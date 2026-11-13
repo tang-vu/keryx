@@ -58,6 +58,7 @@ import { nativeLedgerSource } from './ledger-source.mts';
 import { qualifyLedger } from './qualify-ledger.mts';
 import { nativeAcceptanceSource } from './acceptance-source.mts';
 import { qualifyAcceptance } from './qualify-acceptance.mts';
+import { APPLICATION_READ_CALLS,APPLICATION_READ_OPERATIONS } from '../../lib/db/postgres/application-read-calls';
 import { qualifyOwnershipHistory } from './qualify-ownership-history.mts';
 import { qualifyRunClaims } from "./qualify-run-claims.mts";
 import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
@@ -126,8 +127,9 @@ try {
   const usageOnly=process.argv.includes('--usage-only');
   const ledgerOnly=process.argv.includes('--ledger-only');
   const acceptanceOnly=process.argv.includes('--acceptance-only');
+  const readGroupsOnly=process.argv.includes('--read-groups-only');
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
-  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeFactoryOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly;
+  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeFactoryOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly||readGroupsOnly;
   const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly||workspacesOnly||contentWritesOnly||reviewsOnly||healthOnly||usageOnly||ledgerOnly||acceptanceOnly;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
@@ -235,6 +237,7 @@ try {
   const createTransport = withNativeRuntime ? createPostgresRuntimeTransport : withPrivateProfiles ? createPostgresUserDomainTransport : withAuth ? createPostgresApplicationDomainTransport : withApplicationDomains ? createPostgresApplicationReadTransport : withOwner ? createPostgresOwnerWithdrawalTransport : withHosted ? createPostgresHostedLedgerTransport : withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
   const nativeTransport = createTransport({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
   transports.push(nativeTransport);
+  let readGroups:Readonly<{vectors:number;groups:number;nativeFunctions:number;removedIndividualReadEntrypoints:number;fixedLiteralActions:true;unknownAndCrossGroupActionsRefused:true;strictArgumentKeys:true;actualReadonlyRole:true;metadataLimitsUnchanged:true}>|undefined;
   if(withApplicationDomains){
     const read=(nativeTransport as PostgresApplicationReadTransport).applicationRead;
     assert.deepEqual(await read('list_all_sources',{}),[]);
@@ -242,7 +245,16 @@ try {
     assert.equal(await read('get_user',{p_wallet_address:owner}),null);
     assert.equal(await read('get_sync_state',{p_key:'synthetic-missing'}),null);
     await assert.rejects(read('get_user',{p_wallet_address:owner,unexpected:true}));
-    await assert.rejects(app.query('SELECT public.storage_application_list_all_sources($1::jsonb,$2::text,$3::jsonb)',[canonicalJson(identity),reference.sha256,'{}']));
+    const listStatement=APPLICATION_READ_CALLS.app_list_all_sources.sql;
+    await assert.rejects(app.query(listStatement,[canonicalJson(identity),reference.sha256,'{}']),/native application read arguments refused/);
+    const groups=Number(sql('native_target',"SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname ~ '^storage_application_read_group_[0-9]+$';"));assert.equal(groups,10);
+    const names=Object.keys(APPLICATION_READ_OPERATIONS);assert.equal(sql('native_target',`SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY[${names.map(n=>"'storage_application_"+n+"'").join(',')}]);`),'0');
+    for(const action of ['__proto__','get_user',null,"list_all_sources');SELECT 1;--"]){
+      await app.query('BEGIN READ ONLY');try{await assert.rejects(app.query('SELECT public.storage_application_read_group_0($1::jsonb,$2::text,$3::text,$4::jsonb)',[canonicalJson(identity),reference.sha256,action,'{}']),/native application read action refused/);}finally{await app.query('ROLLBACK');}
+    }
+    await reader.query('BEGIN READ ONLY');try{const result=await reader.query(listStatement,[canonicalJson(identity),reference.sha256,'{}']);assert.equal(result.rows[0].result,'[]');}finally{await reader.query('ROLLBACK');}
+    const nativeFunctions=Number(sql('native_target',"SELECT count(*) FROM pg_proc WHERE pronamespace IN('public'::regnamespace,'keryx_storage'::regnamespace);"));assert(nativeFunctions<=512);
+    readGroups={vectors:12,groups,nativeFunctions,removedIndividualReadEntrypoints:names.length,fixedLiteralActions:true,unknownAndCrossGroupActionsRefused:true,strictArgumentKeys:true,actualReadonlyRole:true,metadataLimitsUnchanged:true};
     sql('native_target',`BEGIN;UPDATE keryx_storage.control SET mode='held';INSERT INTO public.sources(id,name,wallet_address) VALUES('synthetic-domain-source','Synthetic native domain','${owner}');UPDATE keryx_storage.control SET mode='active';COMMIT;`);
     const sources=await read('list_all_sources',{});assert(Array.isArray(sources)&&sources.length===1&&sources[0].id==='synthetic-domain-source');
     await assert.rejects(app.query('SELECT public.storage_list_all_sources($1::jsonb)',[canonicalJson(identity)]));
@@ -258,7 +270,7 @@ try {
     await assert.rejects(business.adapter.listAllSources());
 
     await assert.rejects(app.query('SELECT public.storage_set_sync_state($1::jsonb,$2::jsonb)',[canonicalJson(identity),JSON.stringify({key:'unsafe',value:'x'})]));
-    if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
+    if(applicationDomainsOnly||readGroupsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly,readGroupsOnly,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,readGroups,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
   if(acceptanceOnly){const acceptance=await qualifyAcceptance({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,acceptanceOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,acceptance,runtimeQualified:false,applicationBackendSwitched:false}));return;}
@@ -426,6 +438,7 @@ try {
     ...(reviews?{reviews}:{}),
     ...(health?{health}:{}),
     ...(usage?{usage}:{}),
+    ...(readGroups?{readGroups}:{}),
     ...(acceptance?{acceptance}:{}),
     ...(publicLedger?{publicLedger}:{}),
     ...(originalJson?{originalJson}:{}),

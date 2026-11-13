@@ -1,9 +1,9 @@
 /** Fresh independent SOURCE composition only; no runtime installation or admission. */
-import { nativeApplicationJsonEntrySource } from "./source-json-entries.mts";
+import { nativeApplicationReadGroupsSource } from "./source-json-read-groups.mts";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { nativeApplicationFinancialReferenceSource } from "./application-reference-source.mts";
-import { APPLICATION_READ_OPERATIONS } from "../../lib/db/postgres/application-read-calls";
+import { APPLICATION_READ_CALLS,APPLICATION_READ_OPERATIONS } from "../../lib/db/postgres/application-read-calls";
 const quote=(s:string)=>"'"+s.replaceAll("'","''")+"'";
 const read=(name:string)=>readFileSync(new URL('../../supabase/migrations/'+name,import.meta.url),'utf8').replaceAll('\r\n','\n');
 export function nativeApplicationDomainsReferenceSource(){
@@ -20,6 +20,11 @@ export function nativeApplicationDomainsReferenceSource(){
   const names=Object.keys(APPLICATION_READ_OPERATIONS);
   const financialNames=[...financial.sql.matchAll(/CREATE FUNCTION public\.(storage_[a-z0-9_]+)\(/g)].map(m=>m[1]);
   if(financialNames.length!==26||names.length!==78)throw new Error('Application source inventory changed; review required');
+  for(const [index,name] of [...names].sort().entries()){
+    const call=APPLICATION_READ_CALLS[APPLICATION_READ_OPERATIONS[name as keyof typeof APPLICATION_READ_OPERATIONS]];
+    const expected=`SELECT public.storage_application_read_group_${Math.floor(index/8)}($1::jsonb,$2::text,'${name}',$3::jsonb) AS result`;
+    if(call.sql!==expected||call.args!==1||call.write!==false||call.bytes!==4194304||call.transaction!==true)throw Error('Application read group fixed call changed');
+  }
   const sql=financial.sql+`
 SET ROLE keryx_owner;
 CREATE FUNCTION keryx_storage.read_operation(expected jsonb,selected text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
@@ -44,7 +49,7 @@ DO $$ DECLARE f record;BEGIN
 END;$$;
 -- Emit fixed JSON argument adapters from this freshly built SOURCE schema. The
 -- target is independently installed from the same source and compared afterward.
-${nativeApplicationJsonEntrySource(names)}
+${nativeApplicationReadGroupsSource(names)}
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA keryx_storage FROM PUBLIC,keryx_app,keryx_reader;
 RESET ROLE;
 `;

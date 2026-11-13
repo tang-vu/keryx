@@ -14,7 +14,7 @@ beforeEach(()=>{vi.clearAllMocks();state.pools=0;state.query.mockResolvedValue(r
 describe('native application read composition',()=>{
  it('uses a real read-only transaction and the same bounded pool as financial ports',async()=>{
   const t=make();expect(await t.applicationRead('list_all_sources',{})).toEqual([]);expect(await t.browserSignerRetainedSpend('0x'+'11'.repeat(20))).toBe(0);
-  expect(state.pools).toBe(1);expect(state.clientQuery.mock.calls[0][0]).toBe('BEGIN READ ONLY');expect(state.clientQuery.mock.calls[1][0].text).toBe('SELECT public.storage_application_list_all_sources($1::jsonb,$2::text,$3::jsonb) AS result');
+  expect(state.pools).toBe(1);expect(state.clientQuery.mock.calls[0][0]).toBe('BEGIN READ ONLY');expect(state.clientQuery.mock.calls[1][0].text).toBe("SELECT public.storage_application_read_group_5($1::jsonb,$2::text,'list_all_sources',$3::jsonb) AS result");
   expect(state.clientQuery.mock.calls[2][0]).toBe('COMMIT');expect(state.release).toHaveBeenCalledWith(false);await t.close();
  });
  it.each(['__proto__','constructor','get_user;drop table sources','set_sync_state'])( 'refuses a caller-selected operation %s before pool admission',async operation=>{

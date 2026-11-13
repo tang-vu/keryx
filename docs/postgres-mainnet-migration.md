@@ -774,3 +774,25 @@ after a committed authority read to prove that the final observation sees it.
 `--audit-acceptance` checks the retained original inside the contained read-only
 child and emits counts/digests. These checks do not import application tables or
 open the full production writer.
+
+## Closed native application read groups
+
+Compile the existing 78 fixed JSON read adapters into ten SOURCE functions, with
+at most eight literal actions in each `CASE`. Every branch retains its exact
+argument-key set, SOURCE-derived composite argument types, named underlying call
+and fresh `require_operation` check. Runtime statements contain a fixed group and
+literal action. Unknown, null, cross-group and SQL-shaped action values refuse;
+there is no runtime function lookup or caller-supplied SQL.
+
+Each group requires a real read-only transaction, keeps the existing 64 KiB
+argument and 4 MiB result bounds, and retains app/reader permission restrictions.
+The 34 separately qualified write operations remain unchanged. The fresh combined
+SOURCE contains 444 application functions, leaving space for remaining domains
+inside the unchanged 512-function and aggregate metadata limits. Full catalog
+verification still runs per operation; grouping creates no admission cache.
+
+`--read-groups-only` qualifies the fixed native entrypoints, argument refusal,
+actual reader role, missing former individual entrypoints and current function
+inventory. The compiled Linux factory and complete native financial/domain CI
+remain required before accepting a new runtime profile. This changes internal
+native entrypoints without changing public product contracts or production storage.

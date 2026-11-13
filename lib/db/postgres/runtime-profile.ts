@@ -4,6 +4,6 @@
 export const NATIVE_READONLY_RUNTIME_PROFILE=Object.freeze({
  format:'keryx-native-postgres-observation-profile-v1',
  digestFormat:'keryx-postgres17-jsonb-text-sha256-v1',
- sourceSqlSha256:'e629c4fd70e5beb181aac66760ed716ea221e71a94ea7e9add6d07777592164e',
- catalogSha256:'eaae05880fc715fe14c50295b1a385186bd40c77c27f30b015bf3076009121ae',
+ sourceSqlSha256:'49b721cdcd144593f7c56c575b5f38982538f5d69cbd42ca8bef35361c871c64',
+ catalogSha256:'33363727c8b477624635655a932a2741c2c85c627cad45152d5e155d69816f0e',
 });
