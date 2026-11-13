@@ -1,5 +1,33 @@
 # Keryx — Decision Log
 
+## Retain typed originals while rehearsing native public data - 2026-11-14
+
+Use a separate operator database for the lossless SQLite schema and typed row
+wires. The native runtime's catalog rejects extra namespaces; staging must not
+introduce an exception. Independently install the pinned source and empty target,
+then require exact catalog equality before materializing application rows.
+
+Map explicit source column names through closed native types. Preserve original
+JSON/TEXT bytes, signed int64 and decimal value; verify JSONB by its parsed value
+while retaining its original wire in the typed staging database. Stream both
+stores in source primary-key order and compare every materialized cell. Refuse
+unsupported nonempty historical browser layouts and new target data. Update only
+the two exact pristine singleton bootstrap controls in place, preserving their
+retained no-delete/no-reinsert guards. Other tables use plain inserts. Refuse
+duplicate JSONB object keys: SQLite extraction and JS/JSONB can choose different
+values, so retaining only parsed value would change authority.
+
+Match SQLite's retained source-item relation in the fresh native schema. Historical
+items may outlive a current source row; do not invent a payout source or apply
+the old Supabase cascade to those originals. Paid article and bundle routes still
+require the current source before loading registry price/payout and settling.
+Item retention itself grants no source, ownership or financial authority.
+
+The isolated development target stays held. Successful public-row fidelity does
+not establish source-derived metadata, complete application writer admission,
+cache custody continuity, production capacity or cutover authority. Production
+continues serving until those gates and a fresh consistent source intake qualify.
+
 ## Preserve exact claim completion dates across storage backends - 2026-11-14
 
 Use the SHA-bound raw SQLite completion-date string for anonymous claim issuance,

@@ -981,3 +981,55 @@ SQLite behavior with PostgreSQL for issuance, consumption, private reads, public
 selection and prepared account replies. Source-owner corruption fixtures restore
 the exact immutable SQLite trigger before invoking either reader. These tests
 are isolated and create no production data, payments or jobs.
+
+### Held public-table materialization rehearsal
+
+`scripts/postgres/qualify-native-materialization.mts` owns a development-only
+PG17.12 fixture with independently installed source and target catalogs. Both
+must match the pinned runtime source/profile before input is read. The target
+must have no identity, source contract or user data; only the two exact fresh
+singleton controls are permitted. Existing controls are updated in place,
+preserving their no-delete/no-reinsert guards. All other tables use plain inserts.
+
+| Store | Purpose | Runtime authority |
+| --- | --- | --- |
+| Read-only SQLite snapshot | Immutable declared input, verified hash and sidecars | None |
+| `native_staging` | Exact schema and typed original row wires, including storage classes and real bits | Operator only; application connections revoked |
+| `native_materialized` | Explicit native public columns and verified values | Held; complete application writer remains closed |
+
+The runtime catalog rejects additional namespaces. Keep staging in a separate
+database, with no catalog exception or target-derived approval. Five incompatible
+historical browser layouts require zero input rows. The existing
+`browser_signing_queries` primary-key difference likewise requires an empty
+table; a future nonempty source needs its own qualified mapping.
+
+The closed codec preserves JSON/TEXT wire, int64 and numeric value. JSONB compares
+parsed value separately from its exact retained original text. Refuse NUL/invalid
+text, duplicate JSONB keys, unsupported JSONB Unicode, lossy integer casts and
+timestamp normalization. SQLite extraction selects the first duplicate key;
+JS/JSONB can select the last, which cannot become a migration shortcut.
+Map columns by name, then stream the actual native cells in source primary-key
+order and verify each row before accepting the transaction. Bounds remain finite:
+64-row insertion batches targeting 1MiB, with one larger row allowed only within
+the existing 8MiB typed-source row bound; 8-row re-read pages, 5-second statements and a
+30-minute external deadline. A lost commit acknowledgement stays unknown and
+never triggers an automatic write retry.
+
+The development profile uses a 3GiB PostgreSQL cgroup and a 512MiB Node cgroup
+with 256MiB JS heap, no swap, no outbound network route, no capabilities and
+`no-new-privileges`. Its generic compiled code is capped at 4MiB; this separate
+profile does not change the existing 1MiB offline-intake bound. Private input is
+mounted read-only and never copied into an image. Owned containers and generated
+bundles are removed after qualification; the unique retained original remains.
+
+Public-row fidelity alone does not qualify source-derived private projections,
+original-key cold cache, the complete application writer, production load or
+cutover. The live source has changed since the retained rehearsal point: final
+cutover requires a fresh consistent snapshot/delta and every existing ROOT,
+startup, custody, payment and single-writer gate.
+
+The fresh native schema also preserves SQLite's historical source-item retention.
+The original Supabase `source_items` cascade is not present in SQLite and cannot
+erase retained items or force a fabricated parent during import. Current source
+lookup remains mandatory before paid bundle/article delivery; live registry terms,
+source claims and settlement still provide their existing independent gates.
