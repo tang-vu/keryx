@@ -926,3 +926,40 @@ Capture selectors before the authority await, then read current native state
 last. Disabled/changed flags and readonly mutations refuse without fallback.
 The full application writer, actual data materialization, startup authority,
 compiled load and production cutover remain unqualified by this domain alone.
+
+### Native recipient assignment protocol
+
+The explicit `native-postgres-async-v1` alternative preserves the existing SQLite
+synchronous HTTP reply seal. `ownerAssignmentAct` accepts only consent, confirm,
+reject, withdraw and withdraw-consent; `ownerAssignmentReply` performs the final
+current private snapshot. Both use fixed statements and closed bounded metadata.
+The readonly core/facade owns a non-enumerable port; mutations refuse before input
+getters. The factory captures selectors, awaits authority, then invokes the final
+native reply without another authority await after a prepared body.
+
+The actor must match the durable interactive login, current account birth,
+member/credential generations, login floor and binding. Auth precedes replay.
+A receipt means historical committed result only. Reconciliation requires the
+original request ID and bytes under current authority; lost acknowledgements
+never trigger an automatic write retry. Associations retain terminal audit rows,
+exact revision CAS and their last-operation links. Negative decisions can clear
+an association whose original or positive consent is no longer eligible.
+
+Keep at most 25 active inbox positions, 16KiB canonical manifests, 32KiB states,
+64KiB events and a 2MiB complete private SQL reply. The exact retained original
+SHA, canonical completion-date string, anonymous eligibility, sharing state,
+claim/A2A exclusion and independently recorded network remain mandatory. New
+`original_created_at` metadata preserves the raw SQLite date representation;
+its whole-original SHA and the existing invalidation fence remain authoritative.
+Escaped NUL/surrogate original content never enters JSONB. Nonterminal assignment
+occupancy still blocks claim issuance and original/A2A changes after suppression
+or expiry. Retained privacy tombstones survive fixture cleanup until the isolated
+fixture itself is destroyed.
+
+The retained typed SOURCE census contains zero `owner269_operations` and zero
+`owner269_associations` rows. Synthetic selected Full19 SQLite and PostgreSQL
+qualify recipient actions using real POSIX-root invocation of the unchanged CLI
+for source genesis. Source-owner revocation fault injection, writer-wait expiry,
+commit-ack loss, current reader permissions and unchanged financial digests are
+separate checks. The actual PostgreSQL owner CLI, production Original269, complete
+writer, full materialization, compiled load and authorized cutover remain open.

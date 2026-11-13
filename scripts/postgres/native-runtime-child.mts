@@ -15,6 +15,7 @@ import type { ChatLink,PendingChatLink,ChatRecipient } from '../../lib/chat-acco
 import { requirePublicProfiles,type PublicProfileActor,type PublicProfileSnapshot,type PublicProfileSettings } from '../../lib/profiles/public-profile';
 import { readPublicProfileJson } from '../../lib/profiles/public-profile-route';
 import type { KeryxDB } from '../../lib/db/keryx-db';
+import { createAssignmentRoutes } from '../../lib/owner-run-assignments/http';
 async function main(){
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
  const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient};publicProfile:{actor:PublicProfileActor;handle:string;snapshot:PublicProfileSnapshot;settings:PublicProfileSettings;sitemap:Array<{handle:string;updatedAt:string}>}};
@@ -111,6 +112,31 @@ async function main(){
   parsed=0;await assert.rejects(reviews.capture(input.owner,{get sourceName(){parsed++;return 'unused';}} as never),/readonly_operation/);await assert.rejects(reviews.begin(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),/readonly_operation/);assert.equal(parsed,0);checks++;
   return {privacy,bibliographies,bound,reviews};
  };
+ if(input.mode==='owner-assignments'||input.mode==='withdrawn-before-owner-assignment-reply'){
+  const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000'});
+  let barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,reader:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>;
+  const withdrawing=input.mode==='withdrawn-before-owner-assignment-reply';
+  try{
+   await admin.connect();
+   if(withdrawing){
+    barrier=await startReadonlyCommitBarrier(5432,async()=>{await admin.query('BEGIN');await admin.query("UPDATE keryx_storage.control SET mode='held'");await admin.query('DELETE FROM public.web_sessions WHERE hash=$1',[input.account.session.sessionHash]);await admin.query("UPDATE keryx_storage.control SET mode='active'");await admin.query('COMMIT');});
+    manifest.backend.endpoint.port=barrier.port;writeFileSync(manifestPath,canonicalJson(manifest));
+   }
+   reader=await application.createReadonlyApplicationStorage();assert(reader);const port=reader.ownerRunAssignments;assert(port&&'mode'in port&&port.mode==='native-postgres-async-v1');
+   const descriptor=Object.getOwnPropertyDescriptor(reader,'ownerRunAssignments');assert(descriptor&&!descriptor.enumerable&&descriptor.value===port);checks+=2;
+   let getters=0;const bad={get wallet(){getters++;throw Error();}} as never;await assert.rejects(port.act(bad,bad,bad,''),/readonly_operation/);assert.equal(getters,0);checks++;
+   let sessions=0;const route=createAssignmentRoutes(async()=>{if(++sessions===3&&barrier)barrier.arm();return {db:reader!,wallet:input.owner,currentId:input.account.session.sessionHash};},'https://keryx.cc');
+   const response=await route.GET(new Request('https://keryx.cc/api/me/owner-run-assignments',{headers:{'x-keryx-expected-wallet':input.owner}}));assert.equal(sessions,3);assert.equal(response.headers.get('Cache-Control'),'private, no-store');checks+=2;
+   if(withdrawing){assert.equal(response.status,401);assert.deepEqual(await response.json(),{error:'assignment_unauthenticated'});assert.deepEqual(barrier!.observation(),{intercepted:true,completed:true,failed:false});checks+=3;}
+   else{assert.equal(response.status,200);const body=await response.json();assert.equal(body.kind,'owner-assignment-inbox');assert.deepEqual(body.history,[]);assert.equal(body.recipient.accountId,input.account.snapshot.membership.accountId);checks+=4;}
+   await native.closePostgresRuntimeAdapter(reader);await assert.rejects(port.reply(input.account.session,input.owner,input.account.binding.origin));checks++;assert.equal(outbound,0);checks++;
+   console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,genuineAssignmentRoute:true,ownerAssignmentsPositiveProtocol:!withdrawing,actualCommittedAuthorityReadThenSessionRevocation:withdrawing,finalNativeAssignmentReplyAfterAllRequestAwaits:withdrawing,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{
+   if(reader)await native.closePostgresRuntimeAdapter(reader);
+   if(withdrawing){await admin.query('ROLLBACK;BEGIN');await admin.query("UPDATE keryx_storage.control SET mode='held'");await admin.query('DELETE FROM public.web_sessions WHERE hash=$1',[input.account.session.sessionHash]);await admin.query('INSERT INTO public.web_sessions VALUES($1,$2,$3,$4)',[input.account.session.sessionHash,input.account.session.wallet,input.account.session.issuedAt,input.account.session.expiresAt]);await admin.query("UPDATE keryx_storage.control SET mode='active'");await admin.query('COMMIT');}
+   await admin.end();await barrier?.close();
+  }
+ }
  if(input.mode==='remaining-ports'){
   const reader=await application.createReadonlyApplicationStorage();assert(reader);checks++;
   try{const ports=await exerciseRemainingPorts(reader);await native.closePostgresRuntimeAdapter(reader);await assert.rejects(ports.privacy.read('synthetic-runtime-run'));await assert.rejects(ports.bibliographies.list(input.owner));await assert.rejects(ports.bound.list());await assert.rejects(ports.reviews.list(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'));checks+=4;assert.equal(outbound,0);checks++;console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,remainingPositiveProtocolsAndTerminalDrain:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;}finally{await native.closePostgresRuntimeAdapter(reader);}
@@ -132,7 +158,7 @@ async function main(){
  if(input.mode==='public-profiles-off'){
   const reader=await application.createReadonlyApplicationStorage();assert(reader);
   try{
-   assert.equal(reader.publicProfiles,undefined);assert.equal(Object.getOwnPropertyDescriptor(reader,'publicProfiles'),undefined);assert.throws(()=>requirePublicProfiles(reader));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks']);
+   assert.equal(reader.publicProfiles,undefined);assert.equal(Object.getOwnPropertyDescriptor(reader,'publicProfiles'),undefined);assert.throws(()=>requirePublicProfiles(reader));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments']);
    process.env.KERYX_PUBLIC_PROFILES_ENABLED='true';assert.throws(()=>Reflect.get(reader,'publicProfiles'));assert.equal(outbound,0);
    console.log(JSON.stringify({passed:true,mode:input.mode,checks:7,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,publicProfilesDisabledAbsent:true,changedPublicationFlagRefused:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
   }finally{await native.closePostgresRuntimeAdapter(reader);}
@@ -163,10 +189,10 @@ async function main(){
  if(input.mode==='withdrawn-before-account-read'){
   const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,observer:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>;
   try{
-   await admin.connect();barrier=await startReadonlyCommitBarrier(5432,async()=>{await admin.query("BEGIN;UPDATE keryx_storage.control SET mode='held';");await admin.query('DELETE FROM public.web_sessions WHERE hash=$1',[input.session.hash]);await admin.query("UPDATE keryx_storage.control SET mode='active';COMMIT;");});manifest.backend.endpoint.port=barrier.port;writeFileSync(manifestPath,canonicalJson(manifest));observer=await application.createReadonlyApplicationStorage();assert(observer);const accounts=observer.accountMembership!;
+   await admin.connect();barrier=await startReadonlyCommitBarrier(5432,async()=>{await admin.query("BEGIN;UPDATE keryx_storage.control SET mode='held';");await admin.query('DELETE FROM public.web_sessions WHERE hash=$1',[input.account.session.sessionHash]);await admin.query("UPDATE keryx_storage.control SET mode='active';COMMIT;");});manifest.backend.endpoint.port=barrier.port;writeFileSync(manifestPath,canonicalJson(manifest));observer=await application.createReadonlyApplicationStorage();assert(observer);const accounts=observer.accountMembership!;
    assert.deepEqual(await accounts.resolve(input.account.session,input.account.binding),input.account.snapshot);checks++;barrier.arm();await assert.rejects(accounts.resolve(input.account.session,input.account.binding),/account_unauthenticated/);checks++;assert.deepEqual(barrier.observation(),{intercepted:true,completed:true,failed:false});checks++;
    console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,actualCommittedAuthorityReadThenSessionRevocation:true,finalNativeAccountReadAfterAuthorityAwait:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
-  }finally{try{if(observer)await application.closeReadonlyApplicationStorage(observer);await admin.query("ROLLBACK;BEGIN;UPDATE keryx_storage.control SET mode='held';");await admin.query('DELETE FROM public.web_sessions WHERE hash=$1',[input.session.hash]);await admin.query('INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES($1,$2,$3,$4)',[input.session.hash,input.session.wallet,input.session.issuedAt,input.session.expiresAt]);await admin.query("UPDATE keryx_storage.control SET mode='active';COMMIT;");}finally{await admin.end();await barrier?.close();}}
+  }finally{try{if(observer)await application.closeReadonlyApplicationStorage(observer);await admin.query("ROLLBACK;BEGIN;UPDATE keryx_storage.control SET mode='held';");await admin.query('DELETE FROM public.web_sessions WHERE hash=$1',[input.account.session.sessionHash]);await admin.query('INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES($1,$2,$3,$4)',[input.account.session.sessionHash,input.account.session.wallet,input.account.session.issuedAt,input.account.session.expiresAt]);await admin.query("UPDATE keryx_storage.control SET mode='active';COMMIT;");}finally{await admin.end();await barrier?.close();}}
  }
  if(input.mode==='withdrawn-before-acceptance-read'){
   const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,observer:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>;
@@ -250,7 +276,7 @@ async function main(){
    assert(await health(healthNow,false));checks++;
    await healthAdmin.query("UPDATE keryx_storage.control SET mode='held';");await assert.rejects(health(healthNow,false));await assert.rejects(sync([]));await assert.rejects(funding(input.owner));checks++;
   }finally{try{await healthAdmin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active';");}finally{await healthAdmin.end();}}
-  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks','publicProfiles']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
+  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments','publicProfiles']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
   progress('owner-reads');const profile=await reader.privateProfiles!.get(input.owner,'eip155:5042');assert.equal(profile.profile?.handle,input.publicProfile.handle);assert.equal(profile.activity.questions,1);checks++;
   assert.equal((await reader.profileIdentities!.list(input.owner)).identities.length,0);checks++;
   let parsed=0;await assert.rejects(reader.privateProfiles!.update(input.owner,{get displayName(){parsed++;return 'unused';}} as never));assert.equal(parsed,0);checks++;

@@ -44,6 +44,7 @@ export function createAssignmentRoutes(session: Session, configuredBaseUrl: stri
       const captured = { sessionHash: row.hash, wallet: row.wallet, issuedAt: row.issuedAt, expiresAt: row.expiresAt };
       const port = first.db.ownerRunAssignments;
       if (!port) return json("assignment_unavailable", 503);
+      if ("mode" in port && port.mode !== "native-postgres-async-v1") return json("assignment_unavailable", 503);
       let parsed: z.infer<typeof bodySchema> | undefined;
       if (mutation) {
         try { parsed = bodySchema.parse(await readAssignmentBody(req)); }
@@ -53,12 +54,17 @@ export function createAssignmentRoutes(session: Session, configuredBaseUrl: stri
       if (before instanceof Response || before.db !== first.db || before.wallet !== wallet || before.currentId !== first.currentId)
         return json("assignment_unauthenticated", 401);
       let receipt: Receipt | undefined;
-      if (parsed) receipt = port.act(captured, parsed.expected, parsed.input, configuredOrigin);
+      if (parsed) {
+        if ("mode" in port) receipt = await port.act(captured, parsed.expected, parsed.input, configuredOrigin);
+        else receipt = port.act(captured, parsed.expected, parsed.input, configuredOrigin);
+      }
       const last = await session();
       if (last instanceof Response || last.db !== first.db || last.wallet !== wallet || last.currentId !== first.currentId)
         return json(receipt ? "assignment_outcome_unresolved" : "assignment_unauthenticated", receipt ? 503 : 401);
-      // LAST await above. This synchronous genuine native reply rechecks the exact
-      // durable account/member/credential/session and each current association.
+      // SQLite retains its synchronous seal after the LAST route await. The
+      // explicit PostgreSQL alternative owns a fresh final native read and body
+      // serialization after its own last authority await. Catch its async refusal.
+      if ("mode" in port) return await port.reply(captured, wallet, configuredOrigin, parsed?.expected, receipt);
       return port.reply(captured, wallet, configuredOrigin, parsed?.expected, receipt);
     } catch (error) {
       if (error instanceof AssignmentError) return json(error.code, error.code === "assignment_unauthenticated" ? 401

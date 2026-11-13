@@ -10,6 +10,7 @@ END;$$;
 CREATE TABLE keryx_storage.run_history_projection(
  run_id text PRIMARY KEY REFERENCES public.query_runs(id) ON DELETE CASCADE,
  original_sha256 text NOT NULL CHECK(original_sha256 ~ '^[a-f0-9]{64}$'),
+ original_created_at text CHECK(octet_length(original_created_at)<=64),
  recorded_owner text CHECK(recorded_owner IS NULL OR recorded_owner ~ '^0x[0-9a-f]{40}$'),
  owner_invalid boolean NOT NULL,funded boolean NOT NULL,
  provenance jsonb CHECK(provenance IS NULL OR
