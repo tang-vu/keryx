@@ -48,6 +48,16 @@ async function main(){
    try{if(connected)await admin.query("UPDATE keryx_storage.control SET mode='active' WHERE singleton");}finally{await admin.end();await barrier?.close();}
   }
  }
+ if(input.mode==='withdrawn-before-usage-body'){
+  const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,observer:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>;
+  const window={network:'eip155:5042' as const,since:'1970-01-01T00:00:00.000Z',until:'2026-10-10T00:00:00.000Z',period:'all' as const};
+  try{
+   await admin.connect();barrier=await startReadonlyCommitBarrier(5432,async()=>{await admin.query("BEGIN;UPDATE keryx_storage.control SET mode='held';UPDATE public.run_privacy SET visibility='private' WHERE run_id='synthetic-runtime-run';UPDATE keryx_storage.control SET mode='active';COMMIT;");});manifest.backend.endpoint.port=barrier.port;writeFileSync(manifestPath,canonicalJson(manifest));observer=await application.createReadonlyApplicationStorage();assert(observer);
+   assert.equal((await observer.publicUsage!.history(window,'unknown',1))[0]?.id,'synthetic-runtime-run');checks++;
+   barrier.arm(3);assert.deepEqual(await observer.publicUsage!.history(window,'unknown',1),[]);assert.deepEqual(barrier.observation(),{intercepted:true,completed:true,failed:false});checks++;
+   console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,actualCommittedAuthorityReadThenWithdrawal:true,finalNativeBodyReadAfterAuthorityAwait:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{try{if(observer)await application.closeReadonlyApplicationStorage(observer);await admin.query("ROLLBACK;BEGIN;UPDATE keryx_storage.control SET mode='held';UPDATE public.run_privacy SET visibility='public' WHERE run_id='synthetic-runtime-run';UPDATE keryx_storage.control SET mode='active';COMMIT;");}finally{await admin.end();await barrier?.close();}}
+ }
  if(input.mode==='wrong-credential-role')writeFileSync(readerPath,credential('keryx_app'));
  if(input.mode!=='success'){
   if(input.mode==='wrong-source'){
@@ -62,6 +72,9 @@ async function main(){
   await assert.rejects(native.assertPostgresRuntimeIdentity(reader,'write'));await assert.rejects(native.assertPostgresRuntimeIdentity(new Proxy(reader,{})));checks++;
   await assert.rejects(application.createApplicationStorage());checks++;
   const metrics=await reader.metrics();assert.equal(metrics.totalQueries,1);checks++;
+  const publicUsage=reader.publicUsage!,usageWindow={network:'eip155:5042' as const,since:'1970-01-01T00:00:00.000Z',until:'2026-10-10T00:00:00.000Z',period:'all' as const};
+  assert.equal((await publicUsage.summary(usageWindow)).unattributedNetworkRuns,0);assert.equal((await publicUsage.history(usageWindow,'unknown',1))[0]?.answer,'Original answer');checks++;
+  assert.equal((await publicUsage.publishedHistory!(usageWindow,'unknown',1)).windowRuns,1);assert.throws(()=>Reflect.get(reader,'prepareUsageHistory'));assert.throws(()=>Reflect.get(reader,'finishUsageHistory'));checks++;
   const funding=reader.sessionFundingAccounting.bind(reader),financialId='0x'+'cd'.repeat(32),missingEpoch='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
   const financialAdmin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let journalActive:boolean|undefined;
   try{
@@ -129,6 +142,7 @@ async function main(){
   await assert.rejects(reviews.list(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'));checks++;
   await assert.rejects(sync([]));await assert.rejects(jobs(healthNow));assert.throws(()=>health(healthNow,false));checks++;
   await assert.rejects(funding(input.owner));checks++;
+  await assert.rejects(publicUsage.summary(usageWindow));await assert.rejects(publicUsage.history(usageWindow,'unknown',1));checks++;
   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
  }finally{await native.closePostgresRuntimeAdapter(reader);}
 }

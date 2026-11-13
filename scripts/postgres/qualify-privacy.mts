@@ -23,6 +23,7 @@ export async function qualifyPrivacy(input:{options:PostgresConnectionOptions;id
  const pg=(s:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+s+"UPDATE keryx_storage.control SET mode='active';COMMIT;");let vectors=0;
  const historical:QueryRun={id:'synthetic-native-privacy-historical',createdAt:date,question:'Historical question',answer:'Historical answer',engine:'heuristic',budget:0,totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[],asker:owner};
  const derive=(id:string)=>heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id))+heldOwnershipHistoryProjectionSql(id,sqliteOwnershipHistoryProjection(db,id))+heldPrivacyProjectionSql(id,sqlitePrivacyProjection(db,id));
+ const usageBound=(id:string)=>assert.equal(input.ownerSql(`SELECT count(*) FROM keryx_storage.usage_projection u JOIN public.query_runs q ON q.id=u.run_id WHERE q.id=${q(id)} AND u.original_sha256=keryx_storage.run_original_sha256(q.data) AND u.body_identity_valid;`),'1');
  try{
   installSqliteApplicationSchema(db);writeSqliteQueryRun(db,historical,false);db.exec(RUN_CLAIMS_SQL);db.exec(RUN_PRIVACY_SQL);const history=createSqliteRunOwnershipHistory(db),sqlite=createSqliteRunPrivacy(db,history);
   pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker,engine,total_spent,total_to_creators,answer) VALUES(${q(historical.id)},${q(date)},${q(historical.question)},0,${q(String(db.prepare('SELECT data FROM query_runs WHERE id=?').get(historical.id)!.data))}::json,${q(owner)},'heuristic',0,0,${q(historical.answer)});`+derive(historical.id));
@@ -45,6 +46,7 @@ export async function qualifyPrivacy(input:{options:PostgresConnectionOptions;id
   await Promise.all([assert.rejects(native.change(privateRun.id,actor,{visibility:'public',revision:0,requestId:randomUUID()}),/conflict/),assert.rejects(sqlite.change(privateRun.id,actor,{visibility:'public',revision:0,requestId:randomUUID()}),/conflict/)]);vectors++;
   const exported=randomUUID();assert.deepEqual(await native.export(privateRun.id,actor,exported),await sqlite.export(privateRun.id,actor,exported));vectors++;
   const erase={revision:1,requestId:randomUUID()};assert.deepEqual(await native.erase(privateRun.id,actor,erase),await sqlite.erase(privateRun.id,actor,erase));vectors++;assert.deepEqual(await native.erase(privateRun.id,actor,erase),await sqlite.erase(privateRun.id,actor,erase));vectors++;
+  usageBound(privateRun.id);vectors++;
   assert.deepEqual(await native.read(privateRun.id,actor),await sqlite.read(privateRun.id,actor));vectors++;assert.deepEqual(await native.owner(privateRun.id,actor),await sqlite.owner(privateRun.id,actor));vectors++;
   assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(privateRun.id)};`),db.prepare('SELECT data FROM query_runs WHERE id=?').get(privateRun.id)!.data);vectors++;
   assert.throws(()=>input.ownerSql(`UPDATE public.query_runs SET data=${q(JSON.stringify(privateRun))}::json WHERE id=${q(privateRun.id)};`),/privacy_erased|native storage writer required/);vectors++;
@@ -54,9 +56,11 @@ export async function qualifyPrivacy(input:{options:PostgresConnectionOptions;id
    const run={...publicRun,id:'synthetic-native-privacy-'+suffix,asker};
    const publication=visibility?{visibility}:undefined;
    await transport.saveQueryRun(run,publication);writeSqliteQueryRun(db,run,true,{...creation,publication});
+   await transport.saveQueryRun(run,publication);usageBound(run.id);vectors++;
    assert.deepEqual(await native.read(run.id,actor),await sqlite.read(run.id,actor));vectors++;
    assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(run.id)};`),db.prepare('SELECT data FROM query_runs WHERE id=?').get(run.id)!.data);vectors++;
    await transport.saveQueryRun({...run,answer:'Replacement original'}, {visibility:'public'});writeSqliteQueryRun(db,{...run,answer:'Replacement original'},true,{...creation,publication:{visibility:'public'}});
+   usageBound(run.id);vectors++;
    assert.deepEqual(await native.read(run.id,actor),await sqlite.read(run.id,actor));vectors++;
   }
   await transport.saveQueryRun(historical,{visibility:'public'});writeSqliteQueryRun(db,historical,true,{...creation,publication:{visibility:'public'}});

@@ -688,3 +688,33 @@ the legacy RPC bridge or allocate another connection pool.
 Mutation methods remain absent from this facade. Reading retained policy or
 withdrawal history does not renew a policy, authorize a withdrawal, reset capacity,
 submit a payment or open complete application-writer admission.
+
+## Native public usage and current history
+
+Fixed operations classify the complete metadata/payment window before cohort
+selection. Financial totals include private, unlisted and erased runs; public
+history and the published population are separate. The complete window remains
+bounded to 10,000 runs, 50,000 joined payments and 8 MiB of decoded metadata.
+Oversized reads refuse without reporting partial totals. Private usage derivatives
+retain SQLite's first matching root usage/provenance fields (2,048/1,024 bytes),
+bind their original SHA and invalidate on original/identity/time/asker changes.
+Publication and prospective erasure install these derivatives in the same native
+write scope as the other run projections.
+
+The read factory awaits fresh authority after preparing a private per-call
+selection, then performs a final fixed native transaction that rechecks authority,
+PUBLIC state, original identity/time/usage and current bodies together. This
+transaction is the history observation point. No further asynchronous authority
+read returns previously observed bodies. A withdrawal before this observation
+removes the candidate; published sampling can use remaining captured candidates,
+without adding newly public rows outside that population. Legacy inactive history
+preserves its identity/time-only interpretation and binds original SHAs across
+the native reads. Raw originals retain unrelated escaped NUL/surrogate fields.
+History bodies have finite per-original and complete-response limits.
+
+`--usage-only` compares actual PostgreSQL with a genuine selected SQLite reader.
+The native factory fixture also withdraws publication after its actual committed
+authority read and before the final body operation. `--audit-usage` inspects the
+retained hash-verified original in the qualified contained child, publishing
+counts/digests and metadata incompatibilities only. These checks do not materialize
+application tables, activate the full writer or change production storage.

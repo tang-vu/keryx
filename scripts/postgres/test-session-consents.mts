@@ -52,6 +52,8 @@ import { qualifyReviews } from './qualify-reviews.mts';
 import { nativeReviewsSource } from './reviews-source.mts';
 import { nativeHealthSource } from './health-source.mts';
 import { qualifyHealth } from './qualify-health.mts';
+import { nativeUsageSource } from './usage-source.mts';
+import { qualifyUsage } from './qualify-usage.mts';
 import { qualifyOwnershipHistory } from './qualify-ownership-history.mts';
 import { qualifyRunClaims } from "./qualify-run-claims.mts";
 import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
@@ -117,9 +119,10 @@ try {
   const contentWritesOnly=process.argv.includes('--content-writes-only');
   const reviewsOnly=process.argv.includes('--reviews-only');
   const healthOnly=process.argv.includes('--health-only');
+  const usageOnly=process.argv.includes('--usage-only');
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
   const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeFactoryOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly;
-  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly||workspacesOnly||contentWritesOnly||reviewsOnly||healthOnly;
+  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly||workspacesOnly||contentWritesOnly||reviewsOnly||healthOnly||usageOnly;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
   const boundedReadsOnly=process.argv.includes("--bounded-reads-only");
@@ -139,7 +142,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = healthOnly ? nativeHealthSource() : reviewsOnly ? nativeReviewsSource() : contentWritesOnly ? nativeContentWriteSource() : workspacesOnly ? nativeWorkspacesSource() : privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = usageOnly ? nativeUsageSource() : healthOnly ? nativeHealthSource() : reviewsOnly ? nativeReviewsSource() : contentWritesOnly ? nativeContentWriteSource() : workspacesOnly ? nativeWorkspacesSource() : privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
@@ -249,6 +252,7 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
+  if(usageOnly){const usage=await qualifyUsage({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,usageOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,usage,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(healthOnly){const health=await qualifyHealth({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,healthOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,health,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(reviewsOnly){const reviews=await qualifyReviews({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,reviewsOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,reviews,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(contentWritesOnly){
@@ -267,6 +271,7 @@ try {
     const privacy=await qualifyPrivacy({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
     console.log(JSON.stringify({passed:true,privacyOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,privacy,runtimeQualified:false,applicationBackendSwitched:false}));return;
   }
+  const usage=withNativeRuntime?await qualifyUsage({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const contentWrites=withNativeRuntime?await qualifyContentWrites({transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const health=withNativeRuntime?await qualifyHealth({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const reviews=withNativeRuntime?await qualifyReviews({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
@@ -407,6 +412,7 @@ try {
     ...(contentWrites?{contentWrites}:{}),
     ...(reviews?{reviews}:{}),
     ...(health?{health}:{}),
+    ...(usage?{usage}:{}),
     ...(originalJson?{originalJson}:{}),
     ...(runClaims?{runClaims}:{}),
     ...(ownershipHistory?{ownershipHistory}:{}),

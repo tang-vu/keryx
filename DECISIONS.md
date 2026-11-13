@@ -9281,3 +9281,23 @@ same fresh authority/configuration check before returning a result. Keep factory
 provenance private and disposal terminal; primitive composition confers no
 installed capability. Financial mutations and complete-writer admission remain
 closed. No policy, funding, custody or payment authority changes.
+
+## Revalidate native usage history after authority awaits (2026-11-13)
+
+Classify the complete bounded financial window across every visibility, keeping
+the public-history population separate. Preserve SQLite's first matching root
+usage/provenance fields in private original-SHA-bound derivatives; parsed bodies
+retain their existing last-key JSON semantics. Publication and prospective
+erasure install the same derivatives atomically, and original changes invalidate
+them. An oversized window refuses instead of reporting partial financial totals.
+
+Keep only identity/time/usage expectations in a private per-call selection. After
+the factory's asynchronous authority check, a final fixed read-only operation
+checks current native authority, PUBLIC state and real original bodies together.
+Return those current bodies without another asynchronous guard that could reuse
+an earlier publication verdict. Published sampling fills from the remaining
+captured population after withdrawal; it never adds newly public candidates.
+Legacy inactive history retains its existing identity/time-only body behavior,
+with an original SHA binding between native reads. No body or admission cache,
+fabricated query run, caller SQL or transaction callback is introduced. Complete
+writer, original-data import, load and production cutover remain separate gates.
