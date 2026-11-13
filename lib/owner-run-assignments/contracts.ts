@@ -68,3 +68,10 @@ export interface OwnerRunAssignmentsPort {
   act(session: z.infer<typeof sessionSchema>, expected: Recipient, input: RecipientAction, configuredOrigin: string): Receipt;
   reply(session: z.infer<typeof sessionSchema>, expectedWallet: string, configuredOrigin: string, expected?: Recipient, receipt?: Receipt): Response;
 }
+/** Native PostgreSQL alternative. It performs its final durable read itself;
+ * it never advertises the synchronous SQLite seal or an owner/financial method. */
+export interface AsyncOwnerRunAssignmentsPort {
+  readonly mode: "native-postgres-async-v1";
+  act(session: z.infer<typeof sessionSchema>, expected: Recipient, input: RecipientAction, configuredOrigin: string): Promise<Receipt>;
+  reply(session: z.infer<typeof sessionSchema>, expectedWallet: string, configuredOrigin: string, expected?: Recipient, receipt?: Receipt): Promise<Response>;
+}

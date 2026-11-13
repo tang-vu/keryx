@@ -170,8 +170,8 @@ BEGIN
  h:=packet->'history';o:=packet->'ownership';p:=packet->'privacy';
  PERFORM keryx_storage.install_usage_projection(selected_id,p->'usage');
  PERFORM keryx_storage.install_ledger_projection(selected_id,p->'ledger');
- INSERT INTO keryx_storage.run_history_projection(run_id,original_sha256,recorded_owner,owner_invalid,funded,provenance,anonymous_claim_eligible)
-  VALUES(selected_id,h->>'sha256',h->>'recordedOwner',(h->>'ownerInvalid')::boolean,(h->>'funded')::boolean,nullif(h->'provenance','null'::jsonb),(h->>'anonymousClaimEligible')::boolean);
+ INSERT INTO keryx_storage.run_history_projection(run_id,original_sha256,original_created_at,recorded_owner,owner_invalid,funded,provenance,anonymous_claim_eligible)
+  VALUES(selected_id,h->>'sha256',h->>'originalCreatedAt',h->>'recordedOwner',(h->>'ownerInvalid')::boolean,(h->>'funded')::boolean,nullif(h->'provenance','null'::jsonb),(h->>'anonymousClaimEligible')::boolean);
  INSERT INTO keryx_storage.run_ownership_projection(run_id,original_sha256,question_search,history_eligible,recorded_valid,claimed_valid,summary)
   VALUES(selected_id,o->>'sha256',decode(o->>'questionHex','hex'),(o->>'historyEligible')::boolean,(o->>'recordedValid')::boolean,(o->>'claimedValid')::boolean,nullif(o->'summary','null'::jsonb));
  INSERT INTO keryx_storage.run_privacy_projection(run_id,original_sha256,data_bytes,original_valid,erase_wire,original_fulfillment,question_fields,history_fields,history_references,learning_fields,archive_wire,erase_projection,profile_fields,payment_offline,funding_offline,funding_treasury)

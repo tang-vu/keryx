@@ -39,14 +39,14 @@ function fieldWire(run:Record<string,unknown>,mode:'question'|'history'|'learnin
 type UsageProjection={sha256:string}&ReturnType<typeof publicationUsageMetadata>&ReturnType<typeof usageBodyMetadata>;
 type LedgerProjection={sha256:string}&ReturnType<typeof ledgerOriginalMetadata>;
 interface PublicationDerivatives {
- history:{sha256:string;recordedOwner:string|null;ownerInvalid:boolean;funded:boolean;provenance:ReturnType<typeof parseRunProvenance>|null;anonymousClaimEligible:boolean};
+ history:{sha256:string;originalCreatedAt:string|null;recordedOwner:string|null;ownerInvalid:boolean;funded:boolean;provenance:ReturnType<typeof parseRunProvenance>|null;anonymousClaimEligible:boolean};
  ownership:{sha256:string;questionHex:string;historyEligible:boolean;recordedValid:boolean;claimedValid:boolean;summary:ReturnType<typeof summarizeOwnershipOriginal>|null};
  privacy:{sha256:string;dataBytes:number;valid:boolean;eraseWire:string;originalFulfillment:boolean;questionFields:string;historyFields:string|null;historyReferences:ReturnType<typeof slimPrivacyHistoryFields>['references'];learningFields:string;archiveWire:string|null;eraseProjection:PublicationDerivatives|null;usage:UsageProjection;ledger:LedgerProjection;publicProfile:ReturnType<typeof publicProfileOriginalMetadata>};
 }
 function derive(run:QueryRun,wire:string,recordedOwner:string|null,includeErasure:boolean):PublicationDerivatives{
  const raw=run as unknown as Record<string,unknown>,sha256=createHash('sha256').update(wire).digest('hex'),dataBytes=Buffer.byteLength(wire);
  const validOwner=typeof run.asker==='string'&&/^0x[0-9a-f]{40}$/.test(run.asker.toLowerCase()),eligible=!Object.hasOwn(run,'asker')&&!Object.hasOwn(run,'originalFulfillment')&&run.askerFunded!==true&&run.fundingOwner!=='browser';
- const history={sha256,recordedOwner:validOwner?run.asker!.toLowerCase():null,ownerInvalid:run.asker!==undefined&&run.asker!==null&&!validOwner,funded:run.askerFunded===true,provenance:parseRunProvenance(run.provenance)??null,anonymousClaimEligible:eligible};
+ const history={sha256,originalCreatedAt:Buffer.byteLength(run.createdAt)<=64?run.createdAt:null,recordedOwner:validOwner?run.asker!.toLowerCase():null,ownerInvalid:run.asker!==undefined&&run.asker!==null&&!validOwner,funded:run.askerFunded===true,provenance:parseRunProvenance(run.provenance)??null,anonymousClaimEligible:eligible};
  const owned=(method:'recorded'|'claimed')=>{try{if(method==='recorded'&&(recordedOwner===null||!/^0x[0-9a-f]{40}$/.test(recordedOwner)))return false;ownershipHistoryOriginal(run,recordedOwner??'0x'+'00'.repeat(20),run.id,run.createdAt,method==='recorded'?{method,claimedAt:null}:{method,claimedAt:'2026-01-01T00:00:00.000Z'});return true;}catch{return false;}};
  let summary:ReturnType<typeof summarizeOwnershipOriginal>|null=null;try{summary=summarizeOwnershipOriginal(run);}catch{}
  const ownership={sha256,questionHex:Buffer.from(run.question).toString('hex'),historyEligible:eligible,recordedValid:owned('recorded'),claimedValid:owned('claimed'),summary};
