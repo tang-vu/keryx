@@ -23,6 +23,8 @@ import { createPostgresRuntimeTransport } from './runtime-transport';
 import { NATIVE_READONLY_RUNTIME_PROFILE } from './runtime-profile';
 import { composeNativeFinancialObservation } from './financial-observation';
 import type { PublicUsageStore } from '../../usage/contracts';
+import type { PublicLedgerRunReader } from '../../operator-ledger/native-runs';
+import { capturePublicLedgerLimit } from './ledger-transport';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
 /** Deliberately closed until all writer/current-domain/data gates are qualified. */
@@ -60,6 +62,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   async history(window,cohort,limit){const plan=await read(()=>transport.prepareUsageHistory(window,cohort,limit,false));entry();const result=await transport.finishUsageHistory(plan);entry();return result;},
   async publishedHistory(window,cohort,limit){const plan=await read(()=>transport.prepareUsageHistory(window,cohort,limit,true));entry();const result=await transport.finishPublishedUsageHistory(plan);entry();return result;},
  } satisfies PublicUsageStore);
+ const ledger:PublicLedgerRunReader=Object.freeze({async read(raw:number){entry();const take=capturePublicLedgerLimit(raw);await guard();const result=await transport.publicLedgerRuns.read(take);entry();return result;}});
  const readonly=async():Promise<never>=>refuseStorage('readonly_operation');
  const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
@@ -93,6 +96,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='decisionReviews')return reviews;
     if(property==='topicWatches')return watches;
     if(property==='publicUsage')return usage;
+    if(property==='publicLedgerRuns')return privacyActive?ledger:undefined;
     if(typeof property==='string'&&Object.hasOwn(financial,property)){
      const method=Reflect.get(financial,property) as (...args:unknown[])=>Promise<unknown>;
      return(...args:unknown[])=>read(()=>method(...args));
@@ -109,7 +113,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;
     return (...args:unknown[])=>read(()=>Reflect.apply(method,target,args));
    },
-   ownKeys:()=>[],getOwnPropertyDescriptor:()=>undefined,getPrototypeOf:()=>null,
+   ownKeys:()=>privacyActive?['publicLedgerRuns']:[],getOwnPropertyDescriptor(_target,property){entry();return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
    setPrototypeOf:()=>false,set:()=>false,defineProperty:()=>false,deleteProperty:()=>false,preventExtensions:()=>false,
   });
   facades.set(facade,{identity:deployment.identity,guard,close,closed:()=>closed});

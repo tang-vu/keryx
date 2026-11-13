@@ -11,6 +11,7 @@ import { CONTENT_WRITE_CALLS } from './content-write-calls';
 import { REVIEW_CALLS } from './review-calls';
 import { HEALTH_CALLS } from './health-calls';
 import { USAGE_CALLS } from './usage-calls';
+import { PUBLIC_LEDGER_CALLS } from './ledger-calls';
 
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
@@ -24,6 +25,7 @@ const CALLS = Object.freeze({
   ...REVIEW_CALLS,
   ...HEALTH_CALLS,
   ...USAGE_CALLS,
+  ...PUBLIC_LEDGER_CALLS,
   sourceItemByLink:{sql:'SELECT public.storage_source_item_by_link($1::jsonb,$2::text,$3::text,$4::text) AS result',args:2,write:false,bytes:4194304,transaction:true},
   ownershipHistoryList:{sql:"SELECT public.storage_ownership_history_list($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::jsonb,$7::integer,$8::jsonb,$9::jsonb) AS result",args:7,write:false,bytes:4198400,transaction:true},
   ownershipHistoryRead:{sql:"SELECT public.storage_ownership_history_read($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result",args:4,write:false,bytes:8008192,transaction:true},

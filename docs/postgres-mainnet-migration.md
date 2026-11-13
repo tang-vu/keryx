@@ -718,3 +718,29 @@ authority read and before the final body operation. `--audit-usage` inspects the
 retained hash-verified original in the qualified contained child, publishing
 counts/digests and metadata incompatibilities only. These checks do not materialize
 application tables, activate the full writer or change production storage.
+
+## Bounded native public ledger
+
+The native ledger port returns the existing detached financial snapshots, with
+null positions for excluded originals consuming the same 251-position scan.
+The generic ledger reader awaits either a synchronous SQLite snapshot or a
+PostgreSQL promise before hydrating payments. A present failed capability never
+falls back to whole-run reads. The SQLite constructor remains synchronous.
+
+Private SOURCE derivatives bind snapshots to original SHA and body identity/time.
+Only closed source/item reference IDs enter JSONB; snapshot text travels as UTF-8
+hex so arbitrary recorded content versions retain escaped NUL/surrogate values.
+The final fixed read checks current native authority, PUBLIC state, originals and
+source/item synthetic provenance together after the factory authority await.
+No question, answer or full original leaves this operation. Publication,
+replacement, identical replay and erasure maintain the derivative in their
+existing native write scope. Per-snapshot text is limited to 2 MiB and the
+complete decoded snapshot window to 16 MiB; overflow refuses the read.
+
+`--ledger-only` compares actual PostgreSQL with the genuine selected SQLite ledger
+capability, including excluded positions, current provenance, invalid/missing
+derivatives, escaped content versions and reader/disposal boundaries.
+`--audit-ledger` inspects the retained original in the contained read-only child
+and emits counts, byte totals and a digest. These are protocol/data compatibility
+checks; they do not admit the complete writer, import application tables or
+establish production capacity.

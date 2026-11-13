@@ -71,6 +71,16 @@ it("propagates a present native metadata refusal before payment reads or generic
   expect(iterateRecentQueries).not.toHaveBeenCalled();expect(listPayments).not.toHaveBeenCalled();
 });
 
+it("awaits a native snapshot and propagates its asynchronous refusal without fallback", async () => {
+  const iterateRecentQueries=vi.fn(async function*(){yield ledgerRun();}),listPayments=vi.fn(async()=>[ledgerPayment()]);
+  let finish!:(value:Array<ReturnType<typeof captureLedgerRun>>)=>void;
+  const read=vi.fn(()=>new Promise<Array<ReturnType<typeof captureLedgerRun>>>(resolve=>{finish=resolve;}));
+  const pending=readOperatorLedger({publicLedgerRuns:{read},iterateRecentQueries,listPayments},"eip155:5042002",7,()=>LEDGER_FIXTURE_TIME);
+  expect(listPayments).not.toHaveBeenCalled();finish([captureLedgerRun(ledgerRun()),null]);expect((await pending).payload.jobs).toHaveLength(1);
+  const failed=vi.fn(async()=>{throw Error("Async native refusal");});listPayments.mockClear();
+  await expect(readOperatorLedger({publicLedgerRuns:{read:failed},iterateRecentQueries,listPayments},"eip155:5042002")).rejects.toThrow("Async native refusal");expect(listPayments).not.toHaveBeenCalled();expect(iterateRecentQueries).not.toHaveBeenCalled();
+});
+
 it("caps native positions at the same 251 sentinel including excluded originals", async () => {
   let count = 0;
   const read = vi.fn((limit: number) => {

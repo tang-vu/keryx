@@ -9301,3 +9301,23 @@ Legacy inactive history retains its existing identity/time-only body behavior,
 with an original SHA binding between native reads. No body or admission cache,
 fabricated query run, caller SQL or transaction callback is introduced. Complete
 writer, original-data import, load and production cutover remain separate gates.
+
+## Read native public ledger metadata without original hydration (2026-11-13)
+
+Allow the existing ledger capability to return a promise and await it before
+payment hydration; retain the SQLite constructor's synchronous return type.
+A present refusing native capability still cannot fall back to generic run reads.
+Keep the 251-position scan, including null positions for excluded originals.
+
+Store only the existing captured financial snapshot in a private original-SHA-bound
+derivative. Preserve snapshot text separately from closed reference IDs because a
+recorded content version may contain escaped NUL or surrogate values PostgreSQL
+JSONB cannot represent. Apply current source/item synthetic flags in the same
+fixed read-only transaction as current PUBLIC state and original validation.
+Publication, replacement and erasure replace/invalidate the derivative atomically.
+
+The genuine factory exposes this one descriptor-discovered metadata capability.
+Its final native observation follows the asynchronous authority check; no full
+original, caller SQL, pool, transaction callback or cached admission escapes.
+Retain finite per-snapshot and complete-response bounds, exact facade provenance
+and terminal disposal. Complete writer/import/load/production gates remain open.
