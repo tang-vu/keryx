@@ -9208,3 +9208,21 @@ still refuses admission. This follows the [upstream versioning design](https://g
 Keep the historical dormant Supabase profile's exact 17.11 fixture and immutable
 contract separate. This changes synthetic qualification, not production activation
 or an authorization to downgrade a deployed database.
+
+## Preserve native ordinary-content and encrypted-cache writes (2026-11-13)
+
+Use fixed native operations and scoped table fences for source/item metadata,
+notification preferences, sync values, query memories and leased gap intents.
+Keep source creation time, sticky evidence classification and retained on-chain
+metadata. Preserve text timestamps, including signed article-manifest metadata,
+instead of converting their original wire representation. Keep SQLite's malformed
+feed-date exclusion and missing-date ordering.
+Use one fixed, read-only source/article-URL lookup and retain exact matching and
+the existing ambiguity refusal; the RPC bridge exposes no table/query selector.
+
+Admit authenticated, source/identity-bound cache envelopes under the same finite
+512-row/8-MiB quota as the current enrolled SQLite writer. Apply separate finite
+input bounds to large named content operations; do not expand authentication or
+other small setter limits. Retain conservative unknown-write outcomes without
+automatic retries. Keep complete application-writer admission closed until all
+current domain, original-data, cache, load and production gates pass.

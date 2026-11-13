@@ -6,14 +6,17 @@ import { PostgresStorageUnavailable,type PostgresConnectionOptions } from "./con
 import { createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from "./domain-channel";
 import { AUTH_WRITE_OPERATIONS } from "./auth-write-calls";
 import { OPERATIONAL_WRITE_OPERATIONS } from "./operational-write-calls";
+import { CONTENT_WRITE_OPERATIONS,CONTENT_WRITE_INPUT_BYTES } from './content-write-calls';
 import { composePostgresApplicationReadTransport,type PostgresApplicationReadTransport } from "./application-read-transport";
 
-export const APPLICATION_WRITE_OPERATIONS=Object.freeze({...AUTH_WRITE_OPERATIONS,...OPERATIONAL_WRITE_OPERATIONS});
+export const BASE_APPLICATION_WRITE_OPERATIONS=Object.freeze({...AUTH_WRITE_OPERATIONS,...OPERATIONAL_WRITE_OPERATIONS});
+export const APPLICATION_WRITE_OPERATIONS=Object.freeze({...BASE_APPLICATION_WRITE_OPERATIONS,...CONTENT_WRITE_OPERATIONS});
 
 export type PostgresAuthWrite=keyof typeof AUTH_WRITE_OPERATIONS;
 export type PostgresApplicationWrite=keyof typeof APPLICATION_WRITE_OPERATIONS;
 export interface PostgresApplicationDomainTransport extends PostgresApplicationReadTransport {
   dashboardMetrics():Promise<DashboardMetrics>;
+  sourceItemByLink(sourceId:string,link:string):Promise<Record<string,unknown>[]>;
   applicationWrite(operation:PostgresApplicationWrite,args:Readonly<Record<string,unknown>>):Promise<unknown>;
 }
 /** Qualified named ports only. It cannot select or enroll an application store. */
@@ -24,6 +27,15 @@ export function createPostgresApplicationDomainTransport(options:PostgresConnect
 export function composePostgresApplicationDomainTransport(channel:PostgresDomainChannel,identity:StorageIdentity):PostgresApplicationDomainTransport{
   return Object.freeze({
     ...composePostgresApplicationReadTransport(channel,identity),
+    async sourceItemByLink(sourceId:string,link:string){
+      if(channel.closed||typeof sourceId!=='string'||typeof link!=='string')throw new PostgresStorageUnavailable();
+      const value=await channel.call('sourceItemByLink',[sourceId,link]);
+      if(channel.closed||!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join('|')!=='ambiguous|items')throw new PostgresStorageUnavailable();
+      const {items,ambiguous}=value as {items:unknown;ambiguous:unknown};
+      if(typeof ambiguous!=='boolean'||!Array.isArray(items)||items.length>1||items.some(row=>!row||typeof row!=='object'||Array.isArray(row))||ambiguous&&items.length)throw new PostgresStorageUnavailable();
+      if(ambiguous)throw new Error('Ambiguous exact source article membership');
+      return items as Record<string,unknown>[];
+    },
     async dashboardMetrics(){
       if(channel.closed)throw new PostgresStorageUnavailable();
       const value=await channel.call("dashboardMetrics",[]);
@@ -34,7 +46,8 @@ export function composePostgresApplicationDomainTransport(channel:PostgresDomain
       if(channel.closed||typeof operation!=="string"||!Object.hasOwn(APPLICATION_WRITE_OPERATIONS,operation)
         ||!args||typeof args!=="object"||Array.isArray(args))throw new PostgresStorageUnavailable();
       let wire:string;
-      try{wire=canonicalJson(args);if(Buffer.byteLength(wire)>65536)throw new Error();}catch{throw new PostgresStorageUnavailable();}
+      const limit=Object.hasOwn(CONTENT_WRITE_INPUT_BYTES,operation)?CONTENT_WRITE_INPUT_BYTES[operation as keyof typeof CONTENT_WRITE_INPUT_BYTES]:65536;
+      try{wire=canonicalJson(args);if(Buffer.byteLength(wire)>limit)throw new Error();}catch{throw new PostgresStorageUnavailable();}
       const value=await channel.call(APPLICATION_WRITE_OPERATIONS[operation],[wire]);
       if(channel.closed)throw new PostgresDomainWriteOutcomeUnknown();
       return value;

@@ -1,7 +1,8 @@
 /** Fixed SOURCE-generated JSON adapters; never a runtime query translator. */
 const quote=(s:string)=>"'"+s.replaceAll("'","''")+"'";
-export function nativeApplicationJsonEntrySource(names:readonly string[],write=false):string{
+export function nativeApplicationJsonEntrySource(names:readonly string[],write=false,inputBytes=65536):string{
  if(names.length<1||names.length>128||new Set(names).size!==names.length||names.some(n=>!/^[_a-z][_a-z0-9]{0,62}$/.test(n)))throw new Error('Native entry source inventory refused');
+ if(!Number.isSafeInteger(inputBytes)||inputBytes<65536||inputBytes>8388608)throw new Error('Native entry source input bound refused');
  return `DO $build$ DECLARE original record;arg record;fields text;arguments text;keys text[];body text;selected text;counted integer:=0;
 BEGIN
  FOREACH selected IN ARRAY ARRAY[${names.map(quote).join(',')}] LOOP
@@ -22,7 +23,7 @@ BEGIN
   EXECUTE format($entry$CREATE FUNCTION public.%I(expected jsonb,digest text,arguments jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $fn$
   DECLARE result jsonb;actual text[];%s
   BEGIN
-   IF ${write?"current_setting('transaction_read_only')<>'off'":"current_setting('transaction_read_only')<>'on'"} OR arguments IS NULL OR jsonb_typeof(arguments)<>'object' OR octet_length(arguments::text)>65536 THEN RAISE EXCEPTION 'native application read arguments refused';END IF;
+   IF ${write?"current_setting('transaction_read_only')<>'off'":"current_setting('transaction_read_only')<>'on'"} OR arguments IS NULL OR jsonb_typeof(arguments)<>'object' OR octet_length(arguments::text)>${inputBytes} THEN RAISE EXCEPTION 'native application read arguments refused';END IF;
    SELECT coalesce(array_agg(key ORDER BY key),ARRAY[]::text[]) INTO actual FROM jsonb_object_keys(arguments) key;
    IF actual IS DISTINCT FROM (SELECT coalesce(array_agg(k ORDER BY k),ARRAY[]::text[]) FROM unnest(%L::text[]) k) THEN RAISE EXCEPTION 'native application argument keys refused';END IF;
    PERFORM keryx_storage.require_operation(expected,digest,%L);

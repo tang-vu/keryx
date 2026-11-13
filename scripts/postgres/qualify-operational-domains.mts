@@ -39,8 +39,12 @@ export async function qualifyOperationalDomains(input:{transport:PostgresApplica
   assert.deepEqual(await native.adapter.getFeedbackStats('synthetic-feedback'),await sqlite.getFeedbackStats('synthetic-feedback'));vectors++;
   await Promise.all([native.adapter.recordActivationEvent('reader_landing',day),native.adapter.recordActivationEvent('reader_landing',day)]);
   const counts=await input.transport.applicationRead('activation_funnel',{p_day:day});assert(Array.isArray(counts));assert.equal(Number(counts.find(r=>r.event==='reader_landing')?.count),2);vectors++;
+  // Pin this independent counter's day in every request. The public helper
+  // above uses the current UTC date, which may roll over during qualification.
+  await Promise.all([input.transport.applicationWrite('upsert_api_key_usage',{p_key_id:minted.id,p_day:day}),input.transport.applicationWrite('upsert_api_key_usage',{p_key_id:minted.id,p_day:day})]);
+  assert.deepEqual(await native.adapter.getUsage(minted.id),[{day,count:2}]);
   assert.equal(input.options.endpoint.kind,'loopback');const proxy=await startCommitAckLossProxy(input.options.endpoint.port),broken=createPostgresApplicationDomainTransport({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);
-  try{proxy.arm();await assert.rejects(broken.applicationWrite('upsert_api_key_usage',{p_key_id:id,p_day:day}),PostgresDomainWriteOutcomeUnknown);assert.deepEqual(proxy.observation(),{dropped:true,commands:1});const usages=await native.adapter.getUsage(id);assert.equal(usages.find(r=>r.day===day)?.count,3);vectors++;}finally{await broken.close();await proxy.close();}
+  try{proxy.arm();await assert.rejects(broken.applicationWrite('upsert_api_key_usage',{p_key_id:minted.id,p_day:day}),PostgresDomainWriteOutcomeUnknown);assert.deepEqual(proxy.observation(),{dropped:true,commands:1});assert.deepEqual(await native.adapter.getUsage(minted.id),[{day,count:3}]);vectors++;}finally{await broken.close();await proxy.close();}
   const reader=createPostgresApplicationDomainTransport({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(reader.applicationWrite('consume_rate_limit',{p_bucket:'refused',p_points:1,p_window_ms:100,p_now:now}));vectors++;}finally{await reader.close();}
   assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
   return {vectors,concurrentRateAdmission:true,singleCircuitProbe:true,walletScopedKeyRevocation:true,keyScopeRetention:true,awaitedNativeAuthenticationAudit:true,concurrentCounters:true,actualLostCommitAck:true,noAutomaticRetry:true,readonlyWritesRefused:true,productionData:false,paidOperations:0};

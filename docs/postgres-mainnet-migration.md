@@ -577,3 +577,25 @@ enabled. See the [upstream attribute-version design](https://github.com/postgres
 and [17.12 release notes](https://www.postgresql.org/docs/17/release-17-12.html).
 The retained, dormant Supabase acceptance fixture runs its exact original 17.11
 image and immutable contract; it does not grant a new production backend profile.
+
+## Native ordinary content writes
+
+Fixed operations cover source/item upserts, metadata and notification settings,
+sync values, query memories and gap-intent leases. Retain original creation time,
+sticky source/item provenance, on-chain metadata and exact manifest timestamp
+strings. Item ordering puts missing dates last; recency excludes the same malformed
+feed-date shapes as the current SQLite implementation. Complete result bounds
+refuse rather than return an incomplete collection.
+Exact article-URL lookup remains scoped to one source, retains literal URL matching
+and refuses ambiguous membership before a caller can select a paid article.
+
+Cache writes seal the plaintext against the source and all storage-identity fields
+before submission. Serialize the 512-row/8-MiB ciphertext quota with the native
+writer lock, including UTF-16 source-ID and per-envelope bounds. A lost commit
+acknowledgement remains unknown and cannot cause an automatic second write.
+
+Bounds belong to named operations: item batches and sealed cache inputs 8 MiB,
+memory/sync inputs 1 MiB, source/metadata inputs 256 KiB, other existing setters
+64 KiB. These ports do not admit raw SQL or a transaction callback. Full-writer
+admission remains closed until managed-source history, remaining current domains,
+lossless materialization/cache continuity and compiled load/cutover qualify.
