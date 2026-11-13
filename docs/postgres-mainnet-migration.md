@@ -824,11 +824,29 @@ the final native account read afterwards; a committed session revocation at that
 boundary refuses the result. Mutations refuse before inspecting inputs, and
 captured methods refuse after terminal close.
 
-The factory supplies no `prepareHistoryFence`. The existing history seal is
-synchronous; replacing it with an asynchronous function would leave a gap before
-private history serialization. A qualified final asynchronous original/privacy/
-membership observation and its route consumers remain required. The complete
-application writer, materialized import, production capacity and cutover also
-remain closed. The retained original's accepted typed inventory contains zero
+The factory supplies no `prepareHistoryFence`. SQLite retains that synchronous
+seal. PostgreSQL instead supplies the explicit `prepareAsyncHistoryFence` when
+the privacy domain is active. The owned-history route serializes its response,
+finishes privacy and exact-credential awaits, then awaits the native final read
+last. No further IO or await follows it, and it grants no streaming authority.
+
+Preparation captures immutable request-local inputs and compares the complete
+semantic original, including unknown fields, with the actual raw native original.
+Detail observations without list attribution still require positive captured
+recorded/claimed ownership. Preserve raw-original SHA-256 and every privacy/claim
+field, including absent rows, completion time and A2A association. The one-use
+final read checks that fingerprint and current account/session in one fresh native
+snapshot after the authority/writer wait. Preparation cannot cache permission.
+
+Keep 1000 items, 4,000,000 raw bytes per original, 16,000,000 aggregate raw bytes
+and the existing 25-second request deadline. Native byte limits apply before
+body materialization. The compiled genuine readonly factory exercises the actual
+owned-history route and commits a privacy change after its final credential read
+and authority await; the prebuilt response must be refused. Protocol qualification
+compares the native final read with the selected SQLite seal, including whole-body,
+privacy, claim/A2A, session, malformed input and terminal-disposal boundaries.
+
+The complete application writer, materialized import, production capacity and
+cutover remain closed. The retained original's accepted typed inventory contains zero
 rows in all six account tables; that census does not establish future import or
 history authorization.

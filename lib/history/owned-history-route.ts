@@ -104,13 +104,16 @@ export function createOwnedHistoryRoute(deps: Dependencies, action: "list" | "ex
         }
       }
       // Every body is fully serialized before the final awaited checks. Empty
-      // results still seal the exact consent/session. No streaming authority.
-      const seal = account ? await account.prepare(selected) : null;
+      // results still check the exact consent/session. No streaming authority.
+      const fence = account ? await account.prepare(selected) : null;
       if (account) await account.privacyFence(selected);
       const finished = await finish(response);
       if (finished !== response) return finished;
-      if (account && seal) account.seal(seal);
-      return response; // Deliberately NO await or asynchronous work after seal.
+      if (account && fence) {
+        if (fence.kind === "async") await account.finalRead(fence.check);
+        else account.seal(fence.check);
+      }
+      return response; // No IO or await after the final native observation.
     } catch (error) {
       if (error instanceof HistoryError && error.code === "invalid_history_query") return json({ error: "invalid_history_query" }, 400);
       if (error instanceof AccountError && error.code === "account_unauthenticated") return json({ error: "unauthenticated" }, 401);

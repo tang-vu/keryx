@@ -61,6 +61,7 @@ import { qualifyAcceptance } from './qualify-acceptance.mts';
 import { APPLICATION_READ_CALLS,APPLICATION_READ_OPERATIONS } from '../../lib/db/postgres/application-read-calls';
 import { nativeAccountsSource } from './accounts-source.mts';
 import { qualifyAccounts } from './qualify-accounts.mts';
+import { qualifyAccountHistory } from './qualify-account-history.mts';
 import { qualifyOwnershipHistory } from './qualify-ownership-history.mts';
 import { qualifyRunClaims } from "./qualify-run-claims.mts";
 import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
@@ -132,8 +133,9 @@ try {
   const readGroupsOnly=process.argv.includes('--read-groups-only');
   const accountsSourceReferenceOnly=process.argv.includes('--accounts-source-reference-only');
   const accountsOnly=process.argv.includes('--accounts-only');
+  const accountHistoryOnly=process.argv.includes('--account-history-only');
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
-  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeFactoryOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly||readGroupsOnly;
+  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeFactoryOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly||readGroupsOnly||accountHistoryOnly;
   const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly||workspacesOnly||contentWritesOnly||reviewsOnly||healthOnly||usageOnly||ledgerOnly||acceptanceOnly||accountsSourceReferenceOnly||accountsOnly;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
@@ -279,6 +281,7 @@ try {
   }
 
   if(accountsOnly){const accounts=await qualifyAccounts({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,accountsOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,accounts,runtimeQualified:false,applicationBackendSwitched:false}));return;}
+  if(accountHistoryOnly){const accountHistory=await qualifyAccountHistory({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,accountHistoryOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,accountHistory,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(acceptanceOnly){const acceptance=await qualifyAcceptance({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,acceptanceOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,acceptance,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(ledgerOnly){const ledger=await qualifyLedger({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,ledgerOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,ledger,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(usageOnly){const usage=await qualifyUsage({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,usageOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,usage,runtimeQualified:false,applicationBackendSwitched:false}));return;}
@@ -302,6 +305,7 @@ try {
   }
   const usage=withNativeRuntime?await qualifyUsage({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const accounts=withNativeRuntime?await qualifyAccounts({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  const accountHistory=withNativeRuntime?await qualifyAccountHistory({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const acceptance=withNativeRuntime?await qualifyAcceptance({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const publicLedger=withNativeRuntime?await qualifyLedger({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const contentWrites=withNativeRuntime?await qualifyContentWrites({transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
@@ -448,6 +452,7 @@ try {
     ...(readGroups?{readGroups}:{}),
     ...(acceptance?{acceptance}:{}),
     ...(accounts?{accounts}:{}),
+    ...(accountHistory?{accountHistory}:{}),
     ...(publicLedger?{publicLedger}:{}),
     ...(originalJson?{originalJson}:{}),
     ...(runClaims?{runClaims}:{}),

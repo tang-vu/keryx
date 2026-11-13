@@ -1,5 +1,6 @@
 /** Literal fixed actions only; no caller action/SQL/function selector escapes. */
 export const ACCOUNT_CALLS=Object.freeze({
+ accountHistory:{sql:'SELECT public.storage_account_history($1::jsonb,$2::text,$3::jsonb,$4::jsonb,$5::boolean,$6::bigint) AS result',args:4,write:false,bytes:41943040,inputBytes:262144,transaction:true},
  accountOffer:{sql:"SELECT public.storage_account_observe($1::jsonb,$2::text,'offer',$3::jsonb) AS result",args:1,write:false,bytes:65536,transaction:true},
  accountResolve:{sql:"SELECT public.storage_account_observe($1::jsonb,$2::text,'resolve',$3::jsonb) AS result",args:1,write:false,bytes:65536,transaction:true},
  accountCurrent:{sql:"SELECT public.storage_account_observe($1::jsonb,$2::text,'current',$3::jsonb) AS result",args:1,write:false,bytes:65536,transaction:true},

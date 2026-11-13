@@ -1,10 +1,10 @@
 import { isDeepStrictEqual } from "node:util";
 import type { KeryxDB } from "../db/keryx-db";
 import { AccountError, bindingSchema, interactiveSessionSchema, snapshotSchema, type AccountHistoryObservation,
-  type AccountHistorySeal } from "../accounts/contracts";
+  type AccountHistorySeal, type AccountHistoryFinalRead } from "../accounts/contracts";
 import { createAccountHistoryProjection } from "../accounts/history-projection";
 import { ACCOUNT_HISTORY_DEADLINE_MS, MAX_ACCOUNT_HISTORY_ITEMS, MAX_ACCOUNT_HISTORY_ORIGINAL_BYTES,
-  MAX_ACCOUNT_HISTORY_TOTAL_BYTES } from "../accounts/sqlite-history-fence";
+  MAX_ACCOUNT_HISTORY_TOTAL_BYTES } from "../accounts/history-evidence";
 import { requirePrivacy } from "../run-privacy/contracts";
 import { summarizeOwnershipOriginal } from "../run-claims/history";
 import type { RunClaimBinding } from "../run-claims/contracts";
@@ -42,8 +42,10 @@ export async function accountOwnedHistory(context: SessionContext, rawBinding: R
   if (!raw) return { db: walletDb, account: null }; // No explicit consent on this exact session.
   const snapshot = snapshotSchema.parse(raw);
   if (!isDeepStrictEqual(snapshot.session, session) || !isDeepStrictEqual(snapshot.binding, binding)) throw unavailable();
-  if (typeof store.prepareHistoryFence !== "function") throw unavailable();
-  const prepare = store.prepareHistoryFence.bind(store), privacy = requirePrivacy(walletDb);
+  const syncPrepare = typeof store.prepareHistoryFence === "function" ? store.prepareHistoryFence.bind(store) : null;
+  const asyncPrepare = typeof store.prepareAsyncHistoryFence === "function" ? store.prepareAsyncHistoryFence.bind(store) : null;
+  if (!!syncPrepare === !!asyncPrepare) throw unavailable();
+  const privacy = requirePrivacy(walletDb);
   const observations = new Map<string, AccountHistoryObservation>();
   let observedBytes = 0;
   const watched = Object.freeze({ ...privacy, async owner(id: string, actor: Parameters<typeof privacy.owner>[1]) {
@@ -93,8 +95,13 @@ export async function accountOwnedHistory(context: SessionContext, rawBinding: R
   }
   return { db, account: Object.freeze({ selectRows, selectDetail,
     async prepare(observed: readonly AccountHistoryObservation[]) {
-      check(); const seal = await prepare(snapshot, observed, deadline); check();
-      if (typeof seal !== "function") throw unavailable(); return seal;
+      check();
+      if (syncPrepare) {
+        const seal = await syncPrepare(snapshot, observed, deadline); check();
+        if (typeof seal !== "function") throw unavailable(); return { kind: "sync" as const, check: seal };
+      }
+      const final = await asyncPrepare!(snapshot, observed, deadline); check();
+      if (typeof final !== "function") throw unavailable(); return { kind: "async" as const, check: final };
     },
     async privacyFence(observed: readonly AccountHistoryObservation[]) {
       for (const item of observed) {
@@ -106,6 +113,11 @@ export async function accountOwnedHistory(context: SessionContext, rawBinding: R
       check(); const returned = seal();
       if (returned !== undefined) throw unavailable();
       check(); // Still synchronous; no private IO or await after native seal.
+    },
+    async finalRead(read: AccountHistoryFinalRead) {
+      check(); const returned = await read();
+      if (returned !== undefined) throw unavailable();
+      check(); // This is the last awaited request operation, never a sync seal.
     },
   }) };
 }
