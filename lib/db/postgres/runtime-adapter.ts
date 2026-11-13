@@ -29,6 +29,8 @@ import { z } from 'zod';
 import { interactiveSessionSchema,bindingSchema as accountBindingSchema,snapshotSchema as accountSnapshotSchema,digestSchema as accountDigestSchema,type AccountMembershipStore } from '../../accounts/contracts';
 import { recipientSchema as chatRecipientSchema,type ChatAccountLinksStore } from '../../chat-accounts/contracts';
 import { publicProfilesEnabled,publicHandle,publicProfileActor,type PublicProfilesStore } from '../../profiles/public-profile';
+import type { AsyncOwnerRunAssignmentsPort } from '../../owner-run-assignments/contracts';
+import { captureOwnerAssignmentReply } from './owner-assignments-transport';
 import { acceptanceWallet,networkSchema,deliverableIdSchema,type DeliverableAcceptanceStore } from '../../deliverable-acceptance/contracts';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
@@ -38,7 +40,7 @@ export async function createPostgresRuntimeAdapter():Promise<KeryxDB>{
  return refuseStorage('adapter_not_initialized');
 }
 /** Linux read-only observation profile. It does not admit application writers,
- * signing or the still-unported claim/account writers. */
+ * signing or the complete application writer. */
 export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  if(arguments.length)refuseStorage('invalid_operation');
  const deployment=readRuntimeStorageDeployment();
@@ -102,6 +104,14 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   update:readonly,unpublish:readonly,
  } satisfies PublicProfilesStore);
  if(publicProfilesActive)Object.defineProperty(core.adapter,'publicProfiles',{value:publicProfiles,enumerable:false,writable:false,configurable:true});
+ const assignments:AsyncOwnerRunAssignmentsPort=Object.freeze({
+  mode:'native-postgres-async-v1',act:readonly,
+  async reply(session,wallet,origin,expected,receipt){
+   entry();const args=captureOwnerAssignmentReply(session,wallet,origin,expected,receipt);await guard();
+   const response=await transport.ownerRunAssignments.reply(...args);entry();return response;
+  },
+ } satisfies AsyncOwnerRunAssignmentsPort);
+ Object.defineProperty(core.adapter,'ownerRunAssignments',{value:assignments,enumerable:false,writable:false,configurable:true});
  const sessionRow=z.object({hash:accountDigestSchema,wallet:z.string().regex(/^0x[a-fA-F0-9]{40}$/),issued_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),expires_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)}).strict().refine(row=>row.expires_at>row.issued_at&&row.expires_at-row.issued_at<=604800000);
  const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
@@ -140,6 +150,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='accountMembership')return accounts;
     if(property==='chatAccountLinks')return chat;
     if(property==='publicProfiles')return publicProfilesActive?publicProfiles:undefined;
+    if(property==='ownerRunAssignments')return assignments;
     if(property==='getWebSession')return async(raw:string)=>{
      entry();const hash=accountDigestSchema.parse(raw);await guard();const value=await transport.applicationRead('get_web_session',{p_hash:hash});entry();if(value===null)return null;
      const row=sessionRow.parse(value);if(row.hash!==hash)refuseStorage('invalid_operation');return {hash:row.hash,wallet:row.wallet,issuedAt:row.issued_at,expiresAt:row.expires_at};
@@ -160,7 +171,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;
     return (...args:unknown[])=>read(()=>Reflect.apply(method,target,args));
    },
-   ownKeys:()=>[...(privacyActive?['publicLedgerRuns']:[]),'accountMembership','chatAccountLinks',...(publicProfilesActive?['publicProfiles']:[])],getOwnPropertyDescriptor(_target,property){entry();if(publicProfilesActive&&property==='publicProfiles')return {value:publicProfiles,enumerable:false,writable:false,configurable:true};if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
+   ownKeys:()=>[...(privacyActive?['publicLedgerRuns']:[]),'accountMembership','chatAccountLinks','ownerRunAssignments',...(publicProfilesActive?['publicProfiles']:[])],getOwnPropertyDescriptor(_target,property){entry();if(property==='ownerRunAssignments')return {value:assignments,enumerable:false,writable:false,configurable:true};if(publicProfilesActive&&property==='publicProfiles')return {value:publicProfiles,enumerable:false,writable:false,configurable:true};if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
    setPrototypeOf:()=>false,set:()=>false,defineProperty:()=>false,deleteProperty:()=>false,preventExtensions:()=>false,
   });
   facades.set(facade,{identity:deployment.identity,guard,close,closed:()=>closed});

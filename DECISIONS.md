@@ -1,5 +1,33 @@
 # Keryx — Decision Log
 
+## Preserve recipient assignment decisions in native PostgreSQL - 2026-11-14
+
+Keep the SQLite synchronous reply seal and add an explicit asynchronous PostgreSQL
+port. After the route's last session await, the native factory checks authority
+before one final stable SQL snapshot; synchronous projection then forms the
+private response. Recheck the exact current session, account birth, member and
+credential generations, login floor, origin and network. Consent and original
+eligibility remain separate from historical receipt access.
+
+Use two fixed recipient RPCs with serialized revisions, immutable operation
+receipts and retained terminal associations. Negative decisions require current
+actor authority but do not require positive consent or original content. Expired
+or suppressed nonterminal assignments retain their joint claim/original/A2A
+reservation. Lost commit acknowledgements remain unresolved; explicit replay of
+the exact operation ID and input, under current authentication, reconciles the
+historical result without an automatic retry.
+
+Preserve the original SQLite completion-date string in the SHA-bound private
+history derivative. A normalized timestamp alone cannot authorize an association.
+Original JSON remains TEXT/JSON, including escaped NUL and surrogate values.
+Only closed ASCII assignment metadata enters JSONB and the domain canonicalizer.
+Association/history labels grant no publication, authorship, spending or custody.
+
+Do not expose owner execution through the application credential or HTTP port.
+Synthetic genesis uses the unchanged CLI as actual POSIX uid/euid 0 in an isolated
+container. This does not close production Original269, qualify a PostgreSQL owner
+CLI, or admit the complete writer, data migration or production cutover.
+
 ## Preserve opt-in public profiles in native PostgreSQL - 2026-11-13
 
 Keep publication separate from run visibility, wallet membership and payments.

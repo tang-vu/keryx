@@ -53,14 +53,14 @@ BEGIN
   IF NOT keryx_storage.owner269_keys(v,ARRAY['version','binding','recipient','basis','scope','admissionExpiresAt','members']) OR v->'version' IS DISTINCT FROM '1'::jsonb
    OR v->>'scope' IS DISTINCT FROM 'association-history-and-confirmation' OR octet_length(keryx_storage.owner269_json(v))>16384
    OR NOT keryx_storage.owner269_keys(v->'binding',ARRAY['network','origin','storageDigest'])
-   OR v->'binding'->>'network' NOT IN('eip155:5042','eip155:5042002') OR NOT coalesce(keryx_storage.claim_origin_valid(v->'binding'->>'origin'),false)
-   OR NOT keryx_storage.owner269_keys(v->'basis',ARRAY['code','reference']) OR v->'basis'->>'code' NOT IN('early-run-recovery','documented-recipient-request')
+   OR jsonb_typeof(v->'binding'->'network') IS DISTINCT FROM 'string' OR v->'binding'->>'network' NOT IN('eip155:5042','eip155:5042002') OR NOT coalesce(keryx_storage.claim_origin_valid(v->'binding'->>'origin'),false)
+   OR NOT keryx_storage.owner269_keys(v->'basis',ARRAY['code','reference']) OR jsonb_typeof(v->'basis'->'code') IS DISTINCT FROM 'string' OR v->'basis'->>'code' NOT IN('early-run-recovery','documented-recipient-request')
    OR jsonb_typeof(v->'basis'->'reference') IS DISTINCT FROM 'string' OR v->'basis'->>'reference' !~ '^[A-Za-z0-9_:/.-]{1,128}$'
    OR jsonb_typeof(v->'members') IS DISTINCT FROM 'array' THEN RAISE EXCEPTION 'assignment_unavailable';END IF;
   IF jsonb_array_length(v->'members') NOT BETWEEN 1 AND 25 THEN RAISE EXCEPTION 'assignment_unavailable';END IF;
   PERFORM keryx_storage.owner269_valid('recipient',v->'recipient');PERFORM keryx_storage.owner269_valid('digest',v->'binding'->'storageDigest');PERFORM keryx_storage.owner269_valid('time',v->'admissionExpiresAt');
   FOR x IN SELECT jsonb_array_elements(v->'members') LOOP PERFORM keryx_storage.owner269_valid('member',x);IF previous COLLATE "C">= (x->>'runId') COLLATE "C" THEN RAISE EXCEPTION 'assignment_unavailable';END IF;previous:=x->>'runId';END LOOP;
-  IF(SELECT count(DISTINCT x->>'assignmentId') FROM jsonb_array_elements(v->'members')x)<>jsonb_array_length(v->'members') THEN RAISE EXCEPTION 'assignment_unavailable';END IF;
+  IF(SELECT count(DISTINCT item->>'assignmentId') FROM jsonb_array_elements(v->'members') AS items(item))<>jsonb_array_length(v->'members') THEN RAISE EXCEPTION 'assignment_unavailable';END IF;
  WHEN 'expected' THEN
   IF NOT keryx_storage.owner269_keys(v,ARRAY['assignmentId','revision']) THEN RAISE EXCEPTION 'assignment_unavailable';END IF;PERFORM keryx_storage.owner269_valid('uuid',v->'assignmentId');PERFORM keryx_storage.owner269_valid('revision',v->'revision');
  WHEN 'input' THEN
@@ -82,7 +82,7 @@ BEGIN
   IF NOT keryx_storage.owner269_keys(v,fields) THEN RAISE EXCEPTION 'assignment_unavailable';END IF;PERFORM keryx_storage.owner269_valid('uuid',v->'requestId');
  WHEN 'receipt' THEN
   IF NOT keryx_storage.owner269_keys(v,ARRAY['version','requestId','inputDigest','action','committedAt','results','meaning']) OR v->'version' IS DISTINCT FROM '1'::jsonb
-   OR v->>'meaning' IS DISTINCT FROM 'historical-committed-result-not-current-authority' OR v->>'action' NOT IN('consent','apply','confirm','reject','withdraw','withdraw-consent','undo','cleanup')
+   OR v->>'meaning' IS DISTINCT FROM 'historical-committed-result-not-current-authority' OR jsonb_typeof(v->'action') IS DISTINCT FROM 'string' OR v->>'action' NOT IN('consent','apply','confirm','reject','withdraw','withdraw-consent','undo','cleanup')
    OR jsonb_typeof(v->'results') IS DISTINCT FROM 'array' THEN RAISE EXCEPTION 'assignment_unavailable';END IF;
   IF jsonb_array_length(v->'results')>25 THEN RAISE EXCEPTION 'assignment_unavailable';END IF;
   PERFORM keryx_storage.owner269_valid('uuid',v->'requestId');PERFORM keryx_storage.owner269_valid('digest',v->'inputDigest');PERFORM keryx_storage.owner269_valid('time',v->'committedAt');
