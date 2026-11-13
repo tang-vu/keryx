@@ -7,6 +7,8 @@ import { assembleNativePostgresBusinessCore } from "./supabase-adapter";
 import { storageDomainClient,callSupabaseDomain,type StorageDomainAuthority } from "./supabase-authority";
 import { assertEnrolledSupabaseAuthority } from "./enrolled-supabase-adapter";
 import { assertEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
+import * as contentCrypto from '../ipfs/content-crypto';
+import { sealEnrolledCacheText } from '../sources/enrolled-content-cache';
 
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',network:'eip155:5042',authorityMode:'mainnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-12T00:00:00.000Z',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,provenanceDigest:'11'.repeat(32)};
 type DomainResult=Awaited<ReturnType<StorageDomainAuthority["rpcResult"]>>;
@@ -18,7 +20,7 @@ function fixture(){
  return {...core,rpc,verify,entry,authority};
 }
 beforeEach(()=>{vi.clearAllMocks();state.sdk.mockImplementation(()=>{throw new Error('SDK construction is forbidden in native assembly');});});
-afterEach(()=>vi.unstubAllEnvs());
+afterEach(()=>{vi.restoreAllMocks();vi.unstubAllEnvs();});
 describe('native PostgreSQL shared business-code assembly',()=>{
  it('initializes through its native guard without constructing a Supabase client or ordinary optional ports',async()=>{
   const f=fixture();await expect(f.adapter.getSource('synthetic')).rejects.toThrow();await f.adapter.init();expect(f.verify).toHaveBeenCalledTimes(1);expect(state.sdk).not.toHaveBeenCalled();
@@ -59,4 +61,17 @@ describe('native PostgreSQL shared business-code assembly',()=>{
   expect(await f.adapter.metrics()).toBe(observation);expect(f.rpc).toHaveBeenCalledExactlyOnceWith('dashboard_metrics',{});expect(state.sdk).not.toHaveBeenCalled();
   f.rpc.mockRejectedValue(new Error('native report unavailable'));await expect(f.adapter.metrics()).rejects.toThrow('native report unavailable');
  });
+it('checks fresh native authority before opening cached ciphertext',async()=>{
+ vi.stubEnv('CONTENT_MASTER_KEY','11'.repeat(32));const ciphertext=sealEnrolledCacheText('Synthetic private cache','synthetic',identity),f=fixture();await f.adapter.init();
+ f.rpc.mockResolvedValue({data:{text:ciphertext},error:null});f.verify.mockRejectedValueOnce(new Error('native authority held'));
+ const decrypt=vi.spyOn(contentCrypto,'decryptContent');await expect(f.adapter.getCached('synthetic')).rejects.toThrow('native authority held');expect(decrypt).not.toHaveBeenCalled();expect(f.rpc).toHaveBeenCalledExactlyOnceWith('get_cached',{p_source_id:'synthetic'});
+});
+it('refuses uninitialized or revoked native authority before sealing or submission',async()=>{
+ vi.stubEnv('CONTENT_MASTER_KEY','11'.repeat(32));const f=fixture(),encrypt=vi.spyOn(contentCrypto,'encryptContent');await expect(f.adapter.setCached('synthetic','private')).rejects.toThrow();expect(encrypt).not.toHaveBeenCalled();await f.adapter.init();
+ f.verify.mockRejectedValueOnce(new Error('native authority held'));await expect(f.adapter.setCached('synthetic','private')).rejects.toThrow('native authority held');expect(encrypt).not.toHaveBeenCalled();expect(f.rpc).not.toHaveBeenCalled();
+});
+it('keeps native disposal terminal during the pre-crypto authority check',async()=>{
+ vi.stubEnv('CONTENT_MASTER_KEY','11'.repeat(32));const f=fixture();await f.adapter.init();let finish!:()=>void;f.verify.mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve;}));
+ const encrypt=vi.spyOn(contentCrypto,'encryptContent'),request=f.adapter.setCached('synthetic','private'),outcome=expect(request).rejects.toThrow();await vi.waitFor(()=>expect(finish).toBeTypeOf('function'));f.hooks.close();finish();await outcome;expect(encrypt).not.toHaveBeenCalled();expect(f.rpc).not.toHaveBeenCalled();
+});
 });

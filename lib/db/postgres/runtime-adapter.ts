@@ -69,7 +69,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  const reviews:DecisionReviewsStore=Object.freeze({ready:()=>read(()=>transport.decisionReviews.ready()),read:(owner,id)=>read(()=>transport.decisionReviews.read(owner,id)),list:(owner,run)=>read(()=>transport.decisionReviews.list(owner,run)),metrics:(network,since,until)=>read(()=>transport.decisionReviews.metrics(network,since,until)),capture:readonly,begin:readonly,verdict:readonly,consume:readonly,cancel:readonly,expire:readonly,observe:readonly} satisfies DecisionReviewsStore);
  const watches:TopicWatchesPort=Object.freeze({bindSession(session){entry();const bound=transport.topicWatches.bindSession(session);return Object.freeze({list:()=>read(()=>bound.list()),read:key=>read(()=>bound.read(key)),compareAndSwap:readonly} satisfies PrivateTopicWatchStore);}} satisfies TopicWatchesPort);
  try{
-  entry();const cache=await transport.readColdCache();entry();
+  entry();const cache=await transport.readColdCache();await guard();entry();
   for(const row of cache.cacheRows){openEnrolledCacheText(row.text,row.sourceId,deployment.identity);entry();}
   await core.adapter.init();await guard();
   const facade=new Proxy(core.adapter,{

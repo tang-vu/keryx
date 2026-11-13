@@ -3,6 +3,9 @@
 import assert from 'node:assert/strict';
 import { chmodSync,linkSync,readFileSync,readSync,rmSync,symlinkSync,writeFileSync } from 'node:fs';
 import { canonicalJson } from '../../lib/canonical-json';
+import { createRequire,syncBuiltinESMExports } from 'node:module';
+import { Client } from 'pg';
+import { startReadonlyCommitBarrier } from './readonly-commit-barrier.mts';
 async function main(){
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
  const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number}};
@@ -26,6 +29,25 @@ async function main(){
  chmodSync(readerPath,0o644);assert.throws(()=>privateFile.readPrivatePostgresCredential(readerPath,'keryx_reader'));chmodSync(readerPath,0o600);checks++;
  const alias=folder+'/alias';linkSync(readerPath,alias);assert.throws(()=>privateFile.readPrivatePostgresCredential(readerPath,'keryx_reader'));rmSync(alias);symlinkSync(readerPath,alias);assert.throws(()=>privateFile.readPrivatePostgresCredential(alias,'keryx_reader'));rmSync(alias);checks++;
  assert.throws(()=>privateFile.readPrivatePostgresCredential(readerPath,'keryx_app'));checks++;
+ if(input.mode==='held-before-cache-crypto'){
+  const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});
+  let connected=false,barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,decipherCalls=0;
+  const builtin=createRequire('/child.cjs')('node:crypto') as typeof import('node:crypto'),original=builtin.createDecipheriv;
+  try{
+   await admin.connect();connected=true;
+   barrier=await startReadonlyCommitBarrier(5432,async()=>{await admin.query("UPDATE keryx_storage.control SET mode='held' WHERE singleton");});
+   manifest.backend.endpoint.port=barrier.port;writeFileSync(manifestPath,canonicalJson(manifest));
+   Object.defineProperty(builtin,'createDecipheriv',{value:new Proxy(original,{apply(target,thisArg,args){decipherCalls++;return Reflect.apply(target,thisArg,args);}})});syncBuiltinESMExports();
+   const control=await application.createReadonlyApplicationStorage();assert(control);await application.closeReadonlyApplicationStorage(control);assert(decipherCalls>0);const positiveControlDecryptionCalls=decipherCalls;decipherCalls=0;checks++;
+   barrier.arm();
+   await assert.rejects(async()=>{const value=await application.createReadonlyApplicationStorage();if(value)await native.closePostgresRuntimeAdapter(value);});
+   assert.deepEqual(barrier.observation(),{intercepted:true,completed:true,failed:false});assert.equal(decipherCalls,0);checks++;
+   console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,committedColdReadBeforeActualAuthorityHold:true,asyncAuthorityBeforeCacheCrypto:true,positiveControlDecryptionCalls,decipherCalls,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{
+   Object.defineProperty(builtin,'createDecipheriv',{value:original});syncBuiltinESMExports();
+   try{if(connected)await admin.query("UPDATE keryx_storage.control SET mode='active' WHERE singleton");}finally{await admin.end();await barrier?.close();}
+  }
+ }
  if(input.mode==='wrong-credential-role')writeFileSync(readerPath,credential('keryx_app'));
  if(input.mode!=='success'){
   if(input.mode==='wrong-source'){

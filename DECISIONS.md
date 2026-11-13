@@ -9241,3 +9241,17 @@ original SHA, and invalidate it when the original changes. TypeScript decodes th
 bounded raw bytes through the unchanged strict schemas. Keep aggregate metrics
 free of private source/reason text and reader mutations closed before parsing.
 This partial protocol does not activate the complete writer or migrate production.
+
+## Recheck native authority before cache cryptography (2026-11-13)
+
+Perform a fresh asynchronous native-authority check immediately before opening
+cold-cache envelopes or decrypting a fetched cache value, and before sealing a
+write. Keep the existing synchronous manifest, credential, key and disposal
+checks on both sides of the await. Primitive cache arguments are captured first.
+Failure grants neither plaintext nor a write submission; there is no fallback,
+key change or cached admission result.
+
+Use an actual committed-read acknowledgement barrier in the compiled Linux
+fixture to revoke authority between read and crypto and require zero decryption
+calls. Preserve private zero-argument factory provenance and keep the complete
+application writer closed pending its remaining gates.
