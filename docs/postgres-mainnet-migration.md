@@ -850,3 +850,35 @@ The complete application writer, materialized import, production capacity and
 cutover remain closed. The retained original's accepted typed inventory contains zero
 rows in all six account tables; that census does not establish future import or
 history authorization.
+
+## Native private chat links
+
+Keep the two existing chat tables and seven operations: issue, preview, complete,
+lookup, unlink, list and unlinkAccount. Fixed native statements select literal
+actions; caller data cannot select SQL or a function. The dedicated profile uses
+the enrolled origin/network. Provider scope/user selects the reservation; the
+stored delivery channel remains unchanged by a lookup from another channel.
+
+Completion checks the exact live account session, current revision, member and
+credential generation inside its native transaction. Lookup requires current
+active membership while retaining a stale reservation for explicit unlink.
+Concurrent completion has one winner. A takeover refusal commits the token's
+consumed marker without moving the link. Capacity or authentication failure rolls
+back; an unknown commit acknowledgement receives no automatic retry and can be
+reviewed by explicit lookup. Keep 32 links per account, unexpired burned hashes,
+replacement/unlink invalidation and recipient-scoped expiry cleanup. Read clocks
+after writer waits; a queued request gains no stale session or token lifetime.
+
+The genuine readonly factory publishes the non-enumerable core/facade capability
+recognized by `chatAccountPort`, with current reads after authority awaits.
+Mutations refuse before inspecting their input. Its compiled fixture commits
+credential revocation after an authority read and requires the final link lookup
+to refuse. Protocol qualification compares actual PostgreSQL with selected SQLite,
+including three platforms, limits, takeover, revocation, expiry and lost commit
+acknowledgement. The retained original has zero rows in both chat tables.
+
+The store supplies no provider-envelope authentication or browser consent proof.
+Existing verified-provider, private-channel and HMAC callers remain authoritative;
+links attribute future history only and grant no payment, funding or custody
+authority. This does not admit the complete application writer, import application
+data, execute jobs or establish production capacity/cutover acceptance.

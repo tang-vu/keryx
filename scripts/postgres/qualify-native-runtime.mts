@@ -30,6 +30,7 @@ import { inspectStorageDeploymentManifest } from '../../lib/db/runtime-storage-c
 import { sqliteAcceptanceProjection,heldAcceptanceProjectionSql } from './acceptance-projection.mts';
 import type { AcceptanceSnapshot,PublicAcceptance,AcceptanceMetrics } from '../../lib/deliverable-acceptance/contracts';
 import { nativeAccountFixture,nativeAccountFixturePaths,nativeAccountFixtureTables } from './native-account-fixture.mts';
+import { nativeChatFixture } from './native-chat-fixture.mts';
 export async function qualifyNativeRuntime(input:{postgresContainer:string;password:string;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  input={...input,identity:validateStorageIdentity(input.identity)};
  assert.match(input.postgresContainer,/^keryx-postgres-consents-[a-f0-9-]{36}$/);
@@ -49,6 +50,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
  const acceptanceFixture=syntheticA2aOriginal(739,ARC_MAINNET_PROFILE),acceptanceFile=join(folder,'acceptance.sqlite'),acceptanceManifestPath=join(folder,'acceptance-storage.json');
  let acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics}|undefined,acceptanceStoreId:string|undefined;
  let account:Awaited<ReturnType<typeof nativeAccountFixture>>['observation']|undefined,accountId:string|undefined;
+ let chat:Awaited<ReturnType<typeof nativeChatFixture>>['observation']|undefined,chatTokenHashes:string[]=[];
  const created=await createTopicWatch({store:{async read(){return null;},async compareAndSwap(_key,_revision,next){watch=next;return true;}},now:()=>now,isOwnerCurrent:wallet=>wallet===owner,metadata:{async read(){throw new Error('Synthetic native factory does not run metadata checks');}}},owner,{watchId:'synthetic-runtime-watch',question:'Synthetic metadata',keywords:['term'],authors:[],venues:[],cadenceMs:60000,periodMs:86400000,maximumChecksPerPeriod:4,maximumRowsPerCheck:32,maximumDigestItems:16,expiresAtMs:now+86400000,requestedCaps:{perCheckMicroUsdc:0,perPeriodMicroUsdc:0},consent:{manualMetadata:true,emptyHeartbeat:false}});
  assert.equal(created.status,'created');assert(watch);const watchWire=canonicalJson(watch);
  const run=(mode:string)=>{
@@ -59,7 +61,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
     '--network','container:'+input.postgresContainer,'--tmpfs','/run/keryx-runtime:rw,nosuid,noexec,mode=0700,size=16m',
     '-e','KERYX_NETWORK=arc','-e','NEXT_PUBLIC_KERYX_NETWORK=arc','-e','KERYX_FORCE_OFFLINE=0','-e','BASE_URL=https://keryx.cc',
     '-e','KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555',
-    candidateImage!,'node','--max-old-space-size=256','/child.cjs'],JSON.stringify({mode,identity:input.identity,digest:input.digest,password:input.password,key,owner,session,acceptance,account})));
+    candidateImage!,'node','--max-old-space-size=256','/child.cjs'],JSON.stringify({mode,identity:input.identity,digest:input.digest,password:input.password,key,owner,session,acceptance,account,chat})));
    assert.equal(result.passed,true);assert.equal(result.outbound,0);assert.equal(result.selectedApplicationWriter,false);vectors+=result.checks;process.stderr.write(JSON.stringify({fixtureMode:mode,event:'passed',checks:result.checks,elapsedMs:Math.round(performance.now()-startedAt)})+'\n');return result;
   }finally{
    const remaining=docker(['ps','-aq','--filter',`name=^/${name}$`]);if(remaining)docker(['rm','-f',name]);assert.equal(docker(['ps','-aq','--filter',`name=^/${name}$`]),'');containers.delete(name);
@@ -90,6 +92,8 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   }finally{selected.close();}
   for(const table of nativeAccountFixtureTables)assert.equal(input.ownerSql(`SELECT count(*) FROM public.${table};`),'0');
   const accountSeed=await nativeAccountFixture(folder,input.identity,session);account=accountSeed.observation;accountId=accountSeed.accountId;pg(accountSeed.sql);
+  for(const table of ['chat263_links','chat263_tokens'])assert.equal(input.ownerSql(`SELECT count(*) FROM public.${table};`),'0');
+  const chatSeed=await nativeChatFixture(folder,input.identity,account.snapshot);chat=chatSeed.observation;chatTokenHashes=chatSeed.tokenHashes;pg(chatSeed.sql);
   // Transfer through the daemon archive API instead of assuming host bind paths
   // share the runner namespace. Bundle JS dependencies; optional native PG is
   // deliberately unavailable (this profile uses the qualified pure JS driver).
@@ -116,6 +120,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   const withdrawnLedger=run('withdrawn-before-ledger-read');assert.equal(withdrawnLedger.finalNativeLedgerReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const withdrawnAcceptance=run('withdrawn-before-acceptance-read');assert.equal(withdrawnAcceptance.finalNativeAcceptanceReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const withdrawnAccount=run('withdrawn-before-account-read');assert.equal(withdrawnAccount.finalNativeAccountReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
+  const withdrawnChat=run('withdrawn-before-chat-read');assert.equal(withdrawnChat.finalNativeChatReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const withdrawnAccountHistory=run('withdrawn-before-account-history');assert.equal(withdrawnAccountHistory.finalNativeHistoryReadAfterAllRequestAwaits,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const beforeCrypto=run('held-before-cache-crypto');assert.equal(beforeCrypto.asyncAuthorityBeforeCacheCrypto,true);assert(beforeCrypto.positiveControlDecryptionCalls>0);assert.equal(beforeCrypto.decipherCalls,0);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   pg(`UPDATE public.cache_items SET text=${q(seal(cacheId,{...input.identity,storageId:randomUUID()}))} WHERE source_id=${q(cacheId)};`);run('foreign-cache-identity');
@@ -126,7 +131,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   // restoration, qualify a fresh cold factory/current reads/drain without
   // replaying every unchanged financial/history/permission assertion again.
   pg(`UPDATE public.cache_items SET text=${q(envelope)} WHERE source_id=${q(cacheId)};`);const restoredColdFactory=run('restored-cold-factory');assert.equal(restoredColdFactory.restoredAuthenticatedColdCache,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
-  return {vectors,image,compiledDependenciesInOwnedImage:true,genuineLinuxCompiledFactory:true,actualPrivateFilePermissions:true,sourceAndIdentityPinned:true,cacheCiphertextAuthenticated:true,cacheSourceAndIdentityBound:true,asyncAuthorityBeforeCacheCrypto:true,actualCommittedColdReadThenAuthorityHold:true,heldBeforeCrypto:beforeCrypto,finalUsageBodyAfterAuthorityAwait:withdrawnUsage,finalLedgerReadAfterAuthorityAwait:withdrawnLedger,finalAcceptanceReadAfterAuthorityAwait:withdrawnAcceptance,finalAccountReadAfterAuthorityAwait:withdrawnAccount,finalAccountHistoryAfterAllRequestAwaits:withdrawnAccountHistory,missingAndWrongKeysRefused:true,plaintextAndOversizedCacheRefused:true,validColdFactoryRestored:true,restoredColdFactory,completeSuccessProtocolRunOnce:true,actualReaderConnectionsDrained:true,noFallback:true,observation:success,selectedApplicationWriter:false,productionData:false,paidOperations:0};
+  return {vectors,image,compiledDependenciesInOwnedImage:true,genuineLinuxCompiledFactory:true,actualPrivateFilePermissions:true,sourceAndIdentityPinned:true,cacheCiphertextAuthenticated:true,cacheSourceAndIdentityBound:true,asyncAuthorityBeforeCacheCrypto:true,actualCommittedColdReadThenAuthorityHold:true,heldBeforeCrypto:beforeCrypto,finalUsageBodyAfterAuthorityAwait:withdrawnUsage,finalLedgerReadAfterAuthorityAwait:withdrawnLedger,finalAcceptanceReadAfterAuthorityAwait:withdrawnAcceptance,finalAccountReadAfterAuthorityAwait:withdrawnAccount,finalChatReadAfterAuthorityAwait:withdrawnChat,finalAccountHistoryAfterAllRequestAwaits:withdrawnAccountHistory,missingAndWrongKeysRefused:true,plaintextAndOversizedCacheRefused:true,validColdFactoryRestored:true,restoredColdFactory,completeSuccessProtocolRunOnce:true,actualReaderConnectionsDrained:true,noFallback:true,observation:success,selectedApplicationWriter:false,productionData:false,paidOperations:0};
  }finally{
   for(const name of containers){try{docker(['rm','-f',name]);}catch{}}
   if(candidateImage){assert.equal(docker(['image','inspect',candidateImage,'--format','{{index .Config.Labels "keryx.native-runtime-fixture"}}']),staging);docker(['image','rm',candidateImage]);assert.equal(docker(['image','ls','-q','--filter','label=keryx.native-runtime-fixture='+staging]),'');}
@@ -135,6 +140,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   assert.equal(realpathSync(folder).toLowerCase(),resolve(folder).toLowerCase());assert.equal(dirname(folder).toLowerCase(),resolve(fixtureRoot).toLowerCase());
   pg(`DELETE FROM public.deliverable_acceptance_entries WHERE original_id=${q(acceptanceFixture.order.id)};DELETE FROM public.payment_events WHERE query_id=${q(acceptanceFixture.order.id)};DELETE FROM public.research_purchase_authorizations WHERE purchase_id=${q(acceptanceFixture.order.id)};DELETE FROM public.a2a_orders WHERE id=${q(acceptanceFixture.order.id)};`+(acceptanceStoreId?`DELETE FROM public.deliverable_acceptance_store WHERE id=${q(acceptanceStoreId)};`:''));
   if(accountId)pg(nativeAccountFixtureTables.map(table=>table==='account267_challenges'?`DELETE FROM public.${table} WHERE session_hash=${q(session.hash)};`:`DELETE FROM public.${table} WHERE account_id=${q(accountId!)};`).join(''));
+  pg(`DELETE FROM public.chat263_links WHERE wallet=${q(owner)};DELETE FROM public.chat263_tokens WHERE token_hash IN(${chatTokenHashes.length?chatTokenHashes.map(q).join(','):"''"});`);
   for(const path of [bundle,acceptanceFile,acceptanceFile+'-wal',acceptanceFile+'-shm',acceptanceFile+'-journal',acceptanceManifestPath,...nativeAccountFixturePaths(folder)])try{unlinkSync(path);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}rmdirSync(folder);
  }
 }

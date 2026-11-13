@@ -1,5 +1,26 @@
 # Keryx — Decision Log
 
+## Preserve private chat reservations in native PostgreSQL - 2026-11-13
+
+Port the existing seven chat-link operations through fixed native calls. A
+recipient's provider scope/user and enrolled origin/network reserve the link;
+changing the delivery channel cannot transfer it. Keep stale reservations until
+explicit unlink, check current membership/credential lineage, and require the
+exact current account session when listing or completing links.
+
+Replacement and unlink burn pending tokens. A completion that encounters an
+existing reservation commits its token burn and refuses takeover; capacity or
+authentication refusal rolls back. Retain unexpired burned hashes and delete only
+expired tokens for that recipient. Preserve the 32-link bound, single completion
+and unknown-acknowledgement behavior without automatic retry.
+
+The readonly factory publishes an own non-enumerable port on its core and facade,
+capturing inputs before authority awaits and reading current state afterwards.
+Provider envelope verification, browser HMAC consent, private-channel checks and
+future-only history attribution remain with their existing callers. A link grants
+no payment or custody authority. Complete writer/data/cutover gates remain separate.
+See [the migration contract](docs/postgres-mainnet-migration.md).
+
 ## Await one final native account-history observation - 2026-11-13
 
 Keep SQLite's synchronous history seal and add an explicit asynchronous final

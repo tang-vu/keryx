@@ -27,6 +27,7 @@ import type { PublicLedgerRunReader } from '../../operator-ledger/native-runs';
 import { capturePublicLedgerLimit } from './ledger-transport';
 import { z } from 'zod';
 import { interactiveSessionSchema,bindingSchema as accountBindingSchema,snapshotSchema as accountSnapshotSchema,digestSchema as accountDigestSchema,type AccountMembershipStore } from '../../accounts/contracts';
+import { recipientSchema as chatRecipientSchema,type ChatAccountLinksStore } from '../../chat-accounts/contracts';
 import { acceptanceWallet,networkSchema,deliverableIdSchema,type DeliverableAcceptanceStore } from '../../deliverable-acceptance/contracts';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
@@ -86,6 +87,13 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   resume:readonly,issue:readonly,take:readonly,complete:readonly,unlink:readonly,revokeSession:readonly,
  } satisfies AccountMembershipStore);
  Object.defineProperty(core.adapter,'accountMembership',{value:accounts,enumerable:false,writable:false,configurable:true});
+ const chat:ChatAccountLinksStore=Object.freeze({
+  async preview(raw,b){entry();const hash=accountDigestSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.chatAccountLinks.preview(hash,binding);entry();return value;},
+  async lookup(raw,b){entry();const recipient=chatRecipientSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.chatAccountLinks.lookup(recipient,binding);entry();return value;},
+  async list(raw){entry();const snapshot=accountSnapshotSchema.parse(raw);await guard();const value=await transport.chatAccountLinks.list(snapshot);entry();return value;},
+  issue:readonly,complete:readonly,unlink:readonly,unlinkAccount:readonly,
+ } satisfies ChatAccountLinksStore);
+ Object.defineProperty(core.adapter,'chatAccountLinks',{value:chat,enumerable:false,writable:false,configurable:true});
  const sessionRow=z.object({hash:accountDigestSchema,wallet:z.string().regex(/^0x[a-fA-F0-9]{40}$/),issued_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),expires_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)}).strict().refine(row=>row.expires_at>row.issued_at&&row.expires_at-row.issued_at<=604800000);
  const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
@@ -122,6 +130,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='publicLedgerRuns')return privacyActive?ledger:undefined;
     if(property==='deliverableAcceptance')return acceptance;
     if(property==='accountMembership')return accounts;
+    if(property==='chatAccountLinks')return chat;
     if(property==='getWebSession')return async(raw:string)=>{
      entry();const hash=accountDigestSchema.parse(raw);await guard();const value=await transport.applicationRead('get_web_session',{p_hash:hash});entry();if(value===null)return null;
      const row=sessionRow.parse(value);if(row.hash!==hash)refuseStorage('invalid_operation');return {hash:row.hash,wallet:row.wallet,issuedAt:row.issued_at,expiresAt:row.expires_at};
@@ -142,7 +151,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;
     return (...args:unknown[])=>read(()=>Reflect.apply(method,target,args));
    },
-   ownKeys:()=>privacyActive?['publicLedgerRuns','accountMembership']:['accountMembership'],getOwnPropertyDescriptor(_target,property){entry();if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
+   ownKeys:()=>privacyActive?['publicLedgerRuns','accountMembership','chatAccountLinks']:['accountMembership','chatAccountLinks'],getOwnPropertyDescriptor(_target,property){entry();if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
    setPrototypeOf:()=>false,set:()=>false,defineProperty:()=>false,deleteProperty:()=>false,preventExtensions:()=>false,
   });
   facades.set(facade,{identity:deployment.identity,guard,close,closed:()=>closed});

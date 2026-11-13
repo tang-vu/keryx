@@ -10,9 +10,11 @@ import { publicLedgerRunReader } from '../../lib/operator-ledger/native-runs';
 import type { AcceptanceSnapshot,PublicAcceptance,AcceptanceMetrics } from '../../lib/deliverable-acceptance/contracts';
 import type { AccountBinding,AccountPrecondition,AccountSnapshot,InteractiveSession } from '../../lib/accounts/contracts';
 import { createOwnedHistoryRoute } from '../../lib/history/owned-history-route';
+import { chatAccountPort } from '../../lib/chat-accounts/service';
+import type { ChatLink,PendingChatLink,ChatRecipient } from '../../lib/chat-accounts/contracts';
 async function main(){
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
- const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition}};
+ const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient}};
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid!(),0);
  const cgroup=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:cgroup('memory.max'),swapMax:cgroup('memory.swap.max'),cpuMax:cgroup('cpu.max'),pidsMax:cgroup('pids.max')};
@@ -87,6 +89,17 @@ async function main(){
    await admin.end();await barrier?.close();
   }
  }
+ if(input.mode==='withdrawn-before-chat-read'){
+  const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000'});let barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,reader:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>;
+  try{
+   await admin.connect();barrier=await startReadonlyCommitBarrier(5432,async()=>{await admin.query('BEGIN');await admin.query("UPDATE keryx_storage.control SET mode='held'");await admin.query('UPDATE public.account267_credentials SET active=0 WHERE wallet=$1',[input.owner]);await admin.query("UPDATE keryx_storage.control SET mode='active'");await admin.query('COMMIT');});
+   writeFileSync(manifestPath,canonicalJson({...manifest,backend:{...manifest.backend,endpoint:{kind:'loopback',port:barrier.port}}}));reader=await application.createReadonlyApplicationStorage();assert(reader);const chat=chatAccountPort(reader);assert(chat);
+   assert.deepEqual(await chat.lookup(input.chat.recipient,input.account.binding),input.chat.link);barrier.arm();await assert.rejects(chat.lookup(input.chat.recipient,input.account.binding),/chat_account_changed/);assert.deepEqual(barrier.observation(),{intercepted:true,completed:true,failed:false});assert.equal(outbound,0);
+   console.log(JSON.stringify({passed:true,mode:input.mode,checks:7,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,actualCommittedAuthorityReadThenCredentialRevocation:true,finalNativeChatReadAfterAuthorityAwait:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{
+   if(reader)await native.closePostgresRuntimeAdapter(reader);await admin.query('ROLLBACK;BEGIN');await admin.query("UPDATE keryx_storage.control SET mode='held'");await admin.query('UPDATE public.account267_credentials SET active=1 WHERE wallet=$1',[input.owner]);await admin.query("UPDATE keryx_storage.control SET mode='active'");await admin.query('COMMIT');await admin.end();await barrier?.close();
+  }
+ }
  if(input.mode==='withdrawn-before-account-read'){
   const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,observer:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>;
   try{
@@ -109,6 +122,7 @@ async function main(){
    assert.deepEqual(await native.assertPostgresRuntimeIdentity(restored),input.identity);checks++;
    assert.equal((await restored.metrics()).totalQueries,1);checks++;
    assert.deepEqual(await restored.accountMembership!.resolve(input.account.session,input.account.binding),input.account.snapshot);checks++;
+   assert.deepEqual(await chatAccountPort(restored)!.lookup(input.chat.recipient,input.account.binding),input.chat.link);checks++;
    await native.closePostgresRuntimeAdapter(restored);await assert.rejects(native.assertPostgresRuntimeIdentity(restored));checks++;
    assert.equal(outbound,0);checks++;progress('restored-cold-complete');
    console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,phaseMs,genuineZeroArgumentReadonlyFactory:true,restoredAuthenticatedColdCache:true,currentIdentityAndAccount:true,actualTerminalDrain:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
@@ -139,6 +153,10 @@ async function main(){
   assert.deepEqual(await accounts.offer(input.account.session,input.account.binding),input.account.offer);assert.deepEqual(await accounts.resolve(input.account.session,input.account.binding),input.account.snapshot);await accounts.assertCurrent(input.account.snapshot);checks++;
   assert.deepEqual(await getWebSession(input.session.hash),input.session);checks++;
   let accountParsed=0;await assert.rejects(accounts.resume({get wallet(){accountParsed++;throw Error();}} as never,{} as never,{} as never,{} as never),/readonly_operation/);assert.equal(accountParsed,0);assert.equal(accounts.prepareHistoryFence,undefined);checks++;
+  const chatDescriptor=Object.getOwnPropertyDescriptor(reader,'chatAccountLinks'),chat=chatAccountPort(reader);assert(chatDescriptor&&!chatDescriptor.enumerable&&chatDescriptor.value===chat&&chat===reader.chatAccountLinks);assert.equal(chatAccountPort(Object.create(reader)),null);checks++;
+  assert.deepEqual(await chat.preview(input.chat.preview.tokenHash,input.account.binding),input.chat.preview);checks++;
+  assert.deepEqual(await chat.lookup(input.chat.recipient,input.account.binding),input.chat.link);assert.deepEqual(await chat.list(input.account.snapshot),[input.chat.link]);checks++;
+  let chatParsed=0;const badChat={get wallet(){chatParsed++;throw Error();}} as never;for(const invoke of [()=>chat.issue(badChat),()=>chat.complete('',badChat),()=>chat.unlink(badChat,badChat),()=>chat.unlinkAccount(badChat,badChat)])await assert.rejects(invoke(),/readonly_operation/);assert.equal(chatParsed,0);checks++;
   const funding=reader.sessionFundingAccounting.bind(reader),financialId='0x'+'cd'.repeat(32),missingEpoch='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
   progress('financial-observations');
   const financialAdmin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let journalActive:boolean|undefined;
@@ -171,7 +189,7 @@ async function main(){
    assert(await health(healthNow,false));checks++;
    await healthAdmin.query("UPDATE keryx_storage.control SET mode='held';");await assert.rejects(health(healthNow,false));await assert.rejects(sync([]));await assert.rejects(funding(input.owner));checks++;
   }finally{try{await healthAdmin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active';");}finally{await healthAdmin.end();}}
-  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
+  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
   progress('owner-reads');const profile=await reader.privateProfiles!.get(input.owner,'eip155:5042');assert.equal(profile.profile,null);assert.equal(profile.activity.questions,1);checks++;
   assert.equal((await reader.profileIdentities!.list(input.owner)).identities.length,0);checks++;
   let parsed=0;await assert.rejects(reader.privateProfiles!.update(input.owner,{get displayName(){parsed++;return 'unused';}} as never));assert.equal(parsed,0);checks++;
@@ -218,6 +236,7 @@ async function main(){
   await assert.rejects(acceptance.read(...acceptanceArgs));await assert.rejects(acceptance.publicState(input.acceptance.network,input.acceptance.id));await assert.rejects(acceptance.metrics(input.acceptance.network));checks++;
   await assert.rejects(accounts.resolve(input.account.session,input.account.binding));await assert.rejects(getWebSession(input.session.hash));checks++;
   await assert.rejects(disposedHistory());checks++;
+  await assert.rejects(chat.lookup(input.chat.recipient,input.account.binding));await assert.rejects(chat.list(input.account.snapshot));checks++;
   progress('complete');assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,phaseMs,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
  }finally{await native.closePostgresRuntimeAdapter(reader);}
 }
