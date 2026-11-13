@@ -11,10 +11,12 @@ import { auditRunDomains } from './audit-run-domains.mts';
 import { auditRunPrivacy } from './audit-run-privacy.mts';
 import { auditWorkspaces } from './audit-workspaces.mts';
 import { auditReviews } from './audit-reviews.mts';
+import { auditA2a } from './audit-a2a.mts';
+import { auditCache } from './audit-cache.mts';
 const diagnostic:InventoryDiagnostic={stage:'containment',table:null,rows:0,wireBytes:0,started:performance.now()};
 async function main(){
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid?.(),0);assert.equal(process.ppid,1);
- const mode=process.argv[2];assert(['pressure','deadline','synthetic','inventory','rehearsal','synthetic-rehearsal','domain-audit','privacy-audit','workspace-audit','review-audit'].includes(mode));
+ const mode=process.argv[2];assert(['pressure','deadline','synthetic','inventory','rehearsal','synthetic-rehearsal','domain-audit','privacy-audit','workspace-audit','review-audit','a2a-audit','cache-audit'].includes(mode));
  const rehearsal=mode.endsWith('rehearsal'),synthetic=mode==='synthetic'||mode==='synthetic-rehearsal';assert.equal(process.argv.length,mode==='inventory'||mode==='rehearsal'||mode.endsWith('-audit')?4:3);
  const kernel=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:kernel('memory.max'),swapMax:kernel('memory.swap.max'),cpuMax:kernel('cpu.max'),pidsMax:kernel('pids.max')};
@@ -47,7 +49,12 @@ async function main(){
   diagnostic.stage='file-hash';const hash=createHash('sha256');for await(const chunk of createReadStream(target))hash.update(chunk);assert.equal(hash.digest('hex'),expectedHash);
   db=new DatabaseSync(target,{readOnly:true,allowExtension:false,timeout:1000});configureSnapshotConnection(db,OFFLINE_SNAPSHOT_LIMITS);db.exec('BEGIN');
   if(mode.endsWith('-audit')){
-   diagnostic.stage=mode;const audit=(mode==='domain-audit'?auditRunDomains:mode==='privacy-audit'?auditRunPrivacy:mode==='review-audit'?auditReviews:auditWorkspaces)(db,diagnostic.started+250000);db.exec('ROLLBACK');db.close();db=undefined;checkSnapshotUnchanged(target,fd,before.size,before.mtimeNs);
+   if(mode==='cache-audit'){
+    const buffer=Buffer.alloc(2049);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=2048);
+    const packet=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {key:string};assert.deepEqual(Object.keys(packet),['key']);assert(typeof packet.key==='string'&&/^[a-fA-F0-9]{64}$/.test(packet.key));process.env.CONTENT_MASTER_KEY=packet.key;buffer.fill(0);delete (packet as Partial<typeof packet>).key;
+   }
+   diagnostic.stage=mode;let audit:Record<string,unknown>;try{audit=(mode==='domain-audit'?auditRunDomains:mode==='privacy-audit'?auditRunPrivacy:mode==='review-audit'?auditReviews:mode==='a2a-audit'?auditA2a:mode==='cache-audit'?auditCache:auditWorkspaces)(db,diagnostic.started+250000);}finally{delete process.env.CONTENT_MASTER_KEY;}
+   db.exec('ROLLBACK');db.close();db=undefined;checkSnapshotUnchanged(target,fd,before.size,before.mtimeNs);
    console.log(JSON.stringify({snapshotSha256:expectedHash,...audit,limits,hardDeadlineSeconds:300,elapsedMs:Math.round(performance.now()-diagnostic.started),enrollmentAuthorized:false,modeIdentityAccepted:false,applicationBackendSwitched:false,paymentActions:0,jobActions:0}));return;
   }
   if(rehearsal){

@@ -660,3 +660,18 @@ after a fresh authority check succeeds. Revoked authority and disposal still rej
 Synthetic PostgreSQL/SQLite parity and the genuine compiled Linux factory qualify
 this observation path. They do not prove production load capacity or identify the
 cause of historical timeout incidents. Complete writer and cutover remain closed.
+
+## Retained financial and cache compatibility audits
+
+`qualify-offline-intake.mts <private-snapshot> <sha256> --audit-a2a` checks exact
+micro-USDC amounts, fee splits, recorded network/order identity and retained
+purchase/inbound tuples. Keep unknown or conflicting lineage explicit. Matching
+database rows do not authenticate a settlement or authorize another execution.
+
+`--audit-cache` authenticates every bounded retained envelope against the identity
+inside that same hash-verified snapshot. Supply the existing `CONTENT_MASTER_KEY`
+through the operator environment; only the actual contained audit child receives
+it over stdin. Keep the original read-only mount, verified native-memory pressure
+and hard deadline. Counts, source/key fingerprints and digests leave the child;
+plaintext and key bytes do not. These audits do not import application tables,
+rebind cache ciphertext to a target identity, enroll a store or start jobs.
