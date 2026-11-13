@@ -36,6 +36,20 @@ export async function qualifyRunClaims(input:{transport:PostgresUserDomainTransp
   const offset=save('offset-original',{},date.replace('Z','+00:00')),normalized={...offset.request,completedAt:date};
   now=Date.now();await assert.rejects(sqlite.issue(normalized),code('claim_unavailable'));
   await assert.rejects(native.issue(normalized),code('claim_unavailable'));vectors++;
+  // Held corrupt/legacy ticket fixture, never a valid issuance. Consumption
+  // independently checks the exact retained completion string as SQLite does.
+  const retainedAt=Date.now(),originalHash=hash(offset.wire);
+  db.prepare('INSERT INTO anonymous_run_claims(run_id,network,origin,token_hash,original_sha256,completed_at,issued_at,expires_at) VALUES(?,?,?,?,?,?,?,?)')
+   .run(offset.id,binding.network,binding.origin,hash(offset.id),originalHash,date,retainedAt,retainedAt+86400000);
+  pg(`INSERT INTO public.anonymous_run_claims(run_id,network,origin,token_hash,original_sha256,completed_at,issued_at,expires_at) VALUES(${q(offset.id)},${q(binding.network)},${q(binding.origin)},${q(hash(offset.id))},${q(originalHash)},${q(date)},${retainedAt},${retainedAt+86400000});`);
+  now=Date.now();await assert.rejects(sqlite.claim(attempt(offset.id)),code('claim_unavailable'));await assert.rejects(native.claim(attempt(offset.id)),code('claim_unavailable'));vectors++;
+  // Retained tickets are checked against their own exact date, without adding
+  // the canonical-UTC issuance restriction to the existing consume protocol.
+  const retained=save('retained-offset',{},date.replace('Z','+00:00')),retainedHash=hash(retained.wire);
+  db.prepare('INSERT INTO anonymous_run_claims(run_id,network,origin,token_hash,original_sha256,completed_at,issued_at,expires_at) VALUES(?,?,?,?,?,?,?,?)')
+   .run(retained.id,binding.network,binding.origin,hash(retained.id),retainedHash,retained.request.completedAt,retainedAt,retainedAt+86400000);
+  pg(`INSERT INTO public.anonymous_run_claims(run_id,network,origin,token_hash,original_sha256,completed_at,issued_at,expires_at) VALUES(${q(retained.id)},${q(binding.network)},${q(binding.origin)},${q(hash(retained.id))},${q(retainedHash)},${q(retained.request.completedAt)},${retainedAt},${retainedAt+86400000});`);
+  const retainedReceipt=await native.claim(attempt(retained.id));now=Date.parse(retainedReceipt.claimedAt);assert.deepEqual(retainedReceipt,await sqlite.claim(attempt(retained.id)));vectors++;
   const first=save('first');await issue(first);const receipt=await native.claim(attempt(first.id));now=Date.parse(receipt.claimedAt);assert.deepEqual(receipt,await sqlite.claim(attempt(first.id)));vectors++;
   assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(first.id)};`),first.wire);assert.equal(input.ownerSql(`SELECT asker IS NULL FROM public.query_runs WHERE id=${q(first.id)};`),'t');vectors++;
   await assert.rejects(native.claim(attempt(first.id)),code('claim_unavailable'));await assert.rejects(sqlite.claim(attempt(first.id)),code('claim_unavailable'));vectors++;
@@ -61,7 +75,7 @@ export async function qualifyRunClaims(input:{transport:PostgresUserDomainTransp
   assert.throws(()=>input.ownerSql(`UPDATE public.anonymous_run_claims SET original_sha256='${'00'.repeat(32)}' WHERE run_id=${q(first.id)};`),/claim_unavailable|native storage writer required/);vectors++;
   const revoked=save('revoked');await issue(revoked);db.prepare('DELETE FROM web_sessions WHERE hash=?').run(session);pg(`DELETE FROM public.web_sessions WHERE hash=${q(session)};`);await assert.rejects(native.claim(attempt(revoked.id)),code('claim_unauthenticated'));await assert.rejects(sqlite.claim(attempt(revoked.id)),code('claim_unauthenticated'));vectors++;
   const reader=createPostgresUserDomainTransport({...input.options,role:'keryx_reader'},input.identity,input.digest);transports.push(reader);await reader.runClaims.assertAvailable();await assert.rejects(reader.runClaims.issue(first.request),code('claims_unavailable'));await reader.close();await assert.rejects(reader.runClaims.assertAvailable(),code('claims_unavailable'));vectors++;
-  return {vectors,currentSqliteOracle:true,exactRawOriginalDigest:true,immutableOwnershipOnly:true,singleConsumeAcrossConnections:true,actualLostCommitAck:true,noAutomaticRetry:true,durableSessionRevocation:true,expiredTicketAndSessionRefused:true,replacedSessionOwnerRefused:true,a2aOriginalRefused:true,escapedNulAndSurrogateOriginal:true,changedOriginalAndMetadataRefused:true,ineligibleAndFutureOriginalsRefused:true,readonlyRoleAndTerminalClose:true,productionData:false,paidOperations:0};
+  return {vectors,currentSqliteOracle:true,exactRawOriginalDigest:true,exactCompletionDateBytes:true,retainedExactOffsetTicketPreserved:true,immutableOwnershipOnly:true,singleConsumeAcrossConnections:true,actualLostCommitAck:true,noAutomaticRetry:true,durableSessionRevocation:true,expiredTicketAndSessionRefused:true,replacedSessionOwnerRefused:true,a2aOriginalRefused:true,escapedNulAndSurrogateOriginal:true,changedOriginalAndMetadataRefused:true,ineligibleAndFutureOriginalsRefused:true,readonlyRoleAndTerminalClose:true,productionData:false,paidOperations:0};
  }finally{
   await Promise.allSettled(transports.map(t=>t.close()));await proxy?.close();db.close();pg(`DELETE FROM public.a2a_orders WHERE id='synthetic-native-claim-order';DELETE FROM public.anonymous_run_claims WHERE run_id LIKE 'synthetic-native-claim-%';DELETE FROM public.query_runs WHERE id LIKE 'synthetic-native-claim-%';DELETE FROM public.web_sessions WHERE hash IN(${q(session)},${q(expiredSession)});`);
  }

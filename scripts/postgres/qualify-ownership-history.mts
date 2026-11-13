@@ -35,6 +35,13 @@ export async function qualifyOwnershipHistory(input:{options:PostgresConnectionO
   const read=async(id:string,wallet=owner,targetBinding=binding)=>{assert.deepEqual(await native.read(wallet,targetBinding,id),await sqlite.read(wallet,targetBinding,id));vectors++;};
   const recorded=save('recorded',{asker:owner,askerFunded:true,provenance:{version:1,surface:'web',ownershipMethod:'session'}}),claimed=save('claimed');await claim(claimed.id);save('other',{asker:other});save('unclaimed');const foreign=save('foreign');await claim(foreign.id,otherBinding);
   await list();await list({},other);await list({binding:otherBinding});for(const id of [recorded.id,claimed.id,foreign.id,'missing'])await read(id);await read(claimed.id,other);await read(claimed.id,owner,otherBinding);
+  // Source-owner corruption fixture: retain an equal instant with different
+  // completion bytes, then restore the exact immutable SOURCE trigger before
+  // either real reader executes. No application can perform this mutation.
+  const retainedTrigger=String(db.prepare("SELECT sql FROM sqlite_schema WHERE name='anonymous_run_claims_single_use'").get()!.sql);
+  const completion=(value:string)=>{db.exec('DROP TRIGGER anonymous_run_claims_single_use');try{db.prepare('UPDATE anonymous_run_claims SET completed_at=? WHERE run_id=?').run(value,claimed.id);}finally{db.exec(retainedTrigger);}pg(`UPDATE public.anonymous_run_claims SET completed_at=${q(value)} WHERE run_id=${q(claimed.id)};`);};
+  completion(date.replace('Z','+00:00'));await read(claimed.id);await list();
+  completion(date);await read(claimed.id);
   assert(!JSON.stringify(await native.list(owner,{binding,filters:{},take:51})).includes('Private answer'));vectors++;
   for(const filters of [{search:'%_'},{search:'absent'},{surface:'web' as const},{surface:'unknown' as const},{funding:'browser-recorded' as const},{funding:'other-or-unknown' as const},{from:date,to:date}])await list({filters});
   for(const id of ['A','a','b','c']){const run=save('page-'+id,id==='b'?{asker:owner}:{});if(id!=='b')await claim(run.id);}

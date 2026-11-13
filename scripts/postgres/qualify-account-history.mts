@@ -17,6 +17,7 @@ import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection
 import type { StorageIdentity } from '../../lib/db/storage-identity';
 import type { AccountHistoryObservation } from '../../lib/accounts/contracts';
 import type { QueryRun } from '../../lib/types';
+import { heldHistoryProjectionSql,sqliteOriginalHistoryProjection } from './run-history-projection.mts';
 export async function qualifyAccountHistory(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  const folder=mkdtempSync(join(tmpdir(),'keryx-account-history-')),paths=nativeAccountFixturePaths(folder),q=(s:string)=>"'"+s.replaceAll("'","''")+"'";
  const now=Date.now(),session={hash:'f8'.repeat(32),wallet:'0x'+'f7'.repeat(20),issuedAt:now-1000,expiresAt:now+600000},date=new Date(now-10000).toISOString();
@@ -28,16 +29,16 @@ export async function qualifyAccountHistory(input:{options:PostgresConnectionOpt
  try{
   const fixture=await nativeAccountFixture(folder,input.identity,session);accountId=fixture.accountId;const {snapshot,binding}=fixture.observation;
   pg(fixture.sql+`INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES(${q(session.hash)},${q(session.wallet)},${session.issuedAt},${session.expiresAt});`);
-  const originals=new Map<string,string>(),observed:AccountHistoryObservation[]=[];
+  const originals=new Map<string,string>(),historyMetadata=new Map<string,string>(),observed:AccountHistoryObservation[]=[];
   owner(db=>{for(const [index,id] of ids.entries()){
    const run={id,createdAt:date,question:'Synthetic private history',answer:'Retained whole answer',budget:0,engine:'heuristic',totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[],paymentMode:'offline',...(index===0?{asker:session.wallet}:{}),extra:{escaped:'\0\ud800',unrelated:'Preserve all original fields'}} as QueryRun;
    writeSqliteQueryRun(db,run,false);assert.equal(db.prepare("UPDATE run_privacy SET visibility='private',updated_at=? WHERE run_id=?").run(date,id).changes,1);
-   const wire=String(db.prepare('SELECT data FROM query_runs WHERE id=?').get(id)!.data);originals.set(id,wire);
+   const wire=String(db.prepare('SELECT data FROM query_runs WHERE id=?').get(id)!.data);originals.set(id,wire);historyMetadata.set(id,heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id)));
    if(index===1){db.prepare('INSERT INTO anonymous_run_claims(run_id,network,origin,token_hash,original_sha256,completed_at,issued_at,expires_at) VALUES(?,?,?,?,?,?,?,?)').run(id,binding.network,binding.origin,'f6'.repeat(32),createHash('sha256').update(wire).digest('hex'),date,now-5000,now-5000+86400000);db.prepare('UPDATE anonymous_run_claims SET claimed_wallet=?,claimed_at=? WHERE run_id=?').run(session.wallet,now-1000,id);}
    observed.push({id,ownerWallet:session.wallet,run:JSON.parse(wire) as QueryRun,state:{visibility:'private',revision:0,erased:false},ownership:index===0?{method:'recorded',claimedAt:null}:{method:'claimed',claimedAt:new Date(now-1000).toISOString()}});
   }});
   for(const [index,id] of ids.entries()){
-   const wire=originals.get(id)!;pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker,engine,total_spent,total_to_creators,answer) VALUES(${q(id)},${q(date)},'Synthetic private history',0,${q(wire)}::json,${index===0?q(session.wallet):'NULL'},'heuristic',0,0,'Retained whole answer');INSERT INTO public.run_privacy(run_id,visibility,updated_at) VALUES(${q(id)},'private',${q(date)});`+(index===1?`INSERT INTO public.anonymous_run_claims(run_id,network,origin,token_hash,original_sha256,completed_at,issued_at,expires_at,claimed_wallet,claimed_at) VALUES(${q(id)},${q(binding.network)},${q(binding.origin)},${q('f6'.repeat(32))},${q(createHash('sha256').update(wire).digest('hex'))},${q(date)},${now-5000},${now-5000+86400000},${q(session.wallet)},${now-1000});`:''));
+   const wire=originals.get(id)!;pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker,engine,total_spent,total_to_creators,answer) VALUES(${q(id)},${q(date)},'Synthetic private history',0,${q(wire)}::json,${index===0?q(session.wallet):'NULL'},'heuristic',0,0,'Retained whole answer');INSERT INTO public.run_privacy(run_id,visibility,updated_at) VALUES(${q(id)},'private',${q(date)});`+(index===1?`INSERT INTO public.anonymous_run_claims(run_id,network,origin,token_hash,original_sha256,completed_at,issued_at,expires_at,claimed_wallet,claimed_at) VALUES(${q(id)},${q(binding.network)},${q(binding.origin)},${q('f6'.repeat(32))},${q(createHash('sha256').update(wire).digest('hex'))},${q(date)},${now-5000},${now-5000+86400000},${q(session.wallet)},${now-1000});`:'')+historyMetadata.get(id)!);
   }
   const manifest=readFileSync(paths[4],'utf8');selected=openVerifiedSqliteStorage(paths[0],input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(readFileSync(paths[4],'utf8'),manifest)});
   const oracle=createEnrolledSqliteAccountMembership(selected.db);assert(oracle?.prepareHistoryFence);
@@ -56,6 +57,9 @@ export async function qualifyAccountHistory(input:{options:PostgresConnectionOpt
 
    else{owner(db=>{db.prepare("DELETE FROM a2a_orders WHERE id='synthetic-account-history-a2a'").run();});pg("DELETE FROM public.a2a_orders WHERE id='synthetic-account-history-a2a';");}
   }
+  const completion=(value:string)=>{owner(db=>{const sql=String(db.prepare("SELECT sql FROM sqlite_schema WHERE name='anonymous_run_claims_single_use'").get()!.sql);db.exec('DROP TRIGGER anonymous_run_claims_single_use');try{db.prepare('UPDATE anonymous_run_claims SET completed_at=? WHERE run_id=?').run(value,ids[1]);}finally{db.exec(sql);}});pg(`UPDATE public.anonymous_run_claims SET completed_at=${q(value)} WHERE run_id=${q(ids[1])};`);};
+  const completionProof=await prepare([observed[1]]);completion(date.replace('Z','+00:00'));await assert.rejects(completionProof.n());assert.throws(completionProof.o);vectors++;
+  completion(date);const restoredCompletion=await prepare([observed[1]]);await restoredCompletion.n();restoredCompletion.o();vectors++;
   const claimProof=await prepare([observed[1]]);
   owner(db=>{assert.throws(()=>db.prepare('UPDATE anonymous_run_claims SET claimed_wallet=? WHERE run_id=?').run('0x'+'f5'.repeat(20),ids[1]),/claim_unavailable/);});
   pg(`UPDATE public.anonymous_run_claims SET claimed_wallet=${q('0x'+'f5'.repeat(20))} WHERE run_id=${q(ids[1])};`);

@@ -16,13 +16,14 @@ BEGIN
  SELECT coalesce(sum(octet_length(q.data::text)),0),coalesce(bool_and(q.id IS NOT NULL AND octet_length(q.data::text)<=4000000),true)
  INTO total,bounded FROM jsonb_array_elements_text(ids) wanted LEFT JOIN public.query_runs q ON q.id=wanted;
  IF NOT bounded OR total>16000000 THEN RAISE EXCEPTION 'account_unavailable';END IF;
- FOR r IN SELECT q.id,q.asker,to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
-  keryx_storage.run_original_sha256(q.data) AS original_hash,
+ FOR r IN SELECT q.id,q.asker,q.created_at AS created_instant,to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+  keryx_storage.run_original_sha256(q.data) AS original_hash,h.original_created_at,h.original_sha256 AS history_original_sha256,
   p.run_id AS p_id,p.visibility,p.revision,p.erased,p.retained_owner,p.retained_digest,p.retained_binding,p.updated_at,
   c.run_id AS c_id,c.network AS c_network,c.origin AS c_origin,c.claimed_wallet,c.claimed_at,c.completed_at,c.original_sha256,
   CASE WHEN EXISTS(SELECT 1 FROM public.a2a_orders o WHERE o.query_id=q.id) THEN 1 ELSE 0 END AS a2a
   FROM jsonb_array_elements_text(ids) WITH ORDINALITY wanted(id,position) LEFT JOIN public.query_runs q ON q.id=wanted.id
   LEFT JOIN public.run_privacy p ON p.run_id=q.id
+  LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
   LEFT JOIN public.anonymous_run_claims c ON c.run_id=q.id AND c.network=snapshot->'binding'->>'network' AND c.origin=snapshot->'binding'->>'origin'
   ORDER BY wanted.position LOOP
   IF r.id IS DISTINCT FROM ids->>seen OR r.original_hash IS NULL
@@ -34,7 +35,8 @@ BEGIN
   IF r.erased=1 THEN RAISE EXCEPTION 'account_unavailable';END IF;
   IF r.asker IS NOT NULL THEN
    IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(account->'membership'->'members') m WHERE m->>'wallet'=r.asker) THEN RAISE EXCEPTION 'account_unavailable';END IF;
-  ELSIF r.claimed_at IS NULL OR r.completed_at IS DISTINCT FROM r.created_at OR r.original_sha256 IS DISTINCT FROM r.original_hash OR r.a2a<>0
+  ELSIF r.claimed_at IS NULL OR r.completed_at IS DISTINCT FROM r.original_created_at OR r.created_instant IS DISTINCT FROM r.completed_at::timestamptz
+   OR r.original_sha256 IS DISTINCT FROM r.history_original_sha256 OR r.original_sha256 IS DISTINCT FROM r.original_hash OR r.a2a<>0
    OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(account->'membership'->'members') m WHERE m->>'wallet'=r.claimed_wallet)
   THEN RAISE EXCEPTION 'account_unavailable';END IF;
   metadata:=metadata||jsonb_build_array(jsonb_build_array(r.id,r.asker,r.created_at,r.original_hash,

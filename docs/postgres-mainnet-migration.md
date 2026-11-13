@@ -963,3 +963,21 @@ for source genesis. Source-owner revocation fault injection, writer-wait expiry,
 commit-ack loss, current reader permissions and unchanged financial digests are
 separate checks. The actual PostgreSQL owner CLI, production Original269, complete
 writer, full materialization, compiled load and authorized cutover remain open.
+
+### Exact anonymous-claim completion dates
+
+Claim issuance and consumption compare the SHA-bound `original_created_at`
+metadata with the retained claim's exact completion string, in addition to the
+physical timestamp, original SHA and existing eligibility checks. An offset date
+and normalized UTC date can represent the same instant without authorizing the
+same claim. Private history, privacy ownership, public-profile selection and the
+account-history final reply seal use this same exact-date condition for claimed
+ownership. Missing metadata cannot grant an association.
+
+New issuance still requires canonical UTC. Retained ticket consumption preserves
+SQLite's exact-string behavior, including matching offset representations;
+no stored original or claim is normalized. Regression fixtures compare actual
+SQLite behavior with PostgreSQL for issuance, consumption, private reads, public
+selection and prepared account replies. Source-owner corruption fixtures restore
+the exact immutable SQLite trigger before invoking either reader. These tests
+are isolated and create no production data, payments or jobs.
