@@ -62,6 +62,24 @@ async function main(){
   await assert.rejects(native.assertPostgresRuntimeIdentity(reader,'write'));await assert.rejects(native.assertPostgresRuntimeIdentity(new Proxy(reader,{})));checks++;
   await assert.rejects(application.createApplicationStorage());checks++;
   const metrics=await reader.metrics();assert.equal(metrics.totalQueries,1);checks++;
+  const funding=reader.sessionFundingAccounting.bind(reader),financialId='0x'+'cd'.repeat(32),missingEpoch='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+  const financialAdmin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let journalActive:boolean|undefined;
+  try{
+  await financialAdmin.connect();journalActive=(await financialAdmin.query<{active:boolean}>('SELECT active FROM public.browser_journal_control WHERE id=1')).rows[0]?.active;assert.equal(typeof journalActive,'boolean');
+  if(!journalActive){await assert.rejects(reader.browserSignerRetainedSpendMicro(input.owner));checks++;}
+  await financialAdmin.query("BEGIN;UPDATE keryx_storage.control SET mode='held';UPDATE public.browser_journal_control SET active=true WHERE id=1;UPDATE keryx_storage.control SET mode='active';COMMIT;");
+  assert.equal(await reader.getSessionGrantConsent(input.owner,missingEpoch),null);checks++;
+  assert.equal(await reader.browserSignerRetainedSpendMicro(input.owner),0);assert.equal(await reader.browserSignerRetainedSpendMicro('0x'+'22'.repeat(20)),7);checks++;
+  assert.deepEqual(await funding(input.owner),{hasAuthorityHistory:false,confirmedSpentMicroUsdc:'0',retainedSpentMicroUsdc:'0',postBaselineConfirmedDebitMicroUsdc:'0'});checks++;
+  assert.deepEqual(await reader.sessionWithdrawalAccounting(input.owner),{heldPaymentMicroUsdc:'0',heldWithdrawalMicroUsdc:'0',confirmedSpentMicroUsdc:'0'});checks++;
+  assert.equal(await reader.getSessionWithdrawal(financialId,input.owner),null);assert.equal(await reader.pendingSessionWithdrawal(input.owner,input.owner),null);checks++;
+  assert.equal(await reader.getSessionWithdrawalCompletion(financialId,input.owner),null);assert.equal(await reader.getSessionWithdrawalSigningPhase(financialId,input.owner),null);assert.equal(await reader.getSessionWithdrawalAbort(financialId,input.owner),null);checks++;
+  assert.deepEqual(await reader.listCreatorWithdrawalHistory(input.owner),{requests:[],nextCursor:null});assert.equal(await reader.getCreatorWithdrawal(financialId,input.owner),null);checks++;
+  assert.equal(await reader.getCreatorWithdrawalTransferClaim(financialId,input.owner),null);assert.equal(await reader.getCreatorWithdrawalAttestation(financialId,input.owner),null);checks++;
+  assert.deepEqual(await reader.creatorOwnerWithdrawalAccounting(input.owner),{heldPaymentMicroUsdc:'0',heldWithdrawalMicroUsdc:'0',confirmedPaymentMicroUsdc:'0',confirmedWithdrawalMicroUsdc:'0'});assert.equal(await reader.getCreatorOwnerWithdrawalCompletion(financialId,input.owner),null);checks++;
+  for(const role of [undefined,'public','private'] as const)assert.deepEqual(await reader.hostedTreasuryAccounting(input.owner,role),{retainedMicroUsdc:'0',confirmedMicroUsdc:'0'});checks++;
+  for(const name of ['issueSessionGrantConsent','consumeSessionGrantConsent','reserveSessionWithdrawal','admitHostedTreasuryPolicy','admitHostedAuthorization','submitHostedAuthorization','reserveCreatorWithdrawal','admitCreatorOwnerWithdrawal'])assert.throws(()=>Reflect.get(reader,name));checks++;
+  }finally{try{if(journalActive!==undefined)await financialAdmin.query("ROLLBACK;BEGIN;UPDATE keryx_storage.control SET mode='held';UPDATE public.browser_journal_control SET active="+String(journalActive)+" WHERE id=1;UPDATE keryx_storage.control SET mode='active';COMMIT;");}finally{await financialAdmin.end();}}
   const health=reader.readPublicHealthSnapshot!,sync=reader.getSyncStates!,jobs=reader.a2aOperationsSnapshot.bind(reader),healthNow=Date.parse('2026-10-09T12:00:00.000Z');
   assert.deepEqual([...(await sync(['dispatchHealth','dispatchHealth','missing']))],[['dispatchHealth',null],['missing',null]]);checks++;
   const snapshot=await health(healthNow,true);assert(snapshot);assert.deepEqual(snapshot.metrics,metrics);assert.equal(snapshot.syncState.size,6);assert.deepEqual(snapshot.jobs,await jobs(healthNow));assert.notEqual(snapshot.jobs.completionLatencyCohorts,null);checks++;
@@ -73,7 +91,7 @@ async function main(){
    assert.equal(await health(healthNow,false),undefined);checks++;
    await healthAdmin.query("BEGIN;UPDATE keryx_storage.control SET mode='held';DELETE FROM public.sync_state WHERE key='dispatchHealth';UPDATE keryx_storage.control SET mode='active';COMMIT;");
    assert(await health(healthNow,false));checks++;
-   await healthAdmin.query("UPDATE keryx_storage.control SET mode='held';");await assert.rejects(health(healthNow,false));await assert.rejects(sync([]));checks++;
+   await healthAdmin.query("UPDATE keryx_storage.control SET mode='held';");await assert.rejects(health(healthNow,false));await assert.rejects(sync([]));await assert.rejects(funding(input.owner));checks++;
   }finally{try{await healthAdmin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active';");}finally{await healthAdmin.end();}}
   assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),[]);assert.equal(Object.getPrototypeOf(reader),null);checks++;
   const profile=await reader.privateProfiles!.get(input.owner,'eip155:5042');assert.equal(profile.profile,null);assert.equal(profile.activity.questions,1);checks++;
@@ -110,6 +128,7 @@ async function main(){
   await assert.rejects(bibliographies.list(input.owner));await assert.rejects(bound.list());checks++;
   await assert.rejects(reviews.list(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'));checks++;
   await assert.rejects(sync([]));await assert.rejects(jobs(healthNow));assert.throws(()=>health(healthNow,false));checks++;
+  await assert.rejects(funding(input.owner));checks++;
   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
  }finally{await native.closePostgresRuntimeAdapter(reader);}
 }

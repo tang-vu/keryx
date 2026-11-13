@@ -21,6 +21,7 @@ import { createPostgresApplicationDomainAuthority } from './application-domain-a
 import { readPrivatePostgresCredential } from './private-credential';
 import { createPostgresRuntimeTransport } from './runtime-transport';
 import { NATIVE_READONLY_RUNTIME_PROFILE } from './runtime-profile';
+import { composeNativeFinancialObservation } from './financial-observation';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
 /** Deliberately closed until all writer/current-domain/data gates are qualified. */
@@ -52,6 +53,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  // Invoke it before awaiting so its typed port captures the caller's arguments.
  // A separate fresh guard still checks authority before publishing the result.
  const read=async<T>(work:()=>Promise<T>)=>{entry();const value=await work();await guard();return value;};
+ const financial=composeNativeFinancialObservation(transport);
  const readonly=async():Promise<never>=>refuseStorage('readonly_operation');
  const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
@@ -84,6 +86,10 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='privateBibliographies')return bibliographies;
     if(property==='decisionReviews')return reviews;
     if(property==='topicWatches')return watches;
+    if(typeof property==='string'&&Object.hasOwn(financial,property)){
+     const method=Reflect.get(financial,property) as (...args:unknown[])=>Promise<unknown>;
+     return(...args:unknown[])=>read(()=>method(...args));
+    }
     if(property==='getSyncStates')return(keys:readonly string[])=>read(()=>transport.getSyncStates(keys));
     if(property==='a2aOperationsSnapshot')return(nowMs:number)=>read(()=>transport.currentA2aOperationsSnapshot(nowMs));
     if(property==='readPublicHealthSnapshot')return(...args:unknown[])=>{

@@ -9270,3 +9270,14 @@ cohorts. Refuse complete-read bounds instead of returning partial health. A vali
 read facade may report an unavailable snapshot on a data failure only after fresh
 authority verification; authority changes and disposal remain errors. This read
 protocol does not admit the complete application writer or production cutover.
+
+## Bind qualified financial reads in the native factory (2026-11-13)
+
+Expose only the already qualified consent, retained funding, withdrawal and
+hosted-ledger observations through fixed current `KeryxDB` names in the genuine
+read factory. Reuse one transport/channel, original validators and accounting
+rules. Capture arguments through the typed port before awaiting, then perform the
+same fresh authority/configuration check before returning a result. Keep factory
+provenance private and disposal terminal; primitive composition confers no
+installed capability. Financial mutations and complete-writer admission remain
+closed. No policy, funding, custody or payment authority changes.
