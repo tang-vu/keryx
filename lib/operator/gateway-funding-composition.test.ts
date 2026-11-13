@@ -130,6 +130,8 @@ describe("dormant Operator funding release", () => {
           || importer === "scripts/postgres/qualify-workspaces.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-usage.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-ledger.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "scripts/postgres/qualify-acceptance.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "scripts/postgres/qualify-native-runtime.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/storage-identity-connection.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts";
         expect(permitted, `Unreviewed storage selector: ${importer} -> ${target}`).toBe(true);
       }
@@ -137,6 +139,8 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("scripts/owner-run-assignment.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-usage.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-ledger.mts")).toBe(false);
+    expect(visited.has("scripts/postgres/qualify-acceptance.mts")).toBe(false);
+    expect(visited.has("scripts/postgres/qualify-native-runtime.mts")).toBe(false);
     // These shared bridges carry immutable identity/AAD data, not factory or enrollment selection.
     expect(visited.has("lib/db/sqlite-adapter.ts")).toBe(true);
     expect(visited.has("lib/a2a/pending-owner-session.ts")).toBe(true);
