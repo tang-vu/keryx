@@ -25,6 +25,8 @@ import { composeNativeFinancialObservation } from './financial-observation';
 import type { PublicUsageStore } from '../../usage/contracts';
 import type { PublicLedgerRunReader } from '../../operator-ledger/native-runs';
 import { capturePublicLedgerLimit } from './ledger-transport';
+import { z } from 'zod';
+import { interactiveSessionSchema,bindingSchema as accountBindingSchema,snapshotSchema as accountSnapshotSchema,digestSchema as accountDigestSchema,type AccountMembershipStore } from '../../accounts/contracts';
 import { acceptanceWallet,networkSchema,deliverableIdSchema,type DeliverableAcceptanceStore } from '../../deliverable-acceptance/contracts';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
@@ -73,6 +75,14 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   async metrics(network){entry();const selected=networkSchema.parse(network);await guard();const result=await transport.deliverableAcceptance.metrics(selected);entry();return result;},
   submit:readonly,
  } satisfies DeliverableAcceptanceStore);
+ const accounts:AccountMembershipStore=Object.freeze({
+  async offer(raw,b){entry();const session=interactiveSessionSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.accountMembership.offer(session,binding);entry();return value;},
+  async resolve(raw,b){entry();const session=interactiveSessionSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.accountMembership.resolve(session,binding);entry();return value;},
+  async assertCurrent(raw){entry();const snapshot=accountSnapshotSchema.parse(raw);await guard();await transport.accountMembership.assertCurrent(snapshot);entry();},
+  resume:readonly,issue:readonly,take:readonly,complete:readonly,unlink:readonly,revokeSession:readonly,
+ } satisfies AccountMembershipStore);
+ Object.defineProperty(core.adapter,'accountMembership',{value:accounts,enumerable:false,writable:false,configurable:true});
+ const sessionRow=z.object({hash:accountDigestSchema,wallet:z.string().regex(/^0x[a-fA-F0-9]{40}$/),issued_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),expires_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)}).strict().refine(row=>row.expires_at>row.issued_at&&row.expires_at-row.issued_at<=604800000);
  const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
  const history:PersonalHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.personalHistory.list(owner,query)),receipts:(id,take)=>read(()=>transport.personalHistory.receipts!(id,take))} satisfies PersonalHistoryStore);
@@ -107,6 +117,11 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='publicUsage')return usage;
     if(property==='publicLedgerRuns')return privacyActive?ledger:undefined;
     if(property==='deliverableAcceptance')return acceptance;
+    if(property==='accountMembership')return accounts;
+    if(property==='getWebSession')return async(raw:string)=>{
+     entry();const hash=accountDigestSchema.parse(raw);await guard();const value=await transport.applicationRead('get_web_session',{p_hash:hash});entry();if(value===null)return null;
+     const row=sessionRow.parse(value);if(row.hash!==hash)refuseStorage('invalid_operation');return {hash:row.hash,wallet:row.wallet,issuedAt:row.issued_at,expiresAt:row.expires_at};
+    };
     if(typeof property==='string'&&Object.hasOwn(financial,property)){
      const method=Reflect.get(financial,property) as (...args:unknown[])=>Promise<unknown>;
      return(...args:unknown[])=>read(()=>method(...args));
@@ -123,7 +138,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;
     return (...args:unknown[])=>read(()=>Reflect.apply(method,target,args));
    },
-   ownKeys:()=>privacyActive?['publicLedgerRuns']:[],getOwnPropertyDescriptor(_target,property){entry();return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
+   ownKeys:()=>privacyActive?['publicLedgerRuns','accountMembership']:['accountMembership'],getOwnPropertyDescriptor(_target,property){entry();if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
    setPrototypeOf:()=>false,set:()=>false,defineProperty:()=>false,deleteProperty:()=>false,preventExtensions:()=>false,
   });
   facades.set(facade,{identity:deployment.identity,guard,close,closed:()=>closed});

@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+## Keep account membership separate from native history and payment authority - 2026-11-13
+
+Port the existing six-table account journal through fixed native operations. Keep
+the exact durable web session, consent, membership and credential generations,
+revision CAS and single-use challenge lease. Invalid challenge attempts retain
+their consumed marker; uncertain write acknowledgements receive no automatic
+retry. Preserve retained challenges/events and the existing wallet/session bounds.
+
+The dedicated mainnet profile accepts only its enrolled origin and network. Its
+readonly factory exposes current membership observations and durable web-session
+reads after the authority await. Install the membership capability on the core
+for internal consumers as well as the facade, while refusing mutations there.
+Do not provide a fake synchronous account-history seal: its final original,
+privacy and membership check requires a separately qualified asynchronous path.
+This journal neither delegates wallet spending nor admits the complete writer.
+See [the migration contract](docs/postgres-mainnet-migration.md).
+
 ## Group fixed PostgreSQL reads within the existing catalog bounds - 2026-11-13
 
 The native SOURCE reached its 512-function metadata limit before all application

@@ -9,9 +9,11 @@ import { composePostgresUsage,type PostgresUsageTransport } from './usage-transp
 import { composePostgresPublicLedger,type PostgresPublicLedgerTransport } from './ledger-transport';
 import { composePostgresAcceptance } from './acceptance-transport';
 import type { DeliverableAcceptanceStore } from '../../deliverable-acceptance/contracts';
+import type { AccountMembershipStore } from '../../accounts/contracts';
+import { composePostgresAccounts } from './accounts-transport';
 const cacheRow=z.object({sourceId:z.string().min(1).max(256),text:z.string().max(2097152)}).strict();
 export interface NativeColdCacheSnapshot {readonly cacheRows:readonly Readonly<{sourceId:string;text:string}>[];readonly cacheRowCount:number;readonly cacheWireBytes:number;}
-export interface PostgresRuntimeTransport extends PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport {readonly deliverableAcceptance:DeliverableAcceptanceStore;verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
+export interface PostgresRuntimeTransport extends PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport {readonly deliverableAcceptance:DeliverableAcceptanceStore;readonly accountMembership:AccountMembershipStore;verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
 /** Actual fixed reads on one native pool. This transport cannot enroll a facade. */
 export function createPostgresRuntimeTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,claimsEnabled=false,privacyActive=false):PostgresRuntimeTransport {
  const expected=validateStorageIdentity(identity);return composePostgresRuntimeTransport(createPostgresDomainChannel(options,expected,digest),expected,digest,options.role!=='keryx_app',claimsEnabled,privacyActive);
@@ -27,6 +29,7 @@ export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,id
   ...composePostgresUsage(channel,privacyActive),
   ...composePostgresPublicLedger(channel,privacyActive),
   deliverableAcceptance:composePostgresAcceptance(channel,readOnly),
+  accountMembership:composePostgresAccounts(channel,readOnly),
   async verifyRuntimeAuthority(){
    live();try{const value=authority.parse(await channel.call('nativeRuntimeAuthority',[]));live();if(canonicalJson(validateStorageIdentity(value.identity))!==wire)throw unavailable();}
    catch{throw unavailable();}
