@@ -60,6 +60,8 @@ export interface AccountHistoryObservation {
 }
 /** One-use native synchronous check. No IO may be awaited after invoking it. */
 export type AccountHistorySeal = () => void;
+/** Final native read, after all other awaited request work. Never a sync seal. */
+export type AccountHistoryFinalRead = () => Promise<void>;
 export const preconditionSchema = z.object({ accountId: accountIdSchema, revision: revisionSchema }).strict();
 export type AccountPrecondition = z.infer<typeof preconditionSchema>;
 
@@ -90,4 +92,6 @@ export interface AccountMembershipStore {
   assertCurrent(snapshot: AccountSnapshot): Promise<void>;
   /** Optional native capability only; absence cannot authorize account history. */
   prepareHistoryFence?(snapshot: AccountSnapshot, observed: readonly AccountHistoryObservation[], deadline: number): Promise<AccountHistorySeal>;
+  /** Separately qualified asynchronous alternative; consumers must await it last. */
+  prepareAsyncHistoryFence?(snapshot: AccountSnapshot, observed: readonly AccountHistoryObservation[], deadline: number): Promise<AccountHistoryFinalRead>;
 }

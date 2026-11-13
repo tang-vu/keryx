@@ -53,13 +53,14 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
  assert.equal(created.status,'created');assert(watch);const watchWire=canonicalJson(watch);
  const run=(mode:string)=>{
   const name='keryx-postgres-runtime-'+randomUUID();containers.add(name);
+  const startedAt=performance.now();process.stderr.write(JSON.stringify({fixtureMode:mode,event:'started'})+'\n');
   try{
    const result=JSON.parse(docker(['run','-i','--rm','--name',name,'--user','0:0','--read-only','--memory','512m','--memory-swap','512m','--cpus','1','--pids-limit','64','--cap-drop','ALL','--security-opt','no-new-privileges',
     '--network','container:'+input.postgresContainer,'--tmpfs','/run/keryx-runtime:rw,nosuid,noexec,mode=0700,size=16m',
     '-e','KERYX_NETWORK=arc','-e','NEXT_PUBLIC_KERYX_NETWORK=arc','-e','KERYX_FORCE_OFFLINE=0','-e','BASE_URL=https://keryx.cc',
     '-e','KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555',
     candidateImage!,'node','--max-old-space-size=256','/child.cjs'],JSON.stringify({mode,identity:input.identity,digest:input.digest,password:input.password,key,owner,session,acceptance,account})));
-   assert.equal(result.passed,true);assert.equal(result.outbound,0);assert.equal(result.selectedApplicationWriter,false);vectors+=result.checks;return result;
+   assert.equal(result.passed,true);assert.equal(result.outbound,0);assert.equal(result.selectedApplicationWriter,false);vectors+=result.checks;process.stderr.write(JSON.stringify({fixtureMode:mode,event:'passed',checks:result.checks,elapsedMs:Math.round(performance.now()-startedAt)})+'\n');return result;
   }finally{
    const remaining=docker(['ps','-aq','--filter',`name=^/${name}$`]);if(remaining)docker(['rm','-f',name]);assert.equal(docker(['ps','-aq','--filter',`name=^/${name}$`]),'');containers.delete(name);
   }
@@ -115,13 +116,17 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   const withdrawnLedger=run('withdrawn-before-ledger-read');assert.equal(withdrawnLedger.finalNativeLedgerReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const withdrawnAcceptance=run('withdrawn-before-acceptance-read');assert.equal(withdrawnAcceptance.finalNativeAcceptanceReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const withdrawnAccount=run('withdrawn-before-account-read');assert.equal(withdrawnAccount.finalNativeAccountReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
+  const withdrawnAccountHistory=run('withdrawn-before-account-history');assert.equal(withdrawnAccountHistory.finalNativeHistoryReadAfterAllRequestAwaits,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const beforeCrypto=run('held-before-cache-crypto');assert.equal(beforeCrypto.asyncAuthorityBeforeCacheCrypto,true);assert(beforeCrypto.positiveControlDecryptionCalls>0);assert.equal(beforeCrypto.decipherCalls,0);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   pg(`UPDATE public.cache_items SET text=${q(seal(cacheId,{...input.identity,storageId:randomUUID()}))} WHERE source_id=${q(cacheId)};`);run('foreign-cache-identity');
   pg(`UPDATE public.cache_items SET text=${q(seal(cacheId+'-foreign',input.identity))} WHERE source_id=${q(cacheId)};`);run('foreign-cache-source');
   pg(`UPDATE public.cache_items SET text='unbound legacy plaintext' WHERE source_id=${q(cacheId)};`);run('plaintext-cache');
   pg(`UPDATE public.cache_items SET text=repeat('x',2097153) WHERE source_id=${q(cacheId)};`);run('oversized-cache');
-  pg(`UPDATE public.cache_items SET text=${q(envelope)} WHERE source_id=${q(cacheId)};`);run('success');assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
-  return {vectors,image,compiledDependenciesInOwnedImage:true,genuineLinuxCompiledFactory:true,actualPrivateFilePermissions:true,sourceAndIdentityPinned:true,cacheCiphertextAuthenticated:true,cacheSourceAndIdentityBound:true,asyncAuthorityBeforeCacheCrypto:true,actualCommittedColdReadThenAuthorityHold:true,heldBeforeCrypto:beforeCrypto,finalUsageBodyAfterAuthorityAwait:withdrawnUsage,finalLedgerReadAfterAuthorityAwait:withdrawnLedger,finalAcceptanceReadAfterAuthorityAwait:withdrawnAcceptance,finalAccountReadAfterAuthorityAwait:withdrawnAccount,missingAndWrongKeysRefused:true,plaintextAndOversizedCacheRefused:true,validColdFactoryRestored:true,actualReaderConnectionsDrained:true,noFallback:true,observation:success,selectedApplicationWriter:false,productionData:false,paidOperations:0};
+  // The complete successful facade/protocol checks ran once above. After cache
+  // restoration, qualify a fresh cold factory/current reads/drain without
+  // replaying every unchanged financial/history/permission assertion again.
+  pg(`UPDATE public.cache_items SET text=${q(envelope)} WHERE source_id=${q(cacheId)};`);const restoredColdFactory=run('restored-cold-factory');assert.equal(restoredColdFactory.restoredAuthenticatedColdCache,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
+  return {vectors,image,compiledDependenciesInOwnedImage:true,genuineLinuxCompiledFactory:true,actualPrivateFilePermissions:true,sourceAndIdentityPinned:true,cacheCiphertextAuthenticated:true,cacheSourceAndIdentityBound:true,asyncAuthorityBeforeCacheCrypto:true,actualCommittedColdReadThenAuthorityHold:true,heldBeforeCrypto:beforeCrypto,finalUsageBodyAfterAuthorityAwait:withdrawnUsage,finalLedgerReadAfterAuthorityAwait:withdrawnLedger,finalAcceptanceReadAfterAuthorityAwait:withdrawnAcceptance,finalAccountReadAfterAuthorityAwait:withdrawnAccount,finalAccountHistoryAfterAllRequestAwaits:withdrawnAccountHistory,missingAndWrongKeysRefused:true,plaintextAndOversizedCacheRefused:true,validColdFactoryRestored:true,restoredColdFactory,completeSuccessProtocolRunOnce:true,actualReaderConnectionsDrained:true,noFallback:true,observation:success,selectedApplicationWriter:false,productionData:false,paidOperations:0};
  }finally{
   for(const name of containers){try{docker(['rm','-f',name]);}catch{}}
   if(candidateImage){assert.equal(docker(['image','inspect',candidateImage,'--format','{{index .Config.Labels "keryx.native-runtime-fixture"}}']),staging);docker(['image','rm',candidateImage]);assert.equal(docker(['image','ls','-q','--filter','label=keryx.native-runtime-fixture='+staging]),'');}

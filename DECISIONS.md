@@ -1,5 +1,25 @@
 # Keryx — Decision Log
 
+## Await one final native account-history observation - 2026-11-13
+
+Keep SQLite's synchronous history seal and add an explicit asynchronous final
+read for PostgreSQL. The route fully serializes its response, finishes privacy
+and exact-credential awaits, then awaits this native read last. Never pass a
+Promise-returning function as a synchronous seal or perform further IO afterwards.
+
+Preparation compares the complete semantic original, including unknown fields,
+against bounded request-local observations and requires positive recorded/claimed
+ownership even for detail responses without list attribution. Its private plan
+keeps raw-original hashes and every privacy/claim input, with row absence distinct
+from null. A one-use final native transaction checks current membership/session
+and the same original/privacy/claim fingerprint in one fresh post-authority
+snapshot. Changed data refuses; preparation cannot cache permission.
+
+Preserve the existing 1000-item, 4 MB per-original, 16 MB aggregate and 25-second
+bounds, real readonly transactions and terminal disposal. This adds no wallet,
+claim, payment or complete application-writer authority. See
+[the migration contract](docs/postgres-mainnet-migration.md).
+
 ## Keep account membership separate from native history and payment authority - 2026-11-13
 
 Port the existing six-table account journal through fixed native operations. Keep

@@ -79,6 +79,10 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   async offer(raw,b){entry();const session=interactiveSessionSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.accountMembership.offer(session,binding);entry();return value;},
   async resolve(raw,b){entry();const session=interactiveSessionSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.accountMembership.resolve(session,binding);entry();return value;},
   async assertCurrent(raw){entry();const snapshot=accountSnapshotSchema.parse(raw);await guard();await transport.accountMembership.assertCurrent(snapshot);entry();},
+  ...(privacyActive&&transport.accountMembership.prepareAsyncHistoryFence?{async prepareAsyncHistoryFence(raw,observed,deadline){
+   entry();const final=await read(()=>transport.accountMembership.prepareAsyncHistoryFence!(raw,observed,deadline));let unused=true;
+   return async()=>{if(!unused)refuseStorage('invalid_operation');unused=false;entry();await guard();await final();entry();};
+  }}:{}),
   resume:readonly,issue:readonly,take:readonly,complete:readonly,unlink:readonly,revokeSession:readonly,
  } satisfies AccountMembershipStore);
  Object.defineProperty(core.adapter,'accountMembership',{value:accounts,enumerable:false,writable:false,configurable:true});
