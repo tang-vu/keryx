@@ -135,6 +135,7 @@ describe("dormant Operator funding release", () => {
           || importer === "scripts/postgres/qualify-accounts.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-account-history.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-chat-links.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "scripts/postgres/qualify-public-profiles.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-chat-links.mts" && target === "lib/db/chat-accounts-sqlite.ts"
           || importer === "scripts/postgres/native-account-fixture.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/native-chat-fixture.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
@@ -150,6 +151,8 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("scripts/postgres/qualify-accounts.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-account-history.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-chat-links.mts")).toBe(false);
+    expect(visited.has("scripts/postgres/qualify-public-profiles.mts")).toBe(false);
+    expect(visited.has("scripts/postgres/native-public-profile-fixture.mts")).toBe(false);
     expect(visited.has("scripts/postgres/native-account-fixture.mts")).toBe(false);
     expect(visited.has("scripts/postgres/native-chat-fixture.mts")).toBe(false);
     // These shared bridges carry immutable identity/AAD data, not factory or enrollment selection.

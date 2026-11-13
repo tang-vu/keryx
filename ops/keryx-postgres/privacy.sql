@@ -8,6 +8,8 @@ CREATE TABLE keryx_storage.run_privacy_projection(
  history_fields text CHECK(octet_length(history_fields)<=8000000),
  history_references jsonb NOT NULL CHECK(jsonb_typeof(history_references)='array' AND jsonb_array_length(history_references)<=10000 AND octet_length(history_references::text)<=4194304),
  learning_fields text CHECK(octet_length(learning_fields)<=8000000),
+ profile_fields text CHECK(octet_length(profile_fields)<=262144),
+ payment_offline boolean,funding_offline boolean,funding_treasury boolean,
  archive_wire text CHECK(octet_length(archive_wire)<=2097152),
  erase_projection jsonb CHECK(erase_projection IS NULL OR octet_length(erase_projection::text)<=16777216)
 );
@@ -172,8 +174,8 @@ BEGIN
   VALUES(selected_id,h->>'sha256',h->>'recordedOwner',(h->>'ownerInvalid')::boolean,(h->>'funded')::boolean,nullif(h->'provenance','null'::jsonb),(h->>'anonymousClaimEligible')::boolean);
  INSERT INTO keryx_storage.run_ownership_projection(run_id,original_sha256,question_search,history_eligible,recorded_valid,claimed_valid,summary)
   VALUES(selected_id,o->>'sha256',decode(o->>'questionHex','hex'),(o->>'historyEligible')::boolean,(o->>'recordedValid')::boolean,(o->>'claimedValid')::boolean,nullif(o->'summary','null'::jsonb));
- INSERT INTO keryx_storage.run_privacy_projection(run_id,original_sha256,data_bytes,original_valid,erase_wire,original_fulfillment,question_fields,history_fields,history_references,learning_fields,archive_wire,erase_projection)
-  VALUES(selected_id,p->>'sha256',(p->>'dataBytes')::integer,(p->>'valid')::boolean,CASE WHEN include_erasure THEN p->>'eraseWire' END,(p->>'originalFulfillment')::boolean,p->>'questionFields',p->>'historyFields',p->'historyReferences',p->>'learningFields',p->>'archiveWire',CASE WHEN include_erasure THEN nullif(p->'eraseProjection','null'::jsonb) END);
+ INSERT INTO keryx_storage.run_privacy_projection(run_id,original_sha256,data_bytes,original_valid,erase_wire,original_fulfillment,question_fields,history_fields,history_references,learning_fields,archive_wire,erase_projection,profile_fields,payment_offline,funding_offline,funding_treasury)
+  VALUES(selected_id,p->>'sha256',(p->>'dataBytes')::integer,(p->>'valid')::boolean,CASE WHEN include_erasure THEN p->>'eraseWire' END,(p->>'originalFulfillment')::boolean,p->>'questionFields',p->>'historyFields',p->'historyReferences',p->>'learningFields',p->>'archiveWire',CASE WHEN include_erasure THEN nullif(p->'eraseProjection','null'::jsonb) END,p->'publicProfile'->>'profileFields',(p->'publicProfile'->>'paymentOffline')::boolean,(p->'publicProfile'->>'fundingOffline')::boolean,(p->'publicProfile'->>'fundingTreasury')::boolean);
 END;$$;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
  ('privacy_default',ARRAY['run_privacy_defaults','run_privacy_audit']::text[],true,false),

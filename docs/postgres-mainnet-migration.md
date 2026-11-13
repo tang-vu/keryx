@@ -882,3 +882,47 @@ Existing verified-provider, private-channel and HMAC callers remain authoritativ
 links attribute future history only and grant no payment, funding or custody
 authority. This does not admit the complete application writer, import application
 data, execute jobs or establish production capacity/cutover acceptance.
+
+
+## Native opt-in public profiles
+
+Keep five operations: public read, owner settings, revision-bound update,
+unpublish and sitemap. They alter publication metadata only. Published run
+selection retains existing recorded/claimed ownership proof and public privacy;
+missing sharing, a changed whole original, A2A membership or mismatched claim
+binding cannot become a public association. Current private handles and verified
+identities are read in the same final stable snapshot. Consumed claim associations
+survive disabling new-claim issuance, as in SQLite. Update/unpublish check the
+current durable session after writer waits and again before mutation; conflict
+and authentication refusals roll back. Unknown commit acknowledgements require
+explicit settings reconciliation, without automatic retry.
+
+Add minimal public-run fields and exact original-mode booleans to the existing
+private privacy derivative. Keep the fields as JSON TEXT, transported as hex, to
+preserve escaped NUL/surrogates without casting an original to JSONB. Existing
+whole-original SHA/byte bindings and invalidation cover the new fields, including
+normal publication and prospective erasure. These derivatives grant no visibility.
+A missing or unsupported derivative refuses the public read; no target repair or
+fallback is permitted. Older synthetic rows may omit the nullable fields, which
+cannot qualify a public-profile read.
+
+For explicitly opted-in wallet-wide ledgers, retain settled fetch/citation,
+nonempty receipt hash, network and offline exclusions. SQL groups original
+numeric amounts by network and reader/creator/sponsor masks. Node applies the
+existing exact JS Number/recordedMicros admission and multiplies by integer
+counts; an invalid amount makes only its affected aggregate null. Claimed runs
+grant no contribution inference. No payer, payee, transaction hash or original
+body is returned in the intermediate ledger packet.
+
+Bounds: 50 runs, 262144 UTF-8 bytes per public-run input and 8388608 aggregate
+input bytes; at most 65536 ledger groups within 4194304 serialized bytes; a
+22020096-byte complete RPC cap. Exceeding a bound fails closed. This is bounded
+protocol coverage, not a production capacity or latency claim. Sitemap remains
+at most 1000 handles. The retained SOURCE inventory has zero publication rows.
+
+The genuine Linux readonly factory installs an own non-enumerable port on both
+core and facade only when both existing privacy/public-profile flags are true.
+Capture selectors before the authority await, then read current native state
+last. Disabled/changed flags and readonly mutations refuse without fallback.
+The full application writer, actual data materialization, startup authority,
+compiled load and production cutover remain unqualified by this domain alone.
