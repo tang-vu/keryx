@@ -27,6 +27,23 @@ function unicode(value:unknown):boolean{
  if(typeof value==='number')return Number.isFinite(value);
  return Array.isArray(value)?value.every(unicode):value!==null&&typeof value==='object'?Object.entries(value).every(([k,v])=>unicode(k)&&unicode(v)):true;
 }
+/** SQLite json_extract selects the first duplicate key; JS/JSONB keep the last.
+ * Such input requires a domain-specific producer, never silent canonicalizing. */
+function uniqueJsonKeys(wire:string):boolean{
+ let i=0;const space=()=>{while(i<wire.length&&/\s/.test(wire[i]))i++;};
+ const string=()=>{const start=i++;while(i<wire.length){const c=wire[i++];if(c==='\\')i++;else if(c==='"')return JSON.parse(wire.slice(start,i)) as string;}return refuse();};
+ const value=(depth:number):boolean=>{
+  if(depth>128)return false;space();const c=wire[i];
+  if(c==='"'){string();return true;}
+  if(c==='{'){
+   i++;space();if(wire[i]==='}'){i++;return true;}const keys=new Set<string>();
+   for(;;){space();const key=string();if(keys.has(key))return false;keys.add(key);space();if(wire[i++]!==':'||!value(depth+1))return false;space();const end=wire[i++];if(end==='}')return true;if(end!==',')return false;}
+  }
+  if(c==='['){i++;space();if(wire[i]===']'){i++;return true;}for(;;){if(!value(depth+1))return false;space();const end=wire[i++];if(end===']')return true;if(end!==',')return false;}}
+  while(i<wire.length&&!/[\s,\]}]/.test(wire[i]))i++;return true;
+ };
+ const valid=value(0);space();return valid&&i===wire.length;
+}
 /** Decimal value equality, without passing int64 or PostgreSQL numeric through
  * a JS Number. This does not replace the retained SQLite storage class/bits. */
 function decimal(value:string):string{
@@ -53,7 +70,7 @@ export function nativeMaterializationCell(cell:SnapshotValue,type:NativeMaterial
  }else if(type==='keryx_storage.native_uuid_text'){
   if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value))return refuse();
  }else if(type==='json'||type==='jsonb'){
-  let parsed:unknown;try{parsed=JSON.parse(value);}catch{return refuse();}if(type==='jsonb'&&!unicode(parsed))return refuse();
+  let parsed:unknown;try{parsed=JSON.parse(value);}catch{return refuse();}if(type==='jsonb'&&(!unicode(parsed)||!uniqueJsonKeys(value)))return refuse();
  }return value;
 }
 /** Compare the actual native text rendering with the independently decoded

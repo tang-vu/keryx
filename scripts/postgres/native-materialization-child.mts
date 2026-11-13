@@ -23,6 +23,7 @@ function synthetic(){
   const id='synthetic-native-materialized-run',wire=' '+JSON.stringify({id,createdAt:date,question:'Synthetic native materialization',answer:'Original\0answer\ud800',budget:0,engine:'heuristic',totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[],paymentMode:'offline',uninterpreted:{keep:'exact original'}})+'\n';
   db.prepare('INSERT INTO query_runs(id,created_at,question,budget,total_spent,total_to_creators,data) VALUES(?,?,?,0,0,0,?)').run(id,date,'Synthetic native materialization',wire);
   db.prepare('INSERT INTO query_memories(id,source_scores,sources_read,topics,created_at) VALUES(?,?,?,?,?)').run(id,' {"z":{"weight":0.30000000000000004},"a":{"weight":0.1}} ','["synthetic"]','["café","metadata"]',date);
+  db.prepare('INSERT INTO source_items(id,source_id,title,content) VALUES(?,?,?,?)').run('synthetic-materialized-orphan','synthetic-missing-source','Historical item','Retained original metadata');
   insertStorageIdentity(db,identity);installStorageFences(db,identity);db.exec('COMMIT');
  }finally{db.close();}return target;
 }
@@ -45,8 +46,10 @@ async function main(){
   db=new DatabaseSync(target,{readOnly:true,allowExtension:false,timeout:1000});configureSnapshotConnection(db,OFFLINE_SNAPSHOT_LIMITS);db.exec('BEGIN');
   const options={endpoint:{kind:'loopback' as const,port:5432},database:'native_materialized',role:'postgres',password:packet.password};
   stage='typed-staging';const staging=await rehearseSqliteSnapshot(db,{...options,database:'native_staging'});assert(staging.verified);stagingSummary={tables:staging.tables.length,rows:staging.totalRows};
-  stage='native-public-materialization';const materialization=await materializeNativeSnapshot(db,options,packet.referenceWire);db.exec('ROLLBACK');db.close();db=undefined;checkSnapshotUnchanged(target,descriptor,before.size,before.mtimeNs);
-  console.log(JSON.stringify({format:'keryx-native-materialization-development-rehearsal-v1',passed:true,mode:packet.mode,snapshotSha256,sourceBytes:Number(before.size),staging,materialization,limits,sourceUnchanged:true,hardDeadlineSeconds:1800,retainedProductionSnapshotRead:packet.mode==='retained',liveProductionRead:false,productionChanged:false,applicationBackendSwitched:false,paymentActions:0,jobActions:0}));
+  stage='native-public-materialization';const materialization=await materializeNativeSnapshot(db,options,packet.referenceWire);
+  stage='existing-target-refusal';await assert.rejects(materializeNativeSnapshot(db,options,packet.referenceWire),error=>error instanceof NativeMaterializationUnavailable&&error.diagnostic.stage==='pristine-catalog'&&error.diagnostic.commitOutcome==='not_attempted');
+  db.exec('ROLLBACK');db.close();db=undefined;checkSnapshotUnchanged(target,descriptor,before.size,before.mtimeNs);
+  console.log(JSON.stringify({format:'keryx-native-materialization-development-rehearsal-v1',passed:true,mode:packet.mode,snapshotSha256,sourceBytes:Number(before.size),staging,materialization,existingTargetReadoptionRefused:true,limits,sourceUnchanged:true,hardDeadlineSeconds:1800,retainedProductionSnapshotRead:packet.mode==='retained',liveProductionRead:false,productionChanged:false,applicationBackendSwitched:false,paymentActions:0,jobActions:0}));
  }finally{try{db?.close();}finally{closeSync(descriptor);}}
 }
 void main().catch((error:unknown)=>{

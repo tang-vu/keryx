@@ -49,7 +49,7 @@ jobs:
       - name: Typed operational and application contracts
         run: npm run typecheck
       - name: Bounded transport, terminal disposal and lossless row regressions
-        run: npx vitest run lib/db/postgres lib/db/postgres-business-core.test.ts scripts/postgres/typed-snapshot.test.mts scripts/postgres/ownership-history-projection.test.mts scripts/postgres/privacy-projection.test.mts scripts/postgres/publication-packet.test.mts scripts/postgres/usage-projection.test.mts scripts/postgres/ledger-projection.test.mts scripts/postgres/acceptance-projection.test.mts --maxWorkers=1
+        run: npx vitest run lib/db/postgres lib/db/postgres-business-core.test.ts scripts/postgres/typed-snapshot.test.mts scripts/postgres/native-materialization-codec.test.mts scripts/postgres/ownership-history-projection.test.mts scripts/postgres/privacy-projection.test.mts scripts/postgres/publication-packet.test.mts scripts/postgres/usage-projection.test.mts scripts/postgres/ledger-projection.test.mts scripts/postgres/acceptance-projection.test.mts --maxWorkers=1
       - name: Actual synthetic PostgreSQL transport, role isolation and snapshot copy
         run: |
           docker pull postgres:17-alpine
@@ -61,3 +61,8 @@ jobs:
 
       - name: Native Linux cold factory, current protocols and financial regressions
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --native-runtime
+
+      - name: Held native public materialization and exact typed originals
+        env:
+          NODE_OPTIONS: --max-old-space-size=512
+        run: node --import tsx --no-warnings scripts/postgres/qualify-native-materialization.mts --synthetic

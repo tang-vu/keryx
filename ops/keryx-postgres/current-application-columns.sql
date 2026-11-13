@@ -8,6 +8,11 @@ ALTER TABLE public.browser_signing_queries ADD COLUMN proof text NOT NULL CHECK(
 ALTER TABLE public.browser_signing_queries ADD COLUMN proof_digest text NOT NULL;
 ALTER TABLE public.browser_signing_v2_barrier ADD COLUMN ever_active keryx_storage.sqlite_number NOT NULL DEFAULT 0 CHECK(ever_active IN(0,1));
 ALTER TABLE public.source_items ADD COLUMN evidence_provenance text;
+-- SQLite retains historical items without a current sources row. The original
+-- Supabase cascade is not SQLite authority: importing must neither invent a
+-- payout source nor delete retained item originals. Paid delivery still loads
+-- the current source and registry terms independently before item delivery.
+ALTER TABLE public.source_items DROP CONSTRAINT source_items_source_id_fkey;
 ALTER TABLE public.sources ADD COLUMN preview_depth text;
 ALTER TABLE public.sources ADD COLUMN evidence_provenance text;
 

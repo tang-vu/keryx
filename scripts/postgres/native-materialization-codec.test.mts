@@ -25,6 +25,15 @@ it('refuses coercions and date normalization that could silently change retained
  expect(()=>cell(text('2026-11-14T00:00:00.000+00:00'),'timestamp with time zone')).toThrow();
  expect(()=>cell(text('2026-02-30'),'date')).toThrow();expect(()=>cell(text('private\0text'),'text')).toThrow();
 });
+it('refuses duplicate JSONB keys where actual SQLite and JS choose different values',()=>{
+ const db=new DatabaseSync(':memory:');try{
+  const wire='{"authorization":{"network":1,"network":2}}';
+  expect(db.prepare("SELECT json_extract(?,'$.authorization.network') n").get(wire)!.n).toBe(1);expect(JSON.parse(wire).authorization.network).toBe(2);
+  expect(()=>cell(text(wire),'jsonb')).toThrow();expect(()=>cell(text('{"a":1,"\\u0061":2}'),'jsonb')).toThrow();
+  expect(cell(text('{"a":{"x":1},"b":{"x":2}}'),'jsonb')).toBe('{"a":{"x":1},"b":{"x":2}}');
+  expect(cell(text(wire),'json')).toBe(wire);
+ }finally{db.close();}
+});
 it('orders actual SQLite source rows by validated compound keys without changing default iteration',()=>{
  const db=new DatabaseSync(':memory:');try{
   db.exec('CREATE TABLE example(a TEXT,b INTEGER,PRIMARY KEY(a,b));INSERT INTO example VALUES(\'a\',2),(\'A\',3),(\'a\',1);BEGIN');const table=snapshotTables(db)[0];
