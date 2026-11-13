@@ -9226,3 +9226,18 @@ input bounds to large named content operations; do not expand authentication or
 other small setter limits. Retain conservative unknown-write outcomes without
 automatic retries. Keep complete application-writer admission closed until all
 current domain, original-data, cache, load and production gates pass.
+
+## Retain native decision-review originals and atomic gates (2026-11-13)
+
+Use fixed PostgreSQL review ports with the same owner, deadline, exact-term,
+idempotency and transition checks as the current SQLite store. Serialize competing
+verdicts and consumes under the existing native writer lock. Never retry an
+uncertain write or treat human review state as financial settlement evidence.
+
+Preserve original review input and verdict text. NUL is allowed in a source name
+by the existing API; PostgreSQL JSON extraction rejects that retained value.
+Keep the bounded review metadata in a private SOURCE-derived row tied to the
+original SHA, and invalidate it when the original changes. TypeScript decodes the
+bounded raw bytes through the unchanged strict schemas. Keep aggregate metrics
+free of private source/reason text and reader mutations closed before parsing.
+This partial protocol does not activate the complete writer or migrate production.

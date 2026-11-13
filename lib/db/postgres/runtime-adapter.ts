@@ -11,6 +11,7 @@ import type { RunOwnershipHistoryStore } from '../../run-claims/history';
 import { runClaimsEnabled } from '../../run-claims/contracts';
 import type { RunPrivacyStore } from '../../run-privacy/contracts';
 import type { PrivateBibliographiesStore } from '../../bibliographies/private-bibliography';
+import type { DecisionReviewsStore } from '../../research/decision-review-types';
 import type { TopicWatchesPort,PrivateTopicWatchStore } from '../topic-watches-sqlite';
 import type { KeryxDB } from '../keryx-db';
 import { readRuntimeStorageDeployment } from '../runtime-storage-config';
@@ -65,6 +66,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   settlement:id=>read(()=>transport.runPrivacy.settlement(id)),pending:id=>read(()=>transport.runPrivacy.pending(id)),setDefault:readonly,change:readonly,erase:readonly,export:readonly,
  } satisfies RunPrivacyStore);
  const bibliographies:PrivateBibliographiesStore=Object.freeze({list:owner=>read(()=>transport.privateBibliographies.list(owner)),read:token=>read(()=>transport.privateBibliographies.read(token)),create:readonly,replace:readonly,revoke:readonly} satisfies PrivateBibliographiesStore);
+ const reviews:DecisionReviewsStore=Object.freeze({ready:()=>read(()=>transport.decisionReviews.ready()),read:(owner,id)=>read(()=>transport.decisionReviews.read(owner,id)),list:(owner,run)=>read(()=>transport.decisionReviews.list(owner,run)),metrics:(network,since,until)=>read(()=>transport.decisionReviews.metrics(network,since,until)),capture:readonly,begin:readonly,verdict:readonly,consume:readonly,cancel:readonly,expire:readonly,observe:readonly} satisfies DecisionReviewsStore);
  const watches:TopicWatchesPort=Object.freeze({bindSession(session){entry();const bound=transport.topicWatches.bindSession(session);return Object.freeze({list:()=>read(()=>bound.list()),read:key=>read(()=>bound.read(key)),compareAndSwap:readonly} satisfies PrivateTopicWatchStore);}} satisfies TopicWatchesPort);
  try{
   entry();const cache=await transport.readColdCache();entry();
@@ -80,6 +82,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='runPrivacyActive')return privacyActive;
     if(property==='runPrivacy')return privacyActive?privacy:undefined;
     if(property==='privateBibliographies')return bibliographies;
+    if(property==='decisionReviews')return reviews;
     if(property==='topicWatches')return watches;
     // Only currently qualified bounded observations escape this profile.
     if(property!=='init'&&property!=='metrics')refuseStorage('invalid_operation');

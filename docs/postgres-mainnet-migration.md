@@ -599,3 +599,31 @@ memory/sync inputs 1 MiB, source/metadata inputs 256 KiB, other existing setters
 64 KiB. These ports do not admit raw SQL or a transaction callback. Full-writer
 admission remains closed until managed-source history, remaining current domains,
 lossless materialization/cache continuity and compiled load/cutover qualify.
+
+## Native decision reviews
+
+Fixed review ports retain owner isolation, one activation deadline, exact captured
+terms, one gate verdict and one approved consume. An identical verdict key reads
+back its current record; a changed payload conflicts. Later opinions and code
+observations retain the initial decision and its financial terms. Cancellation
+and expiry do not imply a payment, job action or release of financial capacity.
+
+Keep original `input_json` and verdict bytes as text. The current API accepts NUL
+in a source name, which PostgreSQL JSON extraction cannot safely project. A private
+SOURCE-derived metadata row binds the required fields to the exact original SHA;
+an original change invalidates that derivative. Reads require the live binding
+and return bounded raw bytes for the existing strict TypeScript projection. No
+free text is normalized into JSONB. This follows PostgreSQL's documented
+[Unicode restrictions in JSON processing](https://www.postgresql.org/docs/17/datatype-json.html).
+Lists refuse beyond 300 rows and metrics
+return bounded cohort aggregates without private reasons. The observation factory
+exposes only the corresponding reads and refuses writers before parsing input.
+
+The complete application writer remains closed. These protocols still require
+their actual PostgreSQL, original-data, factory and full required CI acceptance.
+
+`qualify-offline-intake.mts <private-snapshot> <sha256> --audit-reviews`
+checks retained originals and reports counts/digests only. The rehearsal snapshot
+contains 2,344 compatible review records and one verdict. The audit uses the
+verified 512-MiB/no-swap/offline child and its original hard deadline; it does not
+materialize the application database or grant writer/cutover authority.
