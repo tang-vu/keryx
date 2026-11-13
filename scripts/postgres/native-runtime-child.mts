@@ -61,6 +61,10 @@ async function main(){
   await assert.rejects(bibliographies.create(input.owner,{title:'Unused',papers:[]}),/readonly_operation/);checks++;
   const bound=reader.topicWatches!.bindSession(input.session);assert.equal((await bound.list())[0].key.watchId,'synthetic-runtime-watch');assert.equal((await bound.read({ownerWallet:input.owner,watchId:'synthetic-runtime-watch'}) as {revision:number}).revision,1);checks++;
   await assert.rejects(bound.compareAndSwap({ownerWallet:input.owner,watchId:'synthetic-runtime-watch'},null,{} as never,Date.now()+1000),/readonly_operation/);checks++;
+  const reviews=reader.decisionReviews!;await reviews.ready();assert.equal(await reviews.read(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),null);checks++;
+  assert.deepEqual(await reviews.list(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),[]);checks++;
+  const reviewMetrics=await reviews.metrics('eip155:5042','2026-10-09T00:00:00.000Z','2026-10-10T00:00:00.000Z');assert(reviewMetrics.cohorts.every(row=>row.decisions===0));checks++;
+  parsed=0;await assert.rejects(reviews.capture(input.owner,{get sourceName(){parsed++;return 'unused';}} as never),/readonly_operation/);await assert.rejects(reviews.begin(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),/readonly_operation/);assert.equal(parsed,0);checks++;
   const before=performance.now();await reader.metrics();const observedReadMs=performance.now()-before;
   // A changed credential is not adopted by an already-created facade.
   writeFileSync(readerPath,credential('keryx_reader','different-synthetic-password'));assert.throws(()=>reader.metrics());writeFileSync(readerPath,credential('keryx_reader'));checks++;
@@ -69,6 +73,7 @@ async function main(){
   await assert.rejects(ownership.read(input.owner,binding,'synthetic-runtime-run'));checks++;
   await assert.rejects(privacy.read(id,actor));checks++;
   await assert.rejects(bibliographies.list(input.owner));await assert.rejects(bound.list());checks++;
+  await assert.rejects(reviews.list(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'));checks++;
   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
  }finally{await native.closePostgresRuntimeAdapter(reader);}
 }
