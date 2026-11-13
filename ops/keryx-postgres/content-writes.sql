@@ -12,35 +12,49 @@ DO $$ DECLARE entry text;relation_name text;column_name text;BEGIN
   END IF;
  END LOOP;
 END;$$;
+INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES('source_item_by_link',ARRAY['source_items'],false,true);
+CREATE FUNCTION public.storage_source_item_by_link(expected jsonb,digest text,selected_source text,selected_link text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+DECLARE item record;items jsonb:='[]'::jsonb;bytes bigint:=2;matching integer;BEGIN
+ IF current_setting('transaction_read_only')<>'on' OR selected_source IS NULL OR selected_link IS NULL OR octet_length(selected_source)+octet_length(selected_link)>65536 THEN RAISE EXCEPTION 'native item identity unavailable';END IF;
+ PERFORM keryx_storage.require_operation(expected,digest,'source_item_by_link');
+ SELECT count(*) INTO matching FROM(SELECT 1 FROM public.source_items i WHERE i.source_id=selected_source AND i.link=selected_link LIMIT 2) candidates;
+ IF matching>1 THEN RETURN jsonb_build_object('items','[]'::jsonb,'ambiguous',true);END IF;
+ FOR item IN SELECT i.* FROM public.source_items i WHERE i.source_id=selected_source AND i.link=selected_link ORDER BY i.id COLLATE "C" LIMIT 2 LOOP
+  bytes:=bytes+octet_length(to_jsonb(item)::text)+2;IF bytes>4194304 THEN RAISE EXCEPTION 'native complete item identity bound';END IF;
+  items:=items||jsonb_build_array(to_jsonb(item));
+ END LOOP;RETURN jsonb_build_object('items',items,'ambiguous',false);
+END;$$;
+REVOKE ALL ON FUNCTION public.storage_source_item_by_link(jsonb,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.storage_source_item_by_link(jsonb,text,text,text) TO keryx_app,keryx_reader;
 CREATE OR REPLACE FUNCTION public.storage_get_items(p_expected_identity jsonb,p_source_id text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE bound_row record;total_bytes bigint:=2;total_rows integer:=0;result jsonb;BEGIN
+DECLARE native_bound_row record;native_bound_bytes bigint:=2;native_bound_count integer:=0;result jsonb;BEGIN
  PERFORM keryx_storage.read_operation(p_expected_identity,'get_items');
- FOR bound_row IN SELECT * FROM public.source_items WHERE source_id=p_source_id ORDER BY published_at DESC NULLS LAST LIMIT 1001 LOOP
-  total_rows:=total_rows+1;total_bytes:=total_bytes+octet_length(to_jsonb(bound_row)::text)+2;
-  IF total_rows>1000 OR total_bytes>4194304 THEN RAISE EXCEPTION 'native complete item result bound';END IF;
+ FOR native_bound_row IN SELECT * FROM public.source_items WHERE source_id=p_source_id ORDER BY published_at DESC NULLS LAST LIMIT 1001 LOOP
+  native_bound_count:=native_bound_count+1;native_bound_bytes:=native_bound_bytes+octet_length(to_jsonb(native_bound_row)::text)+2;
+  IF native_bound_count>1000 OR native_bound_bytes>4194304 THEN RAISE EXCEPTION 'native complete item result bound';END IF;
  END LOOP;
  SELECT coalesce(jsonb_agg(to_jsonb(r)),'[]'::jsonb) INTO result FROM (SELECT * FROM public.source_items WHERE source_id=p_source_id ORDER BY published_at DESC NULLS LAST LIMIT 1001) r;
  RETURN result;
 END;$$;
 CREATE OR REPLACE FUNCTION public.storage_count_items_published_between(p_expected_identity jsonb,p_source_id text[],p_published_at text,p_published_at_2 text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE result jsonb;bound_row record;total_bytes bigint:=2;total_rows integer:=0;BEGIN
+DECLARE result jsonb;native_bound_row record;native_bound_bytes bigint:=2;native_bound_count integer:=0;BEGIN
  PERFORM keryx_storage.read_operation(p_expected_identity,'count_items_published_between');
  IF p_source_id IS NULL OR cardinality(p_source_id)>1000 THEN RAISE EXCEPTION 'invalid bounded source selection';END IF;
- FOR bound_row IN SELECT source_id FROM public.source_items WHERE source_id=ANY(p_source_id) AND published_at LIKE '____-__-__%' AND published_at>p_published_at AND published_at<=p_published_at_2 LIMIT 1001 LOOP
-  total_rows:=total_rows+1;total_bytes:=total_bytes+octet_length(to_jsonb(bound_row)::text)+2;
-  IF total_rows>1000 OR total_bytes>4194304 THEN RAISE EXCEPTION 'native complete recency result bound';END IF;
+ FOR native_bound_row IN SELECT source_id FROM public.source_items WHERE source_id=ANY(p_source_id) AND published_at LIKE '____-__-__%' AND published_at>p_published_at AND published_at<=p_published_at_2 LIMIT 1001 LOOP
+  native_bound_count:=native_bound_count+1;native_bound_bytes:=native_bound_bytes+octet_length(to_jsonb(native_bound_row)::text)+2;
+  IF native_bound_count>1000 OR native_bound_bytes>4194304 THEN RAISE EXCEPTION 'native complete recency result bound';END IF;
  END LOOP;
  SELECT coalesce(jsonb_agg(to_jsonb(r)),'[]'::jsonb) INTO result FROM(SELECT source_id FROM public.source_items WHERE source_id=ANY(p_source_id)
   AND published_at LIKE '____-__-__%' AND published_at>p_published_at AND published_at<=p_published_at_2 LIMIT 1001) r;
  IF jsonb_array_length(result)>1000 OR octet_length(result::text)>4194304 THEN RAISE EXCEPTION 'native complete recency result bound';END IF;RETURN result;
 END;$$;
 CREATE OR REPLACE FUNCTION public.storage_newest_item_dates(p_expected_identity jsonb,p_source_id text[]) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE result jsonb;bound_row record;total_bytes bigint:=2;BEGIN
+DECLARE result jsonb;native_bound_row record;native_bound_bytes bigint:=2;BEGIN
  PERFORM keryx_storage.read_operation(p_expected_identity,'newest_item_dates');
  IF p_source_id IS NULL OR cardinality(p_source_id)>1000 THEN RAISE EXCEPTION 'invalid bounded source selection';END IF;
- FOR bound_row IN SELECT source_id,max(published_at) published_at FROM public.source_items WHERE source_id=ANY(p_source_id) AND published_at LIKE '____-__-__%' GROUP BY source_id ORDER BY source_id COLLATE "C" LOOP
-  total_bytes:=total_bytes+octet_length(to_jsonb(bound_row)::text)+2;
-  IF total_bytes>4194304 THEN RAISE EXCEPTION 'native complete newest result bound';END IF;
+ FOR native_bound_row IN SELECT source_id,max(published_at) published_at FROM public.source_items WHERE source_id=ANY(p_source_id) AND published_at LIKE '____-__-__%' GROUP BY source_id ORDER BY source_id COLLATE "C" LOOP
+  native_bound_bytes:=native_bound_bytes+octet_length(to_jsonb(native_bound_row)::text)+2;
+  IF native_bound_bytes>4194304 THEN RAISE EXCEPTION 'native complete newest result bound';END IF;
  END LOOP;
  SELECT coalesce(jsonb_agg(to_jsonb(r)),'[]'::jsonb) INTO result FROM(SELECT source_id,max(published_at) published_at FROM public.source_items
   WHERE source_id=ANY(p_source_id) AND published_at LIKE '____-__-__%' GROUP BY source_id ORDER BY source_id COLLATE "C") r;

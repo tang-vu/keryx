@@ -600,8 +600,13 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getSourceItemByLink(sourceId: string, exactItemUrl: string): Promise<SourceItem | null> {
-    // No enrolled SQL operation/schema exists for this new catalog read. Keep
-    // sealed authority closed rather than use legacy REST through that lane.
+    if(this.#native){
+      const {data,error}=await this.domainRpc('source_item_by_link',{p_source_id:sourceId,p_link:exactItemUrl});
+      if(error)throw error;if(!Array.isArray(data)||data.length>2)refuseStorage('invalid_operation');
+      if(data.length>1)throw new Error('Ambiguous exact source article membership');
+      return data.length?rowToSourceItem(data[0] as Record<string,unknown>):null;
+    }
+    // The enrolled Supabase lane has no matching fixed operation.
     if (this.isAuthorityBound) { this.assertEntry(); refuseStorage("invalid_operation"); }
     const { data, error } = await this.#sb.from("source_items").select("*")
       .eq("source_id", sourceId).eq("link", exactItemUrl).limit(2);

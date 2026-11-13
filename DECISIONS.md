@@ -9217,6 +9217,8 @@ Keep source creation time, sticky evidence classification and retained on-chain
 metadata. Preserve text timestamps, including signed article-manifest metadata,
 instead of converting their original wire representation. Keep SQLite's malformed
 feed-date exclusion and missing-date ordering.
+Use one fixed, read-only source/article-URL lookup and retain exact matching and
+the existing ambiguity refusal; the RPC bridge exposes no table/query selector.
 
 Admit authenticated, source/identity-bound cache envelopes under the same finite
 512-row/8-MiB quota as the current enrolled SQLite writer. Apply separate finite

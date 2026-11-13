@@ -16,6 +16,7 @@ export type PostgresAuthWrite=keyof typeof AUTH_WRITE_OPERATIONS;
 export type PostgresApplicationWrite=keyof typeof APPLICATION_WRITE_OPERATIONS;
 export interface PostgresApplicationDomainTransport extends PostgresApplicationReadTransport {
   dashboardMetrics():Promise<DashboardMetrics>;
+  sourceItemByLink(sourceId:string,link:string):Promise<Record<string,unknown>[]>;
   applicationWrite(operation:PostgresApplicationWrite,args:Readonly<Record<string,unknown>>):Promise<unknown>;
 }
 /** Qualified named ports only. It cannot select or enroll an application store. */
@@ -26,6 +27,15 @@ export function createPostgresApplicationDomainTransport(options:PostgresConnect
 export function composePostgresApplicationDomainTransport(channel:PostgresDomainChannel,identity:StorageIdentity):PostgresApplicationDomainTransport{
   return Object.freeze({
     ...composePostgresApplicationReadTransport(channel,identity),
+    async sourceItemByLink(sourceId:string,link:string){
+      if(channel.closed||typeof sourceId!=='string'||typeof link!=='string')throw new PostgresStorageUnavailable();
+      const value=await channel.call('sourceItemByLink',[sourceId,link]);
+      if(channel.closed||!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join('|')!=='ambiguous|items')throw new PostgresStorageUnavailable();
+      const {items,ambiguous}=value as {items:unknown;ambiguous:unknown};
+      if(typeof ambiguous!=='boolean'||!Array.isArray(items)||items.length>1||items.some(row=>!row||typeof row!=='object'||Array.isArray(row))||ambiguous&&items.length)throw new PostgresStorageUnavailable();
+      if(ambiguous)throw new Error('Ambiguous exact source article membership');
+      return items as Record<string,unknown>[];
+    },
     async dashboardMetrics(){
       if(channel.closed)throw new PostgresStorageUnavailable();
       const value=await channel.call("dashboardMetrics",[]);

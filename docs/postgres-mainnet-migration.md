@@ -586,6 +586,8 @@ sticky source/item provenance, on-chain metadata and exact manifest timestamp
 strings. Item ordering puts missing dates last; recency excludes the same malformed
 feed-date shapes as the current SQLite implementation. Complete result bounds
 refuse rather than return an incomplete collection.
+Exact article-URL lookup remains scoped to one source, retains literal URL matching
+and refuses ambiguous membership before a caller can select a paid article.
 
 Cache writes seal the plaintext against the source and all storage-identity fields
 before submission. Serialize the 512-row/8-MiB ciphertext quota with the native
