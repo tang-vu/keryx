@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+## Group fixed PostgreSQL reads within the existing catalog bounds - 2026-11-13
+
+The native SOURCE reached its 512-function metadata limit before all application
+domains were implemented. Replace 78 repetitive JSON read entrypoints with ten
+small closed `CASE` groups. Preserve each branch's exact argument keys, typed
+conversion, named business call and current native operation check. Fixed runtime
+statements select literal actions; caller input cannot select a function or SQL.
+
+Keep real read-only transactions, role permissions, allocation bounds and fresh
+full catalog verification. Leave the 34 write operations unchanged. The measured
+combined SOURCE has 444 functions; do not raise metadata caps or introduce an
+admission cache to accommodate new domains. Fresh SOURCE/profile, actual native
+refusal and compiled factory/full domain acceptance remain mandatory. See
+[the migration contract](docs/postgres-mainnet-migration.md).
+
 ## Preserve customer original fingerprints across PostgreSQL storage - 2026-11-13
 
 Deliverable choices bind the exact retained SQLite order/delivery representation
