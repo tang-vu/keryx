@@ -12,9 +12,12 @@ import type { AccountBinding,AccountPrecondition,AccountSnapshot,InteractiveSess
 import { createOwnedHistoryRoute } from '../../lib/history/owned-history-route';
 import { chatAccountPort } from '../../lib/chat-accounts/service';
 import type { ChatLink,PendingChatLink,ChatRecipient } from '../../lib/chat-accounts/contracts';
+import { requirePublicProfiles,type PublicProfileActor,type PublicProfileSnapshot,type PublicProfileSettings } from '../../lib/profiles/public-profile';
+import { readPublicProfileJson } from '../../lib/profiles/public-profile-route';
+import type { KeryxDB } from '../../lib/db/keryx-db';
 async function main(){
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
- const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient}};
+ const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient};publicProfile:{actor:PublicProfileActor;handle:string;snapshot:PublicProfileSnapshot;settings:PublicProfileSettings;sitemap:Array<{handle:string;updatedAt:string}>}};
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid!(),0);
  const cgroup=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:cgroup('memory.max'),swapMax:cgroup('memory.swap.max'),cpuMax:cgroup('cpu.max'),pidsMax:cgroup('pids.max')};
@@ -27,7 +30,7 @@ async function main(){
   endpoint:{kind:'loopback',port:5432},credentialPaths:{application:appPath,reader:readerPath}}};
  writeFileSync(manifestPath,canonicalJson(manifest),{mode:0o600});
  process.env.KERYX_STORAGE_MANIFEST=manifestPath;process.env.CONTENT_MASTER_KEY=input.mode==='missing-key'?'':input.mode==='wrong-key'?'ff'.repeat(32):input.key;
- process.env.KERYX_RUN_PRIVACY_ENABLED='true';process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='true';
+ process.env.KERYX_RUN_PRIVACY_ENABLED='true';process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED=input.mode==='claims-issuance-off'?'false':'true';process.env.KERYX_PUBLIC_PROFILES_ENABLED=input.mode==='public-profiles-off'?'false':'true';
  let outbound=0;globalThis.fetch=async()=>{outbound++;throw new Error('Synthetic native runtime forbids outbound HTTP');};
  const application=await import('../../lib/db/application-storage'),native=await import('../../lib/db/postgres/runtime-adapter'),privateFile=await import('../../lib/db/postgres/private-credential');
  let checks=0;
@@ -89,6 +92,63 @@ async function main(){
    await admin.end();await barrier?.close();
   }
  }
+ const exerciseRemainingPorts=async(reader:KeryxDB)=>{
+  const privacy=reader.runPrivacy!,id='synthetic-runtime-run',binding={network:'eip155:5042' as const,origin:'https://keryx.cc'},actor={wallet:input.owner,binding};let parsed=0;
+  progress('remaining-ports');
+  assert.equal((await privacy.list({take:1}))[0].id,id);assert.deepEqual(await privacy.questions!([id]),[{id,question:'Original'}]);checks++;
+  assert.deepEqual(await privacy.sourceHistory!(),[{id,createdAt:'2026-01-02T03:04:05.000Z',hasAnswer:true,citations:[]}]);assert.equal((await privacy.learningPage!({take:1}))[0].id,id);assert.equal((await privacy.archivePage!({take:1}))[0].id,id);checks++;
+  assert.deepEqual(await privacy.memories(1),[]);assert.deepEqual(await privacy.offers(1),[]);assert.equal(await privacy.pending('missing'),null);assert.equal((await privacy.settlement(id))?.question,'');checks++;
+  await assert.rejects(privacy.creationReady(),/readonly_operation/);await assert.rejects(privacy.export(id,actor,'12345678-1234-4234-8234-123456789abc'),/readonly_operation/);checks++;
+  process.env.KERYX_RUN_PRIVACY_ENABLED='false';assert.throws(()=>reader.runPrivacy);process.env.KERYX_RUN_PRIVACY_ENABLED='true';checks++;
+  process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='false';assert.throws(()=>reader.runPrivacy);process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='true';checks++;
+  const bibliographies=reader.privateBibliographies!;assert.equal((await bibliographies.list(input.owner))[0].id,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');assert.deepEqual(await bibliographies.read('a9'.repeat(32)),{content:'Synthetic bibliography content'});checks++;
+  await assert.rejects(bibliographies.create(input.owner,{title:'Unused',papers:[]}),/readonly_operation/);checks++;
+  const bound=reader.topicWatches!.bindSession(input.session);assert.equal((await bound.list())[0].key.watchId,'synthetic-runtime-watch');assert.equal((await bound.read({ownerWallet:input.owner,watchId:'synthetic-runtime-watch'}) as {revision:number}).revision,1);checks++;
+  await assert.rejects(bound.compareAndSwap({ownerWallet:input.owner,watchId:'synthetic-runtime-watch'},null,{} as never,Date.now()+1000),/readonly_operation/);checks++;
+  const reviews=reader.decisionReviews!;await reviews.ready();assert.equal(await reviews.read(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),null);checks++;
+  assert.deepEqual(await reviews.list(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),[]);checks++;
+  const reviewMetrics=await reviews.metrics('eip155:5042','2026-10-09T00:00:00.000Z','2026-10-10T00:00:00.000Z');assert(reviewMetrics.cohorts.every(row=>row.decisions===0));checks++;
+  parsed=0;await assert.rejects(reviews.capture(input.owner,{get sourceName(){parsed++;return 'unused';}} as never),/readonly_operation/);await assert.rejects(reviews.begin(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),/readonly_operation/);assert.equal(parsed,0);checks++;
+  return {privacy,bibliographies,bound,reviews};
+ };
+ if(input.mode==='remaining-ports'){
+  const reader=await application.createReadonlyApplicationStorage();assert(reader);checks++;
+  try{const ports=await exerciseRemainingPorts(reader);await native.closePostgresRuntimeAdapter(reader);await assert.rejects(ports.privacy.read('synthetic-runtime-run'));await assert.rejects(ports.bibliographies.list(input.owner));await assert.rejects(ports.bound.list());await assert.rejects(ports.reviews.list(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'));checks+=4;assert.equal(outbound,0);checks++;console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,remainingPositiveProtocolsAndTerminalDrain:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;}finally{await native.closePostgresRuntimeAdapter(reader);}
+ }
+ if(input.mode==='public-profiles'){
+  const reader=await application.createReadonlyApplicationStorage();assert(reader);checks++;
+  try{
+  const publicProfiles=requirePublicProfiles(reader);assert.deepEqual(await publicProfiles.read(input.publicProfile.handle),input.publicProfile.snapshot);checks++;assert.deepEqual(await publicProfiles.settings(input.publicProfile.actor),input.publicProfile.settings);checks++;assert.deepEqual(await publicProfiles.sitemap(10),input.publicProfile.sitemap);checks++;const descriptor=Object.getOwnPropertyDescriptor(reader,'publicProfiles');assert(descriptor&&!descriptor.enumerable&&descriptor.value===publicProfiles);checks++;let profileGetters=0;const badProfile={get wallet(){profileGetters++;throw Error();}} as never;for(const work of [()=>publicProfiles.update(badProfile,badProfile),()=>publicProfiles.unpublish(badProfile)])await assert.rejects(work(),/readonly_operation/);assert.equal(profileGetters,0);checks++;
+   assert.equal(outbound,0);checks++;console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,publicProfilesPositiveProtocol:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{await native.closePostgresRuntimeAdapter(reader);}
+ }
+ if(input.mode==='claims-issuance-off'){
+  const reader=await application.createReadonlyApplicationStorage();assert(reader);
+  try{
+   const profiles=requirePublicProfiles(reader);assert.deepEqual(await profiles.read(input.publicProfile.handle),input.publicProfile.snapshot);assert.deepEqual(await profiles.settings(input.publicProfile.actor),input.publicProfile.settings);assert.equal(process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED,'false');assert.equal(outbound,0);
+   console.log(JSON.stringify({passed:true,mode:input.mode,checks:5,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,retainedPublicProfilesAvailableWithIssuanceDisabled:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{await native.closePostgresRuntimeAdapter(reader);}
+ }
+ if(input.mode==='public-profiles-off'){
+  const reader=await application.createReadonlyApplicationStorage();assert(reader);
+  try{
+   assert.equal(reader.publicProfiles,undefined);assert.equal(Object.getOwnPropertyDescriptor(reader,'publicProfiles'),undefined);assert.throws(()=>requirePublicProfiles(reader));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks']);
+   process.env.KERYX_PUBLIC_PROFILES_ENABLED='true';assert.throws(()=>Reflect.get(reader,'publicProfiles'));assert.equal(outbound,0);
+   console.log(JSON.stringify({passed:true,mode:input.mode,checks:7,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,publicProfilesDisabledAbsent:true,changedPublicationFlagRefused:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{await native.closePostgresRuntimeAdapter(reader);}
+ }
+ if(input.mode==='withdrawn-before-public-profile-read'){
+  const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000'});
+  let reader:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>,barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined;
+  try{
+   await admin.connect();barrier=await startReadonlyCommitBarrier(5432,async()=>{await admin.query('BEGIN');await admin.query("UPDATE keryx_storage.control SET mode='held'");await admin.query('UPDATE public.public_researcher_profiles SET published=0 WHERE wallet=$1',[input.owner]);await admin.query("UPDATE keryx_storage.control SET mode='active'");await admin.query('COMMIT');});
+   writeFileSync(manifestPath,canonicalJson({...manifest,backend:{...manifest.backend,endpoint:{kind:'loopback',port:barrier.port}}}));reader=await application.createReadonlyApplicationStorage();assert(reader);const profiles=requirePublicProfiles(reader);
+   assert.deepEqual(await profiles.read(input.publicProfile.handle),input.publicProfile.snapshot);barrier.arm();const response=await readPublicProfileJson(reader,input.publicProfile.handle);assert.equal(response.status,404);assert(!(await response.text()).includes('Private profile bio'));assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(barrier.observation(),{intercepted:true,completed:true,failed:false});assert.equal(outbound,0);
+   console.log(JSON.stringify({passed:true,mode:input.mode,checks:7,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,genuinePublicProfileJsonRoute:true,actualCommittedAuthorityReadThenUnpublish:true,finalNativePublicProfileReadAfterAuthorityAwait:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{
+   if(reader)await native.closePostgresRuntimeAdapter(reader);await admin.query('ROLLBACK;BEGIN');await admin.query("UPDATE keryx_storage.control SET mode='held'");await admin.query('UPDATE public.public_researcher_profiles SET published=1 WHERE wallet=$1',[input.owner]);await admin.query("UPDATE keryx_storage.control SET mode='active'");await admin.query('COMMIT');await admin.end();await barrier?.close();
+  }
+ }
  if(input.mode==='withdrawn-before-chat-read'){
   const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000'});let barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,reader:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>;
   try{
@@ -123,6 +183,7 @@ async function main(){
    assert.equal((await restored.metrics()).totalQueries,1);checks++;
    assert.deepEqual(await restored.accountMembership!.resolve(input.account.session,input.account.binding),input.account.snapshot);checks++;
    assert.deepEqual(await chatAccountPort(restored)!.lookup(input.chat.recipient,input.account.binding),input.chat.link);checks++;
+   assert.deepEqual(await requirePublicProfiles(restored).read(input.publicProfile.handle),input.publicProfile.snapshot);checks++;
    await native.closePostgresRuntimeAdapter(restored);await assert.rejects(native.assertPostgresRuntimeIdentity(restored));checks++;
    assert.equal(outbound,0);checks++;progress('restored-cold-complete');
    console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,phaseMs,genuineZeroArgumentReadonlyFactory:true,restoredAuthenticatedColdCache:true,currentIdentityAndAccount:true,actualTerminalDrain:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
@@ -189,8 +250,8 @@ async function main(){
    assert(await health(healthNow,false));checks++;
    await healthAdmin.query("UPDATE keryx_storage.control SET mode='held';");await assert.rejects(health(healthNow,false));await assert.rejects(sync([]));await assert.rejects(funding(input.owner));checks++;
   }finally{try{await healthAdmin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active';");}finally{await healthAdmin.end();}}
-  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
-  progress('owner-reads');const profile=await reader.privateProfiles!.get(input.owner,'eip155:5042');assert.equal(profile.profile,null);assert.equal(profile.activity.questions,1);checks++;
+  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks','publicProfiles']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
+  progress('owner-reads');const profile=await reader.privateProfiles!.get(input.owner,'eip155:5042');assert.equal(profile.profile?.handle,input.publicProfile.handle);assert.equal(profile.activity.questions,1);checks++;
   assert.equal((await reader.profileIdentities!.list(input.owner)).identities.length,0);checks++;
   let parsed=0;await assert.rejects(reader.privateProfiles!.update(input.owner,{get displayName(){parsed++;return 'unused';}} as never));assert.equal(parsed,0);checks++;
   const filters={search:'Original'},pending=reader.personalHistory!.list(input.owner,{filters,take:1});filters.search='Changed';const rows=await pending;assert.equal(rows.length,1);assert.equal(rows[0].id,'synthetic-runtime-run');checks++;
@@ -205,21 +266,7 @@ async function main(){
   const detailRoute=createOwnedHistoryRoute({binding,key:async()=>null,db:async()=>reader,session:async()=>{assert.deepEqual(await getWebSession(input.session.hash),input.session);return {db:reader,wallet:input.owner,currentId:input.session.hash};}},'detail');
   const detail=await detailRoute(new Request('https://keryx.cc/api/me/asks/'+id),id);assert.equal(detail.status,200);assert.equal((await detail.json()).run.answer,'Original answer');checks++;
   const disposedHistory=await accounts.prepareAsyncHistoryFence!(input.account.snapshot,[],Date.now()+25000);
-  progress('remaining-ports');
-  assert.equal((await privacy.list({take:1}))[0].id,id);assert.deepEqual(await privacy.questions!([id]),[{id,question:'Original'}]);checks++;
-  assert.deepEqual(await privacy.sourceHistory!(),[{id,createdAt:'2026-01-02T03:04:05.000Z',hasAnswer:true,citations:[]}]);assert.equal((await privacy.learningPage!({take:1}))[0].id,id);assert.equal((await privacy.archivePage!({take:1}))[0].id,id);checks++;
-  assert.deepEqual(await privacy.memories(1),[]);assert.deepEqual(await privacy.offers(1),[]);assert.equal(await privacy.pending('missing'),null);assert.equal((await privacy.settlement(id))?.question,'');checks++;
-  await assert.rejects(privacy.creationReady(),/readonly_operation/);await assert.rejects(privacy.export(id,actor,'12345678-1234-4234-8234-123456789abc'),/readonly_operation/);checks++;
-  process.env.KERYX_RUN_PRIVACY_ENABLED='false';assert.throws(()=>reader.runPrivacy);process.env.KERYX_RUN_PRIVACY_ENABLED='true';checks++;
-  process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='false';assert.throws(()=>reader.runPrivacy);process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='true';checks++;
-  const bibliographies=reader.privateBibliographies!;assert.equal((await bibliographies.list(input.owner))[0].id,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');assert.deepEqual(await bibliographies.read('a9'.repeat(32)),{content:'Synthetic bibliography content'});checks++;
-  await assert.rejects(bibliographies.create(input.owner,{title:'Unused',papers:[]}),/readonly_operation/);checks++;
-  const bound=reader.topicWatches!.bindSession(input.session);assert.equal((await bound.list())[0].key.watchId,'synthetic-runtime-watch');assert.equal((await bound.read({ownerWallet:input.owner,watchId:'synthetic-runtime-watch'}) as {revision:number}).revision,1);checks++;
-  await assert.rejects(bound.compareAndSwap({ownerWallet:input.owner,watchId:'synthetic-runtime-watch'},null,{} as never,Date.now()+1000),/readonly_operation/);checks++;
-  const reviews=reader.decisionReviews!;await reviews.ready();assert.equal(await reviews.read(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),null);checks++;
-  assert.deepEqual(await reviews.list(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),[]);checks++;
-  const reviewMetrics=await reviews.metrics('eip155:5042','2026-10-09T00:00:00.000Z','2026-10-10T00:00:00.000Z');assert(reviewMetrics.cohorts.every(row=>row.decisions===0));checks++;
-  parsed=0;await assert.rejects(reviews.capture(input.owner,{get sourceName(){parsed++;return 'unused';}} as never),/readonly_operation/);await assert.rejects(reviews.begin(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),/readonly_operation/);assert.equal(parsed,0);checks++;
+  const bibliographies=reader.privateBibliographies!,bound=reader.topicWatches!.bindSession(input.session),reviews=reader.decisionReviews!;
   const before=performance.now();await reader.metrics();const observedReadMs=performance.now()-before;
   // A changed credential is not adopted by an already-created facade.
   writeFileSync(readerPath,credential('keryx_reader','different-synthetic-password'));assert.throws(()=>reader.metrics());writeFileSync(readerPath,credential('keryx_reader'));checks++;

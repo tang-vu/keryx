@@ -14,9 +14,11 @@ import { composePostgresAccounts } from './accounts-transport';
 import { composePostgresAccountHistory } from './account-history-transport';
 import { composePostgresChatLinks } from './chat-links-transport';
 import type { ChatAccountLinksStore } from '../../chat-accounts/contracts';
+import type { PublicProfilesStore } from '../../profiles/public-profile';
+import { composePostgresPublicProfiles } from './public-profiles-transport';
 const cacheRow=z.object({sourceId:z.string().min(1).max(256),text:z.string().max(2097152)}).strict();
 export interface NativeColdCacheSnapshot {readonly cacheRows:readonly Readonly<{sourceId:string;text:string}>[];readonly cacheRowCount:number;readonly cacheWireBytes:number;}
-export interface PostgresRuntimeTransport extends PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport {readonly deliverableAcceptance:DeliverableAcceptanceStore;readonly accountMembership:AccountMembershipStore;readonly chatAccountLinks:ChatAccountLinksStore;verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
+export interface PostgresRuntimeTransport extends PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport {readonly deliverableAcceptance:DeliverableAcceptanceStore;readonly accountMembership:AccountMembershipStore;readonly chatAccountLinks:ChatAccountLinksStore;readonly publicProfiles:PublicProfilesStore;verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
 /** Actual fixed reads on one native pool. This transport cannot enroll a facade. */
 export function createPostgresRuntimeTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,claimsEnabled=false,privacyActive=false):PostgresRuntimeTransport {
  const expected=validateStorageIdentity(identity);return composePostgresRuntimeTransport(createPostgresDomainChannel(options,expected,digest),expected,digest,options.role!=='keryx_app',claimsEnabled,privacyActive);
@@ -34,6 +36,8 @@ export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,id
   deliverableAcceptance:composePostgresAcceptance(channel,readOnly),
   accountMembership:Object.freeze({...composePostgresAccounts(channel,readOnly),...(privacyActive?composePostgresAccountHistory(channel):{})}),
   chatAccountLinks:composePostgresChatLinks(channel,readOnly),
+  // Consumed associations survive the separate new-claim issuance flag.
+  publicProfiles:composePostgresPublicProfiles(channel,readOnly),
   async verifyRuntimeAuthority(){
    live();try{const value=authority.parse(await channel.call('nativeRuntimeAuthority',[]));live();if(canonicalJson(validateStorageIdentity(value.identity))!==wire)throw unavailable();}
    catch{throw unavailable();}

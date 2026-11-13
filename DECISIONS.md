@@ -1,5 +1,27 @@
 # Keryx — Decision Log
 
+## Preserve opt-in public profiles in native PostgreSQL - 2026-11-13
+
+Keep publication separate from run visibility, wallet membership and payments.
+Use five fixed operations with current durable login, ownership proof and revision
+checks inside the serialized writer. A lost commit acknowledgement stays unknown;
+settings provide explicit reconciliation without replaying the write.
+
+Store only minimal public-run inputs as original-bound private TEXT derivatives.
+Escaped NUL and surrogate data stays outside JSONB, and changing an original
+invalidates the derivative. A fresh stable snapshot after the last authority
+await checks publication, current handle, sharing, claims and verified identities.
+Retain consumed claim associations independently of the new-claim issuance flag.
+The readonly core/facade exposes the port only under both existing feature flags.
+
+For opt-in wallet-wide ledgers, group original numeric amounts and role masks in
+SQL, then apply the existing JS Number/recordedMicros function to each amount and
+multiply by its exact count. This avoids SQL float formatting or rounding while
+transferring no payer, payee or receipt identifiers. Bound groups and wire bytes;
+missing original-mode metadata or an unsupported window refuses the read.
+This records display facts only and grants no settlement or custody authority.
+Full writer, materialization, capacity and production cutover remain separate gates.
+
 ## Preserve private chat reservations in native PostgreSQL - 2026-11-13
 
 Port the existing seven chat-link operations through fixed native calls. A

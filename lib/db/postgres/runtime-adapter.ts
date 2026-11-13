@@ -28,6 +28,7 @@ import { capturePublicLedgerLimit } from './ledger-transport';
 import { z } from 'zod';
 import { interactiveSessionSchema,bindingSchema as accountBindingSchema,snapshotSchema as accountSnapshotSchema,digestSchema as accountDigestSchema,type AccountMembershipStore } from '../../accounts/contracts';
 import { recipientSchema as chatRecipientSchema,type ChatAccountLinksStore } from '../../chat-accounts/contracts';
+import { publicProfilesEnabled,publicHandle,publicProfileActor,type PublicProfilesStore } from '../../profiles/public-profile';
 import { acceptanceWallet,networkSchema,deliverableIdSchema,type DeliverableAcceptanceStore } from '../../deliverable-acceptance/contracts';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
@@ -45,12 +46,12 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   ||deployment.identity.authorityMode!=='mainnet-real')refuseStorage('identity_mismatch');
  if(deployment.backend.sourceDigest!==NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256)refuseStorage('adapter_not_initialized');
  const selected=deployment.backend,expectedWire=canonicalJson(deployment),credential=readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader'),key=keyFingerprint();
- const claimsEnabled=runClaimsEnabled(process.env),privacyActive=process.env.KERYX_RUN_PRIVACY_ENABLED==='true';
+ const claimsEnabled=runClaimsEnabled(process.env),privacyActive=process.env.KERYX_RUN_PRIVACY_ENABLED==='true',publicProfilesActive=publicProfilesEnabled(process.env);
  const transport=createPostgresRuntimeTransport({endpoint:selected.endpoint,database:selected.database,role:'keryx_reader',password:credential.password},deployment.identity,selected.sourceDigest,claimsEnabled,privacyActive);
  let closed=false,closing:Promise<void>|undefined;
  const entry=()=>{
   if(closed)refuseStorage('adapter_not_initialized');
-  if(canonicalJson(readRuntimeStorageDeployment())!==expectedWire||keyFingerprint()!==key||runClaimsEnabled(process.env)!==claimsEnabled||(process.env.KERYX_RUN_PRIVACY_ENABLED==='true')!==privacyActive
+  if(canonicalJson(readRuntimeStorageDeployment())!==expectedWire||keyFingerprint()!==key||runClaimsEnabled(process.env)!==claimsEnabled||(process.env.KERYX_RUN_PRIVACY_ENABLED==='true')!==privacyActive||publicProfilesEnabled(process.env)!==publicProfilesActive
    ||readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader').fingerprint!==credential.fingerprint)refuseStorage('identity_mismatch');
  };
  const guard=async()=>{entry();await transport.verifyRuntimeAuthority();entry();};
@@ -94,6 +95,13 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   issue:readonly,complete:readonly,unlink:readonly,unlinkAccount:readonly,
  } satisfies ChatAccountLinksStore);
  Object.defineProperty(core.adapter,'chatAccountLinks',{value:chat,enumerable:false,writable:false,configurable:true});
+ const publicProfiles:PublicProfilesStore=Object.freeze({
+  async read(raw){entry();const handle=publicHandle.parse(raw);await guard();const value=await transport.publicProfiles.read(handle);entry();return value;},
+  async settings(raw){entry();const actor=publicProfileActor.parse(raw);await guard();const value=await transport.publicProfiles.settings(actor);entry();return value;},
+  async sitemap(raw){entry();const take=z.number().int().min(1).max(1000).parse(raw);await guard();const value=await transport.publicProfiles.sitemap(take);entry();return value;},
+  update:readonly,unpublish:readonly,
+ } satisfies PublicProfilesStore);
+ if(publicProfilesActive)Object.defineProperty(core.adapter,'publicProfiles',{value:publicProfiles,enumerable:false,writable:false,configurable:true});
  const sessionRow=z.object({hash:accountDigestSchema,wallet:z.string().regex(/^0x[a-fA-F0-9]{40}$/),issued_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),expires_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)}).strict().refine(row=>row.expires_at>row.issued_at&&row.expires_at-row.issued_at<=604800000);
  const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
@@ -131,6 +139,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='deliverableAcceptance')return acceptance;
     if(property==='accountMembership')return accounts;
     if(property==='chatAccountLinks')return chat;
+    if(property==='publicProfiles')return publicProfilesActive?publicProfiles:undefined;
     if(property==='getWebSession')return async(raw:string)=>{
      entry();const hash=accountDigestSchema.parse(raw);await guard();const value=await transport.applicationRead('get_web_session',{p_hash:hash});entry();if(value===null)return null;
      const row=sessionRow.parse(value);if(row.hash!==hash)refuseStorage('invalid_operation');return {hash:row.hash,wallet:row.wallet,issuedAt:row.issued_at,expiresAt:row.expires_at};
@@ -151,7 +160,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;
     return (...args:unknown[])=>read(()=>Reflect.apply(method,target,args));
    },
-   ownKeys:()=>privacyActive?['publicLedgerRuns','accountMembership','chatAccountLinks']:['accountMembership','chatAccountLinks'],getOwnPropertyDescriptor(_target,property){entry();if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
+   ownKeys:()=>[...(privacyActive?['publicLedgerRuns']:[]),'accountMembership','chatAccountLinks',...(publicProfilesActive?['publicProfiles']:[])],getOwnPropertyDescriptor(_target,property){entry();if(publicProfilesActive&&property==='publicProfiles')return {value:publicProfiles,enumerable:false,writable:false,configurable:true};if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
    setPrototypeOf:()=>false,set:()=>false,defineProperty:()=>false,deleteProperty:()=>false,preventExtensions:()=>false,
   });
   facades.set(facade,{identity:deployment.identity,guard,close,closed:()=>closed});
