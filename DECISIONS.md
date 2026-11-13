@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+## Preserve exact claim completion dates across storage backends - 2026-11-14
+
+Use the SHA-bound raw SQLite completion-date string for anonymous claim issuance,
+consumption and claimed ownership reads. Equal PostgreSQL timestamp instants do
+not establish equal original date bytes. Keep the physical timestamp and whole
+original SHA checks as additional guards. This applies to private history,
+privacy ownership, public-profile selection and the account-history reply seal.
+
+Keep canonical UTC validation for new issuance. Consumption of retained tickets
+continues to compare their own exact original date, including an offset date if
+both retained values match; migration must not normalize data or impose a new
+issuance rule on historical tickets. Missing raw-date metadata cannot grant
+claimed ownership. This source correction does not activate PostgreSQL or close
+the remaining full-writer, materialization and production cutover gates.
+
 ## Preserve recipient assignment decisions in native PostgreSQL - 2026-11-14
 
 Keep the SQLite synchronous reply seal and add an explicit asynchronous PostgreSQL

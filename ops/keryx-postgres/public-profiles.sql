@@ -41,8 +41,10 @@ CREATE FUNCTION keryx_storage.public_profile_owned(selected_id text,wallet text,
  SELECT EXISTS(SELECT 1 FROM public.query_runs q LEFT JOIN public.run_privacy v ON v.run_id=q.id
   LEFT JOIN public.anonymous_run_claims c ON c.run_id=q.id AND c.network=binding->>'network' AND c.origin=binding->>'origin'
   LEFT JOIN keryx_storage.run_ownership_projection o ON o.run_id=q.id
+  LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
   WHERE q.id=selected_id AND coalesce(v.erased,0)=0 AND(q.asker=wallet OR(q.asker IS NULL AND claims AND c.claimed_wallet=wallet AND c.claimed_at IS NOT NULL
-   AND q.created_at=c.completed_at::timestamptz AND o.history_eligible AND o.claimed_valid AND octet_length(q.data::text)<=4000000
+   AND q.created_at=c.completed_at::timestamptz AND h.original_created_at=c.completed_at AND h.original_sha256=c.original_sha256
+   AND o.history_eligible AND o.claimed_valid AND octet_length(q.data::text)<=4000000
    AND o.original_sha256=c.original_sha256 AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
    AND NOT EXISTS(SELECT 1 FROM public.a2a_orders a WHERE a.query_id=q.id))));
 $$;
@@ -68,10 +70,12 @@ BEGIN
  IF claims AND EXISTS(SELECT 1 FROM public.query_runs q JOIN public.run_privacy v ON v.run_id=q.id
   JOIN public.anonymous_run_claims c ON c.run_id=q.id AND c.network=binding->>'network' AND c.origin=binding->>'origin'
   LEFT JOIN keryx_storage.run_ownership_projection o ON o.run_id=q.id
+  LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
   WHERE q.id IN(SELECT jsonb_array_elements_text(selected->'runIds')) AND v.visibility='public' AND v.erased=0 AND q.asker IS NULL AND c.claimed_wallet=s.wallet AND c.claimed_at IS NOT NULL
    AND q.created_at=c.completed_at::timestamptz AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
    AND NOT EXISTS(SELECT 1 FROM public.a2a_orders a WHERE a.query_id=q.id)
-   AND(o.history_eligible IS DISTINCT FROM true OR o.claimed_valid IS DISTINCT FROM true OR o.original_sha256 IS DISTINCT FROM c.original_sha256)) THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
+   AND(h.original_created_at IS NULL OR h.original_sha256 IS DISTINCT FROM c.original_sha256
+    OR h.original_created_at=c.completed_at AND(o.history_eligible IS DISTINCT FROM true OR o.claimed_valid IS DISTINCT FROM true OR o.original_sha256 IS DISTINCT FROM c.original_sha256))) THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
  FOR r IN SELECT q.id,q.asker,m.profile_fields,m.original_sha256,m.data_bytes,octet_length(q.data::text) actual_bytes,CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data) END original_hash,h.owner_invalid,h.recorded_owner
   FROM public.query_runs q JOIN public.run_privacy v ON v.run_id=q.id
   LEFT JOIN keryx_storage.run_privacy_projection m ON m.run_id=q.id LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id

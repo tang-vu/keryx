@@ -15,9 +15,10 @@ CREATE TRIGGER native_original_projection_invalidate AFTER UPDATE OF data,create
 CREATE FUNCTION keryx_storage.claim_original(run_id text,completed_at text) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE r record;fingerprint text;
 BEGIN
- SELECT q.asker,q.created_at,q.data,p.anonymous_claim_eligible,p.original_sha256 INTO r FROM public.query_runs q
+ SELECT q.asker,q.created_at,q.data,p.anonymous_claim_eligible,p.original_sha256,p.original_created_at INTO r FROM public.query_runs q
   JOIN keryx_storage.run_history_projection p ON p.run_id=q.id WHERE q.id=claim_original.run_id FOR SHARE OF q;
- IF NOT FOUND OR r.asker IS NOT NULL OR NOT r.anonymous_claim_eligible OR r.created_at IS DISTINCT FROM completed_at::timestamptz
+ IF NOT FOUND OR r.asker IS NOT NULL OR NOT r.anonymous_claim_eligible OR r.original_created_at IS DISTINCT FROM completed_at
+  OR r.created_at IS DISTINCT FROM completed_at::timestamptz
   OR EXISTS(SELECT 1 FROM public.a2a_orders WHERE query_id=claim_original.run_id) THEN RAISE EXCEPTION 'claim_unavailable';END IF;
  fingerprint:=keryx_storage.run_original_sha256(r.data);
  IF fingerprint IS DISTINCT FROM r.original_sha256 THEN RAISE EXCEPTION 'claim_unavailable';END IF;

@@ -42,7 +42,8 @@ CREATE FUNCTION keryx_storage.ownership_candidates(wallet text,network text,orig
  FROM public.query_runs q LEFT JOIN public.anonymous_run_claims c ON c.run_id=q.id AND c.network=ownership_candidates.network AND c.origin=ownership_candidates.origin
  LEFT JOIN keryx_storage.run_ownership_projection p ON p.run_id=q.id LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
  WHERE (selected_id IS NULL OR q.id=selected_id) AND(q.asker=wallet OR(q.asker IS NULL AND c.claimed_wallet=wallet AND c.claimed_at IS NOT NULL
-  AND q.created_at=c.completed_at::timestamptz AND octet_length(q.data::text)<=4000000
+  AND q.created_at=c.completed_at::timestamptz AND h.original_created_at=c.completed_at AND h.original_sha256=c.original_sha256
+  AND octet_length(q.data::text)<=4000000
   AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
   AND NOT EXISTS(SELECT 1 FROM public.a2a_orders o WHERE o.query_id=q.id)));
 $$;
