@@ -9,9 +9,9 @@ import { validatePrivateResearchResultSnapshot,requireOriginalPrivateResearchRes
 import { PostgresStorageUnavailable } from './connection';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
 import { capturePrivateResearchValue,privateResearchLookup,readPrivateResearchSnapshot,privateSnapshotPayment,privateSnapshotExecution,privateSnapshotResult,privateSnapshotInterruption,
- privateSnapshotSubmissions,privateSnapshotConfirmation,privateSnapshotReservation,privateResearchExpected,privateResearchPacket,privateResearchResultIdentity,privateCreatorLegId,checkedPrivatePayment,type PrivateResearchAction,type PrivateResearchSnapshot } from './private-research-packet';
+ privateSnapshotSubmissions,privateSnapshotConfirmation,privateSnapshotReservation,privateResearchExpected,privateResearchPacket,privateResearchResultIdentity,privateCreatorLegId,checkedPrivatePayment,privateHistorySelection,privateCandidateSelection,readPrivateHistory,readPrivateCandidates,readPrivateTreasurySummary,type PrivateResearchAction,type PrivateResearchSnapshot } from './private-research-packet';
 
-export type PostgresPrivateResearchReadPort=Pick<KeryxDB,'getPrivateResearchIntent'|'getPrivatePaymentState'|'getPrivateResearchExecution'|'getPrivateResearchResult'|'getPrivateResearchInterruption'|'getPrivateTreasury'|'listPrivateCreatorSubmissions'|'getPrivateCreatorConfirmation'>;
+export type PostgresPrivateResearchReadPort=Pick<KeryxDB,'getPrivateResearchIntent'|'getPrivatePaymentState'|'getPrivateResearchExecution'|'getPrivateResearchResult'|'getPrivateResearchInterruption'|'getPrivateTreasury'|'listPrivateCreatorSubmissions'|'getPrivateCreatorConfirmation'|'listPrivateResearchHistory'|'getPrivateTreasurySummary'|'listPrivateWorkerCandidates'|'listPrivateReconciliationCandidates'>;
 export type PostgresPrivateResearchPort=PostgresPrivateResearchReadPort&Pick<KeryxDB,'reservePrivateResearchIntent'|'reservePrivateTreasury'|'claimPrivatePaymentSubmission'|'confirmPrivatePayment'|'claimPrivateResearchExecution'|'admitPrivateCreatorSubmission'|'confirmPrivateCreatorSubmission'|'savePrivateResearchResult'|'interruptPrivateResearch'|'releasePrivateTreasury'>;
 const operations={
  'reserve-intent':'privateResearchReserveIntent','reserve-treasury':'privateResearchReserveTreasury','claim-payment':'privateResearchClaimPayment','confirm-payment':'privateResearchConfirmPayment',
@@ -40,6 +40,10 @@ export function composePostgresPrivateResearch(channel:PostgresDomainChannel,rea
  const worker=(state:PrivateResearchSnapshot,id:string)=>{const claim=privateSnapshotExecution(state);if(!claim||claim.workerId!==id)throw Error('Private execution authority unavailable');return claim;};
  const workerId=(id:string)=>z.string().uuid().parse(id);
  return Object.freeze({
+  async listPrivateResearchHistory(payer,before){live();const selected=privateHistorySelection(payer,before),raw=await channel.call('privateResearchHistory',[selected.payer,JSON.stringify({before:selected.before})]);live();const result=await readPrivateHistory(raw,selected.payer);live();return result;},
+  async getPrivateTreasurySummary(signer){live();const selected=privateCandidateSelection(signer),raw=await channel.call('privateResearchSummary',[selected.signer,'{}']);live();return readPrivateTreasurySummary(raw);},
+  async listPrivateWorkerCandidates(signer,after){live();const selected=privateCandidateSelection(signer,after),raw=await channel.call('privateResearchWorkers',[selected.signer,JSON.stringify({after:selected.after})]);live();return readPrivateCandidates(raw,25);},
+  async listPrivateReconciliationCandidates(signer,after){live();const selected=privateCandidateSelection(signer,after),raw=await channel.call('privateResearchReconciliation',[selected.signer,JSON.stringify({after:selected.after})]);live();return readPrivateCandidates(raw,1);},
   async getPrivateResearchIntent(id,payer){live();return (await snapshot(privateResearchLookup(id,payer))).intent;},
   async getPrivatePaymentState(id,payer){live();return privateSnapshotPayment(await snapshot(privateResearchLookup(id,payer)));},
   async getPrivateResearchExecution(id,payer){live();return privateSnapshotExecution(await snapshot(privateResearchLookup(id,payer)));},

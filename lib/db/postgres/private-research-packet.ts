@@ -10,6 +10,8 @@ import { privateCreatorSubmissionSchema,type PrivateCreatorSubmissionRecord } fr
 import { capturePrivateCreatorConfirmation,readPrivateCreatorConfirmation } from '../private-creator-confirmations';
 import { capturePrivateResearchResult,readPrivateResearchResult,validatePrivateResearchResultSnapshot } from '../private-research-results';
 import type { QueryRun } from '../../types';
+import { privateHistoryCursorSchema } from '../../a2a/private-research-identifiers';
+import type { PrivateTreasurySummary } from '../private-treasury-summary';
 
 export const privateResearchActions=Object.freeze(['reserve-intent','reserve-treasury','claim-payment','confirm-payment','claim-execution','admit-creator','confirm-creator','save-result','interrupt','release'] as const);
 export type PrivateResearchAction=typeof privateResearchActions[number];
@@ -101,3 +103,42 @@ export function privateResearchResultIdentity(serializedRun:string,state:Private
 }
 export function checkedPrivatePayment(value:unknown,state:PrivateResearchSnapshot){if(!state.intent)throw refuse();return privatePaymentConfirmation(value as PrivatePaymentConfirmation,state.intent);}
 export function privateResearchPacket(value:unknown){return bound(JSON.stringify(value),67108864);}
+export function privateHistorySelection(payer:string,before?:z.infer<typeof privateHistoryCursorSchema>){return freeze({payer:addressSchema.parse(payer).toLowerCase(),before:before===undefined?null:privateHistoryCursorSchema.parse(before)});}
+export function privateCandidateSelection(signer:string,after?:string){return freeze({signer:addressSchema.parse(signer).toLowerCase(),after:after===undefined?null:privateResearchIdSchema.parse(after)});}
+export async function readPrivateHistory(raw:unknown,payer:string){
+ const rows=z.array(z.object({id:privateResearchIdSchema,data:z.string(),created_at:date}).strict()).max(26).parse(raw);
+ return Promise.all(rows.map(async row=>{const intent=await validatePrivateResearchIntent(JSON.parse(bound(row.data,524288)));if(intent.id!==row.id||intent.submission.payment.authorization.from!==payer||intent.requirement.network!==ARC_MAINNET_PROFILE.networkId)throw refuse();return {intent,createdAt:row.created_at};}));
+}
+export function readPrivateCandidates(raw:unknown,maximum:1|25){return z.array(z.object({id:privateResearchIdSchema,payer:addressSchema}).strict()).max(maximum).parse(raw);}
+type JsonNode={sql:string|number|bigint|null;compact:string;fields?:Array<[string,JsonNode]>};
+/** SQLite json_extract selects the FIRST duplicate key. Object/array results
+ * are compact original JSON TEXT, whose key/escape order still participates in
+ * SQL IS comparisons. JSON.parse alone would silently select the last key. */
+function sourceJson(wire:string):JsonNode{
+ JSON.parse(wire);let at=0;const ws=()=>{while(/[\t\n\r ]/.test(wire[at]??'!'))at++;};
+ const quoted=()=>{const start=at++;while(at<wire.length){if(wire[at++]==='"')return wire.slice(start,at);if(wire[at-1]==='\\')at++;}throw refuse();};
+ const parse=(depth:number):JsonNode=>{
+  if(depth>1000)throw refuse();ws();const start=at,ch=wire[at];
+  if(ch==='"'){const token=quoted();return {sql:JSON.parse(token) as string,compact:token};}
+  if(ch==='{'||ch==='['){const object=ch==='{',end=object?'}':']',fields:Array<[string,JsonNode]>=[],parts:string[]=[];at++;ws();
+   while(wire[at]!==end){let key='',token='';if(object){token=quoted();key=JSON.parse(token) as string;ws();if(wire[at++]!==':')throw refuse();}const child=parse(depth+1);parts.push(object?token+':'+child.compact:child.compact);if(object)fields.push([key,child]);ws();if(wire[at]!==',')break;at++;ws();}
+   if(wire[at++]!==end)throw refuse();const compact=ch+parts.join(',')+end;return {sql:compact,compact,...(object?{fields}:{})};
+  }
+  while(at<wire.length&&!/[\t\n\r ,}\]]/.test(wire[at]))at++;const token=wire.slice(start,at);
+  const value=JSON.parse(token) as number|boolean|null;return {sql:value===null?null:typeof value==='boolean'?(value?1n:0n):/^-?(?:0|[1-9]\d*)$/.test(token)&&BigInt(token)>=-9223372036854775808n&&BigInt(token)<=9223372036854775807n?BigInt(token):value,compact:token};
+ };const value=parse(0);ws();if(at!==wire.length)throw refuse();return value;
+}
+const extracted=(node:JsonNode|null,...path:string[])=>{let value:JsonNode|undefined=node??undefined;for(const key of path)value=value?.fields?.find(([name])=>name===key)?.[1];return value?.sql??null;};
+export function readPrivateTreasurySummary(raw:unknown):PrivateTreasurySummary|null{
+ const frame=z.object({capacity:z.string().nullable(),reservations:z.array(z.object({amount:z.string(),released:z.string().nullable()}).strict()),legs:z.array(z.object({amount:z.string(),signer:z.string(),data:z.string(),confirmation_id:z.string().nullable(),confirmation_data:z.string().nullable()}).strict())}).strict().parse(raw);
+ if(frame.capacity===null)return null;
+ const integer=(value:string)=>{if(!/^(0|[1-9]\d*)$/.test(value))throw refuse();return BigInt(value);};
+ const capacity=integer(frame.capacity);let allocated=0n,committed=0n,confirmed=0n,invalid=0n;
+ for(const row of frame.reservations)allocated+=integer(row.amount)-integer(row.released??'0');
+ for(const row of frame.legs){const amount=integer(row.amount),leg=sourceJson(row.data),confirmation=row.confirmation_data===null?null:sourceJson(row.confirmation_data),source=extracted(confirmation,'source'),stage=extracted(confirmation,'transferStatus');
+  if(extracted(leg,'submission','amountMicros')!==row.amount||extracted(leg,'submission','payer')!==row.signer||row.confirmation_id!==null&&(extracted(confirmation,'submission')!==extracted(leg,'submission')||!(source==='circle-facilitator-success'||source==='circle-transfer-search'&&['received','batched','confirmed','completed'].includes(String(stage)))))invalid++;
+  committed+=amount;if(source==='circle-facilitator-success'||source==='circle-transfer-search'&&(stage==='confirmed'||stage==='completed'))confirmed+=amount;
+ }
+ if([capacity,allocated,committed,confirmed,invalid].some(value=>value<0n||value>999999999999n)||invalid!==0n||capacity===0n||confirmed>committed||committed>allocated||allocated>capacity)throw Error('Private treasury accounting mismatch');
+ return {capacityMicros:String(capacity),allocatedMicros:String(allocated),unallocatedMicros:String(capacity-allocated),committedMicros:String(committed),confirmedMicros:String(confirmed),unresolvedOrProcessingMicros:String(committed-confirmed),conservativeBackingMicros:String(capacity-confirmed),observation:'database-recorded',chainFinalityVerified:false};
+}

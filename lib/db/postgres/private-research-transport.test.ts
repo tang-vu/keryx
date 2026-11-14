@@ -88,3 +88,18 @@ it('uses the same mandatory raw snapshot on all eight readonly point/ledger read
  await reader.getPrivateResearchIntent(f.id,f.payer);await reader.getPrivatePaymentState(f.id,f.payer);await reader.getPrivateResearchInterruption(f.id,f.payer);await reader.getPrivateTreasury(f.id,f.payer);await reader.listPrivateCreatorSubmissions(f.id,f.payer);await reader.getPrivateCreatorConfirmation(f.id,f.payer,'0x'+'aa'.repeat(32));
  expect(f.call.mock.calls).toHaveLength(8);expect(f.call.mock.calls.every(c=>c[0]==='privateResearchSnapshot')).toBe(true);
 });
+it('captures exact TEXT history cursors and accepts the26-row sentinel through real Source crypto',async()=>{
+ const f=setup(),reader=transport.composePostgresPrivateResearch(f.channel,true),before={createdAt:'2026-09-09T07:00:00.123456+07:00',id:f.id};
+ f.call.mockResolvedValue(Array.from({length:26},()=>({id:f.id,data:JSON.stringify(f.intent),created_at:'2026-09-09T07:00:00.123+07:00'})));
+ const pending=reader.listPrivateResearchHistory(f.payer,before);before.createdAt='changed';const rows=await pending;expect(rows).toHaveLength(26);expect(rows[0].createdAt).toBe('2026-09-09T07:00:00.123+07:00');
+ expect(f.call.mock.calls[0][0]).toBe('privateResearchHistory');expect(JSON.parse(f.call.mock.calls[0][1][1]!).before.createdAt).toBe('2026-09-09T07:00:00.123456+07:00');
+ f.call.mockClear();await expect(reader.listPrivateResearchHistory(f.payer,{id:f.id,createdAt:'invalid'})).rejects.toThrow();expect(f.call).not.toHaveBeenCalled();
+});
+it('keeps25/1 candidate hints distinct from execution and reports accounting without balance authority',async()=>{
+ const f=setup(),reader=transport.composePostgresPrivateResearch(f.channel,true),after=f.id;
+ f.call.mockImplementation(async operation=>operation==='privateResearchSummary'?{capacity:'100000',reservations:[{amount:'30000',released:'10000'}],legs:[]}:[{id:f.id,payer:f.payer}]);
+ expect(await reader.listPrivateWorkerCandidates(f.payer,after)).toEqual([{id:f.id,payer:f.payer}]);expect(await reader.listPrivateReconciliationCandidates(f.payer)).toEqual([{id:f.id,payer:f.payer}]);
+ expect(await reader.getPrivateTreasurySummary(f.payer)).toMatchObject({capacityMicros:'100000',allocatedMicros:'20000',confirmedMicros:'0',chainFinalityVerified:false,observation:'database-recorded'});
+ expect(f.call.mock.calls.map(c=>c[0])).toEqual(['privateResearchWorkers','privateResearchReconciliation','privateResearchSummary']);
+ f.call.mockClear();f.call.mockResolvedValue([{id:f.id,payer:f.payer},{id:f.id,payer:f.payer}]);await expect(reader.listPrivateReconciliationCandidates(f.payer)).rejects.toThrow();
+});
