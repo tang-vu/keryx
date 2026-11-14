@@ -21,6 +21,9 @@ import { OWNER_ASSIGNMENT_CALLS } from './owner-assignments-calls';
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
+  a2aOriginalSettled:{sql:'SELECT public.storage_a2a_original_settled($1::jsonb,$2::text,$3::text) AS result',args:1,write:false,bytes:128,transaction:true},
+  a2aOriginalUnfinished:{sql:'SELECT public.storage_a2a_original_unfinished($1::jsonb,$2::text,$3::integer) AS result',args:1,write:false,bytes:4194304,transaction:true},
+  a2aOriginalClaim:{sql:'SELECT public.storage_a2a_original_claim($1::jsonb,$2::text,$3::text,$4::text,$5::text) AS result',args:3,write:true,bytes:4194304},
   ...APPLICATION_READ_CALLS,
   ...AUTH_WRITE_CALLS,
   ...OPERATIONAL_WRITE_CALLS,

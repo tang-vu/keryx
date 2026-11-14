@@ -1,5 +1,26 @@
 # Keryx — Decision Log
 
+## Qualify exact-original A2A ports before the complete native writer - 2026-11-14
+
+Native A2A observation and exact-original claim use fixed functions on the same
+bounded channel and current identity/catalog/data locks. Match the immutable
+purchase, inbound settled tuple, request hash and Source package fingerprint;
+exclude retained Monthly redemptions. Preserve the binary Number round-trip of
+integer micro-USDC, including multiplication noise, without a tolerance rule.
+
+Settlement observation remains valid after an original finishes. Execution claim
+additionally requires the untouched v1 journal, no assigned worker, no saved run
+and no prior creator attempt, all rechecked under the writer lock. A lost commit
+acknowledgement remains unknown; a replay cannot assign the original twice.
+These metadata operations perform no provider, settlement or worker execution.
+
+Bound the complete oldest-first unfinished queue before aggregation, preserve
+unreadable positions/truncation and refuse failed reads rather than invent an
+empty queue. Two fixed passes under the same shared data lock avoid repeatedly
+copying a growing array of private bodies. Only the two observation methods
+escape the genuine read-only factory; primitive claim composition does not grant
+installed application, owner/session association or full-writer authority.
+
 ## Import Source derivatives before native cold-cache qualification - 2026-11-14
 
 After public-cell fidelity, derive history, ownership, privacy, usage, ledger,

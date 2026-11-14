@@ -1070,3 +1070,48 @@ is active only for the read-only experiment, then is held again with no remainin
 application/reader connections. The complete application writer stays closed.
 Successful rehearsal still requires fresh live data, actual production load,
 every-role startup admission and authorized ROOT cutover before delivery.
+
+### Native exact-original A2A protocols
+
+The closed A2A ports observe original settlement, inspect a bounded unfinished
+queue and atomically claim one named original. They independently check the
+mainnet identity/catalog and the retained purchase/inbound payment tuple. Request
+hashes use the original question/model bytes and Source package registry; a
+Monthly redemption excludes standalone A2A execution. Integer micro-USDC uses
+the exact binary Number round-trip from SQLite, without an epsilon allowance.
+
+An original can retain a valid local settlement proof after completion. Claim
+also requires a running untouched v1 journal: no worker/start/payment/save marker,
+response, error or resolution, no saved query run and no prior non-inbound payment
+attempt. The current tuple and conditions are checked together under the native
+writer lock. Contention, missing proof and a lost commit acknowledgement never
+trigger an automatic write retry. This is retained local evidence, not a new
+Circle or chain observation.
+
+The SQLite decoder treats retained JSON `null` response/resolution cells as
+logical null. Native claim preserves that behavior without rewriting either
+SQL NULL or JSON null originals; false or non-null JSON remains ineligible.
+Actual differential fixtures reproduce the prior SQL-only-null rejection.
+
+The queue selects `take + 1` oldest rows for an explicit bound of 1 through 500.
+Each private row is capped at 4,000,000 bytes and the complete response at 4MiB.
+Check the complete byte bound before one final aggregation under the same shared
+data lock. Preserve the Source decoder's unreadable count and truncation; a
+refused observation cannot become an empty success. The actual read-only factory
+exposes only settlement and queue observation; execution claim remains a qualified
+primitive until the complete writer and its callers pass their separate gates.
+
+Differential protocols use a genuine verified SQLite connection and its actual
+adapter core. Fixtures cover mismatched inbound tuples, package/request hashes,
+historical journals, saved originals, creator attempts, Monthly markers, concurrent
+claim, real writer contention and actual lost commit acknowledgement. Controlled
+missing-proof seeding restores the exact SQLite trigger before either reader.
+Monthly marker fixtures preserve the submitted-original guard and valid historical
+challenge shape; no challenge issuance, submission or funding is performed.
+
+Future paid-original producers still need byte/Unicode admission before payment:
+the current public question parser accepts NUL and lone surrogates that a native
+JSONB cell cannot represent. Preserve those original wires or refuse the payload
+before settlement; never discover that incompatibility after a debit. These ports
+do not admit the generic worker producer, pending-owner proof/session association,
+full application writer, production load/startup or cutover.
