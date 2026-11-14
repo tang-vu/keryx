@@ -77,7 +77,12 @@ export function nativeFulfillmentVerifyPacket(state:NativeFulfillmentSnapshot){
 export function nativeFulfillmentCompletionPacket(input:ReturnType<typeof captureNativeFulfillmentCompletion>,state:NativeFulfillmentSnapshot,capability?:FulfillmentEvidenceCapability){
  const {record,original,value}=state;if(!record||!original||!value.orderWire||!value.claimRowWire||!value.storeId||record.claim.claimId!==input.claimId)throw refuse();
  validateFulfilledQueryRun(input.run,record.claim,input,capability);
- const expected=fulfilledOriginalOrders(input.run,record.claim,input)[0],afterWire=nativeFulfillmentOrderWire(expected),row=JSON.parse(afterWire) as Record<string,unknown>;
+ const expected=fulfilledOriginalOrders(input.run,record.claim,input)[0],mutable=JSON.parse(nativeFulfillmentOrderWire(expected)) as Record<string,unknown>;
+ // Source updates only these cells. Preserve the observed immutable raw JSON
+ // cell strings even when canonical claim capture reordered their object keys.
+ const row=JSON.parse(value.orderWire) as Record<string,unknown>;
+ for(const key of ['status','response_data','error_code','result_saving_at','resolution_data','updated_at'])row[key]=mutable[key];
+ const afterWire=bounded(JSON.stringify(row),4000000);
  // This existing producer deliberately refuses unrepresentable scalar text.
  // It grants no complete writer or claim of full original-data/domain parity.
  const publication=JSON.parse(capturePostgresPublication(input.run).wire) as {originalHex:string};

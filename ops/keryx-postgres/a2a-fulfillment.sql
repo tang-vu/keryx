@@ -45,7 +45,7 @@ BEGIN
   result:=json_build_object('claimRowWire',claim_wire,'completionRowWire',completion_wire,'orderWire',order_wire,'runWire',run_wire,'storeId',store,'settled',paid,'noCreatorAttempts',no_attempts);
   IF octet_length(result::text)>67108864 THEN RAISE EXCEPTION 'native fulfillment snapshot bound';END IF;RETURN result;
  END IF;
- IF packet_wire IS NULL OR octet_length(packet_wire)>CASE action WHEN 'complete' THEN 67108864 WHEN 'claim' THEN 33554432 ELSE 2048 END THEN RAISE EXCEPTION 'native fulfillment packet bound';END IF;
+ IF packet_wire IS NULL OR octet_length(packet_wire)>(CASE action WHEN 'complete' THEN 67108864 WHEN 'claim' THEN 33554432 ELSE 2048 END) THEN RAISE EXCEPTION 'native fulfillment packet bound';END IF;
  packet:=packet_wire::jsonb;
  IF action='verify' THEN
   IF (jsonb_typeof(packet)='object' AND packet-'claimSha256'-'completionSha256'-'orderSha256'-'runSha256'='{}'::jsonb) IS NOT TRUE THEN RAISE EXCEPTION 'native fulfillment verify packet refused';END IF;

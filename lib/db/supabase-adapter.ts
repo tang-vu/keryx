@@ -1,3 +1,4 @@
+import type { PostgresA2aFulfillmentPort } from './postgres/a2a-fulfillment-transport';
 import type { PostgresSourceClaimsPort } from './postgres/source-claims-transport';
 import type { composePostgresSourceClaimWrites } from './postgres/source-claims-write-transport';
 import type { composePostgresSourceUpkeep } from './postgres/source-upkeep-transport';
@@ -160,6 +161,7 @@ export interface NativePostgresBusinessCoreOptions {
   readonly assertEntry:()=>void;
   readonly verify:()=>Promise<void>;
   readonly sourceClaims?:PostgresSourceClaimsPort;
+  readonly a2aFulfillment?:PostgresA2aFulfillmentPort;
   readonly sourceClaimWrites?:ReturnType<typeof composePostgresSourceClaimWrites>;
   readonly sourceUpkeep?:ReturnType<typeof composePostgresSourceUpkeep>;
   readonly sourceUpsert?:(source:Source)=>Promise<void>;
@@ -262,6 +264,15 @@ export class SupabaseAdapter implements KeryxDB {
       this.assertEntry();
     }, close: () => { this.#enrolled!.ready = false; } });
     const guardedMutation=<A extends unknown[],R>(work:(...args:A)=>Promise<R>)=>async(...args:A)=>{this.assertEntry();const value=await work(...args);this.assertEntry();return value;};
+    if(native?.a2aFulfillment){
+      const port=native.a2aFulfillment,invoke=async<T>(work:()=>Promise<T>)=>{this.assertEntry();const result=await work();this.assertEntry();return result;};
+      Object.defineProperties(this,{
+        claimA2aFailedOriginalFulfillment:{value:(...args:Parameters<PostgresA2aFulfillmentPort['claimA2aFailedOriginalFulfillment']>)=>invoke(()=>port.claimA2aFailedOriginalFulfillment(...args)),configurable:true},
+        getA2aFailedOriginalFulfillment:{value:(...args:Parameters<PostgresA2aFulfillmentPort['getA2aFailedOriginalFulfillment']>)=>invoke(()=>port.getA2aFailedOriginalFulfillment(...args)),configurable:true},
+        completeA2aFailedOriginalFulfillment:{value:(...args:Parameters<PostgresA2aFulfillmentPort['completeA2aFailedOriginalFulfillment']>)=>invoke(()=>port.completeA2aFailedOriginalFulfillment(...args)),configurable:true},
+        hasA2aFailedOriginalFulfillment:{value:(...args:Parameters<PostgresA2aFulfillmentPort['hasA2aFailedOriginalFulfillment']>)=>invoke(()=>port.hasA2aFailedOriginalFulfillment(...args)),configurable:true},
+      });
+    }
     if(native?.sourceClaimWrites){const writes=native.sourceClaimWrites;Object.defineProperties(this,{
       issueSourceClaimChallenge:{value:guardedMutation(writes.issueSourceClaimChallenge.bind(writes)),configurable:true},
       reserveSourceClaimVerification:{value:guardedMutation(writes.reserveSourceClaimVerification.bind(writes)),configurable:true},

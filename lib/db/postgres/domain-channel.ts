@@ -21,6 +21,11 @@ import { OWNER_ASSIGNMENT_CALLS } from './owner-assignments-calls';
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
+  a2aFulfillmentGet:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'get',$3::text,NULL) AS result",args:1,write:false,transaction:true,bytes:33562624,inputBytes:512},
+  a2aFulfillmentSnapshot:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'snapshot',$3::text,NULL) AS result",args:1,write:false,transaction:true,bytes:67108864,inputBytes:512},
+  a2aFulfillmentVerify:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'verify',$3::text,$4::text) AS result",args:2,write:false,transaction:true,bytes:128,inputBytes:4096},
+  a2aFulfillmentClaim:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'claim',$3::text,$4::text) AS result",args:2,write:true,bytes:33562624,inputBytes:67112960},
+  a2aFulfillmentComplete:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'complete',$3::text,$4::text) AS result",args:2,write:true,bytes:128,inputBytes:134221824},
   sourceProducerSnapshot:{sql:"SELECT public.storage_source_producer($1::jsonb,$2::text,'snapshot',$3::text) AS result",args:1,write:false,transaction:true,bytes:16777216,inputBytes:131072},
   sourceProducerWrite:{sql:"SELECT public.storage_source_producer($1::jsonb,$2::text,'write',$3::text) AS result",args:1,write:true,bytes:32768,inputBytes:1064960},
   hostedSourcePolicySnapshot:{sql:"SELECT public.storage_hosted_admit_authorization($1::jsonb,$2::text,'source-policy-snapshot',NULL,$3::text,NULL,NULL,NULL) AS result",args:1,write:false,transaction:true,bytes:16777216,inputBytes:8192},

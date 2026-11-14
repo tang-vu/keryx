@@ -48,3 +48,13 @@ it('retains genuine supplement WeakMap checks and refuses a copied/caller-metada
  f.result.runSha256=fulfillmentObjectSha256(run);const captured=captureNativeFulfillmentCompletion(f.result),state=readNativeFulfillmentSnapshot(f.state);
  for(const proof of [undefined,{},()=>true])expect(()=>nativeFulfillmentCompletionPacket(captured,state,proof as never)).toThrow(/evidence refused/);
 });
+it('preserves immutable raw order cells when retained JSON formatting differs from the canonical claim',()=>{
+ const f=fulfillmentPacketFixture(),before=JSON.parse(f.state.orderWire);
+ for(const key of ['package_data','request_data'])before[key]=JSON.stringify(JSON.parse(before[key]),null,2);
+ f.state.orderWire=JSON.stringify(before);
+ const packet=JSON.parse(nativeFulfillmentCompletionPacket(captureNativeFulfillmentCompletion(f.result),readNativeFulfillmentSnapshot(f.state))),after=JSON.parse(packet.afterWire);
+ const mutable=new Set(['status','response_data','error_code','result_saving_at','resolution_data','updated_at']);
+ for(const key of Object.keys(before))if(!mutable.has(key))expect(after[key],key).toEqual(before[key]);
+ expect(after.status).toBe('completed');expect(after.result_saving_at).toBe(f.result.completedAt);
+ expect(packet.projection.orderWire).toBe(packet.afterWire);
+});
