@@ -3,20 +3,23 @@
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash,randomBytes } from 'node:crypto';
+import type { Client } from 'pg';
 import { canonicalJson } from '../../lib/canonical-json';
 import { config } from '../../lib/config';
 import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
 import { SqliteAdapter } from '../../lib/db/sqlite-adapter';
 import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy } from '../../lib/db/public-source-claims';
 import { composePostgresSourceClaims } from '../../lib/db/postgres/source-claims-transport';
-import { composePostgresSourceUpsert } from '../../lib/db/postgres/source-upsert-policy';
+import { captureSourceUpsertInput,captureSourceUpsertPolicy } from '../../lib/db/postgres/source-upsert-policy';
+import { sourceClaimPolicyRuntime } from '../../lib/db/postgres/source-claim-purchase-policy';
+import { CONTENT_WRITE_CALLS } from '../../lib/db/postgres/content-write-calls';
 import { createPostgresDomainChannel } from '../../lib/db/postgres/domain-channel';
 import { sourceRegistryAuthoritySchema } from '../../lib/registry/source-registry-authority-schema';
 import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection';
 import type { StorageIdentity } from '../../lib/db/storage-identity';
 import type { Source } from '../../lib/types';
-export async function qualifySourceClaims(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
- const db=new DatabaseSync(':memory:'),channel=createPostgresDomainChannel(input.options,input.identity,input.digest),native=composePostgresSourceClaims(channel),upsert=composePostgresSourceUpsert(channel,false),q=(s:string)=>"'"+s.replaceAll("'","''")+"'",sha=(s:string)=>createHash('sha256').update(s).digest('hex'),prefix='keryx:source-claims:v1:';
+export async function qualifySourceClaims(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string}){
+ const db=new DatabaseSync(':memory:'),channel=createPostgresDomainChannel(input.options,input.identity,input.digest),native=composePostgresSourceClaims(channel),q=(s:string)=>"'"+s.replaceAll("'","''")+"'",sha=(s:string)=>createHash('sha256').update(s).digest('hex'),prefix='keryx:source-claims:v1:';
  const pg=(sql:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+sql+"UPDATE keryx_storage.control SET mode='active';COMMIT;"),normalized=(v:unknown)=>JSON.parse(JSON.stringify(v)),equal=(a:unknown,b:unknown)=>assert.deepEqual(normalized(a),normalized(b));
  const oldConfig={networkId:config.networkId,registryOrigins:config.registryOrigins},oldEnv={server:process.env.KERYX_REGISTRY_ORIGINS,public:process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS},sourceIds:string[]=[],keys=new Set<string>();let vectors=0,ownsNamespace=false;
  const sync=(key:string,value:string)=>{keys.add(key);db.prepare('INSERT INTO sync_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,value,'2026-01-02T00:00:00.000Z');pg(`INSERT INTO public.sync_state(key,value,updated_at) VALUES(${q(key)},${q(value)},'2026-01-02T00:00:00.000Z') ON CONFLICT(key) DO UPDATE SET value=excluded.value;`);};
@@ -42,8 +45,19 @@ export async function qualifySourceClaims(input:{options:PostgresConnectionOptio
   db.prepare('UPDATE sources SET active=0 WHERE id=?').run(f.source.id);pg(`UPDATE public.sources SET active=false WHERE id=${q(f.source.id)};`);equal(await native.listSources(),await sqlite.listSources());equal(await native.listAllSources(),await sqlite.listAllSources());vectors++;
   const authority=sourceRegistryAuthoritySchema.parse({network:input.identity.network,address:'0x'+'88'.repeat(20),version:3,codeHash:'0x'+randomBytes(32).toString('hex'),deployBlock:'123'}),originKey='keryx:source-registry-origin:v1:'+legacy.onchainId!,originWire=canonicalJson({format:'keryx-source-registry-origin-v1',onchainId:legacy.onchainId!,authority}),originConfig=canonicalJson([authority]);
   Object.assign(config,{networkId:input.identity.network,registryOrigins:originConfig});process.env.KERYX_REGISTRY_ORIGINS=originConfig;process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS=originConfig;
-  const before=await sqlite.getSource(legacy.id),updated={...legacy,registryAuthority:authority,fetchPrice:0.000009,name:'Atomic current source'};await sqlite.upsertSource(updated);keys.add(originKey);
-  const [observed]=await Promise.all([native.getSource(legacy.id),upsert.upsertSource(updated)]);const after=await sqlite.getSource(legacy.id);assert([normalized(before),normalized(after)].some(value=>canonicalJson(value)===canonicalJson(normalized(observed))));equal(await native.getSource(legacy.id),after);assert.equal(input.ownerSql(`SELECT value FROM public.sync_state WHERE key=${q(originKey)};`),originWire);vectors++;
+  const updated={...legacy,registryAuthority:authority,fetchPrice:0.000009,name:'Atomic current source'},captured=captureSourceUpsertInput(updated),sourceSnapshot=await channel.call('content_source_upsert_snapshot',[captured.selector]),sourceUpsertCapture=captureSourceUpsertPolicy(sourceSnapshot,captured,sourceClaimPolicyRuntime());await sqlite.upsertSource(updated);keys.add(originKey);
+  // READ COMMITTED is deliberate: require_operation acquires the shared data
+  // lock before any catalog/policy SELECT, and every admitted writer is exclusive.
+  // Prove a reader waits and then sees the complete committed row plus origin.
+  let writerHeld=false,pending:Promise<{value:Source|null}|{error:unknown}>|undefined;
+  try{
+   await input.contentionClient.query('BEGIN');writerHeld=true;await input.contentionClient.query('SELECT pg_advisory_xact_lock(634781904177022::bigint)');
+   pending=native.getSource(legacy.id).then(value=>({value}),error=>({error}));let blocked=false;
+   for(let i=0;i<30;i++){const result=await input.contentionClient.query('SELECT count(*) n FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND pg_backend_pid()=ANY(pg_blocking_pids(pid))');if(Number(result.rows[0].n)>0){blocked=true;break;}await new Promise(resolve=>setTimeout(resolve,20));}assert(blocked,'Current native Source read must wait on the writer lock');
+   await input.contentionClient.query(CONTENT_WRITE_CALLS.content_upsert_source.sql,[canonicalJson(input.identity),input.digest,canonicalJson({p_row:{rowWire:captured.rowWire,sourceUpsertCapture}})]);
+   await input.contentionClient.query('COMMIT');writerHeld=false;const observed=await pending;assert('value'in observed,'Waiting Source read must succeed after writer commit');equal(observed.value,await sqlite.getSource(legacy.id));
+  }finally{if(writerHeld)await input.contentionClient.query('ROLLBACK');if(pending)await pending;}
+  equal(await native.getSource(legacy.id),await sqlite.getSource(legacy.id));assert.equal(input.ownerSql(`SELECT value FROM public.sync_state WHERE key=${q(originKey)};`),originWire);vectors++;
   await sqlite.setSourceMeta(legacy.onchainId!,{name:'Registry source metadata',description:'Current description',url:legacy.url,rssUrl:legacy.rssUrl});pg(`INSERT INTO public.source_meta(id,name,description,url,rss_url,updated_at) VALUES(${q(legacy.onchainId!)},'Registry source metadata','Current description',${q(legacy.url)},${q(legacy.rssUrl!)},'2026-01-02T00:00:00.000Z');`);equal(await native.getSourceMeta(legacy.onchainId!),await sqlite.getSourceMeta(legacy.onchainId!));vectors++;
   sync(originKey,'{}');await assert.rejects(native.getSource(legacy.id));await assert.rejects(native.getSourceMeta(legacy.onchainId!));sync(originKey,originWire);vectors++;
   const duplicate=await makeSource(5);db.prepare('UPDATE sources SET onchain_id=? WHERE id=?').run(legacy.onchainId!,duplicate.id);pg(`UPDATE public.sources SET onchain_id=${q(legacy.onchainId!)} WHERE id=${q(duplicate.id)};`);await assert.rejects(native.getSourceByOnchainId(legacy.onchainId!));vectors++;
@@ -53,7 +67,7 @@ export async function qualifySourceClaims(input:{options:PostgresConnectionOptio
   const readerChannel=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{equal(await composePostgresSourceClaims(readerChannel).getSource(legacy.id),await sqlite.getSource(legacy.id));await assert.rejects(readerChannel.call('hostedAdmitAuthorization',['{}','00'.repeat(32),'{}','{}','1',null]));await assert.rejects(readerChannel.call('hostedSourcePolicySnapshot' as Parameters<typeof readerChannel.call>[0],[canonicalJson({sourceId:legacy.id,identity:null})]));vectors++;}finally{await readerChannel.close();}
   const malformedKey=prefix+'history:'+'fe'.repeat(32)+':0000000000000001';sync(malformedKey,'{unavailable malformed history');try{await assert.rejects(native.getSource(legacy.id));await assert.rejects(native.getSourceClaimForSource(legacy.id));vectors++;}finally{remove(malformedKey);}
   assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');assert.equal(input.ownerSql('SELECT count(*) FROM public.browser_journal_writer;'),'0');
-  return {vectors,currentSourceClaimAndChallenge:true,freeAndStaleClaimsRemainMetadata:true,completeAtomicCatalogSidecars:true,oneSnapshotPerCatalogCall:true,rawHistoryEscapesPreserved:true,corruptManagedNeverUnmanaged:true,immutableRegistryOriginMetadata:true,sourceMetadataSidecar:true,ambiguousOnchainRefused:true,tieCatalogMembersPreserved:true,tieOrderHasNoContract:true,readerCannotWrite:true,providerCalls:0,paymentActions:0,fullFactoryQualified:false};
+  return {vectors,currentSourceClaimAndChallenge:true,freeAndStaleClaimsRemainMetadata:true,completeAtomicCatalogSidecars:true,actualReaderWaitsForWriter:true,oneSnapshotPerCatalogCall:true,rawHistoryEscapesPreserved:true,corruptManagedNeverUnmanaged:true,immutableRegistryOriginMetadata:true,sourceMetadataSidecar:true,ambiguousOnchainRefused:true,tieCatalogMembersPreserved:true,tieOrderHasNoContract:true,readerCannotWrite:true,providerCalls:0,paymentActions:0,fullFactoryQualified:false};
  }finally{
   try{if(ownsNamespace){const selected=[...keys];pg(`DELETE FROM public.source_meta WHERE id IN(${sourceIds.length?sourceIds.map(q).join(','):"''"}) OR id IN(SELECT onchain_id FROM public.sources WHERE id IN(${sourceIds.length?sourceIds.map(q).join(','):"''"}));DELETE FROM public.sources WHERE id IN(${sourceIds.length?sourceIds.map(q).join(','):"''"});${selected.length?`DELETE FROM public.sync_state WHERE key IN(${selected.map(q).join(',')});`:''}`);}}
   finally{Object.assign(config,oldConfig);for(const [key,value] of [['KERYX_REGISTRY_ORIGINS',oldEnv.server],['NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS',oldEnv.public]] as const){if(value===undefined)delete process.env[key];else process.env[key]=value;}await channel.close();db.close();}
