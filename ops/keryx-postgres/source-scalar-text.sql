@@ -4,6 +4,7 @@ SET ROLE keryx_owner;
 CREATE FUNCTION keryx_storage.source_scalar_text(wire text,mode text) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE raw bytea;size integer;pos integer;start_at integer;end_at integer;key_wire text;value_wire text;
+ key_hex text;root_key_parts text[]:=ARRAY[]::text[];root_key_chunk text:='';root_key_count integer:=0;
  depth integer;code integer;unit integer;next_unit integer;source_unit integer;json_unit integer;escape_code integer;
  result jsonb:='{}'::jsonb;source_bytes bytea:=''::bytea;json_bytes bytea:=''::bytea;
  source_chunk bytea:=''::bytea;json_chunk bytea:=''::bytea;source_parts bytea[]:=ARRAY[]::bytea[];json_parts bytea[]:=ARRAY[]::bytea[];
@@ -44,18 +45,28 @@ BEGIN
     pos:=pos+1;
    END LOOP;
    IF pos>=size THEN RAISE EXCEPTION 'Source scalar member unavailable';END IF;
-   -- Only the fixed publication tuple and confidence.level are retained. Unknown
-   -- bodies, keys and nested JSON never become a metadata map.
-   IF key_wire IN('"id"','"createdAt"','"question"','"answer"','"engine"','"parentId"','"asker"','"origin"','"mcpClient"','"paymentMode"','"confidence"','"level"','"claim"','"action"','"at"','"evidence"') THEN
-    key_wire:=substring(key_wire FROM 2 FOR length(key_wire)-2);
-    IF result?key_wire THEN RAISE EXCEPTION 'Source scalar duplicate member';END IF;
+   -- Decode keys through this same scalar byte parser. Unknown malformed
+   -- Unicode keys remain opaque hex; no PG getter or UTF-8 conversion touches
+   -- them. Known escaped ASCII keys select exactly the same raw value token.
+   key_hex:=keryx_storage.source_scalar_text(key_wire,'scalar')->>'jsonHex';
+   root_key_chunk:=root_key_chunk||CASE WHEN root_key_count=0 THEN '' ELSE ',' END||to_json(key_hex)::text;root_key_count:=root_key_count+1;
+   IF octet_length(root_key_chunk)>=4096 THEN root_key_parts:=array_append(root_key_parts,root_key_chunk);root_key_chunk:='';END IF;
+   key_wire:=CASE key_hex
+    WHEN '6964' THEN 'id' WHEN '637265617465644174' THEN 'createdAt' WHEN '7175657374696f6e' THEN 'question' WHEN '616e73776572' THEN 'answer'
+    WHEN '656e67696e65' THEN 'engine' WHEN '706172656e744964' THEN 'parentId' WHEN '61736b6572' THEN 'asker' WHEN '6f726967696e' THEN 'origin'
+    WHEN '6d6370436c69656e74' THEN 'mcpClient' WHEN '7061796d656e744d6f6465' THEN 'paymentMode' WHEN '636f6e666964656e6365' THEN 'confidence'
+    WHEN '6c6576656c' THEN 'level' WHEN '636c61696d' THEN 'claim' WHEN '616374696f6e' THEN 'action' WHEN '6174' THEN 'at' WHEN '65766964656e6365' THEN 'evidence' END;
+   IF key_wire IS NOT NULL THEN
     value_wire:=btrim(convert_from(substring(raw FROM start_at+1 FOR pos-start_at),'UTF8'),E' \t\r\n');
+    -- JSON.parse's last matching root member wins. _rootKeys still retains
+    -- every decoded key in source order for callers with a strict allowlist.
     result:=result||jsonb_build_object(key_wire,value_wire);
    END IF;
    IF get_byte(raw,pos)=125 THEN EXIT;END IF;
    IF get_byte(raw,pos)<>44 THEN RAISE EXCEPTION 'Source scalar member unavailable';END IF;pos:=pos+1;
   END LOOP;
-  RETURN result;
+  root_key_parts:=array_append(root_key_parts,root_key_chunk);
+  RETURN result||jsonb_build_object('_rootKeys',('['||array_to_string(root_key_parts,'')||']')::jsonb);
  END IF;
  IF json_typeof(wire::json) IS DISTINCT FROM 'string' OR size<2 OR get_byte(raw,0)<>34 OR get_byte(raw,size-1)<>34
  THEN RAISE EXCEPTION 'Source scalar string unavailable';END IF;
