@@ -65,7 +65,7 @@ export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOn
   const result=await channel.call(operation,operation==='a2aFail'?[id,errorCode!,at]:[id,at]);
   if(channel.closed||typeof result!=='boolean')throw new PostgresDomainWriteOutcomeUnknown();return result;
  };
- const create=async(captured:ReturnType<typeof captureNativeA2aCreate>,owner?:Readonly<PostgresPendingOwnerAdmissionPacket>)=>{
+ const create=async(captured:ReturnType<typeof captureNativeA2aCreate>,owner?:Readonly<PostgresPendingOwnerAdmissionPacket>,selectedDeployment?:string)=>{
    const context=await channel.call('a2aOriginalStore',[]);live();
    if(!context||typeof context!=='object'||Array.isArray(context)||Object.keys(context).join(',')!=='storeId'||typeof Reflect.get(context,'storeId')!=='string')throw unavailable();
    const projection=acceptanceOriginalMetadata(captured.row,Reflect.get(context,'storeId') as string),packet=JSON.stringify({binding:captured.binding,rowWire:captured.rowWire,projection,...(owner?{owner}:{})});if(Buffer.byteLength(packet)>262144)throw unavailable();
@@ -73,7 +73,7 @@ export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOn
     // Proof consumption happened before the first await. The pinned runtime
     // manifest must still match at the last synchronous submission boundary.
     const selected=readRuntimeStorageDeployment(),now=Date.now();
-    if(selected.backend.kind!=='postgres'||canonicalJson(selected.identity)!==canonicalJson(owner.identity)
+    if(selected.backend.kind!=='postgres'||canonicalJson(selected)!==selectedDeployment||canonicalJson(selected.identity)!==canonicalJson(owner.identity)
      ||owner.proofExpiresAt<=now||owner.session.expiresAt<=now||owner.session.issuedAt>now)throw unavailable();
    }
    const result=await channel.call('a2aCreate',[captured.order.id,packet,captured.order.createdAt]);
@@ -91,7 +91,8 @@ export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOn
   async createOwnedA2aOrder(raw,proof){
    live();if(readOnly||!identity)throw unavailable();
    const captured=captureNativeA2aCreate(raw),owner=capturePostgresPendingOwnerAdmission(proof,identity,captured.order);
-   return create(captured,owner);
+   const selectedDeployment=canonicalJson(readRuntimeStorageDeployment());
+   return create(captured,owner,selectedDeployment);
   },
   async getA2aOrder(id){
    live();const retained=await snapshot(id);if(retained===null)return null;

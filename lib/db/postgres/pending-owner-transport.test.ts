@@ -4,9 +4,13 @@ import type { KeryxDB, WebSessionRecord } from "../keryx-db";
 import { a2aOrderId, type A2aOrder } from "../../a2a/order";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "../storage-identity";
 import { canonicalJson } from "../../canonical-json";
+import { ARC_MAINNET_PROFILE } from "../../arc-network-profile";
 import { pendingOwnerRequestSession, pendingOwnerSettlementSession, retainedPendingOwnerSession,
   capturePostgresPendingOwnerAdmission, capturePostgresPendingOwnerSession, type PendingOwnerSessionProof } from "../../a2a/pending-owner-session";
 import { composePostgresPendingJobOwners } from "./pending-owner-transport";
+import { composePostgresA2aOriginals } from "./a2a-originals-transport";
+import { syntheticA2aOriginal } from "../a2a-original-fixture";
+import { monthlyOrderToRow } from "../research-monthly";
 import type { PostgresDomainChannel } from "./domain-channel";
 
 // Unit-only provenance stand-ins. They exercise the real signed-cookie producer;
@@ -57,6 +61,38 @@ beforeEach(async () => {
   fixture.token = (await issueWebSession(db as unknown as KeryxDB, "offline-fixture-secret-with-no-authority", wallet, "asker")).token;
 });
 afterEach(() => { vi.useRealTimers(); });
+
+describe("owned create selected-deployment boundary", () => {
+  const deployment = () => ({ format: "keryx-storage-deployment-v1", identity, backend: { kind: "postgres", database: "offline_fixture",
+    sourceDigest: "a".repeat(64), endpoint: { kind: "loopback", port: 5432 },
+    credentialPaths: { application: "D:/offline-application.json", reader: "D:/offline-reader.json" } } });
+  const original = () => ({ ...syntheticA2aOriginal(1870, ARC_MAINNET_PROFILE).order, createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() });
+  it("submits the captured owned packet when the complete selected deployment stays current", async () => {
+    fixture.manifest = deployment();
+    const input = original();
+    const selected = await pendingOwnerRequestSession(request(), { id: input.id, requestHash: input.requestHash });
+    const { channel, call } = channelFixture();
+    call.mockImplementation(async operation => operation === "a2aOriginalStore"
+      ? { storeId: "3821e833-f4ca-44d3-a944-0cf892ab0b85" } : { created: true, order: monthlyOrderToRow(input) });
+    expect((await composePostgresA2aOriginals(channel, false, identity).createOwnedA2aOrder(input, selected)).created).toBe(true);
+    expect(call.mock.calls.map(row => row[0])).toEqual(["a2aOriginalStore", "a2aCreate"]);
+  });
+  it.each(["database", "sourceDigest", "endpoint", "credentialPaths"] as const)("refuses same-identity %s drift during the context await before writing", async field => {
+    const pinned = deployment(); fixture.manifest = pinned;
+    const input = original();
+    const selected = await pendingOwnerRequestSession(request(), { id: input.id, requestHash: input.requestHash });
+    const { channel, call } = channelFixture();
+    call.mockImplementation(async () => {
+      const changed = field === "database" ? "another_database" : field === "sourceDigest" ? "b".repeat(64)
+        : field === "endpoint" ? { kind: "loopback", port: 5433 }
+        : { application: "D:/another-application.json", reader: "D:/offline-reader.json" };
+      fixture.manifest = { ...pinned, backend: { ...pinned.backend, [field]: changed } };
+      return { storeId: "3821e833-f4ca-44d3-a944-0cf892ab0b85" };
+    });
+    await expect(composePostgresA2aOriginals(channel, false, identity).createOwnedA2aOrder(input, selected)).rejects.toThrow();
+    expect(call.mock.calls.map(row => row[0])).toEqual(["a2aOriginalStore"]);
+  });
+});
 
 describe("native pending owner signed-cookie proof", () => {
   it("requires native installed write provenance and captures only exact original/session metadata", async () => {
