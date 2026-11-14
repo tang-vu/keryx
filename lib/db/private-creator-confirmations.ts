@@ -40,6 +40,10 @@ function requireOriginal(saved: PrivateCreatorConfirmationRecord | null, expecte
   if (!saved || JSON.stringify(saved.confirmation) !== JSON.stringify(expected)) throw new Error("Private creator confirmation conflict");
   return saved;
 }
+/** Pure SOURCE codecs only; exporting these grants no transport observation,
+ * owner/worker authority or permission to make a payment. */
+export { checked as capturePrivateCreatorConfirmation, readRow as readPrivateCreatorConfirmation,
+  requireOriginal as requireOriginalPrivateCreatorConfirmation };
 
 export const PRIVATE_CREATOR_CONFIRMATIONS_SQL = `
 CREATE TABLE IF NOT EXISTS private_creator_confirmations (

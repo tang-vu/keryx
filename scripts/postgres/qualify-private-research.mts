@@ -1,0 +1,130 @@
+/** Disposable CURRENT SOURCE conformance only. Offline EOA data signatures use
+ * a publicly known test key and fake merchants; no request is broadcast and no
+ * provider, custody, job, funding, publication or production receipt is used. */
+import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
+import { mkdtempSync,writeFileSync,readFileSync,existsSync,unlinkSync,rmdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Client } from 'pg';
+import { z } from 'zod';
+import { privateKeyToAccount } from 'viem/accounts';
+import { ARC_MAINNET_PROFILE } from '../../lib/arc-network-profile';
+import { canonicalJson } from '../../lib/canonical-json';
+import { createPrivateAuthorization } from '../../lib/buyer/private-request-commitment';
+import { BUYER_NETWORK,buyerTypedData } from '../../lib/buyer/protocol';
+import { preparePrivateResearchIntent } from '../../lib/a2a/private-research-intent';
+import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
+import { installNativeUserDomainSchema } from '../../lib/db/native-user-domain-schema';
+import { insertStorageIdentity,installStorageFences } from '../../lib/db/storage-identity-sqlite';
+import { openVerifiedSqliteStorage,assertVerifiedSqliteConnection } from '../../lib/db/storage-identity-connection';
+import { supportedSqliteApplicationProfiles } from '../../lib/db/enrolled-sqlite-schema-profile';
+import { SqliteAdapter } from '../../lib/db/sqlite-adapter';
+import { validateStorageIdentity,type StorageIdentity } from '../../lib/db/storage-identity';
+import { postgresPoolConfiguration,type PostgresConnectionOptions } from '../../lib/db/postgres/connection';
+import { createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-channel';
+import { composePostgresPrivateResearch } from '../../lib/db/postgres/private-research-transport';
+import { privateResearchLookup,readPrivateResearchSnapshot,privateResearchExpected,privateResearchPacket,privateResearchResultIdentity,privateResearchSha,privateSnapshotResult,privateSnapshotConfirmation } from '../../lib/db/postgres/private-research-packet';
+import type { QueryRun } from '../../lib/types';
+import type { PrivateCreatorSubmission } from '../../lib/db/private-creator-submissions';
+import { startCommitAckLossProxy } from './commit-ack-loss.mts';
+
+export async function qualifyPrivateResearch(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string}){
+ input={...input,identity:validateStorageIdentity(input.identity)};assert.equal(BUYER_NETWORK,ARC_MAINNET_PROFILE.networkId);
+ const folder=mkdtempSync(join(tmpdir(),'keryx-native-private-source-')),file=join(folder,'source.sqlite'),manifestPath=join(folder,'storage.json');
+ const manifest=canonicalJson({format:'keryx-storage-deployment-v1',identity:input.identity,backend:{kind:'sqlite',databasePath:file}});
+ const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",pg=(sql:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+sql+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
+ const account=privateKeyToAccount(`0x${'11'.repeat(32)}`),payer=account.address.toLowerCase(),merchants={privatePayee:'0x'+'ab'.repeat(20),publicResearchPayee:'0x'+'cd'.repeat(20)},profile=ARC_MAINNET_PROFILE;
+ const requirement={scheme:'exact',network:profile.networkId,asset:profile.usdcAddress,amount:'50000',payTo:merchants.privatePayee,maxTimeoutSeconds:691200,extra:{name:'GatewayWalletBatched',version:'1',verifyingContract:profile.gatewayWallet}};
+ const fixtures=[] as Array<Awaited<ReturnType<typeof preparePrivateResearchIntent>>>;
+ for(let i=0;i<4;i++){
+  const request={question:`Synthetic offline private storage vector ${i}; no vendor or payment`,budget:.03,researchMode:'quick',packageVersion:'1.0.0',responseMode:'async',access:'payer-private-v1',model:null};
+  const fresh=await createPrivateAuthorization(request,requirement,payer,merchants,1788912000000),signature=await account.signTypedData(buyerTypedData(fresh.authorization));
+  fixtures.push(await preparePrivateResearchIntent({request:fresh.request,salt:fresh.salt,payment:{authorization:fresh.authorization,signature}},requirement,merchants));
+ }
+ const ids=fixtures.map(f=>f.id),channel=createPostgresDomainChannel(input.options,input.identity,input.digest),native=composePostgresPrivateResearch(channel,false),signer='0x'+'44'.repeat(20),conflictSigner='0x'+'66'.repeat(20);
+ let source:ReturnType<typeof openVerifiedSqliteStorage>|undefined,core:SqliteAdapter|undefined,proxy:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined,loss:ReturnType<typeof createPostgresDomainChannel>|undefined,vectors=0,started=false;
+ const sourceWorkers=new Map<string,string>(),nativeWorkers=new Map<string,string>();
+ const snap=async(id:string)=>readPrivateResearchSnapshot(await channel.call('privateResearchSnapshot',[id,JSON.stringify({payer})]),privateResearchLookup(id,payer));
+ const sourceSnapshot=async(id:string)=>{
+  assertVerifiedSqliteConnection(source!.db);const one=(table:string,key:string)=>{const row=source!.db.prepare(`SELECT * FROM ${table} WHERE ${key}=?`).get(id);return row?JSON.stringify(row):null;};
+  return readPrivateResearchSnapshot({intentRowWire:one('private_research_intents','id'),paymentRowWire:one('private_research_payment_attempts','id'),executionRowWire:one('private_research_executions','id'),resultRowWire:one('private_research_results','id'),interruptionRowWire:one('private_research_interruptions','id'),reservationRowWire:one('private_treasury_reservations','job_id'),releaseRowWire:one('private_treasury_releases','job_id'),
+   submissionsWire:JSON.stringify(source!.db.prepare('SELECT * FROM private_creator_submissions WHERE job_id=? ORDER BY started_at,leg_id').all(id)),confirmationsWire:JSON.stringify(source!.db.prepare('SELECT c.* FROM private_creator_confirmations c JOIN private_creator_submissions s ON s.authorization_id=c.authorization_id WHERE s.job_id=? ORDER BY c.authorization_id').all(id))},privateResearchLookup(id,payer));
+ };
+ const same=(actual:unknown,expected:unknown)=>assert.equal(privateResearchSha(canonicalJson(actual)),privateResearchSha(canonicalJson(expected)),'Synthetic private SOURCE value digest mismatch');
+ const timeFields=new Set(['created_at','started_at','settled_at','saved_at','recorded_at','released_at']);
+ const view=(row:Record<string,unknown>,worker:string|undefined)=>Object.fromEntries(Object.entries(row).filter(([key,value])=>{
+  if(!timeFields.has(key))return true;if(value!==null)z.string().datetime({offset:true}).parse(value);return false;
+ }).map(([key,value])=>{if(key==='worker_id'){assert.equal(value,worker,'Original worker changed');return [key,'original-worker'];}if(key==='data'||key==='serialized_run'||key==='confirmation')return [key,value===null?null:privateResearchSha(String(value))];return [key,value];}));
+ const compare=async(id:string)=>{
+  const state=await snap(id);same(state.intent,await core!.getPrivateResearchIntent(id,payer));
+  const pairs=[['private_research_payment_attempts','id',state.paymentRow],['private_research_executions','id',state.executionRow],['private_research_results','id',state.resultRow],['private_research_interruptions','id',state.interruptionRow],['private_treasury_reservations','job_id',state.reservationRow],['private_treasury_releases','job_id',state.releaseRow]] as const;
+  for(const [table,key,row] of pairs){const expected=source!.db.prepare(`SELECT * FROM ${table} WHERE ${key}=?`).get(id)??null;same(row===null?null:view(row,nativeWorkers.get(id)),expected===null?null:view(expected,sourceWorkers.get(id)));}
+  same(state.submissionRows.map(row=>view(row,nativeWorkers.get(id))),source!.db.prepare('SELECT * FROM private_creator_submissions WHERE job_id=? ORDER BY started_at,leg_id').all(id).map(row=>view(row,sourceWorkers.get(id))));
+  same(state.confirmationRows.map(row=>view(row,nativeWorkers.get(id))),source!.db.prepare('SELECT c.* FROM private_creator_confirmations c JOIN private_creator_submissions s ON s.authorization_id=c.authorization_id WHERE s.job_id=? ORDER BY c.authorization_id').all(id).map(row=>view(row,sourceWorkers.get(id))));
+  return state;
+ };
+ const incoming=(i:number)=>({source:'circle-facilitator-success' as const,transaction:`synthetic-no-incoming-payment-${i}`,network:profile.networkId,payer,payee:merchants.privatePayee,amountMicros:'50000',authorizationId:fixtures[i].submission.payment.authorization.nonce});
+ const settledExecution=async(i:number)=>{
+  const id=ids[i],a=await native.claimPrivatePaymentSubmission(id,payer),b=await core!.claimPrivatePaymentSubmission(id,payer);assert.equal(a.claimed,b.claimed);assert.equal(a.claimed,true);vectors++;
+  same((await native.confirmPrivatePayment(id,payer,incoming(i))).confirmation,(await core!.confirmPrivatePayment(id,payer,incoming(i))).confirmation);vectors++;
+  const n=await native.claimPrivateResearchExecution(id,payer),s=await core!.claimPrivateResearchExecution(id,payer);assert(n&&s);z.string().uuid().parse(n.workerId);z.string().uuid().parse(s.workerId);nativeWorkers.set(id,n.workerId);sourceWorkers.set(id,s.workerId);vectors++;
+  assert.equal(await native.claimPrivateResearchExecution(id,payer),null);assert.equal(await core!.claimPrivateResearchExecution(id,payer),null);await compare(id);vectors++;
+ };
+ const prepared=(i:number)=>({id:ids[i],question:fixtures[i].submission.request.question,budget:.03,researchMode:'quick',answer:'Synthetic private raw result\0\ud800',nested:{kept:'private-only'},engine:'synthetic',subClaims:[],decisions:[],citations:[],trace:[],totalSpent:0,totalToCreators:0,createdAt:'2026-09-09T00:00:00.000Z'} as QueryRun);
+ const publicDigest=()=>input.ownerSql("SELECT encode(sha256(convert_to(jsonb_build_array((SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM public.payment_events p),(SELECT jsonb_agg(to_jsonb(q) ORDER BY id) FROM public.query_runs q),(SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM public.a2a_orders a))::text,'UTF8')),'hex');");
+ try{
+  assert.equal(input.ownerSql('SELECT count(*) FROM public.private_research_intents;'),'0');
+  const db=new DatabaseSync(file);try{db.exec('BEGIN IMMEDIATE');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);insertStorageIdentity(db,input.identity);installStorageFences(db,input.identity);db.exec('COMMIT');}finally{db.close();}
+  writeFileSync(manifestPath,manifest,{mode:0o600});source=openVerifiedSqliteStorage(file,input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(readFileSync(manifestPath,'utf8'),manifest)});
+  core=SqliteAdapter.assembleConnectionCore(source.db,input.identity,()=>assert.deepEqual(assertVerifiedSqliteConnection(source!.db),input.identity));started=true;const publicBefore=publicDigest();
+  for(const f of fixtures){same(await native.reservePrivateResearchIntent(f),await core.reservePrivateResearchIntent(f));same(await native.reservePrivateResearchIntent(f),await core.reservePrivateResearchIntent(f));await compare(f.id);vectors+=2;}
+  assert.equal(await native.reservePrivateTreasury(ids[0],payer,{signer,capacityMicros:'50000'}),await core.reservePrivateTreasury(ids[0],payer,{signer,capacityMicros:'50000'}));vectors++;
+  assert.equal(await native.reservePrivateTreasury(ids[1],payer,{signer,capacityMicros:'50000'}),await core.reservePrivateTreasury(ids[1],payer,{signer,capacityMicros:'50000'}));assert.equal((await snap(ids[1])).reservationRow,null);vectors++;
+  await assert.rejects(native.reservePrivateTreasury(ids[0],payer,{signer:conflictSigner,capacityMicros:'50000'}));await assert.rejects(core.reservePrivateTreasury(ids[0],payer,{signer:conflictSigner,capacityMicros:'50000'}));
+  assert.equal(input.ownerSql(`SELECT count(*) FROM public.private_treasury_pools WHERE signer=${q(conflictSigner)} AND capacity_micros=50000;`),'1');assert(source.db.prepare('SELECT 1 FROM private_treasury_pools WHERE signer=? AND capacity_micros=50000').get(conflictSigner));vectors++;
+  await assert.rejects(native.reservePrivateTreasury(ids[0],payer,{signer,capacityMicros:'50001'}));await assert.rejects(core.reservePrivateTreasury(ids[0],payer,{signer,capacityMicros:'50001'}));vectors++;
+  for(let i=0;i<3;i++)await settledExecution(i);
+  const id=ids[0],leg:PrivateCreatorSubmission={kind:'citation',sourceId:'synthetic-private-source',itemId:null,submission:{authorizationId:'0x'+'af'.repeat(32),authorizationExpiresAt:'2020-01-01T07:00:00+07:00',payer:signer,payee:'0x'+'55'.repeat(20),amountMicros:'10000',network:profile.networkId,asset:profile.usdcAddress.toLowerCase()}};
+  assert.equal(await native.admitPrivateCreatorSubmission(id,payer,nativeWorkers.get(id)!,leg),await core.admitPrivateCreatorSubmission(id,payer,sourceWorkers.get(id)!,leg));assert.equal(await native.admitPrivateCreatorSubmission(id,payer,nativeWorkers.get(id)!,leg),false);assert.equal(await core.admitPrivateCreatorSubmission(id,payer,sourceWorkers.get(id)!,leg),false);await compare(id);vectors+=2;
+  const processing={source:'circle-transfer-search' as const,transferStatus:'received' as const,transaction:'synthetic-no-creator-payment',submission:leg.submission};
+  same((await native.confirmPrivateCreatorSubmission(id,payer,nativeWorkers.get(id)!,processing)).confirmation,(await core.confirmPrivateCreatorSubmission(id,payer,sourceWorkers.get(id)!,processing)).confirmation);const nFirst=privateSnapshotConfirmation(await snap(id),leg.submission.authorizationId)!.settledAt,sFirst=(await core.getPrivateCreatorConfirmation(id,payer,leg.submission.authorizationId))!.settledAt;vectors++;
+  const terminal={...processing,transferStatus:'completed' as const};same((await native.confirmPrivateCreatorSubmission(id,payer,nativeWorkers.get(id)!,terminal)).confirmation,(await core.confirmPrivateCreatorSubmission(id,payer,sourceWorkers.get(id)!,terminal)).confirmation);
+  assert.equal(privateSnapshotConfirmation(await snap(id),leg.submission.authorizationId)!.settledAt,nFirst);assert.equal((await core.getPrivateCreatorConfirmation(id,payer,leg.submission.authorizationId))!.settledAt,sFirst);await compare(id);vectors++;
+  await assert.rejects(native.confirmPrivateCreatorSubmission(id,payer,nativeWorkers.get(id)!,processing));await assert.rejects(core.confirmPrivateCreatorSubmission(id,payer,sourceWorkers.get(id)!,processing));await compare(id);vectors++;
+  const run=prepared(0),nSaved=await native.savePrivateResearchResult(id,payer,nativeWorkers.get(id)!,run),sSaved=await core.savePrivateResearchResult(id,payer,sourceWorkers.get(id)!,run);same(nSaved.serializedRun,sSaved.serializedRun);assert.equal(privateSnapshotResult(await snap(id))!.savedAt,nSaved.savedAt);vectors++;
+  // Imported historical data needs an independent held SOURCE codec intake.
+  // Missing metadata refuses every point read and cannot be filled by replay.
+  const imported=ids[3];await core.claimPrivatePaymentSubmission(imported,payer);await core.confirmPrivatePayment(imported,payer,incoming(3));const importedClaim=await core.claimPrivateResearchExecution(imported,payer);assert(importedClaim);sourceWorkers.set(imported,importedClaim.workerId);nativeWorkers.set(imported,importedClaim.workerId);
+  const sourceSaved=await core.savePrivateResearchResult(imported,payer,importedClaim.workerId,prepared(3));
+  let importSql='';for(const table of ['private_research_payment_attempts','private_research_executions','private_research_results']){const row=source.db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(imported)!;const columns=Object.keys(row);assert(columns.every(key=>/^[a-z][a-z0-9_]*$/.test(key)));importSql+=`INSERT INTO public.${table}(${columns.join(',')}) VALUES(${columns.map(key=>row[key]===null?'NULL':q(String(row[key]))).join(',')});`;}pg(importSql);
+  const sourceState=await sourceSnapshot(imported),captured=privateResearchResultIdentity(sourceSaved.serializedRun,sourceState);assert(captured.sourceSavedAt);
+  const readFacade=composePostgresPrivateResearch(channel,true);
+  for(const read of [()=>readFacade.getPrivateResearchIntent(imported,payer),()=>readFacade.getPrivatePaymentState(imported,payer),()=>readFacade.getPrivateResearchExecution(imported,payer),()=>readFacade.getPrivateResearchResult(imported,payer),()=>readFacade.getPrivateResearchInterruption(imported,payer),()=>readFacade.getPrivateTreasury(imported,payer),()=>readFacade.listPrivateCreatorSubmissions(imported,payer),()=>readFacade.getPrivateCreatorConfirmation(imported,payer,leg.submission.authorizationId)])await assert.rejects(read);
+  await assert.rejects(native.savePrivateResearchResult(imported,payer,importedClaim.workerId,prepared(3)));assert.equal(input.ownerSql(`SELECT count(*) FROM keryx_storage.private_research_result_identity WHERE id=${q(imported)};`),'0');
+  pg(`INSERT INTO keryx_storage.private_research_result_identity(id,identity_digest,intent_sha256,run_sha256,owner,question_sha256,creator_budget_micros,research_mode,worker_id,execution_started_at,payment_started_at,payment_settled_at,payment_confirmation_sha256,saved_at) VALUES(${q(imported)},keryx_storage.identity_digest(${q(canonicalJson(input.identity))}::jsonb),${q(captured.intentSha256)},${q(captured.runSha256)},${q(captured.owner)},${q(captured.questionSha256)},${captured.budgetMicros},${q(captured.researchMode)},${q(captured.workerId)},${q(captured.executionStartedAt)},${q(captured.paymentStartedAt)},${q(captured.paymentSettledAt)},${q(captured.paymentConfirmationSha256)},${q(captured.sourceSavedAt)});`);await compare(imported);vectors+=9;
+  const replay=await native.savePrivateResearchResult(id,payer,nativeWorkers.get(id)!,run);assert.equal(replay.savedAt,nSaved.savedAt);assert.equal((await core.savePrivateResearchResult(id,payer,sourceWorkers.get(id)!,run)).savedAt,sSaved.savedAt);await compare(id);vectors++;
+  assert.equal(await native.interruptPrivateResearch(id,payer,nativeWorkers.get(id)!),null);assert.equal(await core.interruptPrivateResearch(id,payer,sourceWorkers.get(id)!),null);vectors++;
+  same(await native.releasePrivateTreasury(id,payer,signer),await core.releasePrivateTreasury(id,payer,signer));same(await native.releasePrivateTreasury(id,payer,signer),await core.releasePrivateTreasury(id,payer,signer));await compare(id);vectors+=2;
+  assert.equal(await native.reservePrivateTreasury(ids[1],payer,{signer,capacityMicros:'50000'}),await core.reservePrivateTreasury(ids[1],payer,{signer,capacityMicros:'50000'}));vectors++;
+  const second=ids[1],nInterrupted=await native.interruptPrivateResearch(second,payer,nativeWorkers.get(second)!),sInterrupted=await core.interruptPrivateResearch(second,payer,sourceWorkers.get(second)!);assert(nInterrupted&&sInterrupted);
+  assert.equal((await native.interruptPrivateResearch(second,payer,nativeWorkers.get(second)!))!.recordedAt,nInterrupted.recordedAt);assert.equal((await core.interruptPrivateResearch(second,payer,sourceWorkers.get(second)!))!.recordedAt,sInterrupted.recordedAt);await compare(second);vectors+=2;
+  const late={...leg,sourceId:'synthetic-late-source',submission:{...leg.submission,authorizationId:'0x'+'be'.repeat(32)}};assert.equal(await native.admitPrivateCreatorSubmission(second,payer,nativeWorkers.get(second)!,late),false);assert.equal(await core.admitPrivateCreatorSubmission(second,payer,sourceWorkers.get(second)!,late),false);vectors++;
+  same((await native.savePrivateResearchResult(second,payer,nativeWorkers.get(second)!,prepared(1))).serializedRun,(await core.savePrivateResearchResult(second,payer,sourceWorkers.get(second)!,prepared(1))).serializedRun);same(await native.releasePrivateTreasury(second,payer,signer),await core.releasePrivateTreasury(second,payer,signer));await compare(second);vectors+=2;
+  // Drop exactly one committed raw write ACK, after preparing its snapshot on
+  // the normal channel. No read transaction or automatic write retry is hidden.
+  const third=ids[2],thirdState=await snap(third),thirdRun=JSON.stringify(prepared(2)),packet=privateResearchPacket({payer,expected:privateResearchExpected(thirdState),valueWire:JSON.stringify({serializedRun:thirdRun,identity:privateResearchResultIdentity(thirdRun,thirdState)}),workerId:nativeWorkers.get(third)!});
+  const bad=JSON.parse(packet),badValue=JSON.parse(bad.valueWire);badValue.identity.runSha256='00'.repeat(32);bad.valueWire=JSON.stringify(badValue);
+  await assert.rejects(channel.call('privateResearchSaveResult',[third,JSON.stringify(bad)]),error=>error instanceof PostgresDomainWriteOutcomeUnknown);assert.equal(await native.getPrivateResearchResult(third,payer),null);assert.equal(input.ownerSql(`SELECT count(*) FROM keryx_storage.private_research_result_identity WHERE id=${q(third)};`),'0');vectors++;
+  assert(input.options.endpoint.kind==='loopback');proxy=await startCommitAckLossProxy(input.options.endpoint.port);loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);proxy.arm();
+  await assert.rejects(loss.call('privateResearchSaveResult',[third,packet]),error=>error instanceof PostgresDomainWriteOutcomeUnknown);assert.deepEqual(proxy.observation(),{dropped:true,commands:1});await core.savePrivateResearchResult(third,payer,sourceWorkers.get(third)!,prepared(2));await compare(third);vectors++;
+  const reader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{same((await composePostgresPrivateResearch(reader,true).getPrivateResearchResult(third,payer))!.serializedRun,thirdRun);await assert.rejects(reader.call('privateResearchSaveResult',[third,packet]));}finally{await reader.close();}vectors+=2;
+  const direct=new Client(postgresPoolConfiguration(input.options));try{await direct.connect();await assert.rejects(direct.query("SELECT public.storage_private_research($1::jsonb,$2::text,'caller-sql-selector',$3::text,'{}')",[canonicalJson(input.identity),input.digest,third]));await assert.rejects(direct.query('DELETE FROM public.private_research_results WHERE id=$1',[third]),error=>!!error&&typeof error==='object'&&Reflect.get(error,'code')==='42501');await assert.rejects(direct.query('SELECT id FROM keryx_storage.private_research_result_identity'),error=>!!error&&typeof error==='object'&&Reflect.get(error,'code')==='42501');}finally{await direct.end();}vectors+=3;
+  assert.equal(publicDigest(),publicBefore);assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
+  return {vectors,genuineVerifiedSqliteSource:true,tenCurrentProducersCompared:true,eightPointReadsRequireOriginalBoundIdentity:true,missingImportedMetadataRefusesReplayBackfill:true,independentHeldSourceCodecIntake:true,offlineSyntheticDataSignatures:fixtures.length,syntheticSuccessMetadataOnly:true,backendGeneratedTimesAndWorkersIndependentlyValidated:true,retainedReplayTimesUnchanged:true,firstIntentSignatureRetained:true,permanentExecutionClaimNoRetry:true,committedPoolConflictMatchesSource:true,signedBudgetAndLifetimeAllocationPreserved:true,exactCreatorTupleAndMonotonicConfirmation:true,originalConfirmationEpochRetained:true,privateRawResultAndInterruptionRestorePreserved:true,onlyUncommittedSealedAllocationReleased:true,publicTablesUnchanged:true,lostCommitAcknowledgementObservedWithoutRetry:true,readerAndUnknownAndDirectWritesRefused:true,rawNativeSqlProtocolSynthetic:true,installedNativeWriterQualified:false,productionData:false,productionSignatures:0,paymentActions:0,providerCalls:0,jobExecutions:0};
+ }finally{
+  try{await loss?.close();await proxy?.close();await channel.close();source?.close();if(started){const selected=ids.map(q).join(','),retained=['private_research_intents','private_research_executions','private_research_results','private_research_interruptions','private_creator_submissions','private_treasury_pools','private_treasury_reservations','private_treasury_releases'];
+   pg(retained.map(name=>`ALTER TABLE public.${name} DISABLE TRIGGER native_private_research_retained;`).join('')+`ALTER TABLE keryx_storage.private_research_result_identity DISABLE TRIGGER native_private_result_identity_retained;DELETE FROM keryx_storage.private_research_result_identity WHERE id IN(${selected});ALTER TABLE keryx_storage.private_research_result_identity ENABLE TRIGGER native_private_result_identity_retained;DELETE FROM public.private_creator_confirmations WHERE authorization_id IN(SELECT authorization_id FROM public.private_creator_submissions WHERE job_id IN(${selected}));DELETE FROM public.private_treasury_releases WHERE job_id IN(${selected});DELETE FROM public.private_treasury_reservations WHERE job_id IN(${selected});DELETE FROM public.private_treasury_pools WHERE signer IN(${q(signer)},${q(conflictSigner)});DELETE FROM public.private_research_interruptions WHERE id IN(${selected});DELETE FROM public.private_research_results WHERE id IN(${selected});DELETE FROM public.private_creator_submissions WHERE job_id IN(${selected});DELETE FROM public.private_research_executions WHERE id IN(${selected});DELETE FROM public.private_research_payment_attempts WHERE id IN(${selected});DELETE FROM public.private_research_intents WHERE id IN(${selected});`+retained.map(name=>`ALTER TABLE public.${name} ENABLE TRIGGER native_private_research_retained;`).join(''));}}
+  finally{for(const path of [file,file+'-wal',file+'-shm',file+'-journal',manifestPath])if(existsSync(path))unlinkSync(path);rmdirSync(folder);}
+ }
+}

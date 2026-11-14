@@ -47,6 +47,10 @@ function requireOriginal(result: PrivateResearchResult | null, snapshot: string)
   if (!result || result.serializedRun !== snapshot) throw new Error("Private research result conflict");
   return result;
 }
+/** Pure SOURCE snapshot codecs. No DB write, publication, spool, encryption,
+ * owner verification or fresh execution capability is supplied here. */
+export { snapshotRun as capturePrivateResearchResult, checkedSnapshot as validatePrivateResearchResultSnapshot,
+  readResult as readPrivateResearchResult, requireOriginal as requireOriginalPrivateResearchResult };
 
 export async function getSqlitePrivateResult(db: DatabaseSync, id: string, payer: string) {
   if (!await getSqlitePrivateExecution(db, id, payer)) return null;
