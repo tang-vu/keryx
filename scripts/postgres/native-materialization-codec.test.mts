@@ -1,8 +1,17 @@
 import { expect,it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { nativeMaterializationCell as cell,nativeMaterializationValueKey as key } from './native-materialization-codec.mts';
+import { nativeMaterializationCell as cell,nativeMaterializationQueryCell as queryCell,nativeMaterializationValueKey as key } from './native-materialization-codec.mts';
 import { snapshotRows,snapshotTables } from './typed-snapshot.mts';
 const text=(s:string)=>['text',Buffer.from(s).toString('hex')] as const;
+it('uses bounded Source shadows only for declared QueryRun scalar columns',()=>{
+ const original=text('retained\0text');
+ expect(()=>cell(original,'text')).toThrow();
+ expect(queryCell(original,'text','question')).toBe(JSON.stringify('retained\0text'));
+ expect(queryCell(text('ordinary'),'text','answer')).toBe('ordinary');
+ expect(queryCell(['null'],'text','answer')).toBeNull();
+ for(const column of ['id','created_at','data','unrecognized'])expect(()=>queryCell(original,'text',column)).toThrow();
+ expect(original).toEqual(text('retained\0text'));
+});
 it('retains full int64 and distinguishes SQL NULL, JSON null and original JSON bytes',()=>{
  expect(cell(['integer','9223372036854775807'],'bigint')).toBe('9223372036854775807');
  expect(key('numeric','9223372036854775807.000')).toBe(key('numeric','9223372036854775807'));

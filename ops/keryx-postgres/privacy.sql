@@ -323,7 +323,7 @@ END;$$;
 CREATE FUNCTION keryx_storage.privacy_visible(options jsonb) RETURNS TABLE(run_id text,created_at text,revision numeric) LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 BEGIN
  IF EXISTS(SELECT 1 FROM public.query_runs q LEFT JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=q.id WHERE sc.run_id IS NULL OR sc.scalar_identity_sha256 IS DISTINCT FROM (SELECT identity_digest FROM keryx_storage.identity WHERE singleton)) THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
- RETURN QUERY SELECT q.id,convert_from(decode(sc.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8'),p.revision FROM public.query_runs q JOIN public.run_privacy p ON p.run_id=q.id LEFT JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=q.id
+ RETURN QUERY SELECT q.id,convert_from(decode(sc.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8'),p.revision::numeric FROM public.query_runs q JOIN public.run_privacy p ON p.run_id=q.id LEFT JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=q.id
  WHERE p.visibility='public' AND p.erased=0 AND(NOT(options?'parentId') OR sc.scalar_cells->'parent_id'->>'boundHex'=encode(convert_to(options->>'parentId','UTF8'),'hex'))
   AND(NOT(options?'ids') OR q.id IN(SELECT jsonb_array_elements_text(options->'ids')))
   AND(NOT(options?'before') OR convert_from(decode(sc.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C" <(options->'before'->>'createdAt') COLLATE "C"

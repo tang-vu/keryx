@@ -12,7 +12,7 @@ import { postgresPoolConfiguration,type PostgresConnectionOptions } from '../../
 import { NATIVE_READONLY_RUNTIME_PROFILE } from '../../lib/db/postgres/runtime-profile';
 import { exportNativePostgresSchemaContract } from './native-contract.mts';
 import { snapshotRows,snapshotTables,type SnapshotTable } from './typed-snapshot.mts';
-import { nativeMaterializationCell,nativeMaterializationType,nativeMaterializationValueKey,type NativeMaterializationType } from './native-materialization-codec.mts';
+import { nativeMaterializationCell,nativeMaterializationQueryCell,nativeMaterializationType,nativeMaterializationValueKey,type NativeMaterializationType } from './native-materialization-codec.mts';
 type NativeTable={name:string;columns:Array<{name:string;type:string}>;primary_key:string[];parents:string[]};
 type Plan={source:SnapshotTable;target:NativeTable;types:NativeMaterializationType[];keys:string[];rows:number;emptyDifferentPrimaryKey:boolean};
 export class NativeMaterializationUnavailable extends Error{
@@ -84,7 +84,7 @@ export async function materializeNativeSnapshot(db:DatabaseSync,options:Postgres
    const statement=bootstrap?`UPDATE public.${identifier(table)} target SET ${plan.source.columns.map((c,i)=>`${identifier(c)}=(r.cells->>${i})::${plan.types[i]}`).join(',')} FROM jsonb_to_recordset($1::jsonb) r(cells jsonb) WHERE target.id=(r.cells->>${plan.source.columns.indexOf('id')})::integer`:`INSERT INTO public.${identifier(table)}(${columns}) SELECT ${projection} FROM jsonb_to_recordset($1::jsonb) r(cells jsonb)`;
    const flush=async()=>{if(!batch.length)return;const result=await pg.query(statement,[JSON.stringify(batch)]);assert.equal(result.rowCount,batch.length);batch=[];bytes=0;};
    for(const row of snapshotRows(db,plan.source)){
-    const cells=row.map((cell,i)=>nativeMaterializationCell(cell,plan.types[i])),size=Buffer.byteLength(JSON.stringify(cells));
+    const cells=row.map((cell,i)=>plan.source.name==='query_runs'?nativeMaterializationQueryCell(cell,plan.types[i],plan.source.columns[i]):nativeMaterializationCell(cell,plan.types[i])),size=Buffer.byteLength(JSON.stringify(cells));
     if(batch.length>=64||bytes+size>1048576)await flush();batch.push({cells});bytes+=size;copied++;
    }await flush();assert.equal(copied,plan.rows);totalRows+=copied;
    // Re-read actual stored native cells in SOURCE primary-key order. A cursor
@@ -94,7 +94,7 @@ export async function materializeNativeSnapshot(db:DatabaseSync,options:Postgres
    await pg.query(`DECLARE materialized_rows NO SCROLL CURSOR FOR SELECT json_build_array(${selected})::text wire FROM public.${identifier(table)}${ordered?' ORDER BY '+ordered:''}`);
    for(const row of snapshotRows(db,plan.source,plan.keys)){
     if(offset>=page.length){const next=await pg.query('FETCH FORWARD 8 FROM materialized_rows');page=next.rows.map(r=>JSON.parse(r.wire));offset=0;}
-    assert(offset<page.length);const expected=row.map((cell,i)=>nativeMaterializationCell(cell,plan.types[i])),actual=page[offset++];
+    assert(offset<page.length);const expected=row.map((cell,i)=>plan.source.name==='query_runs'?nativeMaterializationQueryCell(cell,plan.types[i],plan.source.columns[i]):nativeMaterializationCell(cell,plan.types[i])),actual=page[offset++];
     const sourceKey=rowKey(plan,expected),targetKey=rowKey(plan,actual);assert.equal(targetKey,sourceKey);digest.update(sourceKey).update('\n');nativeDigest.update(targetKey).update('\n');seen++;
    }assert.equal(offset,page.length);assert.equal((await pg.query('FETCH FORWARD 1 FROM materialized_rows')).rowCount,0);await pg.query('CLOSE materialized_rows');assert.equal(seen,copied);
    const semanticDigest=digest.digest('hex');assert.equal(nativeDigest.digest('hex'),semanticDigest);results.push({table,rows:copied,semanticDigest,exactRawJsonRows:plan.types.includes('json')?copied:0});stage='public-copy';

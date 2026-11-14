@@ -45,6 +45,10 @@ ALTER TABLE public.private_research_results DROP CONSTRAINT private_research_res
 
 -- Source sqlite scalar clients are arbitrary TEXT; preserve their exact groups.
 ALTER TABLE public.query_runs DROP CONSTRAINT query_runs_mcp_client_check;
+-- SQLite keeps these observations as arbitrary TEXT; semantic consumers use
+-- identity/SHA-bound Source scalars rather than an encoded shadow as authority.
+ALTER TABLE public.query_runs DROP CONSTRAINT query_runs_origin_check;
+ALTER TABLE public.query_runs DROP CONSTRAINT query_runs_payment_mode_check;
 -- JSON.stringify cells retain escaped NUL/surrogates independently of scalars.
 ALTER TABLE public.query_runs ALTER COLUMN economics_data TYPE json USING economics_data::json;
 ALTER TABLE public.browser_journal_bindings ADD COLUMN payment_context text CHECK(payment_context IS NULL OR payment_context IS JSON);

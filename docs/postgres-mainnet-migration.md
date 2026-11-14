@@ -1340,3 +1340,21 @@ not enable publication capture or grant application roles arbitrary execution.
 The readonly installed factory does not receive these mutation ports. Actual
 Source/native protocol qualification and full SOURCE/catalog pins are required;
 the complete application writer, production intake and cutover remain gated.
+
+## Source scalars and exact failed-original receipts
+
+The candidate retains original JSON TEXT and protected scalar interpretations
+bound to the same logical identity and raw SHA. Encoded PostgreSQL TEXT shadows
+are storage representations; they do not establish wallet, privacy or payment
+authority. Answer BYTEA remains separate from metadata. Original date strings
+remain available for Source ordering, filtering and cursor semantics.
+
+Permanent private A2A package/request cells survive acceptance-projection
+invalidation. Completion preserves those cells and updates only the Source's
+six mutable fields, with canonical resolution and the receipt produced from the
+current original package. Qualification compares actual Source raw-row SHA and
+delivery token as well as decoded values.
+
+Publication and receipt candidates still require actual PostgreSQL and compiled
+512 MiB acceptance, complete held intake and consumer coverage. Their factory
+and production cutover remain closed while these checks are incomplete.

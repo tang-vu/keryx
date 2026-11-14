@@ -9717,3 +9717,29 @@ establish compatibility. Preserve duplicate-member and Source scalar semantics;
 never sanitize retained originals or turn a parse failure into absent authority.
 Keep installed readonly mutation composition and the complete writer closed until
 their remaining application, intake and deployment gates are qualified.
+
+## Preserve Source scalar cells and failed-original receipt bytes (2026-11-15)
+
+Keep QueryRun originals as exact raw TEXT. PostgreSQL JSON getters can reject an
+escaped NUL or unpaired UTF-16 in an unrelated field, so inspect original member
+tokens through the existing private bounded lexer. Retain Source scalar binding
+and JSON-extraction interpretations separately where SQLite differs. Represent
+unavailable PostgreSQL TEXT scalars with checked shadows, bound to the logical
+identity and original SHA; readers use the protected scalar cells. Keep the
+answer in separately toastable private BYTEA and omit it from metadata readers.
+
+Retain original date bytes for Source TEXT comparisons and cursors. Native
+timestamps establish physical consistency; they do not replace Source date
+spelling or relax a Source API's strict date validation. Collection limits reject
+the entire result before aggregation rather than returning a partial view.
+
+Persist exact A2A package/request cells independently of disposable acceptance
+projections. Failed-original completion changes only its six Source mutable
+cells, creates canonical resolution JSON and builds the receipt from the current
+original package. Verify completed raw-row fingerprints and delivery tokens
+against genuine SQLite, beyond decoded object equality.
+
+The unsafe publication capture wrapper and complete application writer remain
+closed until their actual PostgreSQL, compiled memory/deadline, intake, consumer
+and deployment requirements pass. Prepared protocols grant no installed writer,
+funding, supplier execution or retry authority.
