@@ -3,16 +3,22 @@ import { keccak256, recoverTransactionAddress, type Hex, type TransactionSeriali
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import type { RegistrationSponsorPolicy } from "./registration-sponsor-protocol";
-import { registrationSponsorReadChain, registrationSponsorRuntime } from "./registration-sponsor-runtime";
+import { registrationSponsorReadChain, registrationSponsorRuntime,captureRegistrationSponsorObservation,validateRegistrationSponsorObservation } from "./registration-sponsor-runtime";
+import { registrationPolicyDigest } from './registration-sponsor-protocol';
 
 const mocked = vi.hoisted(() => ({
   config: { networkId: "eip155:5042", baseUrl: "https://keryx.example", registryAddress: "", registryReadAddress: "", rpcUrl: "https://rpc.invalid", registryOrigins: "", registryDeployBlock: "5" },
-  getDb: vi.fn(), createClient: vi.fn(), transport: vi.fn(),
+  getDb: vi.fn(), createClient: vi.fn(), transport: vi.fn(),readManifest:vi.fn(),assertSqlite:vi.fn(),
+  identity:{format:'keryx-mainnet-storage-identity-v1',deploymentId:'11111111-1111-4111-8111-111111111111',storageId:'22222222-2222-4222-8222-222222222222',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:'ab'.repeat(32),enrollmentId:'33333333-3333-4333-8333-333333333333',enrolledAt:'2026-10-09T00:00:00.000Z',provenanceDigest:'cd'.repeat(32)},
   db: { admitRegistrationSponsor: vi.fn(), getRegistrationSponsor: vi.fn(), transitionRegistrationSponsor: vi.fn(), getRegistrationSponsorExecution: vi.fn(), inspectRegistrationSponsorFunding: vi.fn() },
   rpc: { getCode: vi.fn(), getBlock: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), getTransactionCount: vi.fn(), estimateGas: vi.fn(), sendRawTransaction: vi.fn(), getTransactionReceipt: vi.fn() },
 }));
 vi.mock("../config", () => ({ config: mocked.config }));
 vi.mock("../db", () => ({ getDb: mocked.getDb }));
+// Dependency-only SQLite identity fixtures. These are not native facade or
+// funding acceptance; native positive issuer remains closed and is never mocked.
+vi.mock('../db/enrolled-sqlite-adapter',()=>({assertEnrolledSqliteAdapter:mocked.assertSqlite}));
+vi.mock('../db/runtime-storage-config',()=>({readRuntimeStorageDeployment:mocked.readManifest}));
 vi.mock("../chains", () => ({ chainForProfile: (profile: { chainId: number }) => ({ id: profile.chainId }) }));
 vi.mock("../arc-rpc-attestation", () => ({ attestedArcAuthorityHttp: mocked.transport }));
 vi.mock("viem", async importOriginal => ({ ...await importOriginal<typeof import("viem")>(), createPublicClient: mocked.createClient }));
@@ -50,6 +56,7 @@ beforeEach(() => {
   vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
   vi.stubEnv("KERYX_REGISTRY_VERSION", "3"); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_VERSION", "3");
   mocked.getDb.mockResolvedValue(mocked.db); mocked.createClient.mockReturnValue(mocked.rpc);
+  mocked.readManifest.mockImplementation(()=>({format:'keryx-storage-deployment-v1',identity:{...mocked.identity},backend:{kind:'sqlite',databasePath:'D:/synthetic-registration-journal.sqlite'}}));mocked.assertSqlite.mockImplementation((db:unknown)=>{if(db!==mocked.db)throw Error('Unqualified SQLite facade');return {...mocked.identity};});
   mocked.transport.mockReturnValue({ mocked: true }); mocked.rpc.getCode.mockResolvedValue(code);
   mocked.rpc.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => functionName === "registryVersion" ? 3 : BigInt(0));
   mocked.rpc.getTransactionCount.mockResolvedValue(7); mocked.rpc.sendRawTransaction.mockResolvedValue(hash);
@@ -59,6 +66,9 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe("registration sponsor runtime custody boundary", () => {
+  it('issues reference-bound observations only after same-block RPC and SQLite identity dependency checks',async()=>{const context=(await registrationSponsorRuntime())!,observation=await context.chain.fundingObservation!(),token=captureRegistrationSponsorObservation(observation,context.db,'new-exposure',context.policy),record=await validateRegistrationSponsorObservation(token,context.db,context.policy,'new-exposure');expect(record).toMatchObject({policyDigest:registrationPolicyDigest(context.policy),purpose:'new-exposure',role:'registration-sponsor-write',identity:mocked.identity});expect(()=>captureRegistrationSponsorObservation({...observation},context.db,'new-exposure',context.policy)).toThrow();expect(()=>captureRegistrationSponsorObservation(observation,{...context.db},'new-exposure',context.policy)).toThrow();await expect(validateRegistrationSponsorObservation({...token},context.db,context.policy,'new-exposure')).rejects.toThrow();expect(mocked.rpc.sendRawTransaction).not.toHaveBeenCalled();});
+  it.each(['policy','key','manifest','age'])('invalidates a captured observation after %s changes across await',async changed=>{const context=(await registrationSponsorRuntime())!,observation=await context.chain.fundingObservation!(),token=captureRegistrationSponsorObservation(observation,context.db,'new-exposure');if(changed==='policy')vi.stubEnv('KERYX_REGISTRATION_SPONSOR_POLICY',JSON.stringify(policy({maxRegistrationsTotal:11})));if(changed==='key')vi.stubEnv('KERYX_REGISTRATION_SPONSOR_PRIVATE_KEY',OTHER_TEST_KEY);if(changed==='manifest')mocked.readManifest.mockReturnValue({format:'keryx-storage-deployment-v1',identity:{...mocked.identity,storageId:'99999999-9999-4999-8999-999999999999'},backend:{kind:'sqlite',databasePath:'D:/synthetic-changed.sqlite'}});if(changed==='age')vi.setSystemTime(NOW+5001);await expect(validateRegistrationSponsorObservation(token,context.db,context.policy,'new-exposure')).rejects.toThrow();expect(mocked.rpc.sendRawTransaction).not.toHaveBeenCalled();});
+  it('never mints native write evidence for a shape-compatible unregistered facade',async()=>{mocked.readManifest.mockReturnValue({format:'keryx-storage-deployment-v1',identity:{...mocked.identity},backend:{kind:'postgres',database:'synthetic',sourceDigest:'de'.repeat(32),endpoint:{kind:'loopback',port:5432},credentialPaths:{application:'/synthetic/app.json',reader:'/synthetic/read.json'}}});await expect(registrationSponsorRuntime()).rejects.toThrow('Registration sponsorship configuration is unavailable');expect(mocked.rpc.getBlock).not.toHaveBeenCalled();expect(mocked.rpc.sendRawTransaction).not.toHaveBeenCalled();});
   it("observes native balance and nonce at one attested block and rechecks its hash", async () => {
     const chain = registrationSponsorReadChain(original()), observation = await chain.fundingObservation!();
     expect(observation).toMatchObject({ network: "eip155:5042", sponsorAddress: original().relayer,
@@ -173,6 +183,7 @@ describe("registration sponsor runtime custody boundary", () => {
 });
 
 describe("original registration receipt runtime", () => {
+  it('keeps expired keyless read evidence separate from new exposure',async()=>{const p=policy({expiresAt:NOW-1});vi.stubEnv('KERYX_REGISTRATION_SPONSOR_POLICY',undefined);vi.stubEnv('KERYX_REGISTRATION_SPONSOR_PRIVATE_KEY',undefined);mocked.db.getRegistrationSponsor.mockResolvedValue({policyDigest:registrationPolicyDigest(p),registryAddress:p.registryAddress,registryCodeHash:p.registryCodeHash,relayer:p.sponsorAddress,chainId:5042});const chain=registrationSponsorReadChain(original(),{db:mocked.db as never,policy:p,original:{wallet:wrongRegistry,id:hash}}),observation=await chain.fundingObservation!(),token=captureRegistrationSponsorObservation(observation,mocked.db as never,'read',p);expect((await validateRegistrationSponsorObservation(token,mocked.db as never,p,'read')).role).toBe('registration-sponsor-read');expect(()=>captureRegistrationSponsorObservation(observation,mocked.db as never,'new-exposure',p)).toThrow();await expect(validateRegistrationSponsorObservation(token,mocked.db as never,p,'new-exposure')).rejects.toThrow();await expect(chain.sign(transaction())).rejects.toThrow('Original receipt reader cannot sign');expect(mocked.rpc.sendRawTransaction).not.toHaveBeenCalled();});
   it("needs no policy or sponsor key, retains original authority, and cannot sign or broadcast", async () => {
     vi.stubEnv("KERYX_REGISTRATION_SPONSOR_POLICY", undefined); vi.stubEnv("KERYX_REGISTRATION_SPONSOR_PRIVATE_KEY", undefined);
     const reader = registrationSponsorReadChain(original());
