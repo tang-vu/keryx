@@ -1,6 +1,48 @@
 -- Fresh SOURCE only. Retained originals are copied separately; no backfill,
 -- owner-consent admission, optional-port initialization or backend selection.
 SET ROLE keryx_owner;
+-- Source private clocks and inner JSON.stringify cells are TEXT. These tables
+-- must be freshly empty: never reinterpret retained timestamps/JSONB as Source
+-- originals, and never run this SOURCE constructor against an installed store.
+DO $$BEGIN
+ IF EXISTS(SELECT 1 FROM public.private_research_intents) OR EXISTS(SELECT 1 FROM public.private_research_payment_attempts) OR EXISTS(SELECT 1 FROM public.private_research_executions) OR EXISTS(SELECT 1 FROM public.private_research_results) OR EXISTS(SELECT 1 FROM public.private_research_interruptions) OR EXISTS(SELECT 1 FROM public.private_creator_submissions) OR EXISTS(SELECT 1 FROM public.private_creator_confirmations) OR EXISTS(SELECT 1 FROM public.private_treasury_releases) THEN RAISE EXCEPTION 'fresh private Source tables required';END IF;
+END;$$;
+ALTER TABLE public.private_research_intents ALTER COLUMN created_at DROP DEFAULT;
+ALTER TABLE public.private_research_intents ALTER COLUMN created_at TYPE text USING NULL::text;
+ALTER TABLE public.private_research_intents ALTER COLUMN created_at SET DEFAULT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+ALTER TABLE public.private_research_payment_attempts ALTER COLUMN started_at DROP DEFAULT;
+ALTER TABLE public.private_research_payment_attempts ALTER COLUMN started_at TYPE text USING NULL::text;
+ALTER TABLE public.private_research_payment_attempts ALTER COLUMN started_at SET DEFAULT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+ALTER TABLE public.private_research_payment_attempts ALTER COLUMN settled_at DROP DEFAULT;
+ALTER TABLE public.private_research_payment_attempts ALTER COLUMN settled_at TYPE text USING NULL::text;
+ALTER TABLE public.private_research_executions ALTER COLUMN started_at DROP DEFAULT;
+ALTER TABLE public.private_research_executions ALTER COLUMN started_at TYPE text USING NULL::text;
+ALTER TABLE public.private_research_executions ALTER COLUMN started_at SET DEFAULT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+ALTER TABLE public.private_research_results ALTER COLUMN saved_at DROP DEFAULT;
+ALTER TABLE public.private_research_results ALTER COLUMN saved_at TYPE text USING NULL::text;
+ALTER TABLE public.private_research_results ALTER COLUMN saved_at SET DEFAULT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+ALTER TABLE public.private_research_interruptions ALTER COLUMN recorded_at DROP DEFAULT;
+ALTER TABLE public.private_research_interruptions ALTER COLUMN recorded_at TYPE text USING NULL::text;
+ALTER TABLE public.private_research_interruptions ALTER COLUMN recorded_at SET DEFAULT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+ALTER TABLE public.private_creator_submissions ALTER COLUMN started_at DROP DEFAULT;
+ALTER TABLE public.private_creator_submissions ALTER COLUMN started_at TYPE text USING NULL::text;
+ALTER TABLE public.private_creator_submissions ALTER COLUMN started_at SET DEFAULT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+ALTER TABLE public.private_creator_confirmations ALTER COLUMN settled_at DROP DEFAULT;
+ALTER TABLE public.private_creator_confirmations ALTER COLUMN settled_at TYPE text USING NULL::text;
+ALTER TABLE public.private_creator_confirmations ALTER COLUMN settled_at SET DEFAULT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+ALTER TABLE public.private_treasury_releases ALTER COLUMN released_at DROP DEFAULT;
+ALTER TABLE public.private_treasury_releases ALTER COLUMN released_at TYPE text USING NULL::text;
+ALTER TABLE public.private_treasury_releases ALTER COLUMN released_at SET DEFAULT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+ALTER TABLE public.private_research_intents ALTER COLUMN data DROP DEFAULT;
+ALTER TABLE public.private_research_intents ALTER COLUMN data TYPE text USING NULL::text;
+ALTER TABLE public.private_research_payment_attempts ALTER COLUMN confirmation DROP DEFAULT;
+ALTER TABLE public.private_research_payment_attempts ALTER COLUMN confirmation TYPE text USING NULL::text;
+ALTER TABLE public.private_creator_submissions ALTER COLUMN data DROP DEFAULT;
+ALTER TABLE public.private_creator_submissions ALTER COLUMN data TYPE text USING NULL::text;
+ALTER TABLE public.private_creator_confirmations ALTER COLUMN data DROP DEFAULT;
+ALTER TABLE public.private_creator_confirmations ALTER COLUMN data TYPE text USING NULL::text;
+ALTER TABLE public.private_research_results DROP CONSTRAINT private_research_results_serialized_run_check;
+
 ALTER TABLE public.browser_journal_bindings ADD COLUMN payment_context text CHECK(payment_context IS NULL OR payment_context IS JSON);
 ALTER TABLE public.browser_signing_namespaces ADD COLUMN proof text NOT NULL CHECK(proof IS JSON);
 ALTER TABLE public.browser_signing_queries ADD COLUMN grant_epoch text NOT NULL;
