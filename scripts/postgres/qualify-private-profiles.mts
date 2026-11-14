@@ -10,6 +10,7 @@ import { PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-
 import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection';
 import type { StorageIdentity } from '../../lib/db/storage-identity';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
+import { heldQueryRunFixture } from './held-query-run-fixture.mts';
 export async function qualifyPrivateProfiles(input:{transport:PostgresUserDomainTransport;options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  const db=new DatabaseSync(':memory:'),wallet=(s:string)=>'0x'+s.repeat(20),owner=wallet('a3'),other=wallet('b4'),network=input.identity.network,stamp='2026-01-02T03:04:05.000Z';let vectors=0;
  const native=input.transport.privateProfiles,q=(s:string)=>"'"+s.replaceAll("'","''")+"'";
@@ -29,8 +30,14 @@ export async function qualifyPrivateProfiles(input:{transport:PostgresUserDomain
   const raced=await Promise.allSettled([native.update(wallet('c5'),{...raw,handle:'racing_handle'}),native.update(wallet('d6'),{...raw,handle:'racing_handle'})]);assert.equal(raced.filter(r=>r.status==='fulfilled').length,1);assert.equal(raced.filter(r=>r.status==='rejected'&&conflict(r.reason)).length,1);vectors++;
   both(`INSERT INTO users(wallet_address,role,display_handle,first_seen_at,last_seen_at) VALUES(${q(owner)},'reader','synthetic-private-profile',${q(stamp)},${q(stamp)});`);
   const upper=owner.toUpperCase().replace('0X','0x');
-  for(let i=0;i<1201;i++)db.prepare('INSERT INTO query_runs(id,created_at,question,budget,data,origin,asker) VALUES(?,?,?,?,?,?,?)').run('synthetic-profile-run-'+i,stamp,'synthetic',0,'{}','web',upper);
-  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,origin,asker) SELECT 'synthetic-profile-run-'||g,${q(stamp)},'synthetic',0,'{}'::jsonb,'web',${q(upper)} FROM generate_series(0,1200) g;`);
+  const rows:string[]=[];let rowBytes=0;
+  const flushRows=()=>{if(rows.length){pg(rows.join('\n'));rows.length=0;rowBytes=0;}};
+  for(let i=0;i<1201;i++){
+   const id='synthetic-profile-run-'+i;db.prepare('INSERT INTO query_runs(id,created_at,question,budget,data,origin,asker) VALUES(?,?,?,?,?,?,?)').run(id,stamp,'synthetic',0,'{}','web',upper);
+   const source=heldQueryRunFixture(db,id),sql=source.physicalSql+source.scalarSql,bytes=Buffer.byteLength(sql)+1;assert(bytes<=262144,'Single Source private profile fixture bound');
+   if(rows.length===64||rowBytes+bytes>262144)flushRows();rows.push(sql);rowBytes+=bytes;
+  }
+  flushRows();
   both(`INSERT INTO query_memories(id,source_scores,sources_read,topics,created_at) VALUES('synthetic-profile-run-0','{}','[]','["biology","papers","biology"]',${q(stamp)});`);
   const activity=await native.get(owner,network),expected=await sqlite.get(owner,network);assert.deepEqual(activity.activity,expected.activity);assert.equal(activity.activity.questions,1201);assert.deepEqual(activity.activity.topics,['biology','papers']);vectors++;
   await assert.rejects(native.get(owner,'eip155:5042002'));vectors++;
