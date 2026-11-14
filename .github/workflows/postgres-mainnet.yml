@@ -123,9 +123,30 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=512
         run: node --import tsx --no-warnings scripts/postgres/qualify-native-materialization.mts --synthetic
 
+  publication-contained:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Pinned publication fixture images
+        run: |
+          docker pull postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
+          docker pull node@sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c
+      - name: Compiled publication under actual 512 MiB containment
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --publication-contained-only
+
   postgres-preparation:
     if: ${{ always() }}
-    needs: [contracts-bootstrap-financial, native-runtime-core, native-runtime-tail, synthetic-materialization]
+    needs: [contracts-bootstrap-financial, native-runtime-core, native-runtime-tail, synthetic-materialization, publication-contained]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -134,7 +155,7 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
           node --input-type=module -e '
-            const required = ["contracts-bootstrap-financial", "native-runtime-core", "native-runtime-tail", "synthetic-materialization"];
+            const required = ["contracts-bootstrap-financial", "native-runtime-core", "native-runtime-tail", "synthetic-materialization", "publication-contained"];
             const needs = JSON.parse(process.env.NEEDS_JSON);
             if (Object.keys(needs).length !== required.length || required.some(name => needs[name]?.result !== "success")) {
               console.error("PostgreSQL acceptance refused", needs);
