@@ -6,7 +6,9 @@ import { createOperatorGatewayFundingComposition, OPERATOR_GATEWAY_FUNDING_ACTIV
 
 function runtimeImports(source: string, file: string): string[] {
   const imports: string[] = [];
-  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  // Import inspection never reads node.parent; avoid constructing the extra
+  // parent links while still visiting every static and dynamic import node.
+  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, false);
   const visit = (node: ts.Node) => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       const clause = node.importClause;

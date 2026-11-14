@@ -73,7 +73,7 @@ async function main(){
     try{
      assert.equal((await owner.query("UPDATE public.decision_review_records SET input_json=input_json||' ' WHERE id=$1",[source.id])).rowCount,1);
      await assert.rejects(materializeNativeProjections(db,options),error=>error instanceof NativeMaterializationUnavailable&&error.diagnostic.stage==='projection-copy'&&error.diagnostic.table==='review_projection'&&error.diagnostic.pgCode==='P0001'&&error.diagnostic.commitOutcome==='not_attempted');
-     for(const table of ['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','acceptance_original_projection'])assert.equal((await owner.query('SELECT count(*)::text n FROM keryx_storage.'+table)).rows[0].n,'0');
+     for(const table of ['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','acceptance_original_projection','a2a_original_time_projection'])assert.equal((await owner.query('SELECT count(*)::text n FROM keryx_storage.'+table)).rows[0].n,'0');
      partialProjectionRollbackQualified=true;
     }finally{assert.equal((await owner.query('UPDATE public.decision_review_records SET input_json=$1 WHERE id=$2',[source.input_json,source.id])).rowCount,1);assert.equal((await owner.query('SELECT input_json FROM public.decision_review_records WHERE id=$1',[source.id])).rows[0].input_json,source.input_json);}
    }finally{await owner.end();}

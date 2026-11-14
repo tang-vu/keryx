@@ -31,6 +31,8 @@ import { recipientSchema as chatRecipientSchema,type ChatAccountLinksStore } fro
 import { publicProfilesEnabled,publicHandle,publicProfileActor,type PublicProfilesStore } from '../../profiles/public-profile';
 import type { AsyncOwnerRunAssignmentsPort } from '../../owner-run-assignments/contracts';
 import { captureOwnerAssignmentReply } from './owner-assignments-transport';
+import { capturePostgresPendingOwnerSession } from '../../a2a/pending-owner-session';
+import type { PendingJobOwnersStore } from '../pending-job-owners-sqlite';
 import { acceptanceWallet,networkSchema,deliverableIdSchema,type DeliverableAcceptanceStore } from '../../deliverable-acceptance/contracts';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
@@ -57,12 +59,24 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
    ||readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader').fingerprint!==credential.fingerprint)refuseStorage('identity_mismatch');
  };
  const guard=async()=>{entry();await transport.verifyRuntimeAuthority();entry();};
- const core=assembleNativePostgresBusinessCore({identity:deployment.identity,authority:createPostgresApplicationDomainAuthority(transport),assertEntry:entry,verify:guard});
+ const core=assembleNativePostgresBusinessCore({identity:deployment.identity,authority:createPostgresApplicationDomainAuthority(transport),assertEntry:entry,verify:guard,sourceClaims:transport.sourceClaims,sourceUpsert:transport.sourceUpsert.upsertSource});
  const close=()=>{closed=true;core.hooks.close();return closing??=transport.close();};
  // Each closed work closure below performs its own fresh guarded native SQL.
  // Invoke it before awaiting so its typed port captures the caller's arguments.
  // A separate fresh guard still checks authority before publishing the result.
  const read=async<T>(work:()=>Promise<T>)=>{entry();const value=await work();await guard();return value;};
+ const sourceNames=['getSource','getSourceByOnchainId','listSources','listAllSources','getSourceMeta','getSourceClaim','getSourceClaimForSource','getSourceClaimChallenge','listSourceClaims'] as const;
+ const sourceReads=Object.freeze(Object.fromEntries(sourceNames.map(name=>[name,(...args:unknown[])=>read(()=>Reflect.apply(transport.sourceClaims[name],transport.sourceClaims,args))])));
+ const ownerCursor=z.object({createdAt:z.string().max(64).datetime({offset:true}),id:z.string().regex(/^a2a_[a-f0-9]{64}$/)}).strict();
+ const pending:PendingJobOwnersStore=Object.freeze({
+  assertAdmission:()=>refuseStorage('readonly_operation'),assertAdmissionAsync:async()=>refuseStorage('readonly_operation'),
+  async list(proof,before,id){
+   entry();capturePostgresPendingOwnerSession(proof,deployment.identity,'read');
+   const cursor=before===undefined?undefined:ownerCursor.parse(before),selected=id===undefined?undefined:ownerCursor.shape.id.parse(id);
+   await guard();const result=await transport.pendingJobOwners.list(proof,cursor,selected);entry();return result;
+  },
+ } satisfies PendingJobOwnersStore);
+ Object.defineProperty(core.adapter,'pendingJobOwners',{value:pending,enumerable:false,writable:false,configurable:true});
  const financial=composeNativeFinancialObservation(transport);
  const usage:PublicUsageStore=Object.freeze({
   summary:window=>read(()=>transport.publicUsage.summary(window)),
@@ -151,6 +165,8 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='chatAccountLinks')return chat;
     if(property==='publicProfiles')return publicProfilesActive?publicProfiles:undefined;
     if(property==='ownerRunAssignments')return assignments;
+    if(property==='pendingJobOwners')return pending;
+    if(typeof property==='string'&&Object.hasOwn(sourceReads,property))return sourceReads[property];
     if(property==='getWebSession')return async(raw:string)=>{
      entry();const hash=accountDigestSchema.parse(raw);await guard();const value=await transport.applicationRead('get_web_session',{p_hash:hash});entry();if(value===null)return null;
      const row=sessionRow.parse(value);if(row.hash!==hash)refuseStorage('invalid_operation');return {hash:row.hash,wallet:row.wallet,issuedAt:row.issued_at,expiresAt:row.expires_at};
@@ -171,7 +187,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;
     return (...args:unknown[])=>read(()=>Reflect.apply(method,target,args));
    },
-   ownKeys:()=>[...(privacyActive?['publicLedgerRuns']:[]),'accountMembership','chatAccountLinks','ownerRunAssignments',...(publicProfilesActive?['publicProfiles']:[])],getOwnPropertyDescriptor(_target,property){entry();if(property==='ownerRunAssignments')return {value:assignments,enumerable:false,writable:false,configurable:true};if(publicProfilesActive&&property==='publicProfiles')return {value:publicProfiles,enumerable:false,writable:false,configurable:true};if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
+   ownKeys:()=>[...sourceNames,'pendingJobOwners',...(privacyActive?['publicLedgerRuns']:[]),'accountMembership','chatAccountLinks','ownerRunAssignments',...(publicProfilesActive?['publicProfiles']:[])],getOwnPropertyDescriptor(_target,property){entry();if(property==='pendingJobOwners')return {value:pending,enumerable:false,writable:false,configurable:true};if(typeof property==='string'&&Object.hasOwn(sourceReads,property))return {value:sourceReads[property],enumerable:false,writable:false,configurable:true};if(property==='ownerRunAssignments')return {value:assignments,enumerable:false,writable:false,configurable:true};if(publicProfilesActive&&property==='publicProfiles')return {value:publicProfiles,enumerable:false,writable:false,configurable:true};if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
    setPrototypeOf:()=>false,set:()=>false,defineProperty:()=>false,deleteProperty:()=>false,preventExtensions:()=>false,
   });
   facades.set(facade,{identity:deployment.identity,guard,close,closed:()=>closed});

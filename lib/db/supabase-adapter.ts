@@ -1,3 +1,4 @@
+import type { PostgresSourceClaimsPort } from './postgres/source-claims-transport';
 import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { matchesA2aOriginalBinding, validateA2aOriginalClaim, validateA2aClaimWorker, type A2aOriginalClaim } from "../a2a/original-claim";
 import { storagePaymentProfile } from "./storage-identity";
@@ -150,11 +151,14 @@ type EnrolledConstruction = Readonly<{
   readDeployment: () => Readonly<StorageDeploymentManifest>;
 }>;
 const enrolledConstructions = new WeakMap<object, EnrolledConstruction>();
+
 export interface NativePostgresBusinessCoreOptions {
   readonly identity:StorageIdentity;
   readonly authority:StorageDomainAuthority&{domainClient():SupabaseClient};
   readonly assertEntry:()=>void;
   readonly verify:()=>Promise<void>;
+  readonly sourceClaims?:PostgresSourceClaimsPort;
+  readonly sourceUpsert?:(source:Source)=>Promise<void>;
 }
 const nativeConstructions = new WeakMap<object,Readonly<NativePostgresBusinessCoreOptions>>();
 const enrolledEntryGuards = new WeakMap<object, { verify: () => Promise<void>; close: () => void }>();
@@ -182,6 +186,10 @@ export function assembleNativePostgresBusinessCore(options:NativePostgresBusines
 }
 
 export class SupabaseAdapter implements KeryxDB {
+  declare readonly getSourceClaim?:NonNullable<KeryxDB['getSourceClaim']>;
+  declare readonly getSourceClaimForSource?:NonNullable<KeryxDB['getSourceClaimForSource']>;
+  declare readonly getSourceClaimChallenge?:NonNullable<KeryxDB['getSourceClaimChallenge']>;
+  declare readonly listSourceClaims?:NonNullable<KeryxDB['listSourceClaims']>;
   declare readonly publicProfiles?: PublicProfilesStore;
   declare readonly runPrivacy?: RunPrivacyStore;
   readonly #runPrivacyActive: boolean;
@@ -242,6 +250,16 @@ export class SupabaseAdapter implements KeryxDB {
         data.sourceContractDigest !== SUPABASE_RUNTIME_CONTRACT.afterDigest) refuseStorage("identity_unavailable");
       this.assertEntry();
     }, close: () => { this.#enrolled!.ready = false; } });
+    if(native?.sourceClaims){
+      const claims=native.sourceClaims;
+      const read=async<T>(work:()=>Promise<T>)=>{this.assertEntry();const value=await work();this.assertEntry();return value;};
+      Object.defineProperties(this,{
+        getSourceClaim:{value:(id:string)=>read(()=>claims.getSourceClaim(id)),configurable:true},
+        getSourceClaimForSource:{value:(id:string)=>read(()=>claims.getSourceClaimForSource(id)),configurable:true},
+        getSourceClaimChallenge:{value:(id:string)=>read(()=>claims.getSourceClaimChallenge(id)),configurable:true},
+        listSourceClaims:{value:(wallet?:string)=>read(()=>claims.listSourceClaims(wallet)),configurable:true},
+      });
+    }
     if(native)enrolledEntryGuards.set(this,{verify:async()=>{this.assertEntry();await native.verify();this.assertEntry();},
       close:()=>{this.#native!.closed=true;this.#native!.ready=false;}});
   }
@@ -371,6 +389,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    if(this.#native?.sourceUpsert){this.assertEntry();await this.#native.sourceUpsert(s);this.assertEntry();return;}
     if (s.registryAuthority) throw new Error("Immutable registry origin admission requires the SQLite adapter");
     if (s.sourceClaimId) throw new Error("Managed source claims require accepted atomic SQLite claim storage; Supabase imports are unsupported");
     if (s.scholarlyEnrolled) throw new Error("Scholarly enrolled sources cannot migrate to the unsupported Supabase backend");
@@ -415,6 +434,7 @@ export class SupabaseAdapter implements KeryxDB {
     throw new Error("Public references require the SQLite adapter");
   }
   async listSources(): Promise<Source[]> {
+    if(this.#native?.sourceClaims){this.assertEntry();const result=await this.#native.sourceClaims.listSources();this.assertEntry();return result;}
     // Filter to active=true only — deactivated on-chain sources must not be discovered/cited.
     const { data } = await this.domainCall("list_sources", { p_active: true }, (_args) => this.#sb
       .from("sources")
@@ -425,6 +445,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listAllSources(): Promise<Source[]> {
+    if(this.#native?.sourceClaims){this.assertEntry();const result=await this.#native.sourceClaims.listAllSources();this.assertEntry();return result;}
     // Deactivated rows included — owner history only, never discovery. See the interface note.
     const { data } = await this.domainCall("list_all_sources", {  }, (_args) => this.#sb.from("sources").select("*").order("created_at"));
     return (data ?? []).map(rowToSource);
@@ -443,6 +464,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getSourceMeta(id: string): Promise<import("./keryx-db").SourceMeta | null> {
+    if(this.#native?.sourceClaims){this.assertEntry();const result=await this.#native.sourceClaims.getSourceMeta(id);this.assertEntry();return result;}
     const { data } = await this.domainCall("get_source_meta", { p_id: id }, (_args) => this.#sb
       .from("source_meta")
       .select("name,description,url,rss_url")
@@ -518,11 +540,13 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getSource(id: string): Promise<Source | null> {
+    if(this.#native?.sourceClaims){this.assertEntry();const result=await this.#native.sourceClaims.getSource(id);this.assertEntry();return result;}
     const { data } = await this.domainCall("get_source", { p_id: id }, (_args) => this.#sb.from("sources").select("*").eq("id", _args.p_id).maybeSingle());
     return data ? rowToSource(data) : null;
   }
 
   async getSourceByOnchainId(onchainId: string): Promise<Source | null> {
+    if(this.#native?.sourceClaims){this.assertEntry();const result=await this.#native.sourceClaims.getSourceByOnchainId(onchainId);this.assertEntry();return result;}
     const { data } = await this.domainCall("get_source_by_onchain_id", { p_onchain_id: onchainId }, (_args) => this.#sb
       .from("sources")
       .select("*")

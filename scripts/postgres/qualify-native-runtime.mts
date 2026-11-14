@@ -32,6 +32,12 @@ import type { AcceptanceSnapshot,PublicAcceptance,AcceptanceMetrics } from '../.
 import { nativeAccountFixture,nativeAccountFixturePaths,nativeAccountFixtureTables } from './native-account-fixture.mts';
 import { nativeChatFixture } from './native-chat-fixture.mts';
 import { nativePublicProfileFixture } from './native-public-profile-fixture.mts';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql } from './a2a-time-projection.mts';
+import { SqliteAdapter } from '../../lib/db/sqlite-adapter';
+import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy } from '../../lib/db/public-source-claims';
+import type { Source } from '../../lib/types';
+import type { SourceMeta } from '../../lib/db/keryx-db';
+import type { SourceClaim,SourceClaimChallenge } from '../../lib/sources/public-source-claim';
 export async function qualifyNativeRuntime(input:{postgresContainer:string;password:string;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  input={...input,identity:validateStorageIdentity(input.identity)};
  assert.match(input.postgresContainer,/^keryx-postgres-consents-[a-f0-9-]{36}$/);
@@ -53,6 +59,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
  let account:Awaited<ReturnType<typeof nativeAccountFixture>>['observation']|undefined,accountId:string|undefined;
  let chat:Awaited<ReturnType<typeof nativeChatFixture>>['observation']|undefined,chatTokenHashes:string[]=[];
  let publicProfile:Awaited<ReturnType<typeof nativePublicProfileFixture>>['observation']|undefined;
+ let sourceClaims:{source:Source;meta:SourceMeta;claim:SourceClaim;challenge:SourceClaimChallenge}|undefined;const sourceClaimKeys:string[]=[];
  const created=await createTopicWatch({store:{async read(){return null;},async compareAndSwap(_key,_revision,next){watch=next;return true;}},now:()=>now,isOwnerCurrent:wallet=>wallet===owner,metadata:{async read(){throw new Error('Synthetic native factory does not run metadata checks');}}},owner,{watchId:'synthetic-runtime-watch',question:'Synthetic metadata',keywords:['term'],authors:[],venues:[],cadenceMs:60000,periodMs:86400000,maximumChecksPerPeriod:4,maximumRowsPerCheck:32,maximumDigestItems:16,expiresAtMs:now+86400000,requestedCaps:{perCheckMicroUsdc:0,perPeriodMicroUsdc:0},consent:{manualMetadata:true,emptyHeartbeat:false}});
  assert.equal(created.status,'created');assert(watch);const watchWire=canonicalJson(watch);
  const run=(mode:string)=>{
@@ -63,7 +70,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
     '--network','container:'+input.postgresContainer,'--tmpfs','/run/keryx-runtime:rw,nosuid,noexec,mode=0700,size=16m',
     '-e','KERYX_NETWORK=arc','-e','NEXT_PUBLIC_KERYX_NETWORK=arc','-e','KERYX_FORCE_OFFLINE=0','-e','BASE_URL=https://keryx.cc',
     '-e','KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555',
-    candidateImage!,'node','--max-old-space-size=256','/child.cjs'],JSON.stringify({mode,identity:input.identity,digest:input.digest,password:input.password,key,owner,session,acceptance,account,chat,publicProfile})));
+    candidateImage!,'node','--max-old-space-size=256','/child.cjs'],JSON.stringify({mode,identity:input.identity,digest:input.digest,password:input.password,key,owner,session,acceptance,account,chat,publicProfile,sourceClaims})));
    assert.equal(result.passed,true);assert.equal(result.outbound,0);assert.equal(result.selectedApplicationWriter,false);vectors+=result.checks;process.stderr.write(JSON.stringify({fixtureMode:mode,event:'passed',checks:result.checks,elapsedMs:Math.round(performance.now()-startedAt)})+'\n');return result;
   }finally{
    const remaining=docker(['ps','-aq','--filter',`name=^/${name}$`]);if(remaining)docker(['rm','-f',name]);assert.equal(docker(['ps','-aq','--filter',`name=^/${name}$`]),'');containers.delete(name);
@@ -86,11 +93,17 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
    const snapshot=await port.submit(order.payer,binding.network,order.id,{originalFingerprint:initial.originalFingerprint,deliveredDigest:initial.deliveredDigest,expectedRevision:0,idempotencyKey:'synthetic-factory-acceptance-739',choice:'accept',reason:'PRIVATE FACTORY REASON',publishState:true},{kind:'session',id:session.hash});
    acceptance={owner:order.payer,network:binding.network,id:order.id,snapshot,publicState:await port.publicState(binding.network,order.id),metrics:await port.metrics(binding.network)};
    const projection=sqliteAcceptanceProjection(selected.db,order.id);acceptanceStoreId=projection.storeId;
+   const sourceId='synthetic-runtime-source',onchainId='0x'+'a1'.repeat(32),sourceUrl='https://synthetic-factory.invalid/source';
+   selected.db.prepare('INSERT INTO sources(id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,onchain_id,evidence_provenance,preview_depth) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(sourceId,'Synthetic factory source',sourceUrl,'Current source metadata',sourceUrl+'/rss',owner,0.000007,'["synthetic"]',JSON.stringify([{name:'Synthetic owner',walletAddress:owner,splitWeight:1}]),'2026-01-02T03:04:05.000Z',onchainId,'synthetic-demo','locked');
+   selected.db.prepare('INSERT INTO source_meta(id,name,description,url,rss_url,updated_at) VALUES(?,?,?,?,?,?)').run(onchainId,'Synthetic metadata','Current metadata description',sourceUrl,sourceUrl+'/rss','2026-01-02T03:04:05.000Z');
+   const claimNow=Date.now()-3000,challenge=issueSqliteSourceClaimChallenge(selected.db,{wallet:owner,canonicalUrl:sourceUrl,rssUrl:sourceUrl+'/rss',deploymentOrigin:'https://keryx.cc',network:input.identity.network,now:claimNow}),verified=verifySqliteSourceClaim(selected.db,{challengeId:challenge.id,wallet:owner,proofDigest:'ad'.repeat(32),now:claimNow+1}),linked=bindSqliteSourceClaim(selected.db,{claimId:verified.id,wallet:owner,expectedRevision:1,sourceId,onchainId,registryAddress:'0x'+'88'.repeat(20),now:claimNow+2}),claim=updateSqliteSourceClaimPolicy(selected.db,{claimId:linked.id,wallet:owner,expectedRevision:2,mode:'free',distributionPermission:false,now:claimNow+3});
+   const sourceOracle=SqliteAdapter.assembleConnectionCore(selected.db,input.identity,()=>{}),observedSource=await sourceOracle.getSource(sourceId),meta=await sourceOracle.getSourceMeta(onchainId);const retainedChallenge=await sourceOracle.getSourceClaimChallenge(challenge.id);assert(observedSource&&meta&&retainedChallenge);sourceClaims={source:observedSource,meta,claim,challenge:retainedChallenge};
+
    let seed=`INSERT INTO public.deliverable_acceptance_store(singleton,id) VALUES(1,${q(projection.storeId)});`;
-   for(const table of ['a2a_orders','payment_events','research_purchase_authorizations','deliverable_acceptance_entries'])for(const row of selected.db.prepare('SELECT * FROM '+table).all()){
+   for(const table of ['a2a_orders','payment_events','research_purchase_authorizations','deliverable_acceptance_entries','sources','source_meta','sync_state'])for(const row of selected.db.prepare('SELECT * FROM '+table).all()){
     const keys=Object.keys(row);assert(keys.every(k=>/^[a-z][a-z0-9_]*$/.test(k)));
-    seed+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(k=>{const v=row[k];if(v===null)return 'NULL';if(k==='settled')return v===1?'true':'false';if(typeof v==='number'||typeof v==='bigint')return String(v);assert(typeof v==='string');return q(v)+(table==='a2a_orders'&&['request_data','response_data','package_data','resolution_data'].includes(k)?'::jsonb':'');}).join(',')});`;
-   }pg(seed+heldAcceptanceProjectionSql(projection));
+    seed+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(k=>{const v=row[k];if(v===null)return 'NULL';if(['settled','active','verified'].includes(k))return v===1?'true':'false';if(table==='sync_state'&&k==='key')sourceClaimKeys.push(String(v));if(typeof v==='number'||typeof v==='bigint')return String(v);assert(typeof v==='string');return q(v)+(table==='a2a_orders'&&['request_data','response_data','package_data','resolution_data'].includes(k)||table==='sources'&&['tags','authors'].includes(k)?'::jsonb':'');}).join(',')});`;
+   }pg(seed+heldA2aTimeProjectionSql(sqliteA2aTimeProjection(selected.db,order.id,input.identity))+heldAcceptanceProjectionSql(projection));
   }finally{selected.close();}
   for(const table of nativeAccountFixtureTables)assert.equal(input.ownerSql(`SELECT count(*) FROM public.${table};`),'0');
   const accountSeed=await nativeAccountFixture(folder,input.identity,session,{freshLogin:true});account=accountSeed.observation;accountId=accountSeed.accountId;pg(accountSeed.sql);
@@ -146,8 +159,10 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   for(const name of containers){try{docker(['rm','-f',name]);}catch{}}
   if(candidateImage){assert.equal(docker(['image','inspect',candidateImage,'--format','{{index .Config.Labels "keryx.native-runtime-fixture"}}']),staging);docker(['image','rm',candidateImage]);assert.equal(docker(['image','ls','-q','--filter','label=keryx.native-runtime-fixture='+staging]),'');}
   pg(`DELETE FROM public.cache_items WHERE source_id=${q(cacheId)};DELETE FROM public.query_runs WHERE id='synthetic-runtime-run';DELETE FROM keryx_storage.topic_watch_projection WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.topic_watches WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.private_bibliographies WHERE id=${q(bibliographyId)};DELETE FROM public.web_sessions WHERE wallet=${q(owner)};`);
+  pg(`DELETE FROM public.sources WHERE id='synthetic-runtime-source';DELETE FROM public.source_meta WHERE id='0x${'a1'.repeat(32)}';DELETE FROM public.sync_state WHERE key IN(${sourceClaimKeys.length?sourceClaimKeys.map(q).join(','):"''"});`);
   // Only this fixture's one generated bundle, then its empty unique directory.
   assert.equal(realpathSync(folder).toLowerCase(),resolve(folder).toLowerCase());assert.equal(dirname(folder).toLowerCase(),resolve(fixtureRoot).toLowerCase());
+  pg(`DELETE FROM keryx_storage.a2a_original_time_projection WHERE order_id=${q(acceptanceFixture.order.id)};`);
   pg(`DELETE FROM public.deliverable_acceptance_entries WHERE original_id=${q(acceptanceFixture.order.id)};DELETE FROM public.payment_events WHERE query_id=${q(acceptanceFixture.order.id)};DELETE FROM public.research_purchase_authorizations WHERE purchase_id=${q(acceptanceFixture.order.id)};DELETE FROM public.a2a_orders WHERE id=${q(acceptanceFixture.order.id)};`+(acceptanceStoreId?`DELETE FROM public.deliverable_acceptance_store WHERE id=${q(acceptanceStoreId)};`:''));
   if(accountId)pg(nativeAccountFixtureTables.map(table=>table==='account267_challenges'?`DELETE FROM public.${table} WHERE session_hash=${q(session.hash)};`:`DELETE FROM public.${table} WHERE account_id=${q(accountId!)};`).join(''));
   pg(`DELETE FROM public.public_researcher_profiles WHERE wallet=${q(owner)};DELETE FROM public.private_profiles WHERE wallet=${q(owner)};DELETE FROM public.chat263_links WHERE wallet=${q(owner)};DELETE FROM public.chat263_tokens WHERE token_hash IN(${chatTokenHashes.length?chatTokenHashes.map(q).join(','):"''"});`);
