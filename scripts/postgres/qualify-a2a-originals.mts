@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { ARC_MAINNET_PROFILE } from '../../lib/arc-network-profile';
 import { canonicalJson } from '../../lib/canonical-json';
 import { syntheticA2aOriginal } from '../../lib/db/a2a-original-fixture';
-import { a2aRequestHash } from '../../lib/a2a/order';
+import { a2aRequestHash,type A2aOrderResolutionUpdate } from '../../lib/a2a/order';
 import { a2aResearchPackageFingerprint } from '../../lib/a2a/research-package';
 import { a2aResearchPackage } from '../../lib/a2a/research-package-definition';
 import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
@@ -28,7 +28,7 @@ import { acceptanceOriginalMetadata } from '../../lib/db/postgres/acceptance-met
 import { composePostgresHealth } from '../../lib/db/postgres/health-transport';
 import type { Client } from 'pg';
 type Case={label:string;withoutPurchaseProof?:boolean;fixture?:(value:ReturnType<typeof syntheticA2aOriginal>)=>void;change?:(db:DatabaseSync,id:string)=>void;settled:boolean;claimable:boolean};
-export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string;rawResponses?:boolean}){
+export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string;rawResponses?:boolean;recovery?:boolean}){
  input={...input,identity:validateStorageIdentity(input.identity)};
  const folder=mkdtempSync(join(tmpdir(),'keryx-native-a2a-originals-')),file=join(folder,'source.sqlite'),manifestPath=join(folder,'storage.json'),manifest=canonicalJson({format:'keryx-storage-deployment-v1',identity:input.identity,backend:{kind:'sqlite',databasePath:file}}),at='2026-11-14T00:00:00.000Z';
  const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",pg=(sql:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+sql+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
@@ -66,6 +66,35 @@ export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptio
    db.prepare('INSERT INTO research_monthly(id,payer,data) VALUES(?,?,?)').run(purchase.id,payer,JSON.stringify(purchase));db.prepare('INSERT INTO research_monthly_redemptions(monthly_id,request_id,order_id,request_hash,created_at,slot) SELECT ?,?,id,request_hash,created_at,0 FROM a2a_orders WHERE id=?').run(purchase.id,'synthetic-monthly-slot',id);
   },settled:false,claimable:false},
   {label:'lock wait',settled:true,claimable:true},{label:'race',settled:true,claimable:true},{label:'lost ack',settled:true,claimable:true}];
+ const recoveries:{label:string;status:'completed'|'failed';expected:boolean;setup?:(db:DatabaseSync,id:string)=>void;edit?:(update:A2aOrderResolutionUpdate)=>void}[]=[
+  {label:'repair saved real run',status:'completed',expected:true},
+  {label:'repair missing run',status:'completed',expected:false,setup:(db,id)=>{db.prepare('DELETE FROM query_runs WHERE id=?').run(id);}},
+  {label:'repair offline run',status:'completed',expected:false,setup:(db,id)=>{db.prepare("UPDATE query_runs SET payment_mode='offline' WHERE id=?").run(id);}},
+  {label:'repair unstarted',status:'completed',expected:false,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET started_at=NULL WHERE id=?').run(id);}},
+  {label:'repair wrong journal',status:'completed',expected:false,edit:u=>{u.resolution.evidence.executionJournalVersion=null;}},
+  {label:'repair changed payment boundary',status:'completed',expected:false,edit:u=>{u.resolution.evidence.paymentBoundaryCrossed=true;}},
+  {label:'repair changed saving boundary',status:'completed',expected:false,edit:u=>{u.resolution.evidence.resultSaveBoundaryCrossed=true;}},
+  {label:'repair wrong attempt count',status:'completed',expected:false,edit:u=>{u.resolution.evidence.creatorAttempts=1;}},
+  {label:'repair SQL simulated evidence',status:'completed',expected:false,setup:(db,id)=>{db.prepare("INSERT INTO payment_events(id,query_id,kind,source_id,payer,payee,amount_usdc,network,created_at,settled,settlement_status) SELECT id||'_simulation',id,'citation','synthetic',payer,payee,0.001,'eip155:5042',created_at,0,'simulated' FROM a2a_orders WHERE id=?").run(id);}},
+  {label:'repair mixed current evidence',status:'completed',expected:true,setup:(db,id)=>{for(const [suffix,amount,status,settled] of [['settled',0.001,'settled',1],['pending',0.0005,'pending',0],['failed',0.0007,'failed',0]] as const)db.prepare("INSERT INTO payment_events(id,query_id,kind,source_id,payer,payee,amount_usdc,network,created_at,settled,settlement_status) SELECT id||?,id,'citation','synthetic',payer,payee,?,'eip155:5042',created_at,?,? FROM a2a_orders WHERE id=?").run('_'+suffix,amount,settled,status,id);},edit:u=>{Object.assign(u.resolution.evidence,{creatorAttempts:3,settledCreatorMicros:1000,pendingCreatorMicros:500,failedCreatorMicros:700});}},
+  {label:'repair over creator budget',status:'completed',expected:false,setup:(db,id)=>{db.prepare("INSERT INTO payment_events(id,query_id,kind,source_id,payer,payee,amount_usdc,network,created_at,settled,settlement_status) SELECT id||'_over',id,'citation','synthetic',payer,payee,1,'eip155:5042',created_at,1,'settled' FROM a2a_orders WHERE id=?").run(id);},edit:u=>{Object.assign(u.resolution.evidence,{creatorAttempts:1,settledCreatorMicros:1000000});}},
+  {label:'repair SQL half micro round',status:'completed',expected:true,setup:(db,id)=>{db.prepare("INSERT INTO payment_events(id,query_id,kind,source_id,payer,payee,amount_usdc,network,created_at,settled,settlement_status) SELECT id||'_half',id,'citation','synthetic',payer,payee,0.0000005,'eip155:5042',created_at,1,'settled' FROM a2a_orders WHERE id=?").run(id);},edit:u=>{Object.assign(u.resolution.evidence,{creatorAttempts:1,settledCreatorMicros:1});}},
+  {label:'close creator attempt',status:'failed',expected:false,setup:(db,id)=>{db.prepare("INSERT INTO payment_events(id,query_id,kind,source_id,payer,payee,amount_usdc,network,created_at,settled,settlement_status) SELECT id||'_pending',id,'citation','synthetic',payer,payee,0.001,'eip155:5042',created_at,0,'pending' FROM a2a_orders WHERE id=?").run(id);}},
+  {label:'close no execution boundary',status:'failed',expected:true},
+  {label:'close too recent',status:'failed',expected:false,edit:u=>{if(u.status==='failed')u.startedBefore='2026-11-13T23:59:59.999Z';}},
+  {label:'close saved run',status:'failed',expected:false,setup:(db,id)=>{db.prepare("INSERT INTO query_runs(id,created_at,question,budget,total_spent,total_to_creators,data,payment_mode) SELECT id,created_at,'Synthetic',0,0,0,'{}','offline' FROM a2a_orders WHERE id=?").run(id);}},
+  {label:'close payment boundary',status:'failed',expected:false,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET payment_started_at=started_at WHERE id=?').run(id);}},
+  {label:'close saving boundary',status:'failed',expected:false,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET result_saving_at=started_at WHERE id=?').run(id);}},
+  {label:'close historical journal',status:'failed',expected:false,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET execution_journal_version=NULL WHERE id=?').run(id);}},
+  {label:'close unstarted',status:'failed',expected:false,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET started_at=NULL WHERE id=?').run(id);}},
+  {label:'repair lost ack',status:'completed',expected:true},
+  {label:'repair atomic rollback',status:'completed',expected:true},
+ ];
+ if(input.recovery)for(const spec of recoveries)cases.splice(cases.length-3,0,{label:spec.label,settled:true,claimable:false,change:(db,id)=>{
+  db.prepare("UPDATE a2a_orders SET started_at=?,worker_id='synthetic-recovery' WHERE id=?").run(at,id);
+  if(spec.status==='completed')db.prepare("INSERT INTO query_runs(id,created_at,question,budget,total_spent,total_to_creators,data,payment_mode) SELECT id,created_at,'Synthetic',0,0,0,'{}','real' FROM a2a_orders WHERE id=?").run(id);
+  spec.setup?.(db,id);
+ }});
  if(input.rawResponses)for(const value of ['nul\0answer','unpaired\ud800answer','literal\\u0000 and \\ud800'])cases.splice(cases.length-3,0,{label:'raw response '+cases.length,change:(db,id)=>{db.prepare('UPDATE a2a_orders SET response_data=? WHERE id=?').run(JSON.stringify({answer:value}),id);},settled:true,claimable:false});
  if(input.rawResponses)cases.splice(cases.length-3,0,{label:'raw resolution escapes',change:(db,id)=>{db.prepare('UPDATE a2a_orders SET resolution_data=? WHERE id=?').run(JSON.stringify({note:'nul\0 and unpaired\ud800'}),id);},settled:true,claimable:false});
  const copy=(table:string,row:Record<string,unknown>)=>{const keys=Object.keys(row);assert(['a2a_orders','payment_events','research_purchase_authorizations','query_runs','research_monthly','research_monthly_redemptions'].includes(table)&&keys.every(k=>/^[a-z][a-z0-9_]*$/.test(k)));return `INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(key=>{const v=row[key];if(v===null)return 'NULL';if(key==='settled')return v===1?'true':'false';if(typeof v==='number'||typeof v==='bigint')return String(v);assert(typeof v==='string');return q(v)+(table==='a2a_orders'&&['request_data','package_data','response_data','resolution_data'].includes(key)?input.rawResponses&&['response_data','resolution_data'].includes(key)?'::json':'::jsonb':'');}).join(',')});`;};
@@ -161,11 +190,33 @@ export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptio
    const staleWire=before.orderWire;assert(await complete(rollbackId,{answer:'actual final'},stamp(39)));assert.equal(await channel.call('a2aComplete',[rollbackId,JSON.stringify({beforeWire:staleWire,responseWire,projection}),stamp(39)]),false);
    assert.equal((await native.getA2aOrder(rollbackId))?.response?.answer,'actual final');completionVectors++;
   }
+  let recoveryVectors=0;
+  if(input.recovery){
+   const update=(spec:typeof recoveries[number],id:string):A2aOrderResolutionUpdate=>{
+    const resolution={action:spec.status==='completed'?'repair_completed' as const:'close_failed' as const,actor:'automatic-poll' as const,reason:spec.status==='completed'?'saved_real_query_run' as const:'no_saved_run_before_execution_boundaries' as const,evidence:{executionJournalVersion:1 as const,paymentBoundaryCrossed:false,resultSaveBoundaryCrossed:false,creatorAttempts:0,settledCreatorMicros:0,pendingCreatorMicros:0,failedCreatorMicros:0,simulatedCreatorMicros:0,queryRunFound:spec.status==='completed'},resolvedAt:stamp(45)};
+    const value:A2aOrderResolutionUpdate=spec.status==='completed'?{status:'completed',response:{status:'completed',queryId:id,answer:'Recovered original\0\ud800'},resolution}:{status:'failed',errorCode:'operator_reviewed_no_result',startedBefore:at,resolution};spec.edit?.(value);return value;
+   };
+   for(const spec of recoveries){
+    const id=checkpoint(spec.label),value=update(spec,id);
+    if(spec.label==='repair lost ack'){
+     await loss?.close();await proxy?.close();loss=undefined;proxy=undefined;proxy=await startCommitAckLossProxy(input.options.endpoint.port);loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);
+     const lossy=composePostgresA2aOriginals({get closed(){return loss!.closed;},close:()=>loss!.close(),call:(operation,args)=>{if(operation==='a2aResolveCompleted')proxy!.arm();return loss!.call(operation,args);}},false);
+     await assert.rejects(lossy.resolveA2aOrder(id,value),e=>e instanceof PostgresDomainWriteOutcomeUnknown);assert(proxy.observation().dropped);assert(await core.resolveA2aOrder(id,value));assert.deepEqual(await native.getA2aOrder(id),await core.getA2aOrder(id));assert.equal(await native.resolveA2aOrder(id,value),false);recoveryVectors++;continue;
+    }
+    if(spec.label==='repair atomic rollback'){
+     const before=await channel.call('a2aOriginalSnapshot',[id]) as {orderWire:string;storeId:string};assert(value.status==='completed');const responseWire=JSON.stringify(value.response),resolutionWire=JSON.stringify(value.resolution),projection=acceptanceOriginalMetadata({...JSON.parse(before.orderWire),status:'completed',response_data:responseWire,error_code:null,resolution_data:resolutionWire,updated_at:value.resolution.resolvedAt},before.storeId);
+     await assert.rejects(channel.call('a2aResolveCompleted',[id,JSON.stringify({beforeWire:before.orderWire,responseWire,resolutionWire,projection:{...projection,orderSha256:'00'.repeat(32)}}),value.resolution.resolvedAt]),e=>e instanceof PostgresDomainWriteOutcomeUnknown);assert.deepEqual(await native.getA2aOrder(id),await core.getA2aOrder(id));recoveryVectors++;
+    }
+    const expected=await core.resolveA2aOrder(id,value);assert.equal(expected,spec.expected,spec.label);assert.equal(await native.resolveA2aOrder(id,value),expected,spec.label);assert.deepEqual(await native.getA2aOrder(id),await core.getA2aOrder(id),spec.label);recoveryVectors++;
+   }
+   assert.deepEqual(await composePostgresHealth(channel).currentA2aOperationsSnapshot(Date.parse(stamp(50))),await core.a2aOperationsSnapshot(Date.parse(stamp(50))));recoveryVectors++;
+  }
+  vectors+=recoveryVectors;
   vectors+=completionVectors;
   vectors+=checkpointVectors;
   input.ownerSql("UPDATE keryx_storage.control SET mode='held';");try{await assert.rejects(native.hasA2aOriginalSettlement(fixtures[0].binding));await assert.rejects(native.listUnfinishedA2aOrders(1));await assert.rejects(native.markA2aOrderPaymentStarted(locked.order.id,stamp(24)));await assert.rejects(native.markA2aOrderResultSaving(locked.order.id,stamp(24)));await assert.rejects(native.failA2aOrder(locked.order.id,'held',stamp(24)));if(input.rawResponses)await assert.rejects(native.completeA2aOrder(locked.order.id,{answer:'held'},stamp(24)));checkpointVectors++;vectors+=2;}finally{input.ownerSql("UPDATE keryx_storage.control SET mode='active';");}await state(locked.order.id);
   assert.equal(proofDigest(),financial);assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');await channel.close();await assert.rejects(native.hasA2aOriginalSettlement(fixtures[0].binding));vectors++;
-  return {vectors,...(input.rawResponses?{completion:{vectors:completionVectors,rawJsonPreserved:true,originalProjectionAtomic:true,actualRollback:true,oneConcurrentWinner:true,actualLostCommitAck:true,healthMatchesSource:true}}:{}),executionCheckpoints:{vectors:checkpointVectors,firstTimestampPreserved:true,failedOrFinishedNotReopened:true,unstartedFailureMatchesSource:true,actualLostCommitAck:true,actualWriterContention:true,readerMutationRefused:true,heldMutationRefused:true,unreviewedOpcodeRefused:true},cases:cases.map(c=>c.label),genuineSelectedSqliteConnectionAndActualCore:true,sourceOriginalTriggerRestoredBeforeReads:true,exactOriginalTupleAndRequestHash:true,exactMicroRoundTrip:true,missingPurchaseAndMonthlyRedemptionRefused:true,savedOriginalAndCreatorAttemptNotReexecuted:true,oldestQueueWithTruncation:true,individualAndCompleteResponseBoundsBeforeAggregation:true,oneConcurrentClaimWinner:true,actualLostCommitAck:true,actualWriterContention:true,noAutomaticWriteRetry:true,readerMutationRefused:true,financialProofsUnchanged:true,fullWriterQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
+  return {vectors,...(input.recovery?{recovery:{vectors:recoveryVectors,currentCreatorEvidence:true,offlineRunRefused:true,boundaryAndJournalCas:true,overspendRefused:true,sourceHalfMicroRounding:true,actualLostCommitAck:true,atomicProjectionRollback:true}}:{}),...(input.rawResponses?{completion:{vectors:completionVectors,rawJsonPreserved:true,originalProjectionAtomic:true,actualRollback:true,oneConcurrentWinner:true,actualLostCommitAck:true,healthMatchesSource:true}}:{}),executionCheckpoints:{vectors:checkpointVectors,firstTimestampPreserved:true,failedOrFinishedNotReopened:true,unstartedFailureMatchesSource:true,actualLostCommitAck:true,actualWriterContention:true,readerMutationRefused:true,heldMutationRefused:true,unreviewedOpcodeRefused:true},cases:cases.map(c=>c.label),genuineSelectedSqliteConnectionAndActualCore:true,sourceOriginalTriggerRestoredBeforeReads:true,exactOriginalTupleAndRequestHash:true,exactMicroRoundTrip:true,missingPurchaseAndMonthlyRedemptionRefused:true,savedOriginalAndCreatorAttemptNotReexecuted:true,oldestQueueWithTruncation:true,individualAndCompleteResponseBoundsBeforeAggregation:true,oneConcurrentClaimWinner:true,actualLostCommitAck:true,actualWriterContention:true,noAutomaticWriteRetry:true,readerMutationRefused:true,financialProofsUnchanged:true,fullWriterQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
  }finally{
   try{await loss?.close();await proxy?.close();await channel.close();source?.close();if(ids.length){const selected=ids.map(q).join(',');pg(`DELETE FROM public.research_monthly_redemptions WHERE order_id IN(${selected});`+(monthlyId?`DELETE FROM public.research_monthly WHERE id=${q(monthlyId)};DELETE FROM public.research_purchase_authorizations WHERE purchase_id=${q(monthlyId)};`:'')+`DELETE FROM public.payment_events WHERE query_id IN(${selected});DELETE FROM public.research_purchase_authorizations WHERE purchase_id IN(${selected});DELETE FROM public.a2a_orders WHERE id IN(${selected});DELETE FROM public.query_runs WHERE id IN(${selected});`+(input.rawResponses?'DELETE FROM public.deliverable_acceptance_store;':''));}}
   finally{for(const path of [file,file+'-wal',file+'-shm',file+'-journal',manifestPath])if(existsSync(path))unlinkSync(path);rmdirSync(folder);}
