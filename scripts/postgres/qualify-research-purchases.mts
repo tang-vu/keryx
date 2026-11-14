@@ -1,6 +1,7 @@
 /** Genuine selected SQLite Source versus closed native Arc purchase protocols.
  * All facts are synthetic: no provider, signature, settlement or job executes. */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdtempSync,writeFileSync,readFileSync,existsSync,unlinkSync,rmdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -9,8 +10,8 @@ import type { Client } from 'pg';
 import { ARC_MAINNET_PROFILE } from '../../lib/arc-network-profile';
 import { canonicalJson } from '../../lib/canonical-json';
 import { syntheticA2aOriginal } from '../../lib/db/a2a-original-fixture';
-import { a2aRequestHash,type A2aOrder } from '../../lib/a2a/order';
-import { monthlyPurchaseId,monthlyOrderId,MONTHLY_TERM_MS,type MonthlyPurchase,type MonthlyRedemptionInput } from '../../lib/db/research-monthly';
+import { a2aRequestHash,a2aOrderId,type A2aOrder } from '../../lib/a2a/order';
+import { monthlyPurchaseId,monthlyOrderId,MONTHLY_TERM_MS,type MonthlyPurchase,type MonthlyRedemptionInput,type ResearchPurchaseClaim } from '../../lib/db/research-monthly';
 import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
 import { installNativeUserDomainSchema } from '../../lib/db/native-user-domain-schema';
 import { insertStorageIdentity,installStorageFences } from '../../lib/db/storage-identity-sqlite';
@@ -34,7 +35,7 @@ export async function qualifyResearchPurchases(input:{options:PostgresConnection
  const issued={validAfter:String(base-60),validBefore:String(base+606000),expiresAt:String(base+600)},claim=(p:MonthlyPurchase)=>({network:ARC_MAINNET_PROFILE.networkId,payer:p.payer,payee:p.payee,authorizationId:p.authorizationId,purpose:'monthly' as const,requestHash:p.quoteId,amountMicros:p.totalMicros,issued});
  const redemption=(p:MonthlyPurchase,requestId:string,now=at):MonthlyRedemptionInput=>{const f=syntheticA2aOriginal(2100,ARC_MAINNET_PROFILE),id=monthlyOrderId(p.id,requestId),o:A2aOrder={...f.order,id,queryId:id,authorizationId:p.authorizationId+':monthly:'+requestId,transaction:p.transaction,amountUsdc:p.totalMicros/4/1e6,creatorBudgetUsdc:p.creatorBudgetMicros/1e6,serviceFeeUsdc:p.serviceFeeMicros/4/1e6,createdAt:now,updatedAt:now,request:{question:'Synthetic prepaid \ufeff\u2028\ud83d\udd12 '+requestId,origin:'a2a',network:ARC_MAINNET_PROFILE.networkId,monthlyId:p.id,model:''}};o.requestHash=a2aRequestHash({...o,...o.request!});return {monthlyId:p.id,payer:p.payer,requestId,now,order:o};};
  let vectors=0,storeId='',source:ReturnType<typeof openVerifiedSqliteStorage>|undefined,loss:ReturnType<typeof createPostgresDomainChannel>|undefined,proxy:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined;
- const orderIds:string[]=[];
+ const orderIds:string[]=[],resourceIds:string[]=[],resourcePolicyKeys:string[]=[];
  try{
   assert.equal(input.ownerSql('SELECT count(*) FROM public.research_monthly;'),'0');assert.equal(input.ownerSql('SELECT count(*) FROM public.deliverable_acceptance_store;'),'0');
   const db=new DatabaseSync(file);try{
@@ -47,6 +48,15 @@ export async function qualifyResearchPurchases(input:{options:PostgresConnection
   writeFileSync(manifestPath,manifest,{mode:0o600});source=openVerifiedSqliteStorage(file,input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(readFileSync(manifestPath,'utf8'),manifest)});
   const core=SqliteAdapter.assembleConnectionCore(source.db,input.identity,()=>assert.equal(canonicalJson(assertVerifiedSqliteConnection(source!.db)),canonicalJson(input.identity)));
   const bothReject=async(a:()=>Promise<unknown>,b:()=>Promise<unknown>)=>{await assert.rejects(a());await assert.rejects(b());vectors++;};
+  for(const [index,race] of [[2190,false],[2191,true]] as const){
+   const {order:o}=syntheticA2aOriginal(index,ARC_MAINNET_PROFILE),resource:ResearchPurchaseClaim={network:ARC_MAINNET_PROFILE.networkId,payer:o.payer,payee:o.payee,authorizationId:o.authorizationId,purpose:'resource',requestHash:o.requestHash,amountMicros:30000,resourceSourceId:'synthetic-purchase-resource',resourceKind:'fetch'},identity={network:resource.network,payer:resource.payer,authorizationId:resource.authorizationId};
+   const key='keryx:source-claims:v1:purchase-policy:'+createHash('sha256').update(canonicalJson(identity)).digest('hex');resourceIds.push(a2aOrderId(resource));resourcePolicyKeys.push(key);
+   await core.claimResearchPurchase(resource);if(race)await Promise.all([native.claimResearchPurchase(resource),native.claimResearchPurchase(resource)]);else await native.claimResearchPurchase(resource);vectors++;
+   const retained=await core.getSyncState(key);assert(retained);assert.equal(input.ownerSql(`SELECT value FROM public.sync_state WHERE key=${q(key)};`),retained);vectors++;
+   await core.claimResearchPurchase(resource);await native.claimResearchPurchase(resource);assert.equal(input.ownerSql(`SELECT value FROM public.sync_state WHERE key=${q(key)};`),retained);vectors++;
+   for(const edit of [{requestHash:'ff'.repeat(32)},{resourceSourceId:'different-seller'}])await bothReject(()=>native.claimResearchPurchase({...resource,...edit}),()=>core.claimResearchPurchase({...resource,...edit}));
+   assert.equal(input.ownerSql(`SELECT value FROM public.sync_state WHERE key=${q(key)};`),retained);
+  }
   for(const p of purchases.slice(0,7)){
    await bothReject(()=>native.claimResearchPurchase({...claim(p),requireExisting:true}),()=>core.claimResearchPurchase({...claim(p),requireExisting:true}));
    await core.claimResearchPurchase(claim(p));await native.claimResearchPurchase(claim(p));vectors++;
@@ -76,6 +86,6 @@ export async function qualifyResearchPurchases(input:{options:PostgresConnection
   await input.contentionClient.query('BEGIN');try{await input.contentionClient.query('SELECT pg_advisory_xact_lock(634781904177022::bigint)');await assert.rejects(native.claimResearchPurchase(claim(purchases[2])));vectors++;}finally{await input.contentionClient.query('ROLLBACK');}
   assert(input.options.endpoint.kind==='loopback');proxy=await startCommitAckLossProxy(input.options.endpoint.port);loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);const lost=redemption(purchases[3],'lost-ack');orderIds.push(lost.order.id);const lossy=composePostgresResearchPurchases({get closed(){return loss!.closed;},close:()=>loss!.close(),call:(operation,args)=>{if(String(operation)==='researchMonthlyRedeem')proxy!.arm();return loss!.call(operation,args);}},false);await assert.rejects(lossy.redeemResearchMonthly(lost),e=>e instanceof PostgresDomainWriteOutcomeUnknown);assert(proxy.observation().dropped);assert((await core.redeemResearchMonthly(lost)).created);assert.deepEqual(await native.redeemResearchMonthly(lost),await core.redeemResearchMonthly(lost));vectors++;
   assert.equal(input.ownerSql('SELECT count(*) FROM public.payment_events;'),'0');assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
-  return {vectors,actualVerifiedSqliteCore:true,mainnetSourceExplicit:true,exactMicroAccounting:true,immutableIssuedWindowAndSubmittedCas:true,expiredSubmittedReplay:true,unsubmittedExpiryRefused:true,fourSlotCasAndReplay:true,oneLastSlotWinner:true,atomicOrderProjectionRollback:true,actualLostCommitAck:true,readerAndHeldRefused:true,actualWriterContention:true,settlementAuthorityGranted:false,fullWriterQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
- }finally{try{await loss?.close();await proxy?.close();await channel.close();source?.close();const ids=purchases.map(p=>q(p.id)).join(',');pg(`DELETE FROM public.research_monthly_redemptions WHERE monthly_id IN(${ids});`+(orderIds.length?`DELETE FROM public.a2a_orders WHERE id IN(${orderIds.map(q).join(',')});`:'')+`DELETE FROM public.research_monthly WHERE id IN(${ids});DELETE FROM public.research_purchase_authorizations WHERE purchase_id IN(${ids});`+(storeId?`DELETE FROM public.deliverable_acceptance_store WHERE id=${q(storeId)};`:''));}finally{for(const path of [file,file+'-wal',file+'-shm',file+'-journal',manifestPath])if(existsSync(path))unlinkSync(path);rmdirSync(folder);}}
+  return {vectors,actualVerifiedSqliteCore:true,mainnetSourceExplicit:true,resourcePolicySidecarMatchesSource:true,concurrentExactResourceReplay:true,exactMicroAccounting:true,immutableIssuedWindowAndSubmittedCas:true,expiredSubmittedReplay:true,unsubmittedExpiryRefused:true,fourSlotCasAndReplay:true,oneLastSlotWinner:true,atomicOrderProjectionRollback:true,actualLostCommitAck:true,readerAndHeldRefused:true,actualWriterContention:true,settlementAuthorityGranted:false,fullWriterQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
+ }finally{try{await loss?.close();await proxy?.close();await channel.close();source?.close();const ids=purchases.map(p=>q(p.id)).join(',');pg(`DELETE FROM public.research_monthly_redemptions WHERE monthly_id IN(${ids});`+(orderIds.length?`DELETE FROM public.a2a_orders WHERE id IN(${orderIds.map(q).join(',')});`:'')+`DELETE FROM public.research_monthly WHERE id IN(${ids});DELETE FROM public.research_purchase_authorizations WHERE purchase_id IN(${[...purchases.map(p=>p.id),...resourceIds].map(q).join(',')});`+(resourcePolicyKeys.length?`DELETE FROM public.sync_state WHERE key IN(${resourcePolicyKeys.map(q).join(',')});`:'')+(storeId?`DELETE FROM public.deliverable_acceptance_store WHERE id=${q(storeId)};`:''));}finally{for(const path of [file,file+'-wal',file+'-shm',file+'-journal',manifestPath])if(existsSync(path))unlinkSync(path);rmdirSync(folder);}}
 }
