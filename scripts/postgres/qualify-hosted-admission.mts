@@ -10,11 +10,13 @@ import { installMainnetApplicationSchema } from '../../lib/db/mainnet-applicatio
 import { admitSqliteHostedPolicy,admitSqliteHostedAuthorization,sqliteHostedAccounting,type HostedAuthorizationAdmission } from '../../lib/db/hosted-treasury-journal';
 import { storageIdentityDigest,type StorageIdentity } from '../../lib/db/storage-identity';
 import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection';
-import { createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-channel';
+import { createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from '../../lib/db/postgres/domain-channel';
 import { composePostgresHostedLedgerTransport } from '../../lib/db/postgres/hosted-ledger-transport';
 import { composePostgresHostedAdmission } from '../../lib/db/postgres/hosted-admission-transport';
 import { operatingFeePolicyDigest } from '../../lib/payments/operating-fee-policy';
-import { publicSourceClaimId } from '../../lib/db/public-source-claims';
+import { publicSourceClaimId,issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy } from '../../lib/db/public-source-claims';
+import { config } from '../../lib/config';
+import { captureHostedSourceClaimPolicy,sourceClaimPolicySelector,sourceClaimPolicyRuntime } from '../../lib/db/postgres/source-claim-purchase-policy';
 import { sqliteJournalTransaction } from '../../lib/db/sqlite-browser-journal';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
 const wallet=()=>`0x${randomBytes(20).toString('hex')}`,nonce=()=>`0x${randomBytes(32).toString('hex')}`;
@@ -23,6 +25,7 @@ export async function qualifyHostedAdmission(input:{options:PostgresConnectionOp
  const pg=(s:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+s+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
  let vectors=0,proxy:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined,loss:ReturnType<typeof createPostgresDomainChannel>|undefined;
  const previous={json:process.env.KERYX_OPERATING_FEE_POLICY_JSON,digest:process.env.KERYX_OPERATING_FEE_POLICY_DIGEST};
+ const previousConfig={baseUrl:config.baseUrl,registryOrigins:config.registryOrigins};
  const fresh=async(role:'public'|'private'='public',caps={lifetime:'100',query:'20'})=>{
   const policy={format:'keryx-hosted-treasury-policy-v1' as const,network:profile.networkId,storageIdentityDigest:storageIdentityDigest(input.identity),origin:'https://keryx.cc',signer:wallet(),lifetimeCapMicroUsdc:caps.lifetime,queryCapMicroUsdc:caps.query,expiresAtSeconds:Math.floor(Date.now()/1000)+3600};
   admitSqliteHostedPolicy(db,policy,input.identity,role);await ledger.admitHostedTreasuryPolicy(policy,role);
@@ -41,7 +44,20 @@ export async function qualifyHostedAdmission(input:{options:PostgresConnectionOp
   vectors++;
  };
  const sync=(key:string,value:string)=>{db.prepare('INSERT INTO sync_state(key,value,updated_at) VALUES(?,?,?)').run(key,value,new Date().toISOString());pg(`INSERT INTO public.sync_state(key,value,updated_at) VALUES(${q(key)},${q(value)},clock_timestamp());`);};
+ const rewrite=(key:string,value:string)=>{db.prepare('UPDATE sync_state SET value=? WHERE key=?').run(value,key);pg(`UPDATE public.sync_state SET value=${q(value)} WHERE key=${q(key)};`);};
+ const managed=async(mode:'free'|'citation-only'|'paid'='paid')=>{
+  const value=await fresh(),sourceId='synthetic-managed-'+randomBytes(16).toString('hex'),url='https://synthetic-publisher.invalid/'+randomBytes(16).toString('hex'),owner=wallet(),onchainId=nonce(),now=Date.now()-3000;
+  db.prepare('INSERT INTO sources(id,name,url,wallet_address,onchain_id,active,verified) VALUES(?,?,?,?,?,1,1)').run(sourceId,sourceId,url,owner,onchainId);
+  pg(`INSERT INTO public.sources(id,name,url,wallet_address,onchain_id,active,verified) VALUES(${q(sourceId)},${q(sourceId)},${q(url)},${q(owner)},${q(onchainId)},true,true);`);
+  const challenge=issueSqliteSourceClaimChallenge(db,{canonicalUrl:url,wallet:owner,deploymentOrigin:value.policy.origin,network:profile.networkId,now}),verified=verifySqliteSourceClaim(db,{challengeId:challenge.id,wallet:owner,proofDigest:'ee'.repeat(32),now:now+1}),linked=bindSqliteSourceClaim(db,{claimId:verified.id,wallet:owner,expectedRevision:verified.revision,sourceId,onchainId,registryAddress:config.registryReadAddress.toLowerCase(),now:now+2}),claim=updateSqliteSourceClaimPolicy(db,{claimId:linked.id,wallet:owner,expectedRevision:linked.revision,mode,distributionPermission:mode!=='free',now:now+3});
+  const keys=['rate:'+owner,'challenge:'+challenge.id,'claim:'+claim.id,'source:'+createHash('sha256').update(sourceId).digest('hex'),'marker:'+createHash('sha256').update(sourceId).digest('hex'),...[1,2,3].map(n=>'history:'+claim.id+':'+String(n).padStart(16,'0'))].map(k=>'keryx:source-claims:v1:'+k);
+  for(const key of keys){const raw=String(db.prepare('SELECT value FROM sync_state WHERE key=?').get(key)!.value);pg(`INSERT INTO public.sync_state(key,value,updated_at) VALUES(${q(key)},${q(raw)},clock_timestamp());`);}
+  if(value.context.kind==='operating-fee')throw Error('wrong fresh kind');
+  value.context.sourceId=sourceId;const {id,revision,effectiveAt,verifiedAt}=claim;value.context.sourceClaim={id,revision,mode,effectiveAt,verifiedAt};value.payload.message.to=owner;
+  return {value,claim,challenge,sourceId};
+ };
  try{
+  Object.assign(config,{baseUrl:'https://keryx.cc',registryOrigins:''});
   db.exec('BEGIN');installMainnetApplicationSchema(db);db.exec('COMMIT');
   // Mainnet application schema contains the actual source-claim payment tables.
   const first=await fresh();await compare(first,true);assert.throws(()=>admitSqliteHostedAuthorization(db,first,input.identity));await assert.rejects(native.admitHostedAuthorization(first));vectors++;
@@ -77,12 +93,41 @@ export async function qualifyHostedAdmission(input:{options:PostgresConnectionOp
    const value=await fresh(),key='keryx:source-claims:v1:history:'+randomBytes(32).toString('hex')+':0000000000000001';
    sync(key,JSON.stringify({claim:{linkedSourceId:value.context.sourceId},unrelated:escape}));
    try{await compare(value,false);}finally{
-    // Remove this exact isolated fault fixture. PostgreSQL's JSON decoder also
-    // refuses an unrelated escaped surrogate; ambiguous managed history holds
-    // new admissions rather than falling through to unmanaged authority.
+    // Remove this exact isolated fault fixture. The linked identity survives
+    // escaped evidence, and its missing binding still refuses new admission.
     db.prepare('DELETE FROM sync_state WHERE key=?').run(key);pg(`DELETE FROM public.sync_state WHERE key=${q(key)};`);
    }
   }
+  const unmanagedVectors=vectors;
+  // Genuine Source-created synthetic policy/history, with no wallet signatures,
+  // facilitator settlement, registry/provider IO or real source-control proof.
+  // The production owner's two retained claims are never changed by this suite.
+  for(const mode of ['paid','citation-only','free'] as const){const f=await managed(mode);await compare(f.value,mode==='paid');const g=await managed(mode);g.value.context.kind='citation';await compare(g.value,mode!=='free');}
+  for(const fault of ['receipt','binding','marker','current','history','proof','inactive','unverified','synthetic','url','onchain','stale','future','registry'] as const){
+   const f=await managed(),key='keryx:source-claims:v1:claim:'+f.claim.id,history='keryx:source-claims:v1:history:'+f.claim.id+':0000000000000003';
+   const remove=(key:string)=>{db.prepare('DELETE FROM sync_state WHERE key=?').run(key);pg(`DELETE FROM public.sync_state WHERE key=${q(key)};`);};
+   const updateClaim=(patch:Record<string,unknown>)=>{const claim={...f.claim,...patch};rewrite(key,canonicalJson(claim));rewrite(history,canonicalJson({claim,action:'policy',at:new Date().toISOString(),evidence:{}}));};
+   if(fault==='receipt'&&f.value.context.kind!=='operating-fee')f.value.context.sourceClaim!.revision++;
+   if(fault==='binding')remove('keryx:source-claims:v1:source:'+createHash('sha256').update(f.sourceId).digest('hex'));
+   if(fault==='marker')rewrite('keryx:source-claims:v1:marker:'+createHash('sha256').update(f.sourceId).digest('hex'),'{}');
+   if(fault==='current')remove(key);
+   if(fault==='history')remove(history);
+   if(fault==='proof')remove('keryx:source-claims:v1:challenge:'+f.challenge.id);
+   if(fault==='inactive'||fault==='unverified'){const field=fault==='inactive'?'active':'verified';db.prepare(`UPDATE sources SET ${field}=0 WHERE id=?`).run(f.sourceId);pg(`UPDATE public.sources SET ${field}=false WHERE id=${q(f.sourceId)};`);}
+   if(fault==='synthetic'){db.prepare("UPDATE sources SET evidence_provenance='synthetic-demo' WHERE id=?").run(f.sourceId);pg(`UPDATE public.sources SET evidence_provenance='synthetic-demo' WHERE id=${q(f.sourceId)};`);}
+   if(fault==='url'||fault==='onchain'){const field=fault==='url'?'url':'onchain_id',bad=fault==='url'?'https://other.invalid/':nonce();db.prepare(`UPDATE sources SET ${field}=? WHERE id=?`).run(bad,f.sourceId);pg(`UPDATE public.sources SET ${field}=${q(bad)} WHERE id=${q(f.sourceId)};`);}
+   if(fault==='stale'||fault==='future'){const field=fault==='stale'?'verifiedAt':'effectiveAt',at=new Date(Date.now()+(fault==='stale'?-25*3600000:60000)).toISOString();updateClaim({[field]:at});if(f.value.context.kind!=='operating-fee')f.value.context.sourceClaim![field]=at;}
+   if(fault==='registry')updateClaim({registryAddress:wallet()});
+   await compare(f.value,false);
+  }
+  for(const text of ['\0','\ud800','\udc00','\\u0000']){
+   const f=await managed(),key='keryx:source-claims:v1:history:'+f.claim.id+':0000000000000003',raw=JSON.parse(String(db.prepare('SELECT value FROM sync_state WHERE key=?').get(key)!.value));raw.evidence={retained:text};const wire=JSON.stringify(raw);rewrite(key,wire);await compare(f.value,true);assert.equal(input.ownerSql(`SELECT value FROM public.sync_state WHERE key=${q(key)};`),wire);
+  }
+  const changed=await managed(),selector=sourceClaimPolicySelector({sourceId:changed.sourceId,identity:null}),raw=await channel.call('hostedSourcePolicySnapshot' as Parameters<typeof channel.call>[0],[selector]),capture=captureHostedSourceClaimPolicy(raw,{sourceId:changed.sourceId,expected:changed.value.context.kind==='operating-fee'?null:changed.value.context.sourceClaim,kind:'fetch',network:profile.networkId},sourceClaimPolicyRuntime());
+  db.prepare('UPDATE sources SET active=0 WHERE id=?').run(changed.sourceId);pg(`UPDATE public.sources SET active=false WHERE id=${q(changed.sourceId)};`);
+  assert.throws(()=>admitSqliteHostedAuthorization(db,changed.value,input.identity));await assert.rejects(channel.call('hostedAdmitAuthorization',[canonicalJson(changed.value.policy),createHash('sha256').update(canonicalJson(changed.value.policy)).digest('hex'),canonicalJson({context:changed.value.context,payload:changed.value.payload}),canonicalJson(changed.value.accounting),changed.value.availableMicroUsdc,canonicalJson({sourcePolicy:capture})]));assert.equal(count(String(changed.value.payload.message.nonce)),'0');vectors++;
+  const malformed=await fresh(),malformedKey='keryx:source-claims:v1:history:'+randomBytes(32).toString('hex')+':0000000000000001';sync(malformedKey,'{unsupported malformed retained JSON');try{await assert.rejects(native.admitHostedAuthorization(malformed));assert.equal(count(String(malformed.payload.message.nonce)),'0');vectors++;}finally{db.prepare('DELETE FROM sync_state WHERE key=?').run(malformedKey);pg(`DELETE FROM public.sync_state WHERE key=${q(malformedKey)};`);}
+  const sourcePolicyVectors=vectors-unmanagedVectors;
   // Operating fee policy is isolated synthetic configuration, restored below.
   const feeValue=await fresh(),feePolicy={format:'keryx-operating-fee-policy-v1' as const,network:profile.networkId,origin:feeValue.policy.origin,storageIdentityDigest:storageIdentityDigest(input.identity),beneficiary:String(feeValue.payload.message.to).toLowerCase(),expiresAtSeconds:Math.floor(Date.now()/1000)+3600};
   process.env.KERYX_OPERATING_FEE_POLICY_JSON=canonicalJson(feePolicy);process.env.KERYX_OPERATING_FEE_POLICY_DIGEST=operatingFeePolicyDigest(feePolicy);
@@ -110,14 +155,19 @@ export async function qualifyHostedAdmission(input:{options:PostgresConnectionOp
    if(state==='active')assert.equal(input.ownerSql(`SELECT count(*) FROM public.payment_events WHERE query_id=${q(id)};`),'0');
   }
   const race=await fresh(),other=structuredClone(race);other.payload.message.nonce=nonce();const results=await Promise.allSettled([native.admitHostedAuthorization(race),native.admitHostedAuthorization(other)]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(input.ownerSql(`SELECT count(*) FROM public.hosted_treasury_authorizations WHERE signer=${q(race.policy.signer)};`),'1');vectors++;
-  const locked=await fresh();await input.contentionClient.query('BEGIN');try{await input.contentionClient.query('SELECT pg_advisory_xact_lock(634781904177022::bigint)');await assert.rejects(native.admitHostedAuthorization(locked),e=>e instanceof PostgresDomainWriteOutcomeUnknown);assert.equal(count(String(locked.payload.message.nonce)),'0');vectors++;}finally{await input.contentionClient.query('ROLLBACK');}
-  assert(input.options.endpoint.kind==='loopback');proxy=await startCommitAckLossProxy(input.options.endpoint.port);loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);const lost=await fresh();proxy.arm();await assert.rejects(composePostgresHostedAdmission(loss,input.identity,false).admitHostedAuthorization(lost),e=>e instanceof PostgresDomainWriteOutcomeUnknown);assert(proxy.observation().dropped);assert.equal(count(String(lost.payload.message.nonce)),'1');await assert.rejects(native.admitHostedAuthorization(lost));vectors++;
+  // Stage each write fault after the pure snapshot read, so its read-only
+  // COMMIT cannot consume a fault intended for the original authorization.
+  const hook=(base:PostgresDomainChannel,beforeWrite:()=>Promise<void>|void):PostgresDomainChannel=>({get closed(){return base.closed;},close:()=>base.close(),async call(operation,args){if(operation==='hostedAdmitAuthorization')await beforeWrite();return base.call(operation,args);}});
+  const locked=await fresh();let lockHeld=false;const contended=composePostgresHostedAdmission(hook(channel,async()=>{await input.contentionClient.query('BEGIN');await input.contentionClient.query('SELECT pg_advisory_xact_lock(634781904177022::bigint)');lockHeld=true;}),input.identity,false);try{await assert.rejects(contended.admitHostedAuthorization(locked),e=>e instanceof PostgresDomainWriteOutcomeUnknown);assert.equal(count(String(locked.payload.message.nonce)),'0');vectors++;}finally{if(lockHeld)await input.contentionClient.query('ROLLBACK');}
+  assert(input.options.endpoint.kind==='loopback');proxy=await startCommitAckLossProxy(input.options.endpoint.port);loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);const lost=await fresh();await assert.rejects(composePostgresHostedAdmission(hook(loss,()=>proxy!.arm()),input.identity,false).admitHostedAuthorization(lost),e=>e instanceof PostgresDomainWriteOutcomeUnknown);assert(proxy.observation().dropped);assert.equal(count(String(lost.payload.message.nonce)),'1');await assert.rejects(native.admitHostedAuthorization(lost));vectors++;
   const reader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(composePostgresHostedAdmission(reader,input.identity,true).admitHostedAuthorization(await fresh()));const raw=await fresh();await assert.rejects(reader.call('hostedAdmitAuthorization',[canonicalJson(raw.policy),'ab'.repeat(32),canonicalJson({context:raw.context,payload:raw.payload}),canonicalJson(raw.accounting),raw.availableMicroUsdc,null]));vectors++;}finally{await reader.close();}
   const held=await fresh();input.ownerSql("UPDATE keryx_storage.control SET mode='held';");try{await assert.rejects(native.admitHostedAuthorization(held));assert.equal(count(String(held.payload.message.nonce)),'0');vectors++;}finally{input.ownerSql("UPDATE keryx_storage.control SET mode='active';");}
   assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
   assert.equal(input.ownerSql('SELECT count(*) FROM public.browser_journal_writer;'),'0');
-  return {vectors,actualNewOriginalAdmission:true,unmanagedSourceOnly:true,managedStateNeverFallsBack:true,originalFeePolicyAndOnePerQuery:true,privateOriginalExecution:true,atomicRetainedPayment:true,latePaymentFailureRollsBackOriginal:true,actualConcurrentAdmission:true,actualWriterContention:true,actualLostCommitAck:proxy.observation().dropped,automaticWriteRetry:false,fullWriterAdmitted:false};
+  const priorVectors=vectors-sourcePolicyVectors;assert.equal(priorVectors,42);
+  return {vectors,priorUnmanagedCasesPreserved:true,priorVectors,sourcePolicyVectors,actualNewOriginalAdmission:true,managedSourceCurrentPolicy:true,managedHistoricalTextPreserved:true,sourcePolicyComparedAfterWriterLock:true,managedStateNeverFallsBack:true,originalFeePolicyAndOnePerQuery:true,privateOriginalExecution:true,atomicRetainedPayment:true,latePaymentFailureRollsBackOriginal:true,actualConcurrentAdmission:true,actualWriterContention:true,actualLostCommitAck:proxy.observation().dropped,automaticWriteRetry:false,fullWriterAdmitted:false};
  }finally{
+  Object.assign(config,previousConfig);
   for(const [key,value] of [['KERYX_OPERATING_FEE_POLICY_JSON',previous.json],['KERYX_OPERATING_FEE_POLICY_DIGEST',previous.digest]] as const){if(value===undefined)delete process.env[key];else process.env[key]=value;}
   await loss?.close();await proxy?.close();await channel.close();db.close();
  }
