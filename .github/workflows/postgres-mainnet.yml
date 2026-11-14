@@ -144,9 +144,28 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=2048
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --publication-contained-only
 
+  a2a-fulfillment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Pinned PostgreSQL fixture image
+        run: docker pull postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
+      - name: Failed-original fulfillment against the pinned full runtime catalog
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --a2a-fulfillment-only
+
   postgres-preparation:
     if: ${{ always() }}
-    needs: [contracts-bootstrap-financial, native-runtime-core, native-runtime-tail, synthetic-materialization, publication-contained]
+    needs: [contracts-bootstrap-financial, native-runtime-core, native-runtime-tail, synthetic-materialization, publication-contained, a2a-fulfillment]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -155,7 +174,7 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
           node --input-type=module -e '
-            const required = ["contracts-bootstrap-financial", "native-runtime-core", "native-runtime-tail", "synthetic-materialization", "publication-contained"];
+            const required = ["contracts-bootstrap-financial", "native-runtime-core", "native-runtime-tail", "synthetic-materialization", "publication-contained", "a2a-fulfillment"];
             const needs = JSON.parse(process.env.NEEDS_JSON);
             if (Object.keys(needs).length !== required.length || required.some(name => needs[name]?.result !== "success")) {
               console.error("PostgreSQL acceptance refused", needs);
