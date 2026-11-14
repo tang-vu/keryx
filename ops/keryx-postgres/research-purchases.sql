@@ -5,10 +5,10 @@ INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VA
  ('research_purchase_claim',ARRAY['research_purchase_authorizations','sync_state'],true,false),
  ('research_monthly_create',ARRAY['research_purchase_authorizations','research_monthly','sync_state'],true,false),
  ('research_monthly_get',ARRAY['research_monthly','research_monthly_redemptions','acceptance_original_projection'],true,true),
- ('research_monthly_redeem',ARRAY['research_monthly','research_monthly_redemptions','a2a_orders','a2a_original_time_projection','deliverable_acceptance_store','acceptance_original_projection'],true,false);
+ ('research_monthly_redeem',ARRAY['research_monthly','research_monthly_redemptions','a2a_orders','a2a_original_time_projection','a2a_original_cell_projection','deliverable_acceptance_store','acceptance_original_projection'],true,false);
 CREATE FUNCTION public.storage_research_purchases(expected jsonb,digest text,action text,packet_wire text,accepted_at text) RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE packet jsonb;proposed jsonb;p jsonb;r jsonb;req jsonb;projection jsonb;redemptions jsonb;result json;
+DECLARE packet jsonb;proposed jsonb;p jsonb;r jsonb;rawrow jsonb;req jsonb;projection jsonb;redemptions jsonb;result json;
  c public.research_purchase_authorizations;retained public.research_purchase_authorizations;o public.a2a_orders;saved public.a2a_orders;redemption public.research_monthly_redemptions;
  profile jsonb:=keryx_storage.a2a_original_profile();operation text;field text;chosen_id text;store text;order_wire text;package jsonb;preimage text;required boolean;existed boolean;used integer;challenge jsonb;now_seconds bigint:=floor(extract(epoch FROM clock_timestamp()));
 BEGIN
@@ -134,7 +134,7 @@ BEGIN
   AND jsonb_typeof(packet->'rowWire')='string' AND octet_length(packet->>'rowWire')<=65536 AND accepted_at IS NOT NULL) IS NOT TRUE THEN RAISE EXCEPTION 'Monthly redemption packet refused';END IF;
  r:=(packet->>'rowWire')::jsonb;projection:=packet->'projection';
  IF (jsonb_typeof(r)='object' AND jsonb_typeof(r->'request_data')='string' AND jsonb_typeof(r->'package_data')='string' AND r->>'created_at'=r->>'updated_at') IS NOT TRUE THEN RAISE EXCEPTION 'Monthly order body refused';END IF;
- r:=jsonb_set(jsonb_set(r,'{request_data}',(r->>'request_data')::jsonb),'{package_data}',(r->>'package_data')::jsonb);SELECT * INTO o FROM jsonb_populate_record(NULL::public.a2a_orders,r);req:=o.request_data;
+ rawrow:=r;r:=jsonb_set(jsonb_set(r,'{request_data}',(r->>'request_data')::jsonb),'{package_data}',(r->>'package_data')::jsonb);SELECT * INTO o FROM jsonb_populate_record(NULL::public.a2a_orders,r);req:=o.request_data;
  SELECT value INTO package FROM jsonb_array_elements(keryx_storage.a2a_original_packages()) value WHERE value->'wire'=o.package_data AND value->'wire'->>'researchMode'=o.research_mode;
  IF (o.id='a2a_'||encode(sha256(convert_to('["keryx-monthly-redemption-v1",'||to_json(chosen_id)::text||','||to_json(packet->>'requestId')::text||']','UTF8')),'hex') AND o.query_id=o.id
   AND o.authorization_id=(p->>'authorizationId')||':monthly:'||(packet->>'requestId') AND lower(o.payer)=lower(p->>'payer') AND lower(o.payee)=lower(p->>'payee') AND o.transaction_id=p->>'transaction'
@@ -170,6 +170,8 @@ BEGIN
   -- reconstruct offset spelling or submillisecond original representations.
   INSERT INTO keryx_storage.a2a_original_time_projection(order_id,identity_digest,query_id,request_hash,created_at,updated_at,started_at,payment_started_at,result_saving_at)
    VALUES(o.id,keryx_storage.identity_digest(expected),o.query_id,o.request_hash,r->>'created_at',r->>'updated_at',r->>'started_at',r->>'payment_started_at',r->>'result_saving_at');
+  INSERT INTO keryx_storage.a2a_original_cell_projection(order_id,identity_digest,query_id,request_hash,package_data_wire,request_data_wire)
+   VALUES(o.id,keryx_storage.identity_digest(expected),o.query_id,o.request_hash,rawrow->>'package_data',rawrow->>'request_data');
   INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta) VALUES(o.id,store,projection->>'orderWire',projection->>'orderSha256',projection->>'deliveryToken',projection->>'owner',projection->>'network',nullif(projection->'binding','null'::jsonb),projection->'health');order_wire:=packet->>'rowWire';
  END IF;
  result:=json_build_object('created',NOT existed,'orderWire',order_wire);PERFORM keryx_storage.leave_operation();RETURN result;
