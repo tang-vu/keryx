@@ -86,7 +86,7 @@ BEGIN
    ELSE
     -- Each JSON escape represents one UTF-16 code unit; raw supplementary
     -- characters count twice. This validates Source's exact 256-unit bound
-    -- without decoding NUL/unpaired-surrogate receipt bytes into native TEXT.
+    -- without decoding retained NUL receipt bytes into native TEXT.
     transaction_value:=regexp_replace(transaction_raw::text,chr(92)||chr(92)||'(u[0-9a-fA-F]{4}|["'||chr(92)||chr(92)||'/bfnrt])','x','g');
     IF hosted->>'signer' !~ '^0x[a-f0-9]{40}$' OR selected->>'authorizationId' !~ '^0x[a-f0-9]{64}$' OR transaction_raw::text='""' OR keryx_storage.a2a_utf16_length(transaction_value)-2>256 THEN RAISE EXCEPTION 'native hosted settlement input refused';END IF;
     IF NOT has_payment OR current_row.settlement_status IS DISTINCT FROM 'pending' THEN
@@ -108,7 +108,8 @@ BEGIN
  ELSE payload:=packet;
  END IF;
  -- Validate only safe projections as JSONB. Never cast the raw original to
- -- JSONB: postpaid NUL/unpaired-surrogate bytes must remain JSON escape text.
+ -- JSONB: retained scalar NUL bytes must remain JSON escape text. Lone UTF-16
+ -- already became U+FFFD at Source scalar binding; serialized JSON is separate.
  IF (jsonb_typeof(payload)='object' AND payload-'rowWire'-'sha256'-'projection'-'unprojectedFields'='{}'::jsonb AND jsonb_typeof(payload->'rowWire')='string' AND octet_length(payload->>'rowWire')<=1048576 AND payload->>'sha256'=encode(sha256(convert_to(payload->>'rowWire','UTF8')),'hex') AND jsonb_typeof(payload->'projection')='object' AND jsonb_typeof(payload->'unprojectedFields')='array' AND jsonb_array_length(payload->'unprojectedFields')<=15) IS NOT TRUE THEN RAISE EXCEPTION 'native payment original capture refused';END IF;
  original_json:=(payload->>'rowWire')::json;projection:=payload->'projection';SELECT count(*),count(DISTINCT key) INTO key_count,distinct_count FROM json_each(original_json);
  IF key_count<>27 OR distinct_count<>27 OR (SELECT count(*) FROM jsonb_object_keys(projection))<>27 THEN RAISE EXCEPTION 'native payment original field inventory';END IF;
@@ -116,6 +117,12 @@ BEGIN
  IF cardinality(unprojected)<>(SELECT count(DISTINCT value) FROM unnest(unprojected) value) OR NOT unprojected<@ARRAY['created_at','source_name','rationale','tx_hash','authorization_expires_at','origin','item_id','item_title','item_url','content_version','item_published_at','offer_id'] THEN RAISE EXCEPTION 'native payment projection fields refused';END IF;
  FOREACH field IN ARRAY fields LOOP
   IF NOT projection?field OR original_json->field IS NULL THEN RAISE EXCEPTION 'native payment original missing field';END IF;
+  -- JSON.stringify of a Source scalar column never emits surrogate escapes:
+  -- Node SQLite replaces lone UTF-16 at TEXT binding and emits pairs as UTF-8.
+  -- Tokenize JSON escapes so a literal backslash followed by ud800 is retained.
+  IF json_typeof(original_json->field)='string' AND EXISTS(
+   SELECT 1 FROM regexp_matches((original_json->field)::text,$source_escape$\\(["\\/bfnrt]|u[0-9a-fA-F]{4})$source_escape$,'g') AS escapes(value)
+   WHERE value[1] ~ '^u[dD][89a-fA-F][0-9a-fA-F]{2}$') THEN RAISE EXCEPTION 'native payment scalar Source binding mismatch';END IF;
   IF field=ANY(unprojected) THEN
    IF projection->field IS DISTINCT FROM 'null'::jsonb OR json_typeof(original_json->field) NOT IN('string','null') THEN RAISE EXCEPTION 'native payment unprojected field refused';END IF;
   ELSIF field=ANY(ARRAY['amount_usdc','weight','list_price_usdc','settled']) THEN
@@ -127,6 +134,9 @@ BEGIN
   END IF;
  END LOOP;
  IF (projection->'settled' IN('0'::jsonb,'1'::jsonb) AND (projection->>'settled'='1')=(projection->>'settlement_status'='settled') AND jsonb_typeof(projection->'id')='string' AND octet_length(projection->>'id')<=1024) IS NOT TRUE THEN RAISE EXCEPTION 'native payment settled flag mismatch';END IF;
+ -- Match the selected mainnet Source BEFORE INSERT/UPDATE triggers, including
+ -- duplicate INSERT OR IGNORE attempts. A conflict never bypasses authority.
+ IF projection->>'network' IS DISTINCT FROM 'eip155:5042' OR projection->>'settlement_status' IS NULL OR projection->>'settlement_status'='simulated' THEN RAISE EXCEPTION 'native payment Source authority profile mismatch';END IF;
  IF cardinality(unprojected)>0 AND strpos(pg_get_functiondef('keryx_storage.require_operation(jsonb,text,text)'::regprocedure),'Native payment raw observation guard v1')=0 THEN RAISE EXCEPTION 'native payment raw observation guard unavailable';END IF;
  projection:=jsonb_set(projection,'{settled}',to_jsonb(projection->>'settled'='1'));SELECT * INTO after_row FROM jsonb_populate_record(NULL::public.payment_events,projection);
  IF action IN('record','record-once') THEN

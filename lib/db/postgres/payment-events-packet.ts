@@ -8,11 +8,16 @@ const authorityFields=new Set(['id','kind','query_id','source_id','payer','payee
 const numericFields=new Set(['amount_usdc','weight','list_price_usdc','settled']);
 export type PaymentEventRow=Record<typeof PAYMENT_EVENT_FIELDS[number],string|number|null>;
 function nativeText(value:string){return !value.includes('\0')&&Buffer.from(value).toString('utf8')===value;}
+/** Node's SQLite scalar TEXT binding replaces unpaired UTF-16 with U+FFFD.
+ * NUL survives. Already serialized JSON is separate TEXT and keeps its escapes. */
+export function sqlitePaymentScalarText(value:string){return Buffer.from(value).toString('utf8');}
 export function paymentEventWireSha256(wire:string){return createHash('sha256').update(wire).digest('hex');}
-/** Raw JS JSON retains postpaid NUL/surrogate escape bytes. A NULL relational
- * metadata cell is explicitly unprojected, never a substitute for the original.
+/** The wire captures actual Source column binding, including retained NUL.
+ * A NULL relational metadata cell is explicitly unprojected, never a substitute
+ * for the original.
  * The mandatory shared observation guard must hold all older payment readers. */
-export function capturePaymentEventRow(row:PaymentEventRow){
+export function capturePaymentEventRow(input:PaymentEventRow){
+ const row=Object.fromEntries(Object.entries(input).map(([key,value])=>[key,typeof value==='string'?sqlitePaymentScalarText(value):value])) as PaymentEventRow;
  const keys=Object.keys(row);if(keys.length!==PAYMENT_EVENT_FIELDS.length||PAYMENT_EVENT_FIELDS.some(key=>!Object.hasOwn(row,key)))throw Error('Payment original fields unavailable');
  const projection:PaymentEventRow={...row},unprojectedFields:string[]=[];
  for(const [key,value] of Object.entries(row)){
@@ -36,8 +41,11 @@ export function capturePaymentEvent(raw:PaymentRecord){
  return capturePaymentEventRow(row);
 }
 export function capturePaymentTerminal(id:string,authorizationId:string,transaction:string){
+ if(typeof id==='string')id=sqlitePaymentScalarText(id);if(typeof authorizationId==='string')authorizationId=sqlitePaymentScalarText(authorizationId);
  if(typeof id!=='string'||typeof authorizationId!=='string'||typeof transaction!=='string'||!nativeText(id)||!nativeText(authorizationId)||Buffer.byteLength(id)>1024||Buffer.byteLength(authorizationId)>1024||Buffer.byteLength(JSON.stringify(transaction))>PAYMENT_EVENT_WIRE_BYTES)throw Error('Native payment terminal input unsupported');
- return Object.freeze({id,authorizationId,transaction,transactionWire:JSON.stringify(transaction)});
+ // Keep the caller receipt for hosted exact readback validation; the fixed
+ // write packet describes the scalar value that SQLite would actually store.
+ return Object.freeze({id,authorizationId,transaction,transactionWire:JSON.stringify(sqlitePaymentScalarText(transaction))});
 }
 export interface PaymentEventTerminalSnapshot {
  beforeWire:string|null;
