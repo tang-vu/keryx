@@ -70,6 +70,7 @@ import { nativeHostedAdmissionSource } from './hosted-admission-source.mts';
 import { nativeA2aResponseWireSource } from './a2a-response-wire-source.mts';
 import { nativeA2aOriginalsSource } from './a2a-originals-source.mts';
 import { qualifyA2aOriginals } from './qualify-a2a-originals.mts';
+import { qualifyA2aCreate } from './qualify-a2a-create.mts';
 import { qualifyPublicProfiles } from './qualify-public-profiles.mts';
 import { qualifyChatLinks } from './qualify-chat-links.mts';
 import { qualifyOwnerAssignments } from './qualify-owner-assignments.mts';
@@ -303,7 +304,7 @@ try {
 
   if(ownershipHistoryOnly){const ownershipHistory=await qualifyOwnershipHistory({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,ownershipHistoryOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,ownershipHistory,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(runClaimsOnly){const runClaims=await qualifyRunClaims({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,runClaimsOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,runClaims,runtimeQualified:false,applicationBackendSwitched:false}));return;}
-  if(responseWireOnly){const options={endpoint:{kind:'loopback' as const,port},database:'native_target',role:'keryx_app',password},ownerSql=(statement:string)=>sql('native_target',statement);const a2aOriginals=await qualifyA2aOriginals({options,identity,digest:reference.sha256,contentionClient:app,ownerSql,rawResponses:true,recovery:true});const health=await qualifyHealth({options,identity,digest:reference.sha256,contentionClient:app,ownerSql,rawCompletionMetadata:true});console.log(JSON.stringify({passed:true,responseWireOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,a2aOriginals,health,runtimeQualified:false,applicationBackendSwitched:false}));return;}
+  if(responseWireOnly){const options={endpoint:{kind:'loopback' as const,port},database:'native_target',role:'keryx_app',password},ownerSql=(statement:string)=>sql('native_target',statement);const a2aOriginals=await qualifyA2aOriginals({options,identity,digest:reference.sha256,contentionClient:app,ownerSql,rawResponses:true,recovery:true});const a2aCreate=await qualifyA2aCreate({options,identity,digest:reference.sha256,contentionClient:app,ownerSql});const health=await qualifyHealth({options,identity,digest:reference.sha256,contentionClient:app,ownerSql,rawCompletionMetadata:true});console.log(JSON.stringify({passed:true,responseWireOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,a2aOriginals,a2aCreate,health,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(hostedAdmissionOnly){const hostedAdmission=await qualifyHostedAdmission({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,hostedAdmissionOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,hostedAdmission,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(a2aOriginalsOnly){const a2aOriginals=await qualifyA2aOriginals({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,a2aOriginalsOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,a2aOriginals,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(ownerAssignmentsOnly){const ownerAssignments=await qualifyOwnerAssignments({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,ownerAssignmentsOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,ownerAssignments,runtimeQualified:false,applicationBackendSwitched:false}));return;}
@@ -333,6 +334,7 @@ try {
     console.log(JSON.stringify({passed:true,privacyOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,privacy,runtimeQualified:false,applicationBackendSwitched:false}));return;
   }
   const a2aOriginals=withNativeRuntime?await qualifyA2aOriginals({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement),rawResponses:true,recovery:true}):undefined;
+  const a2aCreate=withNativeRuntime?await qualifyA2aCreate({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const usage=withNativeRuntime?await qualifyUsage({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const accounts=withNativeRuntime?await qualifyAccounts({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const accountHistory=withNativeRuntime?await qualifyAccountHistory({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
@@ -490,6 +492,7 @@ try {
     ...(accountHistory?{accountHistory}:{}),
     ...(ownerAssignments?{ownerAssignments}:{}),
     ...(a2aOriginals?{a2aOriginals}:{}),
+    ...(a2aCreate?{a2aCreate}:{}),
     ...(chatLinks?{chatLinks}:{}),
     ...(publicProfiles?{publicProfiles}:{}),
     ...(publicLedger?{publicLedger}:{}),

@@ -1230,3 +1230,24 @@ seller path and genuine enrolled SQLite facade with unfunded synthetic vendor
 responses; invalid input reaches no facilitator verification/settlement, research
 dependency construction, payment row or order. Native producer/current-domain
 and pending-owner integration remain separate requirements.
+
+### Atomic native A2A creation
+
+The fixed create port captures fresh request/package JSON and its exact current
+mainnet package, rail, body hash and integer micro-USDC tuple before its first
+await. It refuses incompatible input, stale execution markers and oversized
+packets. A new order requires an existing matching local purchase authorization
+and settled inbound original under the writer lock. Those retained records do
+not independently prove provider settlement or authorize payment.
+
+Insertion and acceptance/health derivatives commit together. A projection fault
+rolls back the insert; duplicate creation returns the retained original unchanged
+for caller replay comparison. An actual lost acknowledgement remains unknown
+without automatic retry or job execution. The synthetic Source/core fixture
+checks creation/replay parity plus the stronger composed-call retained-settlement
+preconditions, concurrency, rollback and lost acknowledgement.
+
+The bounded unfinished queue now shares the fixed original observer. It retains
+raw JSON escape bytes, stable ordering, the extra truncation position and its
+complete-response bound. Pending-owner association, fresh purchase producers,
+the genuine application writer and production cutover remain unqualified here.
