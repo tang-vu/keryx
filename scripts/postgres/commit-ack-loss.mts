@@ -2,7 +2,15 @@
  * CommandComplete. Seeing that frame proves PostgreSQL finished the implicit
  * transaction before the client loses its acknowledgement. No TLS interception,
  * data logging, target discovery or production connection is supported. */
-import { createServer, connect, type Socket } from "node:net";
+import { createServer, connect, type Socket,type Server } from "node:net";
+const ownedServers=new WeakMap<Server,number>(),ownedPorts=new Map<number,{server:Server;target:number}>();
+/** Read-only fixture provenance. Only the closed factory below can register. */
+export function isCommitAckLossServerFor(server:unknown,targetPort:number):boolean{
+ return arguments.length===2&&!!server&&typeof server==='object'&&Number.isSafeInteger(targetPort)&&ownedServers.get(server as Server)===targetPort;
+}
+export function isCommitAckLossProxyFor(port:number,targetPort:number):boolean{
+ const record=ownedPorts.get(port);return arguments.length===2&&Number.isSafeInteger(port)&&!!record&&record.target===targetPort&&record.server.listening&&ownedServers.get(record.server)===targetPort;
+}
 
 export async function startCommitAckLossProxy(upstreamPort: number) {
   if (!Number.isSafeInteger(upstreamPort) || upstreamPort < 1 || upstreamPort > 65535) throw new Error("Invalid owned fixture port");
@@ -48,18 +56,23 @@ export async function startCommitAckLossProxy(upstreamPort: number) {
       }
     });
   });
-  await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("Owned fixture proxy did not listen");
+  let port:number|undefined;const unregister=()=>{ownedServers.delete(server);if(port!==undefined)ownedPorts.delete(port);};
+  ownedServers.set(server,upstreamPort);server.once('close',unregister);server.once('error',unregister);
+  try{
+    await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
+    const address = server.address();
+    if (!address || typeof address === "string"||address.address!=='127.0.0.1') throw new Error("Owned fixture proxy did not listen");
+    port=address.port;ownedPorts.set(port,{server,target:upstreamPort});
+  }catch(error){unregister();if(server.listening)await new Promise<void>(resolve=>server.close(()=>resolve()));throw error;}
   return Object.freeze({
-    port: address.port,
+    port: port!,
     arm(skipCompleted = 0) {
       if (closing || armed || dropped || !Number.isSafeInteger(skipCompleted) || skipCompleted < 0 || skipCompleted > 4) throw new Error("Owned acknowledgement loss already armed or invalid");
       skipped = skipCompleted; armed = true;
     },
     observation: () => ({ dropped, commands }),
     close() {
-      closing = true;
+      closing = true;unregister();
       return closed ??= Promise.resolve().then(async () => {
         const stopped = new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
         for (const socket of sockets) socket.destroy();
