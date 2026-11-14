@@ -18,6 +18,8 @@ import { STORAGE_MAINNET_PROFILE_DIGEST,validateStorageIdentity } from '../stora
 import { SqliteAdapter } from '../sqlite-adapter';
 import { sqliteJournalTransaction } from '../sqlite-browser-journal';
 import { canonicalJson } from '../../canonical-json';
+import { config } from '../../config';
+import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy } from '../public-source-claims';
 import { captureBrowserJournalAdmission,captureBrowserJournalSelector,captureBrowserAuthorizationIntent,captureBrowserJournalGrant,decodeBrowserJournal,browserSigningSnapshot,type BrowserJournalStoredRow } from './browser-journal-packet';
 
 // Public, unfunded test-only keys sign only the Source historical query policy.
@@ -56,6 +58,19 @@ it('keeps legacy intent return originals distinct from Source-bound scalar proje
 });
 it('reproduces genuine selected mainnet plain journal reads with NUL and escaped lone UTF-16 originals',async()=>{
  await fixture(async(core,db)=>{const input=admission(),result=await core.admitBrowserJournal(input);expect(result.status).toBe('admitted');const actual=await core.getBrowserJournal(input.sessionId,input.requestId);expect(decodeBrowserJournal(stored(db,input),captureBrowserJournalSelector(input.sessionId,input.requestId))).toEqual(actual);expect(actual!.payment.rationale).toBe('raw\0metadata\udfff');expect(db.prepare('SELECT rationale FROM payment_events').get()!.rationale).toBe('raw\0metadata\ufffd');expect(JSON.parse(String(db.prepare('SELECT payment_context FROM browser_journal_bindings').get()!.payment_context)).note).toBe('raw\0context\ud800');});
+});
+it('uses the item managed receipt when the direct Source context claim is explicitly null',async()=>{
+ const previous={baseUrl:config.baseUrl,registryReadAddress:config.registryReadAddress,registryOrigins:config.registryOrigins};Object.assign(config,{baseUrl:'https://keryx.cc',registryReadAddress:`0x${'37'.repeat(20)}`,registryOrigins:''});
+ try{await fixture(async(core,db)=>{
+  const input=admission(),wallet=payee,url='https://synthetic-browser-claim.invalid/article',onchain=`0x${'35'.repeat(32)}`,at=Date.now()-3000;
+  db.prepare('INSERT INTO sources(id,name,url,wallet_address,onchain_id,active,verified) VALUES(?,?,?,?,?,1,1)').run(input.sourceId,input.sourceId,url,wallet,onchain);
+  // Genuine Source history producers over declared synthetic control evidence;
+  // no verifier request, signature, provider or funding authority is exercised.
+  const challenge=issueSqliteSourceClaimChallenge(db,{canonicalUrl:url,wallet,deploymentOrigin:'https://keryx.cc',network:mainnet.networkId,now:at}),verified=verifySqliteSourceClaim(db,{challengeId:challenge.id,wallet,proofDigest:'36'.repeat(32),now:at+1}),linked=bindSqliteSourceClaim(db,{claimId:verified.id,wallet,expectedRevision:verified.revision,sourceId:input.sourceId,onchainId:onchain,registryAddress:config.registryReadAddress.toLowerCase(),now:at+2}),paid=updateSqliteSourceClaimPolicy(db,{claimId:linked.id,wallet,expectedRevision:linked.revision,mode:'paid',distributionPermission:true,now:at+3});
+  const receipt={id:paid.id,revision:paid.revision,mode:paid.mode,effectiveAt:paid.effectiveAt,verifiedAt:paid.verifiedAt};input.payment.sourceClaim=receipt;input.paymentContext={sourceClaim:null,item:{sourceClaim:receipt}} as never;
+  expect(captureBrowserJournalAdmission(input).contextConflict).toBe(false);expect((await core.admitBrowserJournal(input)).status).toBe('admitted');
+  const retained=await core.getBrowserJournal(input.sessionId,input.requestId);expect(retained!.payment.sourceClaim).toEqual(receipt);expect(retained!.paymentContext).toEqual({sourceClaim:null,item:{sourceClaim:receipt}});
+ });}finally{Object.assign(config,previous);}
 });
 it('retains original epochs and alias signer consumption, and only prepared cancellation releases once',async()=>{
  await fixture(async(core,db)=>{const input=admission(),result=await core.admitBrowserJournal(input);expect(result.status).toBe('admitted');const oldSpent=db.prepare('SELECT spent_micro FROM browser_signer_capacity').get()!.spent_micro;expect(oldSpent).toBe(15700);
