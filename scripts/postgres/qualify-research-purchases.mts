@@ -32,7 +32,7 @@ export async function qualifyResearchPurchases(input:{options:PostgresConnection
  const folder=mkdtempSync(join(tmpdir(),'keryx-native-research-purchases-')),file=join(folder,'source.sqlite'),manifestPath=join(folder,'storage.json'),manifest=canonicalJson({format:'keryx-storage-deployment-v1',identity:input.identity,backend:{kind:'sqlite',databasePath:file}});
  const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",pg=(sql:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+sql+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
  const channel=createPostgresDomainChannel(input.options,input.identity,input.digest),native=composePostgresResearchPurchases(channel,false),base=Math.floor(Date.now()/1000),at=new Date(base*1000).toISOString();
- const previousConfig={baseUrl:config.baseUrl,registryOrigins:config.registryOrigins};
+ const previousConfig={baseUrl:config.baseUrl,registryOrigins:config.registryOrigins,registryReadAddress:config.registryReadAddress};
  const purchases=Array.from({length:9},(_,i)=>{const {order:o}=syntheticA2aOriginal(2100+i,ARC_MAINNET_PROFILE);return {format:'keryx-research-monthly-purchase-v2',network:ARC_MAINNET_PROFILE.networkId,asset:ARC_MAINNET_PROFILE.usdcAddress.toLowerCase(),gatewayContract:ARC_MAINNET_PROFILE.gatewayWallet.toLowerCase(),id:monthlyPurchaseId({network:ARC_MAINNET_PROFILE.networkId,...o}),payer:o.payer,payee:o.payee,authorizationId:o.authorizationId,transaction:o.transaction,quoteId:'ab'.repeat(32),createdAt:at,expiresAt:new Date(base*1000+MONTHLY_TERM_MS).toISOString(),creatorBudgetMicros:10000,serviceFeeMicros:20000,totalMicros:60000,researchPackage:o.researchPackage!} satisfies MonthlyPurchase;});
  purchases[5].creatorBudgetMicros=5700;purchases[5].totalMicros=42800;
  const issued={validAfter:String(base-60),validBefore:String(base+606000),expiresAt:String(base+600)},claim=(p:MonthlyPurchase)=>({network:ARC_MAINNET_PROFILE.networkId,payer:p.payer,payee:p.payee,authorizationId:p.authorizationId,purpose:'monthly' as const,requestHash:p.quoteId,amountMicros:p.totalMicros,issued});
@@ -40,7 +40,7 @@ export async function qualifyResearchPurchases(input:{options:PostgresConnection
  let vectors=0,storeId='',source:ReturnType<typeof openVerifiedSqliteStorage>|undefined,loss:ReturnType<typeof createPostgresDomainChannel>|undefined,proxy:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined;
  const orderIds:string[]=[],resourceIds:string[]=[],resourcePolicyKeys:string[]=[],managedSource='synthetic-purchase-managed-marker',markerKey='keryx:source-claims:v1:marker:'+createHash('sha256').update(managedSource).digest('hex'),managedIds:string[]=[];
  try{
-  Object.assign(config,{baseUrl:'https://keryx.cc',registryOrigins:''});
+  Object.assign(config,{baseUrl:'https://keryx.cc',registryOrigins:'',registryReadAddress:'0x5555555555555555555555555555555555555555'});
   assert.equal(input.ownerSql('SELECT count(*) FROM public.research_monthly;'),'0');assert.equal(input.ownerSql('SELECT count(*) FROM public.deliverable_acceptance_store;'),'0');
   const db=new DatabaseSync(file);try{
    db.exec('BEGIN IMMEDIATE');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);storeId=String(db.prepare('SELECT id FROM deliverable_acceptance_store').get()!.id);
