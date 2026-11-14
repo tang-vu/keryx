@@ -1251,3 +1251,27 @@ The bounded unfinished queue now shares the fixed original observer. It retains
 raw JSON escape bytes, stable ordering, the extra truncation position and its
 complete-response bound. Pending-owner association, fresh purchase producers,
 the genuine application writer and production cutover remain unqualified here.
+
+### Current Source policy and prepaid research protocols
+
+Hosted admission and research claims use a bounded fixed snapshot of Source
+claims, challenges, history, markers, registry origins and retained browser or
+hosted signing originals. The protected Node evaluator applies current Source
+rules; the writer rechecks the exact snapshot under the existing data lock.
+Keep raw history TEXT rather than casting arbitrary evidence to JSONB. Invalid
+or torn managed state refuses admission. Metadata and local original matches
+do not establish provider or onchain settlement.
+
+Research authorization claims retain their exact mainnet nonce, payer, payee,
+product, amount and request hash. Monthly challenges preserve the original
+validity window and submitted bit, including an already submitted expired
+replay. Monthly creation and four-slot redemption preserve original package
+economics, ordered replay and atomic order/acceptance/health projection updates.
+Only one concurrent final-slot redemption succeeds. An actual lost commit
+acknowledgement stays unknown without automatic retry or execution.
+
+An existing resource purchase keeps its captured historical Source receipt;
+new purchases must meet current Source policy. Current Source mutations,
+complete catalog/getter composition, pending-owner integration and the genuine
+application writer remain separate requirements. Production continues serving
+SQLite until the full migration and operational cutover gates pass.
