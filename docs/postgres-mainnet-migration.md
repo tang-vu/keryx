@@ -1303,3 +1303,19 @@ and exposes the pending-owner reader with its opaque proof checks. Its admission
 and write paths remain closed. These prepared protocols do not activate the
 complete application writer, switch production, execute a job, or authorize a
 payment, funding, renewal or schedule.
+
+## Native qualification scheduling
+
+The `postgres-preparation` status requires four independent successful jobs:
+contracts/bootstrap/financial checks, current native protocols and the Linux cold
+factory, remaining native reads/auth/operations/financial regressions, and
+synthetic materialization with the original-key cold factory. Each job retains
+its 25-minute timeout and its own checkout, dependencies and disposable database.
+The aggregate rejects failed, cancelled, missing or skipped jobs.
+
+`test-session-consents.mts --native-runtime-only` runs the current-protocol/factory
+partition; `--native-runtime-tail-only` runs the remaining partition against the
+same pinned full SOURCE/catalog. `--native-runtime` still runs both sequentially.
+The partitions preserve the existing assertions, statement/lock timeouts, memory
+limits and role restrictions. Splitting CI does not qualify the full application
+writer or authorize production cutover.

@@ -25,18 +25,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  KERYX_NETWORK: arcTestnet
+  NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
+  KERYX_FORCE_OFFLINE: "1"
+  SUPABASE_URL: ""
+  SUPABASE_SERVICE_ROLE_KEY: ""
+  NEXT_PUBLIC_SUPABASE_URL: ""
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
+
 jobs:
-  postgres-preparation:
+  contracts-bootstrap-financial:
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    env:
-      KERYX_NETWORK: arcTestnet
-      NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
-      KERYX_FORCE_OFFLINE: "1"
-      SUPABASE_URL: ""
-      SUPABASE_SERVICE_ROLE_KEY: ""
-      NEXT_PUBLIC_SUPABASE_URL: ""
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,20 +50,97 @@ jobs:
       - name: Typed operational and application contracts
         run: npm run typecheck
       - name: Bounded transport, terminal disposal and lossless row regressions
-        run: npx vitest run lib/db/postgres lib/db/postgres-business-core.test.ts scripts/postgres/typed-snapshot.test.mts scripts/postgres/native-materialization-codec.test.mts scripts/postgres/ownership-history-projection.test.mts scripts/postgres/privacy-projection.test.mts scripts/postgres/publication-packet.test.mts scripts/postgres/usage-projection.test.mts scripts/postgres/ledger-projection.test.mts scripts/postgres/acceptance-projection.test.mts --maxWorkers=1
-      - name: Actual synthetic PostgreSQL transport, role isolation and snapshot copy
+        run: npx vitest run lib/db/postgres lib/db/postgres-business-core.test.ts scripts/postgres/ci-partitions.test.mts scripts/postgres/typed-snapshot.test.mts scripts/postgres/native-materialization-codec.test.mts scripts/postgres/ownership-history-projection.test.mts scripts/postgres/privacy-projection.test.mts scripts/postgres/publication-packet.test.mts scripts/postgres/usage-projection.test.mts scripts/postgres/ledger-projection.test.mts scripts/postgres/acceptance-projection.test.mts --maxWorkers=1
+      - name: Pinned PostgreSQL and Node fixture images
         run: |
           docker pull postgres:17-alpine
           docker pull postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
           docker pull node:24.22.1-bookworm-slim
-          node --import tsx --no-warnings scripts/postgres/test-bootstrap.mts
+      - name: Actual synthetic PostgreSQL transport, role isolation and snapshot copy
+        run: node --import tsx --no-warnings scripts/postgres/test-bootstrap.mts
       - name: Native consent, funding, withdrawals and retained hosted ledger
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --owner-withdrawals
 
-      - name: Native Linux cold factory, current protocols and financial regressions
-        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --native-runtime
+  native-runtime-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Pinned PostgreSQL and Node fixture images
+        run: |
+          docker pull postgres:17-alpine
+          docker pull postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
+          docker pull node:24.22.1-bookworm-slim
+      - name: Native Linux cold factory and current protocols
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --native-runtime-only
 
+  native-runtime-tail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Pinned PostgreSQL and Node fixture images
+        run: |
+          docker pull postgres:17-alpine
+          docker pull postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
+          docker pull node:24.22.1-bookworm-slim
+      - name: Native read, auth, operational and financial regressions
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --native-runtime-tail-only
+
+  synthetic-materialization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Pinned PostgreSQL and Node fixture images
+        run: |
+          docker pull postgres:17-alpine
+          docker pull postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
+          docker pull node:24.22.1-bookworm-slim
       - name: Held native public data, Source metadata and original-key cold factory
         env:
           NODE_OPTIONS: --max-old-space-size=512
         run: node --import tsx --no-warnings scripts/postgres/qualify-native-materialization.mts --synthetic
+
+  postgres-preparation:
+    if: ${{ always() }}
+    needs: [contracts-bootstrap-financial, native-runtime-core, native-runtime-tail, synthetic-materialization]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require successful acceptance from every partition
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          node --input-type=module -e '
+            const required = ["contracts-bootstrap-financial", "native-runtime-core", "native-runtime-tail", "synthetic-materialization"];
+            const needs = JSON.parse(process.env.NEEDS_JSON);
+            if (Object.keys(needs).length !== required.length || required.some(name => needs[name]?.result !== "success")) {
+              console.error("PostgreSQL acceptance refused", needs);
+              process.exit(1);
+            }
+          '
+      - name: Refuse workflow cancellation
+        if: ${{ cancelled() }}
+        run: exit 1
