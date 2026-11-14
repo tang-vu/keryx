@@ -292,6 +292,11 @@ try {
   const nativeTransport = createTransport({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
   transports.push(nativeTransport);
   if(publicationContainedOnly){
+    // Close every host socket while the fixture bridge is still reachable.
+    // The contained protocol then permanently removes that bridge; retaining
+    // a host Client would make its later graceful TCP shutdown wait for ACKs.
+    await Promise.all(transports.map(transport=>transport.close()));transports.length=0;
+    await Promise.all(clients.map(client=>client.end()));clients.length=0;
     const publication=await qualifyContainedPublication({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,postgresContainer:name});
     console.log(JSON.stringify({passed:true,publicationContainedOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,publication,applicationBackendSwitched:false}));return;
   }

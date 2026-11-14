@@ -34,7 +34,7 @@ describe('publication containment protocol without execution',()=>{
  it('formats actual simple-query result shapes without parsing JSON or dates',()=>{
   const json='{"x":1,"x":2,"nul":"\\u0000","surrogate":"\\ud800"}',date='2026-11-15 00:00:00+00';
   const results=[{rows:[]},{rows:[[true,null,Buffer.from([0,255])],[json,date,' spaced ']]},{rows:[]}];
-  expect(formatPublicationOwnerResults(results)).toBe('t||\\x00ff\n'+json+'|'+date+'| spaced ');expect(formatPublicationOwnerResults({rows:[[false,123,123n]]})).toBe('f|123|123');
+  expect(formatPublicationOwnerResults(results)).toBe('t||\\x00ff\n'+json+'|'+date+'| spaced ');expect(formatPublicationOwnerResults({rows:[[false,123,BigInt(123)]]})).toBe('f|123|123');
   expect(PUBLICATION_SHARED_BYTES).toBe(16777216);expect(PUBLICATION_DATA_BYTES+PUBLICATION_HEADER_BYTES).toBe(PUBLICATION_SHARED_BYTES);
  });
  it('bounds UTF8 output and rejects coercion of unknown objects or lone UTF16',()=>{

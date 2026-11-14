@@ -36,7 +36,7 @@ async function main(){
  };
  let contention:Client|undefined;
  try{
-  if(worker.resourceLimits.maxOldGenerationSizeMb!==128)publicationRefused();
+  if(worker.resourceLimits?.maxOldGenerationSizeMb!==128)publicationRefused();
   if(wait(PUBLICATION_STATE.initial)!==PUBLICATION_STATE.ready)throw failure();
   contention=new Client({host:'127.0.0.1',port:5432,database:'native_target',user:'keryx_app',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:6000,options:'-c statement_timeout=5000 -c lock_timeout=1000 -c timezone=UTC',application_name:'keryx-contained-publication-contention'});
   contention.on('error',()=>{});await contention.connect();
