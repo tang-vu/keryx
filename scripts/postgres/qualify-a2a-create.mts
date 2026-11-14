@@ -113,7 +113,18 @@ async function qualifyOwnedCreateProtocol(input:{options:PostgresConnectionOptio
   await compareOriginal(id);compareAssociation(id);vectors++;
  };
  const absent=async(id:string)=>{assert.equal(await composePostgresA2aOriginals(input.channel,false).getA2aOrder(id),null);assert.equal(association(id),null);assert.equal(input.ownerSql(`SELECT count(*) FROM keryx_storage.acceptance_original_projection WHERE order_id=${q(id)};`),'0');};
- const blocked=async()=>{for(let i=0;i<30;i++){const r=await input.contentionClient.query('SELECT count(*) n FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND pg_backend_pid()=ANY(pg_blocking_pids(pid))');if(Number(r.rows[0].n)>0)return;await new Promise(resolve=>setTimeout(resolve,10));}assert.fail('Owned create did not reach actual data lock');};
+ const blocked=async(outcome:{settled:boolean},proofExpiresAt:number)=>{
+  // Fresh catalog admission precedes the data lock. Observe that real lock,
+  // rather than assuming admission finishes inside a 300ms polling sweep.
+  const deadline=Date.now()+4000;
+  while(Date.now()<deadline){
+   const r=await input.contentionClient.query('SELECT count(*) n FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND pg_backend_pid()=ANY(pg_blocking_pids(pid))');
+   if(Number(r.rows[0].n)>0){assert(Date.now()<proofExpiresAt,'Owned proof expired before actual data lock was observed');assert(!outcome.settled,'Owned create settled before actual data lock observation');return;}
+   assert(!outcome.settled,'Owned create terminated before reaching actual data lock');
+   await new Promise(resolve=>setTimeout(resolve,10));
+  }
+  assert.fail('Owned create did not reach actual data lock before native statement deadline');
+ };
  try{
   owner(db=>{
    for(const s of sessions)db.prepare('INSERT INTO web_sessions VALUES(?,?,?,?)').run(s.hash,s.wallet,s.issuedAt,s.expiresAt);
@@ -145,7 +156,17 @@ async function qualifyOwnedCreateProtocol(input:{options:PostgresConnectionOptio
   assert.deepEqual(await native.claimA2aOriginal(fixtures[2].binding,'synthetic-owned-completion',timeAt(-300)),await input.core.claimNextA2aOrder('synthetic-owned-completion',timeAt(-300),fixtures[2].binding));await compareOwnedMetadata(race.id);
   const paidResponse={answer:'owned postpaid body\0\ud800'};assert.equal(await native.completeA2aOrder(race.id,paidResponse,timeAt(-200)),await input.core.completeA2aOrder(race.id,paidResponse,timeAt(-200)));await compareOwnedMetadata(race.id);
   assert(input.options.endpoint.kind==='loopback');proxy=await startCommitAckLossProxy(input.options.endpoint.port);loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);const lost=fixtures[3].order;proxy.arm();await assert.rejects(loss.call('a2aCreate',args(lost,packet(lost))),error=>error instanceof PostgresDomainWriteOutcomeUnknown);assert.deepEqual(proxy.observation(),{dropped:true,commands:1});assert((await sourceOwned(lost)).created);await compareOriginal(lost.id);compareAssociation(lost.id);vectors++;
-  const waiting=fixtures[5].order;await input.contentionClient.query('BEGIN');try{await input.contentionClient.query('SELECT pg_advisory_xact_lock_shared(634781904177021::bigint),pg_advisory_xact_lock(634781904177022::bigint)');const value=packet(waiting,sessions[0],Date.now()+700),pending=raw(waiting,value).then(v=>({v}),error=>({error}));await blocked();await new Promise(resolve=>setTimeout(resolve,Math.max(0,value.owner.proofExpiresAt-Date.now()+10)));await input.contentionClient.query('COMMIT');assert('error'in await pending);await assert.rejects(sourceOwned(waiting,sessions[0],value.owner.proofExpiresAt));await absent(waiting.id);vectors++;}finally{await input.contentionClient.query('ROLLBACK');}
+  const waiting=fixtures[5].order;await input.contentionClient.query('BEGIN');try{
+   await input.contentionClient.query('SELECT pg_advisory_xact_lock_shared(634781904177021::bigint),pg_advisory_xact_lock(634781904177022::bigint)');
+   const value=packet(waiting,sessions[0],Date.now()+700),outcome={settled:false};
+   const pending=raw(waiting,value).then(v=>{outcome.settled=true;return {v};},error=>{outcome.settled=true;return {error};});
+   await blocked(outcome,value.owner.proofExpiresAt);
+   await new Promise(resolve=>setTimeout(resolve,Math.max(0,value.owner.proofExpiresAt-Date.now()+10)));
+   assert(Date.now()>=value.owner.proofExpiresAt,'Owned proof must expire before lock release');
+   assert(!outcome.settled,'Owned create timed out or failed while data lock remained held');
+   await input.contentionClient.query('COMMIT');assert('error'in await pending);
+   await assert.rejects(sourceOwned(waiting,sessions[0],value.owner.proofExpiresAt));await absent(waiting.id);vectors++;
+  }finally{await input.contentionClient.query('ROLLBACK');}
   const revoked=fixtures[6].order;owner(db=>db.prepare('DELETE FROM web_sessions WHERE hash=?').run(sessions[0].hash));pg(`DELETE FROM public.web_sessions WHERE hash=${q(sessions[0].hash)};`);await assert.rejects(raw(revoked,packet(revoked)));await assert.rejects(sourceOwned(revoked));await absent(revoked.id);await assert.rejects(raw(replay,packet(replay)));compareAssociation(valid.id);vectors++;
   return {vectors,rawNativeOwnedPacketsSynthetic:true,genuineVerifiedSqliteCoreAndSessionHelper:true,sourceInsertionAlgorithmCompared:true,ownedListAfterCreateClaimCheckpointsFailureAndCompletion:true,sourceTimeWiresSurviveBodyProjectionInvalidation:true,opaqueNativeProofMinted:false,installedNativeOwnedProducerQualified:false,firstInsertOnlyAssociation:true,foreignSessionReplayNeverReassociates:true,standaloneReplayNeverBackfills:true,ownerNeverInferredFromPayer:true,atomicOriginalProjectionOwnerRollback:true,oneConcurrentOwner:true,lostAckObservedWithoutRetry:true,currentExpiryAfterDataLock:true,revokedSessionBlocksNewAndReplay:true,productionData:false,paymentActions:0,jobExecutions:0};
  }finally{
