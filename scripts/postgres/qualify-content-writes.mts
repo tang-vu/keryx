@@ -90,6 +90,7 @@ export async function qualifyContentWrites(input:{transport:PostgresApplicationD
    const before=db.prepare('SELECT key,value FROM sync_state WHERE key LIKE ? ORDER BY key').all('keryx:source-claims:v1:%');
    if(allowed){for(const store of [n,sqlite])await store.upsertSource(s);rawParity(f.source.id);}
    else{for(const store of [n,sqlite])await assert.rejects(store.upsertSource(s));rawParity(f.source.id);}
+   if(f.fixture.keys.length){const retained=db.prepare('SELECT key,value FROM sync_state WHERE key IN(SELECT value FROM json_each(?)) ORDER BY key').all(JSON.stringify(f.fixture.keys)),nativeRetained=JSON.parse(input.ownerSql(`SELECT coalesce(jsonb_agg(jsonb_build_object('key',key,'value',value) ORDER BY key COLLATE "C"),'[]'::jsonb)::text FROM public.sync_state WHERE key IN(${f.fixture.keys.map(q).join(',')});`));equal(nativeRetained,retained);}
    assert.deepEqual(db.prepare('SELECT key,value FROM sync_state WHERE key LIKE ? ORDER BY key').all('keryx:source-claims:v1:%'),before);vectors++;
   };
   Object.assign(config,{baseUrl:'https://keryx.cc',registryOrigins:'',registryReadAddress:'0x'+'88'.repeat(20)});
