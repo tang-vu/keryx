@@ -88,7 +88,7 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
   await same(()=>native.runPrivacy.sourceHistory!(),()=>privacy.sourceHistory!());await same(()=>native.runPrivacy.learningPage!({take:32}),()=>privacy.learningPage!({take:32}));await same(()=>native.runPrivacy.archivePage!({take:32}),()=>privacy.archivePage!({take:32}));
   const metricStatement=db.prepare(SQLITE_DASHBOARD_INPUT_ROWS);metricStatement.setReturnArrays(true);const expectedDashboard=dashboardMetricsFromSqliteRows(metricStatement.all() as never),actualDashboard=await native.dashboardMetrics();
   assert.deepEqual({...actualDashboard,recordedAccounts:undefined},{...expectedDashboard,recordedAccounts:undefined});vectors++;
-  const sourceMetrics=db.prepare('SELECT id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,rewarded_citation_count,economics_data FROM query_runs ORDER BY id').all();
+  const sourceMetrics=db.prepare('SELECT id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,rewarded_citation_count,economics_data FROM query_runs ORDER BY id').all().map(row=>({...row}));
   assert.deepEqual(await native.applicationRead('scan_query_metrics',{p_offset:0,p_limit:1000}),sourceMetrics);vectors++;
   for(const operation of ['get_query_run','list_query_runs_by_asker','list_follow_ups','list_recent_queries'] as const){
    const args=operation==='get_query_run'?{p_id:cases[1].id}:operation==='list_query_runs_by_asker'?{p_asker:owner,p_limit:1000}:operation==='list_follow_ups'?{p_parent_id:'missing-parent'}:{p_limit:1000};

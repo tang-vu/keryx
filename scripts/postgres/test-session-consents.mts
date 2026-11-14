@@ -71,6 +71,7 @@ import { qualifySourceClaims } from './qualify-source-claims.mts';
 import { qualifySourceProducers } from './qualify-source-upkeep.mts';
 import { nativeA2aFulfillmentSource } from './a2a-fulfillment-source.mts';
 import { qualifyPublication } from './qualify-publication.mts';
+import { qualifyContainedPublication } from './qualify-publication-contained.mts';
 import { qualifyA2aFulfillment } from './qualify-a2a-fulfillment.mts';
 import { nativeSourceProducersSource } from './source-producers-source.mts';
 import { qualifyPendingOwner } from './qualify-pending-owner.mts';
@@ -159,7 +160,8 @@ try {
   const chatLinksOnly=process.argv.includes('--chat-links-only'),chatLinksSourceReferenceOnly=process.argv.includes('--chat-links-source-reference-only');
   const ownerAssignmentsSourceReferenceOnly=process.argv.includes('--owner-assignments-source-reference-only'),ownerAssignmentsOnly=process.argv.includes('--owner-assignments-only');
   const responseWireOnly=process.argv.includes('--a2a-response-wire-only');
-  const publicationOnly=process.argv.includes('--publication-only');
+  const publicationContainedOnly=process.argv.includes('--publication-contained-only');
+  const publicationOnly=process.argv.includes('--publication-only')||publicationContainedOnly;
   const a2aFulfillmentOnly=process.argv.includes('--a2a-fulfillment-only');
   const sourceProducersOnly=process.argv.includes('--source-producers-only');
   const currentSourceOwnerOnly=process.argv.includes('--current-source-owner-only')||sourceProducersOnly||a2aFulfillmentOnly||publicationOnly;
@@ -289,6 +291,10 @@ try {
   const createTransport = withNativeRuntime ? createPostgresRuntimeTransport : withPrivateProfiles ? createPostgresUserDomainTransport : withAuth ? createPostgresApplicationDomainTransport : withApplicationDomains ? createPostgresApplicationReadTransport : withOwner ? createPostgresOwnerWithdrawalTransport : withHosted ? createPostgresHostedLedgerTransport : withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
   const nativeTransport = createTransport({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
   transports.push(nativeTransport);
+  if(publicationContainedOnly){
+    const publication=await qualifyContainedPublication({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,postgresContainer:name});
+    console.log(JSON.stringify({passed:true,publicationContainedOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,publication,applicationBackendSwitched:false}));return;
+  }
   if(publicationOnly){
     const publication=await qualifyPublication({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});
     console.log(JSON.stringify({passed:true,publicationOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,publication,applicationBackendSwitched:false}));return;
