@@ -21,7 +21,9 @@ BEGIN
  source_hash:=encode(sha256(convert_to(selection->>'sourceId','UTF8')),'hex');
  IF selection->'identity'<>'null'::jsonb THEN
   policy_key:='keryx:source-claims:v1:purchase-policy:'||encode(sha256(convert_to('{"authorizationId":'||to_json(selection#>>'{identity,authorizationId}')::text||',"network":'||to_json(selection#>>'{identity,network}')::text||',"payer":'||to_json(selection#>>'{identity,payer}')::text||'}','UTF8')),'hex');
-  SELECT jsonb_build_object('intent',to_jsonb(i),'binding',to_jsonb(b)) INTO browser_row FROM public.browser_authorization_intents i
+  -- Native browser binding columns are JSONB; the Source business helper reads
+  -- JSON TEXT. Project those cells as text without changing retained columns.
+  SELECT jsonb_build_object('intent',to_jsonb(i),'binding',CASE WHEN b.nonce IS NULL THEN NULL ELSE to_jsonb(b)||jsonb_build_object('payment_metadata',b.payment_metadata::text,'requirements',b.requirements::text) END) INTO browser_row FROM public.browser_authorization_intents i
    LEFT JOIN public.browser_journal_bindings b USING(nonce) WHERE i.nonce=selection#>>'{identity,authorizationId}';
   SELECT jsonb_build_object('authorization',to_jsonb(a),'policy',to_jsonb(p)) INTO hosted_row FROM public.hosted_treasury_authorizations a
    LEFT JOIN public.hosted_treasury_policies p ON p.digest=a.policy_digest WHERE a.nonce=selection#>>'{identity,authorizationId}';
