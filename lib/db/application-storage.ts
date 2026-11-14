@@ -2,9 +2,9 @@ import { config } from "../config";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqliteAdapter, createReadonlyEnrolledSqliteAdapter, assertEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
-import { createEnrolledSupabaseAdapter, createReadonlyEnrolledSupabaseAdapter, closeEnrolledSupabaseAdapter } from "./enrolled-supabase-adapter";
-import { storagePaymentProfile, refuseStorage } from "./storage-identity";
-import { createPostgresRuntimeAdapter,createReadonlyPostgresRuntimeAdapter,closePostgresRuntimeAdapter } from "./postgres/runtime-adapter";
+import { createEnrolledSupabaseAdapter, createReadonlyEnrolledSupabaseAdapter, closeEnrolledSupabaseAdapter, assertEnrolledSupabaseAuthority } from "./enrolled-supabase-adapter";
+import { storagePaymentProfile, refuseStorage, type StorageIdentity } from "./storage-identity";
+import { createPostgresRuntimeAdapter,createReadonlyPostgresRuntimeAdapter,closePostgresRuntimeAdapter,assertPostgresRuntimeIdentity } from "./postgres/runtime-adapter";
 import type { KeryxDB } from "./keryx-db";
 
 const readonlyClosers = new WeakMap<KeryxDB, () => void | Promise<void>>();
@@ -58,4 +58,16 @@ export function closeReadonlyApplicationStorage(reader: KeryxDB): void | Promise
  * select another datastore, custody account or funding authority. */
 export function applicationSqliteIdentity(db: KeryxDB, access: "read" | "write" = "read") {
   return assertEnrolledSqliteAdapter(db, access);
+}
+/** Verify an already-selected facade through its backend's genuine provenance
+ * guard. The selected deployment only chooses that guard; its identity alone
+ * grants no authority. Guard errors propagate without selecting another store. */
+export async function applicationStorageIdentity(db: KeryxDB, access: "read" | "write" = "read"): Promise<Readonly<StorageIdentity>> {
+  if (arguments.length > 2 || !["read", "write"].includes(access)) refuseStorage("invalid_operation");
+  const deployment = readRuntimeStorageDeployment();
+  switch (deployment.backend.kind) {
+    case "sqlite": return assertEnrolledSqliteAdapter(db, access);
+    case "supabase": return (await assertEnrolledSupabaseAuthority(db, access)).identity;
+    case "postgres": return await assertPostgresRuntimeIdentity(db, access);
+  }
 }
