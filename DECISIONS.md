@@ -9634,3 +9634,18 @@ shared public parser across web, chat and buyer/MCP. Keep retained Operator,
 buyer and Monthly question schemas unchanged so original tasks still reopen. This closes fresh request JSONB representability before a debit while
 raw postpaid responses and retained originals keep their independent storage
 contracts. Complete native producer/factory and operational gates still apply.
+
+## Create native A2A originals with their derivatives atomically (2026-11-14)
+
+Capture a bounded fresh request and exact package/rail/micro-USDC tuple before
+awaiting. The fixed native writer checks an already retained local purchase and
+settled inbound original, inserts a running unstarted v1 order, and installs its
+acceptance and health derivatives in the same transaction. A duplicate returns
+the retained original for the caller's replay comparison without rewriting it.
+Local retained facts do not authenticate a provider or authorize a new payment.
+
+Preserve rollback and unknown acknowledgement behavior without automatic retry.
+Route the bounded unfinished observation through the existing fixed observer,
+keeping its raw JSON response, ordering and whole-response refusal bound. This
+frees a catalog function for the remaining application domains. Pending-owner,
+purchase producer, complete writer and production migration remain separate gates.

@@ -29,7 +29,7 @@ const CALLS = Object.freeze({
   a2aResolveCompleted:{sql:"SELECT public.storage_a2a_original_execution($1::jsonb,$2::text,'repair',$3::text,$4::text,$5::text) AS result",args:3,write:true,bytes:128,inputBytes:33554432},
   a2aResolveFailed:{sql:"SELECT public.storage_a2a_original_execution($1::jsonb,$2::text,'close',$3::text,$4::text,$5::text) AS result",args:3,write:true,bytes:128,inputBytes:33554432},
   a2aComplete:{sql:"SELECT public.storage_a2a_original_execution($1::jsonb,$2::text,'complete',$3::text,$4::text,$5::text) AS result",args:3,write:true,bytes:128,inputBytes:33554432},
-  a2aOriginalUnfinished:{sql:'SELECT public.storage_a2a_original_unfinished($1::jsonb,$2::text,$3::integer) AS result',args:1,write:false,bytes:4194304,transaction:true},
+  a2aOriginalUnfinished:{sql:"SELECT public.storage_a2a_original_observe($1::jsonb,$2::text,'queue',$3::text) AS result",args:1,write:false,bytes:4194304,transaction:true},
   a2aOriginalClaim:{sql:"SELECT public.storage_a2a_original_execution($1::jsonb,$2::text,'claim',$3::text,$4::text,$5::text) AS result",args:3,write:true,bytes:4194304},
   a2aPaymentStart:{sql:"SELECT public.storage_a2a_original_execution($1::jsonb,$2::text,'payment-start',$3::text,NULL,$4::text) AS result",args:2,write:true,bytes:128},
   a2aResultSaving:{sql:"SELECT public.storage_a2a_original_execution($1::jsonb,$2::text,'result-saving',$3::text,NULL,$4::text) AS result",args:2,write:true,bytes:128},
