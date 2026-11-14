@@ -142,6 +142,21 @@ BEGIN
     WHEN '7061795f746f' THEN 'pay_to'
     WHEN '6d61785f74696d656f75745f7365636f6e6473' THEN 'max_timeout_seconds'
     WHEN '766572696679696e675f636f6e7472616374' THEN 'verifying_contract'
+    WHEN '736f757263655f6e616d65' THEN 'source_name'
+    WHEN '776569676874' THEN 'weight'
+    WHEN '726174696f6e616c65' THEN 'rationale'
+    WHEN '6974656d5f6964' THEN 'item_id'
+    WHEN '6974656d5f7469746c65' THEN 'item_title'
+    WHEN '6974656d5f75726c' THEN 'item_url'
+    WHEN '636f6e74656e745f76657273696f6e' THEN 'content_version'
+    WHEN '6974656d5f7075626c69736865645f6174' THEN 'item_published_at'
+    WHEN '6c6973745f70726963655f75736463' THEN 'list_price_usdc'
+    WHEN '7061796d656e74436f6e74657874' THEN 'paymentContext'
+    WHEN '726571756972656d656e7473' THEN 'requirements'
+    WHEN '7061796d656e74' THEN 'payment'
+    WHEN '71756572794e616d657370616365' THEN 'queryNamespace'
+    WHEN '7061796d656e745f636f6e74657874' THEN 'payment_context'
+    WHEN '71756572795f6e616d657370616365' THEN 'query_namespace'
    END;
    IF key_wire IS NOT NULL THEN
     value_wire:=btrim(convert_from(substring(raw FROM start_at+1 FOR pos-start_at),'UTF8'),E' \t\r\n');
