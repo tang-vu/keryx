@@ -7,12 +7,12 @@ CREATE FUNCTION public.storage_source_producer(expected jsonb,digest text,phase 
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE request jsonb;selection jsonb;op text;i jsonb;retained jsonb;source_row jsonb;candidates jsonb;wire text;snapshot_sha text;
  row_count bigint;wire_bytes bigint;n numeric;at text;hour numeric;count_value numeric;raw text;current_claim jsonb;challenge jsonb;
- original_history json;latest_history json;proof jsonb;original_claim jsonb;latest_claim jsonb;proof_challenge jsonb;claim_id text;
+ original_history jsonb;latest_history jsonb;proof jsonb;original_claim jsonb;latest_claim jsonb;proof_challenge jsonb;claim_id text;
  next_claim jsonb;history_action text;evidence jsonb:='{}'::jsonb;next_challenge jsonb;rate_key text;rate_limit integer;rate_row jsonb;
  binding jsonb;marker jsonb;source_id text;existing_link boolean:=false;expected_changes jsonb:='[]'::jsonb;expected_result jsonb;
  state jsonb;next_state jsonb;slot numeric;cursor_value text;ids jsonb;field text;change jsonb;wanted jsonb;position integer;history_key text;
 BEGIN
- IF phase IS NULL OR phase NOT IN('snapshot','write') OR request_wire IS NULL OR octet_length(request_wire)>CASE WHEN phase='snapshot' THEN 32768 ELSE 524288 END
+ IF phase IS NULL OR phase NOT IN('snapshot','write') OR request_wire IS NULL OR octet_length(request_wire)>(CASE WHEN phase='snapshot' THEN 32768 ELSE 524288 END)
   OR session_user<>'keryx_app' THEN RAISE EXCEPTION 'source producer request refused';END IF;
  request:=request_wire::jsonb;
  IF phase='snapshot' THEN
@@ -34,12 +34,12 @@ BEGIN
  IF op='issue' THEN
   IF i-'now'-'challenge'<>'{}'::jsonb OR jsonb_typeof(i->'challenge') IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'source challenge input refused';END IF;
  ELSIF op IN('reserve','verify') THEN
-  IF i-'now'-'challengeId'-'wallet'-CASE WHEN op='verify' THEN 'proofDigest' ELSE 'challengeId' END<>'{}'::jsonb
+  IF i-'now'-'challengeId'-'wallet'-(CASE WHEN op='verify' THEN 'proofDigest' ELSE 'challengeId' END)<>'{}'::jsonb
    OR jsonb_typeof(i->'challengeId') IS DISTINCT FROM 'string' OR i->>'challengeId' !~ '^[a-f0-9]{64}$' OR jsonb_typeof(i->'wallet') IS DISTINCT FROM 'string'
    OR op='verify' AND(jsonb_typeof(i->'proofDigest') IS DISTINCT FROM 'string' OR i->>'proofDigest' !~ '^[a-f0-9]{64}$') THEN RAISE EXCEPTION 'source verification input refused';END IF;
  ELSIF op IN('bind','policy') THEN
-  IF i-'now'-'claimId'-'wallet'-'expectedRevision'-CASE WHEN op='bind' THEN 'sourceId' ELSE 'mode' END
-   -CASE WHEN op='bind' THEN 'onchainId' ELSE 'distributionPermission' END-CASE WHEN op='bind' THEN 'registryAddress' ELSE 'now' END<>'{}'::jsonb
+  IF i-'now'-'claimId'-'wallet'-'expectedRevision'-(CASE WHEN op='bind' THEN 'sourceId' ELSE 'mode' END)
+   -(CASE WHEN op='bind' THEN 'onchainId' ELSE 'distributionPermission' END)-(CASE WHEN op='bind' THEN 'registryAddress' ELSE 'now' END)<>'{}'::jsonb
    OR jsonb_typeof(i->'claimId') IS DISTINCT FROM 'string' OR i->>'claimId' !~ '^[a-f0-9]{64}$' OR jsonb_typeof(i->'wallet') IS DISTINCT FROM 'string'
    OR jsonb_typeof(i->'expectedRevision') IS DISTINCT FROM 'number' OR (i->>'expectedRevision')::numeric NOT BETWEEN 1 AND 9007199254740991
    OR trunc((i->>'expectedRevision')::numeric)<>(i->>'expectedRevision')::numeric THEN RAISE EXCEPTION 'source owner input refused';END IF;
@@ -140,22 +140,22 @@ BEGIN
     OR NOT isfinite((current_claim->>'verifiedAt')::timestamptz) OR NOT isfinite((current_claim->>'effectiveAt')::timestamptz) THEN RAISE EXCEPTION 'source claim tuple unavailable';END IF;
    current_claim:=current_claim||jsonb_build_object('ownerWallet',lower(current_claim->>'ownerWallet'),'revision',((current_claim->>'revision')::numeric)::bigint);
    IF current_claim?'registryAddress' THEN current_claim:=current_claim||jsonb_build_object('registryAddress',lower(current_claim->>'registryAddress'));END IF;
-   SELECT value::json INTO original_history FROM public.sync_state WHERE key='keryx:source-claims:v1:history:'||claim_id||':0000000000000001';
-   SELECT value::json INTO latest_history FROM public.sync_state WHERE key='keryx:source-claims:v1:history:'||claim_id||':'||lpad(current_claim->>'revision',16,'0');
-   original_claim:=(original_history->'claim')::jsonb;latest_claim:=(latest_history->'claim')::jsonb;
+   SELECT keryx_storage.source_scalar_text(value,'tokens') INTO original_history FROM public.sync_state WHERE key='keryx:source-claims:v1:history:'||claim_id||':0000000000000001';
+   SELECT keryx_storage.source_scalar_text(value,'tokens') INTO latest_history FROM public.sync_state WHERE key='keryx:source-claims:v1:history:'||claim_id||':'||lpad(current_claim->>'revision',16,'0');
+   original_claim:=(original_history->>'claim')::jsonb;latest_claim:=(latest_history->>'claim')::jsonb;
    original_claim:=original_claim||jsonb_build_object('ownerWallet',lower(original_claim->>'ownerWallet'));latest_claim:=latest_claim||jsonb_build_object('ownerWallet',lower(latest_claim->>'ownerWallet'));
    IF original_claim?'registryAddress' THEN original_claim:=original_claim||jsonb_build_object('registryAddress',lower(original_claim->>'registryAddress'));END IF;
    IF latest_claim?'registryAddress' THEN latest_claim:=latest_claim||jsonb_build_object('registryAddress',lower(latest_claim->>'registryAddress'));END IF;
-   IF original_history IS NULL OR latest_history IS NULL OR original_history->>'action' IS DISTINCT FROM 'verified'
+   IF original_history IS NULL OR latest_history IS NULL OR ((original_history->>'action')::jsonb#>>'{}') IS DISTINCT FROM 'verified'
     OR original_claim->>'revision' IS DISTINCT FROM '1' OR original_claim->>'mode' IS DISTINCT FROM 'free'
     OR original_claim->'ownerWallet' IS DISTINCT FROM current_claim->'ownerWallet' OR original_claim->'canonicalUrl' IS DISTINCT FROM current_claim->'canonicalUrl'
     OR original_claim->'network' IS DISTINCT FROM current_claim->'network' OR original_claim->'deploymentOrigin' IS DISTINCT FROM current_claim->'deploymentOrigin'
-    OR latest_claim IS DISTINCT FROM current_claim OR latest_history->>'action' NOT IN('verified','linked-free','policy')
-    OR json_typeof(original_history) IS DISTINCT FROM 'object' OR json_typeof(latest_history) IS DISTINCT FROM 'object'
-    OR EXISTS(SELECT 1 FROM json_object_keys(original_history) key WHERE key NOT IN('claim','action','at','evidence'))
-    OR EXISTS(SELECT 1 FROM json_object_keys(latest_history) key WHERE key NOT IN('claim','action','at','evidence'))
-    OR original_history->>'at' IS NULL OR latest_history->>'at' IS NULL OR NOT isfinite((original_history->>'at')::timestamptz) OR NOT isfinite((latest_history->>'at')::timestamptz) THEN RAISE EXCEPTION 'source claim history unavailable';END IF;
-   proof:=(original_history->'evidence')::jsonb;
+    OR latest_claim IS DISTINCT FROM current_claim OR ((latest_history->>'action')::jsonb#>>'{}') NOT IN('verified','linked-free','policy')
+    OR jsonb_typeof(original_history) IS DISTINCT FROM 'object' OR jsonb_typeof(latest_history) IS DISTINCT FROM 'object'
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(original_history->'_rootKeys') k(value) WHERE value NOT IN('636c61696d','616374696f6e','6174','65766964656e6365'))
+    OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(latest_history->'_rootKeys') k(value) WHERE value NOT IN('636c61696d','616374696f6e','6174','65766964656e6365'))
+    OR ((original_history->>'at')::jsonb#>>'{}') IS NULL OR ((latest_history->>'at')::jsonb#>>'{}') IS NULL OR NOT isfinite((((original_history->>'at')::jsonb#>>'{}'))::timestamptz) OR NOT isfinite((((latest_history->>'at')::jsonb#>>'{}'))::timestamptz) THEN RAISE EXCEPTION 'source claim history unavailable';END IF;
+   proof:=(original_history->>'evidence')::jsonb;
    IF jsonb_typeof(proof) IS DISTINCT FROM 'object' OR proof-'challengeId'-'proofDigest'<>'{}'::jsonb OR proof->>'challengeId' IS NULL
     OR proof->>'challengeId' !~ '^[a-f0-9]{64}$' OR proof->>'proofDigest' IS NULL OR proof->>'proofDigest' !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'source original proof unavailable';END IF;
    SELECT value::jsonb INTO proof_challenge FROM public.sync_state WHERE key='keryx:source-claims:v1:challenge:'||(proof->>'challengeId');
@@ -217,7 +217,7 @@ BEGIN
    IF state?'completedAt' AND(jsonb_typeof(state->'completedAt')<>'string' OR NOT isfinite((state->>'completedAt')::timestamptz)) THEN RAISE EXCEPTION 'invalid upkeep journal';END IF;
    IF state?'summary' THEN
     FOREACH field IN ARRAY ARRAY['attempted','added','failed','skipped'] LOOP
-     IF jsonb_typeof(state#>ARRAY['summary',field]) IS DISTINCT FROM 'number' OR(state#>>ARRAY['summary',field])::numeric NOT BETWEEN 0 AND CASE WHEN field='added' THEN 2000 ELSE 2 END OR trunc((state#>>ARRAY['summary',field])::numeric)<>(state#>>ARRAY['summary',field])::numeric THEN RAISE EXCEPTION 'invalid upkeep journal';END IF;
+     IF jsonb_typeof(state#>ARRAY['summary',field]) IS DISTINCT FROM 'number' OR(state#>>ARRAY['summary',field])::numeric NOT BETWEEN 0 AND (CASE WHEN field='added' THEN 2000 ELSE 2 END) OR trunc((state#>>ARRAY['summary',field])::numeric)<>(state#>>ARRAY['summary',field])::numeric THEN RAISE EXCEPTION 'invalid upkeep journal';END IF;
     END LOOP;
    END IF;
   END IF;
@@ -230,7 +230,7 @@ BEGIN
    END IF;
   ELSIF state IS NOT NULL AND state->'slot'=i#>'{claim,slot}' THEN
    FOREACH field IN ARRAY ARRAY['attempted','added','failed','skipped'] LOOP
-    IF jsonb_typeof(i#>ARRAY['summary',field]) IS DISTINCT FROM 'number' OR(i#>>ARRAY['summary',field])::numeric NOT BETWEEN 0 AND CASE WHEN field='added' THEN 2000 ELSE 2 END OR trunc((i#>>ARRAY['summary',field])::numeric)<>(i#>>ARRAY['summary',field])::numeric THEN RAISE EXCEPTION 'invalid upkeep summary';END IF;
+    IF jsonb_typeof(i#>ARRAY['summary',field]) IS DISTINCT FROM 'number' OR(i#>>ARRAY['summary',field])::numeric NOT BETWEEN 0 AND (CASE WHEN field='added' THEN 2000 ELSE 2 END) OR trunc((i#>>ARRAY['summary',field])::numeric)<>(i#>>ARRAY['summary',field])::numeric THEN RAISE EXCEPTION 'invalid upkeep summary';END IF;
    END LOOP;
    at:=to_char(to_timestamp(trunc(n)::double precision/1000) AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');next_state:=state||jsonb_build_object('leaseUntil',0,'completedAt',at,'summary',i->'summary');
   END IF;
