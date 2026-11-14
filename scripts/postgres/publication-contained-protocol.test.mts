@@ -3,7 +3,7 @@
 import {describe,expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity} from '../../lib/db/storage-identity';
-import {PUBLICATION_SHARED_BYTES,PUBLICATION_HEADER_BYTES,PUBLICATION_DATA_BYTES,parsePublicationChildInput,assertPublicationLimits,assertPublicationNamespace,formatPublicationOwnerResults,publicationSqlFailure,validatePublicationObservation} from './publication-owner-sql-worker.mts';
+import {PUBLICATION_SHARED_BYTES,PUBLICATION_HEADER_BYTES,PUBLICATION_DATA_BYTES,PUBLICATION_FACTORY_BLOCKER,parsePublicationChildInput,assertPublicationLimits,assertPublicationNamespace,formatPublicationOwnerResults,publicationSqlFailure,validatePublicationObservation} from './publication-owner-sql-worker.mts';
 import {PUBLICATION_DEADLINE_MS,captureContainedPublicationInput,assertPublicationFixture,publicationContainerArguments,publicationReportRecords,type ContainedPublicationInput} from './qualify-publication-contained.mts';
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',network:'eip155:5042',authorityMode:'mainnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-15T00:00:00.000Z',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,provenanceDigest:'11'.repeat(32)};
 const input:ContainedPublicationInput={options:{endpoint:{kind:'loopback',port:15432},database:'native_target',role:'keryx_app',password:'12'.repeat(24)},identity,digest:'34'.repeat(32),postgresContainer:'keryx-postgres-consents-'+randomUUID()};
@@ -49,5 +49,13 @@ describe('publication containment protocol without execution',()=>{
   expect(publicationReportRecords('{"started":true,"mode":"hang","limitsVerified":true,"namespaceVerified":true}\n')).toHaveLength(1);
   for(const wire of ['{"answer":"PRIVATE BODY"}','{"passed":true,"publication":{"signature":"PRIVATE"}}','{"passed":true,"unknown":42}','PRIVATE SQL DETAIL','x'.repeat(65537)])expect(()=>publicationReportRecords(wire)).toThrow(/^Contained publication refused$/);
   expect(()=>validatePublicationObservation({genuineSqliteOracle:true,pureFixedProtocol:true})).toThrow();
+ });
+ it('validates the current Source report and projects only its exact trusted factory blocker',()=>{
+  // DTO validation only. No assertion that these synthetic fields came from a
+  // native run; only the controller's inspected real execution can earn that.
+  const source=()=>({vectors:1,genuineSqliteOracle:true,verifiedEnrolledSqlite:true,rawSourceDateOrder:true,offsetAndSubmillisecondDates:true,strictHistoryDateRefusal:true,pureFixedProtocol:true,rawScalarVsJsonExtraction:true,rawOriginalPreserved:true,metadataExcludesPaidAnswer:true,unicodeJsOwnerBoundary:true,noNullOwnerFallback:true,staleScalarRefused:true,erasureAfterWriterWaitRefused:true,largeOriginalBytes:4000000,completeCollectionBytes:33554432,largeWriteMaximumMs:1,lostAckUnknownNoRetry:true,readerRefused:true,unsafeCaptureStillClosed:true,compiled512MiBQualified:false,sourceProfileRefusalRetiresConnection:true,nativeFacadeTerminalRetirementQualified:false,fullFactoryBlockers:[PUBLICATION_FACTORY_BLOCKER] as string[],fullFactoryQualified:false,retainedSyntheticRows:1,providerCalls:0,paymentActions:0,schedulesCreated:0});
+  const raw=source(),checked=validatePublicationObservation(raw);expect(checked).toEqual(raw);expect(checked.fullFactoryBlockers).not.toBe(raw.fullFactoryBlockers);raw.fullFactoryBlockers[0]='untrusted';expect(checked.fullFactoryBlockers).toEqual([PUBLICATION_FACTORY_BLOCKER]);
+  expect(publicationReportRecords(JSON.stringify({publication:source()}))[0].publication).toEqual(source());
+  for(const bad of [{...source(),fullFactoryBlockers:[]},{...source(),fullFactoryBlockers:['private-signature']},{...source(),fullFactoryBlockers:[PUBLICATION_FACTORY_BLOCKER,'extra']},{...source(),fullFactoryBlockers:PUBLICATION_FACTORY_BLOCKER},{...source(),nativeFacadeTerminalRetirementQualified:true},{...source(),verifiedEnrolledSqlite:false},{...source(),vectors:false},{...source(),largeWriteMaximumMs:'raw SQL parameter'}])expect(()=>validatePublicationObservation(bad)).toThrow(/^Contained publication refused$/);
  });
 });

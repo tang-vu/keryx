@@ -9,7 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {buildSync} from 'esbuild';
 import type {PostgresConnectionOptions} from '../../lib/db/postgres/connection';
 import type {StorageIdentity} from '../../lib/db/storage-identity';
-import {PUBLICATION_INPUT_BYTES,PUBLICATION_REPORT_BYTES,parsePublicationChildInput,validatePublicationObservation,publicationRefused,type PublicationMode} from './publication-owner-sql-worker.mts';
+import {PUBLICATION_INPUT_BYTES,PUBLICATION_REPORT_BYTES,parsePublicationChildInput,validatePublicationObservation,publicationRefused,type PublicationMode,type PublicationObservation} from './publication-owner-sql-worker.mts';
 
 export const PUBLICATION_NODE_IMAGE='node@sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c';
 export const PUBLICATION_POSTGRES_IMAGE='postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065';
@@ -59,7 +59,7 @@ export async function qualifyContainedPublication(raw:ContainedPublicationInput)
  if(!/^sha256:[a-f0-9]{64}$/.test(nodeId)||!/^sha256:[a-f0-9]{64}$/.test(postgresId))publicationRefused();const pgFixture=inspect(input.postgresContainer);assertPublicationFixture(pgFixture,input,postgresId);if(!/^[a-f0-9]{64}$/.test(pgFixture.Id))publicationRefused();
  const common=execFileSync('git',['rev-parse','--path-format=absolute','--git-common-dir'],{cwd:dirname(fileURLToPath(import.meta.url)),encoding:'utf8',windowsHide:true,timeout:10000,maxBuffer:16384}).trim();
  const taskTemp=resolve(dirname(common),'.local/tmp/postgres-mainnet-migration-20261111/agents/purchase_monthly');mkdirSync(taskTemp,{recursive:true});
- const run=async(mode:PublicationMode)=>{
+ const run=async(mode:PublicationMode):Promise<{exitCode:number;publication?:PublicationObservation}>=>{
   const name='keryx-publication-'+mode+'-'+randomUUID();containers.add(name);docker(publicationContainerArguments(name,owner,input.postgresContainer,candidateImage!,mode));
   const before=owned(name),memory=mode==='limits'?402653184:536870912;
   if(before.Image!==candidateImage||before.HostConfig.Memory!==memory||before.HostConfig.MemorySwap!==memory||before.HostConfig.NanoCpus!==1000000000||before.HostConfig.PidsLimit!==64||before.HostConfig.ReadonlyRootfs!==true||before.Config.User!=='0:0'||!['container:'+input.postgresContainer,'container:'+pgFixture.Id].includes(before.HostConfig.NetworkMode)||JSON.stringify(before.HostConfig.CapDrop)!=='["ALL"]'||!before.HostConfig.SecurityOpt?.some((v:string)=>v==='no-new-privileges'||v==='no-new-privileges:true')||before.Mounts.some((m:{Type:string})=>m.Type==='bind'))publicationRefused();
@@ -80,7 +80,7 @@ export async function qualifyContainedPublication(raw:ContainedPublicationInput)
     const first=records[0];if(first.started!==true||first.mode!==mode||first.limitsVerified!==true||first.namespaceVerified!==true)publicationRefused();
     if(mode==='oom'){if(timedOut||state.OOMKilled!==true||state.ExitCode!==137)publicationRefused();}
     else if(mode==='hang'){if(!timedOut||state.OOMKilled||state.ExitCode!==137)publicationRefused();}
-    else{const last=records.at(-1)!;if(timedOut||state.OOMKilled||state.ExitCode!==0||last.passed!==true||last.mode!=='qualify'||last.limitsVerified!==true||last.namespaceVerified!==true||last.ownerWorker128!==true||last.sqlAsserted!==true)publicationRefused();return validatePublicationObservation(last.publication);}
+    else{const last=records.at(-1)!;if(timedOut||state.OOMKilled||state.ExitCode!==0||last.passed!==true||last.mode!=='qualify'||last.limitsVerified!==true||last.namespaceVerified!==true||last.ownerWorker128!==true||last.sqlAsserted!==true)publicationRefused();return {exitCode:state.ExitCode,publication:validatePublicationObservation(last.publication)};}
    }
    return {exitCode:state.ExitCode as number};
   }finally{remove(name);}
@@ -93,8 +93,8 @@ export async function qualifyContainedPublication(raw:ContainedPublicationInput)
   // No host query follows this point. All SQL is on127.0.0.1 inside the same
   // namespace, whose only interface/routes the actual child checks itself.
   assertPublicationFixture(inspect(input.postgresContainer),input,postgresId);docker(['network','disconnect','bridge',input.postgresContainer]);if(Object.keys(inspect(input.postgresContainer).NetworkSettings.Networks).length)publicationRefused();
-  const limits=await run('limits'),oom=await run('oom'),deadline=await run('hang'),publication=await run('qualify');
-  return {compiled512:true,compiled512MiBQualified:true,actualLinuxNode24:true,actualCgroupAndSqlAssertions:true,actual384MiBRefused:true,actualOomKilled:true,actualDeadlineKilled:true,negativeControlExitCodes:{limits:limits.exitCode,oom:oom.exitCode,deadline:deadline.exitCode},publication,fullFactoryQualified:false,postgresCreated:false,externalNetworkAvailable:false,productionData:false};
+  const limits=await run('limits'),oom=await run('oom'),deadline=await run('hang'),qualified=await run('qualify');if(!qualified.publication)publicationRefused();
+  return {compiled512:true,compiled512MiBQualified:true,actualLinuxNode24:true,actualCgroupAndSqlAssertions:true,actual384MiBRefused:true,actualOomKilled:true,actualDeadlineKilled:true,negativeControlExitCodes:{limits:limits.exitCode,oom:oom.exitCode,deadline:deadline.exitCode},publication:qualified.publication,fullFactoryQualified:false,postgresCreated:false,externalNetworkAvailable:false,productionData:false};
  }finally{
   const failed:string[]=[];for(const name of [...containers])try{remove(name);}catch{failed.push('container');}
   try{for(const id of docker(['image','ls','--no-trunc','-q','--filter','label='+LABEL+'='+owner]).split(/\s+/).filter(Boolean)){if(!/^sha256:[a-f0-9]{64}$/.test(id)||docker(['image','inspect',id,'--format','{{index .Config.Labels "'+LABEL+'"}}'])!==owner)publicationRefused();docker(['image','rm',id]);}if(docker(['image','ls','-q','--filter','label='+LABEL+'='+owner]))publicationRefused();}catch{failed.push('image');}

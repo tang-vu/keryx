@@ -43,6 +43,8 @@ async function main(){
   // Literal import is resolved by the parent's coherent esbuild bundle. This
   // owned worktree intentionally does not copy a peer's qualifier source.
   const {qualifyPublication}=await import('./qualify-publication.mts');
+  // The shared validator also reconstructs the one approved factory-blocker
+  // literal; no arbitrary Source strings/arrays can enter the child report.
   const publication=validatePublicationObservation(await qualifyPublication({options:{endpoint:{kind:'loopback',port:5432},database:'native_target',role:'keryx_app',password:input.password},identity:input.identity,digest:input.digest,contentionClient:contention,ownerSql}));
   report({passed:true,mode:'qualify',limitsVerified:true,namespaceVerified:true,ownerWorker128:true,sqlAsserted:true,publication});
  }finally{await contention?.end().catch(()=>{});await worker.terminate();}

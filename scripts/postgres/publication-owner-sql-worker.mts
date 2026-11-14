@@ -55,11 +55,22 @@ export function publicationSqlFailure(raw:unknown):{code:string;semantic:'claim_
  const code=raw&&typeof raw==='object'?Reflect.get(raw,'code'):undefined,message=raw&&typeof raw==='object'?Reflect.get(raw,'message'):undefined;
  return {code:typeof code==='string'&&/^[A-Z0-9]{5}$/.test(code)?code:'XXXXX',semantic:message==='claim_unavailable'?'claim_unavailable':null};
 }
-const OBSERVATION_FIELDS=new Set(['vectors','genuineSqliteOracle','pureFixedProtocol','rawScalarVsJsonExtraction','rawOriginalPreserved','metadataExcludesPaidAnswer','unicodeJsOwnerBoundary','noNullOwnerFallback','staleScalarRefused','erasureAfterWriterWaitRefused','largeOriginalBytes','completeCollectionBytes','largeWriteMaximumMs','lostAckUnknownNoRetry','readerRefused','unsafeCaptureStillClosed','compiled512MiBQualified','fullFactoryQualified','retainedSyntheticRows','providerCalls','paymentActions','schedulesCreated']);
-export function validatePublicationObservation(raw:unknown):Record<string,boolean|number>{
+export const PUBLICATION_FACTORY_BLOCKER='native-private-profile-terminal-retirement' as const;
+export type PublicationObservation=Record<string,boolean|number|readonly [typeof PUBLICATION_FACTORY_BLOCKER]>;
+const OBSERVATION_FIELDS=new Set(['vectors','genuineSqliteOracle','verifiedEnrolledSqlite','rawSourceDateOrder','offsetAndSubmillisecondDates','strictHistoryDateRefusal','pureFixedProtocol','rawScalarVsJsonExtraction','rawOriginalPreserved','metadataExcludesPaidAnswer','unicodeJsOwnerBoundary','noNullOwnerFallback','staleScalarRefused','erasureAfterWriterWaitRefused','largeOriginalBytes','completeCollectionBytes','largeWriteMaximumMs','lostAckUnknownNoRetry','readerRefused','unsafeCaptureStillClosed','compiled512MiBQualified','sourceProfileRefusalRetiresConnection','nativeFacadeTerminalRetirementQualified','fullFactoryBlockers','fullFactoryQualified','retainedSyntheticRows','providerCalls','paymentActions','schedulesCreated']);
+const OBSERVATION_NUMBERS=new Set(['vectors','largeOriginalBytes','completeCollectionBytes','largeWriteMaximumMs','retainedSyntheticRows','providerCalls','paymentActions','schedulesCreated']);
+export function validatePublicationObservation(raw:unknown):PublicationObservation{
  if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).length!==OBSERVATION_FIELDS.size)publicationRefused();
- for(const [key,value] of Object.entries(raw))if(!OBSERVATION_FIELDS.has(key)||typeof value!=='boolean'&&(typeof value!=='number'||!Number.isFinite(value)||value<0||value>Number.MAX_SAFE_INTEGER))publicationRefused();
- const x=raw as Record<string,boolean|number>;if(x.genuineSqliteOracle!==true||x.pureFixedProtocol!==true||x.compiled512MiBQualified!==false||x.fullFactoryQualified!==false||x.providerCalls!==0||x.paymentActions!==0||x.schedulesCreated!==0)publicationRefused();return x;
+ for(const [key,value] of Object.entries(raw)){
+  if(!OBSERVATION_FIELDS.has(key))publicationRefused();
+  if(key==='fullFactoryBlockers'){if(!Array.isArray(value)||value.length!==1||value[0]!==PUBLICATION_FACTORY_BLOCKER)publicationRefused();}
+  else if(OBSERVATION_NUMBERS.has(key)){if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>Number.MAX_SAFE_INTEGER)publicationRefused();}
+  else if(typeof value!=='boolean')publicationRefused();
+ }
+ const x=raw as PublicationObservation;if(x.genuineSqliteOracle!==true||x.verifiedEnrolledSqlite!==true||x.rawSourceDateOrder!==true||x.offsetAndSubmillisecondDates!==true||x.strictHistoryDateRefusal!==true||x.pureFixedProtocol!==true||x.sourceProfileRefusalRetiresConnection!==true||x.nativeFacadeTerminalRetirementQualified!==false||x.compiled512MiBQualified!==false||x.fullFactoryQualified!==false||x.providerCalls!==0||x.paymentActions!==0||x.schedulesCreated!==0)publicationRefused();
+ // Publish a trusted literal after exact validation; never forward a supplied
+ // mutable array or any arbitrary string from Source/SQL/error objects.
+ return {...x,fullFactoryBlockers:[PUBLICATION_FACTORY_BLOCKER] as const};
 }
 function sharedReply(shared:SharedArrayBuffer,state:number,text=''){
  if(shared.byteLength!==PUBLICATION_SHARED_BYTES)publicationRefused();const header=new Int32Array(shared,0,PUBLICATION_HEADER_BYTES/4),data=new Uint8Array(shared,PUBLICATION_HEADER_BYTES);
