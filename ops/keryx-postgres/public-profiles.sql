@@ -37,22 +37,25 @@ BEGIN
 END;$$;
 -- Private proof predicate uses the same exact original, completion and A2A
 -- exclusions as ownership history. No caller assertion can grant association.
-CREATE FUNCTION keryx_storage.public_profile_owned(selected_id text,wallet text,binding jsonb,claims boolean) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
- SELECT EXISTS(SELECT 1 FROM public.query_runs q LEFT JOIN public.run_privacy v ON v.run_id=q.id
+CREATE FUNCTION keryx_storage.public_profile_owned(selected_id text,wallet text,binding jsonb,claims boolean) RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+BEGIN
+ IF EXISTS(SELECT 1 FROM public.query_runs q LEFT JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=q.id WHERE q.id=selected_id AND(sc.run_id IS NULL OR sc.scalar_identity_sha256 IS DISTINCT FROM (SELECT identity_digest FROM keryx_storage.identity WHERE singleton))) THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
+ RETURN EXISTS(SELECT 1 FROM public.query_runs q LEFT JOIN public.run_privacy v ON v.run_id=q.id LEFT JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=q.id
   LEFT JOIN public.anonymous_run_claims c ON c.run_id=q.id AND c.network=binding->>'network' AND c.origin=binding->>'origin'
   LEFT JOIN keryx_storage.run_ownership_projection o ON o.run_id=q.id
   LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
-  WHERE q.id=selected_id AND coalesce(v.erased,0)=0 AND(q.asker=wallet OR(q.asker IS NULL AND claims AND c.claimed_wallet=wallet AND c.claimed_at IS NOT NULL
+  WHERE q.id=selected_id AND coalesce(v.erased,0)=0 AND(sc.scalar_cells->'asker'->>'boundHex'=encode(convert_to(wallet,'UTF8'),'hex') OR(sc.scalar_cells->'asker'->>'boundHex' IS NULL AND claims AND c.claimed_wallet=wallet AND c.claimed_at IS NOT NULL
    AND q.created_at=c.completed_at::timestamptz AND h.original_created_at=c.completed_at AND h.original_sha256=c.original_sha256
    AND o.history_eligible AND o.claimed_valid AND octet_length(q.data::text)<=4000000
    AND o.original_sha256=c.original_sha256 AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
    AND NOT EXISTS(SELECT 1 FROM public.a2a_orders a WHERE a.query_id=q.id))));
-$$;
+END;$$;
 CREATE FUNCTION keryx_storage.public_profile_capture(handle text,claims boolean) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE current_profile record;s record;r record;selected jsonb;binding jsonb;profile jsonb;runs jsonb:='[]';ledger jsonb:='[]';ledger_groups jsonb[]:='{}';part jsonb;ledger_bytes bigint:=2;verified jsonb;bytes bigint:=0;groups integer:=0;
 BEGIN
  SELECT v.* INTO s FROM public.public_researcher_profiles v JOIN public.private_profiles p ON p.wallet=v.wallet AND p.handle=v.handle WHERE v.handle=public_profile_capture.handle AND v.published=1;
  IF NOT FOUND THEN RETURN NULL;END IF;
+ IF EXISTS(SELECT 1 FROM public.query_runs q LEFT JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=q.id WHERE sc.run_id IS NULL OR sc.scalar_identity_sha256 IS DISTINCT FROM (SELECT identity_digest FROM keryx_storage.identity WHERE singleton)) THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
  selected:=keryx_storage.public_profile_settings(s.wallet);
  IF octet_length(s.binding)>2048 THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;binding:=s.binding::jsonb;
  IF NOT keryx_storage.account_binding_valid(binding) THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
@@ -71,21 +74,21 @@ BEGIN
   JOIN public.anonymous_run_claims c ON c.run_id=q.id AND c.network=binding->>'network' AND c.origin=binding->>'origin'
   LEFT JOIN keryx_storage.run_ownership_projection o ON o.run_id=q.id
   LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
-  WHERE q.id IN(SELECT jsonb_array_elements_text(selected->'runIds')) AND v.visibility='public' AND v.erased=0 AND q.asker IS NULL AND c.claimed_wallet=s.wallet AND c.claimed_at IS NOT NULL
+  WHERE q.id IN(SELECT jsonb_array_elements_text(selected->'runIds')) AND v.visibility='public' AND v.erased=0 AND EXISTS(SELECT 1 FROM keryx_storage.run_privacy_projection sc WHERE sc.run_id=q.id AND sc.scalar_cells->'asker'->>'boundHex' IS NULL) AND c.claimed_wallet=s.wallet AND c.claimed_at IS NOT NULL
    AND q.created_at=c.completed_at::timestamptz AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
    AND NOT EXISTS(SELECT 1 FROM public.a2a_orders a WHERE a.query_id=q.id)
    AND(h.original_created_at IS NULL OR h.original_sha256 IS DISTINCT FROM c.original_sha256
     OR h.original_created_at=c.completed_at AND(o.history_eligible IS DISTINCT FROM true OR o.claimed_valid IS DISTINCT FROM true OR o.original_sha256 IS DISTINCT FROM c.original_sha256))) THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
- FOR r IN SELECT q.id,q.asker,m.profile_fields,m.original_sha256,m.data_bytes,octet_length(q.data::text) actual_bytes,CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data) END original_hash,h.owner_invalid,h.recorded_owner
+ FOR r IN SELECT q.id,m.scalar_cells->'asker'->>'boundHex' AS asker_hex,m.profile_fields,m.original_sha256,m.data_bytes,octet_length(q.data::text) actual_bytes,CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data) END original_hash,h.owner_invalid,h.recorded_owner
   FROM public.query_runs q JOIN public.run_privacy v ON v.run_id=q.id
   LEFT JOIN keryx_storage.run_privacy_projection m ON m.run_id=q.id LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
   WHERE q.id IN(SELECT jsonb_array_elements_text(selected->'runIds')) AND v.visibility='public' AND v.erased=0
    AND keryx_storage.public_profile_owned(q.id,s.wallet,binding,claims) ORDER BY q.created_at DESC,q.id COLLATE "C" DESC LIMIT 50 LOOP
   IF r.profile_fields IS NULL OR r.data_bytes IS DISTINCT FROM r.actual_bytes OR r.original_sha256 IS DISTINCT FROM r.original_hash
-   OR r.asker IS NOT NULL AND(r.owner_invalid IS DISTINCT FROM false OR r.recorded_owner IS NOT NULL AND r.recorded_owner<>s.wallet)
+   OR r.asker_hex IS NOT NULL AND(r.owner_invalid IS DISTINCT FROM false OR r.recorded_owner IS NOT NULL AND r.recorded_owner<>s.wallet)
   THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
   bytes:=bytes+octet_length(r.profile_fields);IF bytes>8388608 THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
-  runs:=runs||jsonb_build_array(jsonb_build_object('wireHex',encode(convert_to(r.profile_fields,'UTF8'),'hex'),'claimed',r.asker IS NULL,
+  runs:=runs||jsonb_build_array(jsonb_build_object('wireHex',encode(convert_to(r.profile_fields,'UTF8'),'hex'),'claimed',r.asker_hex IS NULL,
    'networks',(SELECT coalesce(jsonb_agg(x.network),'[]') FROM(SELECT DISTINCT e.network FROM public.payment_events e WHERE e.query_id=r.id LIMIT 3)x)));
  END LOOP;
  IF selected->'fields'?'ledgers' THEN
@@ -94,15 +97,15 @@ BEGIN
   -- This transfers counts, never payment identities, receipt or wallet details.
   IF EXISTS(SELECT 1 FROM public.payment_events e JOIN public.query_runs q ON q.id=e.query_id LEFT JOIN keryx_storage.run_privacy_projection m ON m.run_id=q.id
    WHERE e.network IN('eip155:5042','eip155:5042002') AND e.kind IN('fetch','citation') AND e.settled=true AND e.settlement_status='settled' AND e.amount_usdc>0 AND e.tx_hash IS NOT NULL AND length(btrim(e.tx_hash))>0
-    AND(lower(e.payer)=s.wallet OR lower(e.payee)=s.wallet OR q.asker=s.wallet)
+    AND(lower(e.payer)=s.wallet OR lower(e.payee)=s.wallet OR m.scalar_cells->'asker'->>'boundHex'=encode(convert_to(s.wallet,'UTF8'),'hex'))
     AND(m.payment_offline IS NULL OR m.funding_offline IS NULL OR m.funding_treasury IS NULL OR m.original_sha256 IS DISTINCT FROM CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data) END))
   THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
   FOR r IN SELECT e.network,lower(e.payer)=s.wallet AND NOT coalesce(m.funding_treasury,false) reader,lower(e.payee)=s.wallet creator,
-   q.asker=s.wallet AND coalesce(m.funding_treasury,false) sponsored,e.amount_usdc,count(*)::text count
+   m.scalar_cells->'asker'->>'boundHex'=encode(convert_to(s.wallet,'UTF8'),'hex') AND coalesce(m.funding_treasury,false) sponsored,e.amount_usdc,count(*)::text count
    FROM public.payment_events e LEFT JOIN public.query_runs q ON q.id=e.query_id LEFT JOIN keryx_storage.run_privacy_projection m ON m.run_id=q.id
    WHERE e.network IN('eip155:5042','eip155:5042002') AND e.kind IN('fetch','citation') AND e.settled=true AND e.settlement_status='settled' AND e.amount_usdc>0 AND e.tx_hash IS NOT NULL AND length(btrim(e.tx_hash))>0
     AND NOT coalesce(m.payment_offline,false) AND NOT coalesce(m.funding_offline,false)
-    AND(lower(e.payer)=s.wallet OR lower(e.payee)=s.wallet OR q.asker=s.wallet AND coalesce(m.funding_treasury,false))
+    AND(lower(e.payer)=s.wallet OR lower(e.payee)=s.wallet OR m.scalar_cells->'asker'->>'boundHex'=encode(convert_to(s.wallet,'UTF8'),'hex') AND coalesce(m.funding_treasury,false))
    GROUP BY e.network,reader,creator,sponsored,e.amount_usdc LIMIT 65537 LOOP
    groups:=groups+1;IF groups>65536 THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
    part:=jsonb_build_object('network',r.network,'reader',coalesce(r.reader,false),'creator',coalesce(r.creator,false),'sponsored',coalesce(r.sponsored,false),

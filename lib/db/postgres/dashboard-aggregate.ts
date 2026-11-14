@@ -4,17 +4,17 @@ import { AGGREGATE_EVIDENCE_QUALITY } from '../dashboard-metrics';
 import { PostgresStorageUnavailable } from './connection';
 const count=z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const money=z.string().max(128).regex(/^-?[0-9]+(?:\.[0-9]+)?$/).transform(Number).refine(Number.isFinite);
-const aggregate=z.object({format:z.literal('keryx-native-dashboard-aggregate-v1'),
+const aggregate=z.object({format:z.literal('keryx-native-dashboard-aggregate-v2'),
  payments:z.object({count,volume:money,creatorVolume:money,operatingVolume:money,operatingCount:count,creators:count,payingQueries:count,pendingCount:count,pendingVolume:money,failedCount:count,failedVolume:money}).strict(),
  runs:z.object({count,guests:count,evidenceRuns:count,evidenceClaims:count,withheld:count}).strict(),
  feedback:z.object({count,up:count}).strict(),gaps:z.object({count,filled:count,pending:count}).strict(),
- channels:z.array(z.object({client:z.enum(['codex','claude','cursor','direct','other','unknown']),queries:count,payingQueries:count}).strict()).max(6),accounts:count.nullable(),
+ channels:z.array(z.object({clientHex:z.string().max(8000000).regex(/^(?:[a-f0-9]{2})*$/),queries:count,payingQueries:count}).strict()).max(1000),accounts:count.nullable(),
 }).strict();
 const round=(n:number)=>Math.round(n*1_000_000)/1_000_000;
 /** The reference calculator's final arithmetic over bounded native summaries. */
 export function dashboardMetricsFromPostgresAggregate(value:unknown):DashboardMetrics {
  try{
-  const a=aggregate.parse(value),p=a.payments,r=a.runs,f=a.feedback,g=a.gaps;
+  const parsed=aggregate.parse(value);if(Buffer.byteLength(JSON.stringify(parsed.channels))>4194304)throw new Error();const a={...parsed,channels:parsed.channels.map(({clientHex,...row})=>{const client=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.from(clientHex,'hex')) as DashboardMetrics['mcpClientQueries'][number]['client'];return {...row,client};})},p=a.payments,r=a.runs,f=a.feedback,g=a.gaps;
   if(p.operatingCount>p.count||r.guests>r.count||r.evidenceRuns>r.count||r.withheld>r.evidenceRuns||f.up>f.count||g.filled+g.pending>g.count
    ||new Set(a.channels.map(c=>c.client)).size!==a.channels.length||a.channels.some(c=>c.payingQueries>c.queries))throw new Error();
   const result:DashboardMetrics={totalPayments:p.count,totalVolumeUsdc:round(p.volume),totalCreatorPayoutsUsdc:round(p.creatorVolume),

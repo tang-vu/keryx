@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {DatabaseSync} from 'node:sqlite';
-import {publicationScalarText,publicationSqliteJsonTextHex,publicationSqliteJsonTextValue} from './publication-scalar-text';
+import {publicationScalarText,publicationSqliteJsonTextHex,publicationSqliteJsonTextValue,publicationScalarCells,decodePublicationMetricRows,decodePublicationOriginalRead} from './publication-scalar-text';
 import {SQLITE_PUBLIC_QUESTION_FIELDS} from '../public-question-projection';
 import {SQLITE_PUBLIC_SOURCE_HISTORY_FIELDS} from '../public-source-history-projection';
 import {slimPrivacyHistoryFields} from './privacy-metadata';
@@ -40,6 +40,17 @@ describe('publication Source scalar binding and JSON extraction',()=>{
   expect(publicationScalarText('\\u0000').sourceHex).not.toBe(publicationScalarText('\0').sourceHex);
   expect(()=>publicationScalarText(null as never)).toThrow();
   expect(()=>publicationSqliteJsonTextHex({} as never)).toThrow();
+ });
+
+ it.each(['\u0130','0xAB\0INVALID','\ud800','',null])('retains malformed non-null owners without inventing absence for %j',asker=>{
+  const run={id:'synthetic-scalar-owner',createdAt:'2026-11-15T00:00:00.000Z',question:'question',answer:'PRIVATE_BODY',engine:'engine',asker} as never;
+  const captured=publicationScalarCells(run);
+  expect(captured.metadata.asker.rawHex??captured.metadata.asker.boundHex).toBe(asker===null?null:publicationSqliteJsonTextHex(asker));
+  expect(captured.metadata.asker.boundHex).toBe(asker===null?null:Buffer.from(asker.toLowerCase()).toString('hex'));
+  expect(captured.shadows.asker===null).toBe(asker===null);
+  expect(JSON.stringify(captured.metadata)).not.toContain('PRIVATE_BODY');
+  expect(Object.hasOwn(captured.metadata,'answer')).toBe(false);
+  expect(captured.answer.boundHex).toBe(Buffer.from('PRIVATE_BODY').toString('hex'));
  });
 });
 
@@ -82,5 +93,30 @@ describe('actual Source string operators used by question and metadata consumers
   expect(history.fields).not.toContain('tail');
   expect(JSON.parse(history.fields!).find(([key]:[string])=>key==='answer')[2]).toBe('present');
   expect(db.prepare('SELECT data FROM query_runs').get()?.data).toBe(JSON.stringify(run));
+ }));
+});
+
+describe('fixed native original and financial scalar envelopes',()=>{
+ it('preserves original JSON bytes and parsed surrogate/NUL values without a scalar rewrite',()=>{
+  const source='{"id":"synthetic-original","question":"q\\ud800\\u0000","answer":"PRIVATE_BODY\\u0000\\udc00"}';
+  const envelope={nativeOriginalHex:Buffer.from(source).toString('hex')};
+  expect(decodePublicationOriginalRead('get_query_run',envelope)).toEqual({data:JSON.parse(source)});
+  expect(decodePublicationOriginalRead('list_query_runs_by_asker',[envelope])).toEqual([{data:JSON.parse(source)}]);
+  expect(decodePublicationOriginalRead('get_query_run',null)).toBeNull();
+  expect(()=>decodePublicationOriginalRead('get_query_run',{data:JSON.parse(source)})).toThrow();
+  expect(()=>decodePublicationOriginalRead('get_query_run',{...envelope,answer:'PRIVATE_BODY'})).toThrow();
+  expect(()=>decodePublicationOriginalRead('get_query_run',{nativeOriginalHex:'ff'})).toThrow();
+ });
+
+ it('decodes only actual scalar-bound financial metadata, with no answer/question map',()=>sqlite(db=>{
+  db.exec('CREATE TABLE q(id TEXT,origin TEXT,asker TEXT,payment_mode TEXT,confidence_level TEXT,mcp_client TEXT)');
+  db.prepare('INSERT INTO q VALUES(?,?,?,?,?,?)').run('synthetic-metric','web\0tail','\u0130'.toLowerCase(),'mode\ud800','High\0','custom\udc00');
+  const source=db.prepare('SELECT * FROM q').get()!;
+  const values={id:source.id,duration_ms:null,payment_attempts:0,settled_payments:0,evidence_claim_count:0,grounded_claim_count:0,rewarded_citation_count:0,economics_data:null};
+  const nativeScalarHex=Object.fromEntries(['origin','asker','payment_mode','confidence_level','mcp_client'].map(key=>[key,Buffer.from(source[key] as string).toString('hex')]));
+  expect(decodePublicationMetricRows([{...values,nativeScalarHex}])).toEqual([{...values,...Object.fromEntries(Object.entries(source).filter(([key])=>key!=='id'))}]);
+  expect(()=>decodePublicationMetricRows([{...values,...source}])).toThrow();
+  expect(()=>decodePublicationMetricRows([{...values,nativeScalarHex:{...nativeScalarHex,answer:'00'}}])).toThrow();
+  expect(()=>decodePublicationMetricRows([{...values,nativeScalarHex:{...nativeScalarHex,origin:'ff'}}])).toThrow();
  }));
 });

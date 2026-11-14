@@ -43,6 +43,10 @@ ALTER TABLE public.private_creator_confirmations ALTER COLUMN data DROP DEFAULT;
 ALTER TABLE public.private_creator_confirmations ALTER COLUMN data TYPE text USING NULL::text;
 ALTER TABLE public.private_research_results DROP CONSTRAINT private_research_results_serialized_run_check;
 
+-- Source sqlite scalar clients are arbitrary TEXT; preserve their exact groups.
+ALTER TABLE public.query_runs DROP CONSTRAINT query_runs_mcp_client_check;
+-- JSON.stringify cells retain escaped NUL/surrogates independently of scalars.
+ALTER TABLE public.query_runs ALTER COLUMN economics_data TYPE json USING economics_data::json;
 ALTER TABLE public.browser_journal_bindings ADD COLUMN payment_context text CHECK(payment_context IS NULL OR payment_context IS JSON);
 ALTER TABLE public.browser_signing_namespaces ADD COLUMN proof text NOT NULL CHECK(proof IS JSON);
 ALTER TABLE public.browser_signing_queries ADD COLUMN grant_epoch text NOT NULL;

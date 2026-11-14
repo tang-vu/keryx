@@ -2,6 +2,7 @@ import { canonicalJson } from "../../canonical-json";
 import { validateStorageIdentity,type StorageIdentity } from "../storage-identity";
 import { PostgresStorageUnavailable,type PostgresConnectionOptions } from "./connection";
 import { createPostgresDomainChannel,type PostgresDomainChannel } from "./domain-channel";
+import {decodePublicationMetricRows,decodePublicationOriginalRead} from './publication-scalar-text';
 import { APPLICATION_READ_OPERATIONS } from "./application-read-calls";
 import { composePostgresOwnerWithdrawalTransport,type PostgresOwnerWithdrawalTransport } from "./owner-withdrawal-transport";
 
@@ -25,6 +26,10 @@ export function composePostgresApplicationReadTransport(channel:PostgresDomainCh
       catch{throw new PostgresStorageUnavailable();}
       const result=await channel.call(APPLICATION_READ_OPERATIONS[operation],[wire]);
       if(channel.closed)throw new PostgresStorageUnavailable();
+      try{
+       if(operation==='scan_query_metrics')return decodePublicationMetricRows(result);
+       if(operation==='get_query_run'||operation==='list_follow_ups'||operation==='list_query_runs_by_asker'||operation==='list_recent_queries')return decodePublicationOriginalRead(operation,result);
+      }catch{throw new PostgresStorageUnavailable();}
       return result;
     },
   });

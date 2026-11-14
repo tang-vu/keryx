@@ -26,28 +26,30 @@ CREATE FUNCTION public.storage_private_profile_get(expected jsonb,digest text,wa
 DECLARE first_seen text;questions bigint;surfaces jsonb;topics jsonb;creators bigint;
 BEGIN
  IF current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION 'native profile read-only transaction required';END IF;
- PERFORM keryx_storage.require_operation(expected,digest,'private_profile_get');PERFORM keryx_storage.private_profile_context(wallet);
+ PERFORM keryx_storage.require_operation(expected,digest,'private_profile_get');PERFORM keryx_storage.private_profile_context(wallet);PERFORM keryx_storage.personal_history_context(wallet);
  IF network IS DISTINCT FROM expected->>'network' THEN RAISE EXCEPTION 'native profile network refused';END IF;
  IF EXISTS(SELECT 1 FROM public.users u WHERE u.wallet_address=wallet AND octet_length(u.first_seen_at)>64)
-  OR EXISTS(SELECT 1 FROM public.query_runs r WHERE lower(r.asker)=wallet AND octet_length(r.origin)>32)
-  OR EXISTS(SELECT 1 FROM public.query_memories m JOIN public.query_runs r ON r.id=m.id WHERE lower(r.asker)=wallet
+  OR EXISTS(SELECT 1 FROM public.query_runs r JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=r.id WHERE CASE WHEN sc.scalar_cells->'asker'->>'boundHex' ~ '^30(78|58)(3[0-9]|4[1-6]|6[1-6]){40}$' THEN translate(convert_from(decode(sc.scalar_cells->'asker'->>'boundHex','hex'),'UTF8'),'ABCDEFX','abcdefx') END=wallet AND length(sc.scalar_cells->'origin'->>'boundHex')>64)
+  OR EXISTS(SELECT 1 FROM public.query_memories m JOIN public.query_runs r ON r.id=m.id JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=r.id WHERE CASE WHEN sc.scalar_cells->'asker'->>'boundHex' ~ '^30(78|58)(3[0-9]|4[1-6]|6[1-6]){40}$' THEN translate(convert_from(decode(sc.scalar_cells->'asker'->>'boundHex','hex'),'UTF8'),'ABCDEFX','abcdefx') END=wallet
     AND(jsonb_typeof(m.topics) IS DISTINCT FROM 'array' OR octet_length(m.topics::text)>65536))
  THEN RAISE EXCEPTION 'native profile activity bound';END IF;
- IF EXISTS(SELECT 1 FROM public.query_memories m JOIN public.query_runs r ON r.id=m.id,
+ IF EXISTS(SELECT 1 FROM public.query_memories m JOIN public.query_runs r ON r.id=m.id JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=r.id,
   LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(m.topics)='array' THEN m.topics ELSE '[]'::jsonb END) t
-  WHERE lower(r.asker)=wallet AND(jsonb_typeof(t.value)<>'string' OR char_length(t.value#>>'{}') NOT BETWEEN 1 AND 80))
+  WHERE CASE WHEN sc.scalar_cells->'asker'->>'boundHex' ~ '^30(78|58)(3[0-9]|4[1-6]|6[1-6]){40}$' THEN translate(convert_from(decode(sc.scalar_cells->'asker'->>'boundHex','hex'),'UTF8'),'ABCDEFX','abcdefx') END=wallet AND(jsonb_typeof(t.value)<>'string' OR char_length(t.value#>>'{}') NOT BETWEEN 1 AND 80))
  THEN RAISE EXCEPTION 'native profile topic shape';END IF;
  SELECT u.first_seen_at INTO first_seen FROM public.users u WHERE u.wallet_address=wallet;
- SELECT count(*) INTO questions FROM public.query_runs r WHERE lower(r.asker)=wallet;
- SELECT coalesce(jsonb_agg(s.origin ORDER BY s.origin COLLATE "C"),'[]'::jsonb) INTO surfaces FROM
-  (SELECT DISTINCT r.origin COLLATE "C" AS origin FROM public.query_runs r WHERE lower(r.asker)=wallet AND r.origin IS NOT NULL ORDER BY 1 LIMIT 17) s;
+ SELECT count(*) INTO questions FROM public.query_runs r JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=r.id WHERE CASE WHEN sc.scalar_cells->'asker'->>'boundHex' ~ '^30(78|58)(3[0-9]|4[1-6]|6[1-6]){40}$' THEN translate(convert_from(decode(sc.scalar_cells->'asker'->>'boundHex','hex'),'UTF8'),'ABCDEFX','abcdefx') END=wallet;
+ SELECT coalesce(jsonb_agg(s.origin_hex ORDER BY s.origin_hex COLLATE "C"),'[]'::jsonb) INTO surfaces FROM
+  (SELECT DISTINCT (sc.scalar_cells->'origin'->>'boundHex') COLLATE "C" AS origin_hex FROM public.query_runs r JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=r.id WHERE CASE WHEN sc.scalar_cells->'asker'->>'boundHex' ~ '^30(78|58)(3[0-9]|4[1-6]|6[1-6]){40}$' THEN translate(convert_from(decode(sc.scalar_cells->'asker'->>'boundHex','hex'),'UTF8'),'ABCDEFX','abcdefx') END=wallet AND sc.scalar_cells->'origin'->>'boundHex' IS NOT NULL ORDER BY origin_hex LIMIT 17) s;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements_text(surfaces) h WHERE h !~ '^(6[1-9a-f]|7[0-9a])(2d|3[0-9]|6[1-9a-f]|7[0-9a]){0,31}$') THEN RAISE EXCEPTION 'native profile surface unavailable';END IF;
+ SELECT coalesce(jsonb_agg(convert_from(decode(h.value,'hex'),'UTF8') ORDER BY h.ord),'[]'::jsonb) INTO surfaces FROM jsonb_array_elements_text(surfaces) WITH ORDINALITY h(value,ord);
  SELECT coalesce(jsonb_agg(t.topic ORDER BY t.n DESC,t.topic COLLATE "C"),'[]'::jsonb) INTO topics FROM
-  (SELECT (e.value#>>'{}') COLLATE "C" AS topic,count(*) AS n FROM public.query_memories m JOIN public.query_runs r ON r.id=m.id,
+  (SELECT (e.value#>>'{}') COLLATE "C" AS topic,count(*) AS n FROM public.query_memories m JOIN public.query_runs r ON r.id=m.id JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=r.id,
    LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(m.topics)='array' THEN m.topics ELSE '[]'::jsonb END) e
-   WHERE lower(r.asker)=wallet AND jsonb_typeof(e.value)='string' AND char_length(e.value#>>'{}') BETWEEN 1 AND 80
+   WHERE CASE WHEN sc.scalar_cells->'asker'->>'boundHex' ~ '^30(78|58)(3[0-9]|4[1-6]|6[1-6]){40}$' THEN translate(convert_from(decode(sc.scalar_cells->'asker'->>'boundHex','hex'),'UTF8'),'ABCDEFX','abcdefx') END=wallet AND jsonb_typeof(e.value)='string' AND char_length(e.value#>>'{}') BETWEEN 1 AND 80
    GROUP BY 1 ORDER BY 2 DESC,1 LIMIT 12) t;
- SELECT count(DISTINCT lower(p.payee)) INTO creators FROM public.payment_events p JOIN public.query_runs r ON r.id=p.query_id
-  WHERE lower(r.asker)=wallet AND p.network=storage_private_profile_get.network AND p.kind IN('fetch','citation') AND p.settled AND p.settlement_status='settled'
+ SELECT count(DISTINCT lower(p.payee)) INTO creators FROM public.payment_events p JOIN public.query_runs r ON r.id=p.query_id JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=r.id
+  WHERE CASE WHEN sc.scalar_cells->'asker'->>'boundHex' ~ '^30(78|58)(3[0-9]|4[1-6]|6[1-6]){40}$' THEN translate(convert_from(decode(sc.scalar_cells->'asker'->>'boundHex','hex'),'UTF8'),'ABCDEFX','abcdefx') END=wallet AND p.network=storage_private_profile_get.network AND p.kind IN('fetch','citation') AND p.settled AND p.settlement_status='settled'
    AND p.amount_usdc>0 AND p.tx_hash IS NOT NULL AND length(btrim(p.tx_hash))>0 AND octet_length(p.payee)=42 AND lower(p.payee)~'^0x[0-9a-f]{40}$';
  RETURN jsonb_build_object('profile',keryx_storage.private_profile_record(wallet),'activity',jsonb_build_object(
   'firstSeenAt',first_seen,'questions',questions,'surfacesUsed',surfaces,'topics',topics,'creatorsPaid',creators,'scope','attributed-current-store','network',network));

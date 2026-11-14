@@ -37,11 +37,11 @@ END;$$;
 CREATE FUNCTION keryx_storage.ownership_candidates(wallet text,network text,origin text,selected_id text DEFAULT NULL)
  RETURNS TABLE(run_id text,created_at timestamptz,claimed_at bigint,question_search bytea,history_eligible boolean,recorded_valid boolean,claimed_valid boolean,summary jsonb,provenance jsonb,funded boolean)
  LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
- SELECT q.id,q.created_at,CASE WHEN q.asker IS NOT NULL THEN NULL::bigint ELSE c.claimed_at END,
+ SELECT q.id,q.created_at,CASE WHEN s.scalar_cells->'asker'->>'boundHex' IS NOT NULL THEN NULL::bigint ELSE c.claimed_at END,
   p.question_search,p.history_eligible,p.recorded_valid,p.claimed_valid,p.summary,h.provenance,h.funded
  FROM public.query_runs q LEFT JOIN public.anonymous_run_claims c ON c.run_id=q.id AND c.network=ownership_candidates.network AND c.origin=ownership_candidates.origin
- LEFT JOIN keryx_storage.run_ownership_projection p ON p.run_id=q.id LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
- WHERE (selected_id IS NULL OR q.id=selected_id) AND(q.asker=wallet OR(q.asker IS NULL AND c.claimed_wallet=wallet AND c.claimed_at IS NOT NULL
+ LEFT JOIN keryx_storage.run_privacy_projection s ON s.run_id=q.id LEFT JOIN keryx_storage.run_ownership_projection p ON p.run_id=q.id LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
+ WHERE (selected_id IS NULL OR q.id=selected_id) AND(s.scalar_cells->'asker'->>'boundHex'=encode(convert_to(wallet,'UTF8'),'hex') OR(s.scalar_cells->'asker'->>'boundHex' IS NULL AND c.claimed_wallet=wallet AND c.claimed_at IS NOT NULL
   AND q.created_at=c.completed_at::timestamptz AND h.original_created_at=c.completed_at AND h.original_sha256=c.original_sha256
   AND octet_length(q.data::text)<=4000000
   AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
