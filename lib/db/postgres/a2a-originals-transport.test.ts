@@ -3,6 +3,7 @@ import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
 import { syntheticA2aOriginal } from '../a2a-original-fixture';
 import { composePostgresA2aOriginals } from './a2a-originals-transport';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
+import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from '../storage-identity';
 const at='2026-11-14T00:00:00.000Z',fixture=()=>syntheticA2aOriginal(970,ARC_MAINNET_PROFILE);
 function channel(){const state={closed:false},call=vi.fn();return {state,call,port:{call,get closed(){return state.closed;},close:async()=>{state.closed=true;}} as PostgresDomainChannel};}
 function row(){const {order:o}=fixture();return {id:o.id,query_id:o.queryId,authorization_id:o.authorizationId,request_hash:o.requestHash,payer:o.payer,payee:o.payee,amount_usdc:o.amountUsdc,creator_budget_usdc:o.creatorBudgetUsdc,service_fee_usdc:o.serviceFeeUsdc,research_mode:o.researchMode,package_data:o.researchPackage,status:o.status,transaction_id:o.transaction,request_data:o.request,started_at:null,worker_id:null,execution_journal_version:1,payment_started_at:null,result_saving_at:null,response_data:null,error_code:null,resolution_data:null,created_at:o.createdAt,updated_at:o.updatedAt};}
@@ -91,4 +92,22 @@ it('does not retry malformed or disposed fresh-create acknowledgements',async()=
  const c=channel(),native=composePostgresA2aOriginals(c.port,false);c.call.mockImplementation(async(operation)=>operation==='a2aOriginalStore'?{storeId:'3821e833-f4ca-44d3-a944-0cf892ab0b85'}:{created:true,order:{}});
  await expect(native.createA2aOrder(fixture().order)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(call=>call[0]==='a2aCreate')).toHaveLength(1);
  c.call.mockClear();c.call.mockImplementation(async(operation)=>{if(operation==='a2aOriginalStore')return {storeId:'3821e833-f4ca-44d3-a944-0cf892ab0b85'};c.state.closed=true;return {created:true,order:row()};});await expect(native.createA2aOrder(fixture().order)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(call=>call[0]==='a2aCreate')).toHaveLength(1);
+});
+
+const ownedIdentity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',deploymentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',storageId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,enrollmentId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',enrolledAt:'2026-10-01T00:00:00.000Z',provenanceDigest:'dd'.repeat(32)};
+it('refuses readonly or identity-free owned creation before inspecting caller input',async()=>{
+ const c=channel();let reads=0;const input={get id(){reads++;throw Error('untrusted input');}} as never;
+ await expect(composePostgresA2aOriginals(c.port,true,ownedIdentity).createOwnedA2aOrder(input,{} as never)).rejects.toThrow();
+ await expect(composePostgresA2aOriginals(c.port,false).createOwnedA2aOrder(input,{} as never)).rejects.toThrow();expect(reads).toBe(0);expect(c.call).not.toHaveBeenCalled();
+});
+it('does not accept exact identity or caller session metadata as an opaque installed native proof',async()=>{
+ const c=channel(),native=composePostgresA2aOriginals(c.port,false,ownedIdentity),input=fixture().order;
+ for(const proof of [{},{identity:ownedIdentity,session:{hash:'ab'.repeat(32),wallet:input.payer,issuedAt:0,expiresAt:Date.now()+300000}},()=>true])await expect(native.createOwnedA2aOrder(input,proof as never)).rejects.toThrow('session_unavailable');
+ expect(c.call).not.toHaveBeenCalled();
+});
+it('rejects callback/extra provenance injection at construction and keeps standalone packets unowned',async()=>{
+ const c=channel();expect(()=>composePostgresA2aOriginals(c.port,false,(()=>ownedIdentity) as never)).toThrow();
+ expect(()=>Reflect.apply(composePostgresA2aOriginals,undefined,[c.port,false,ownedIdentity,()=>true])).toThrow();
+ c.call.mockImplementation(async(operation)=>operation==='a2aOriginalStore'?{storeId:'3821e833-f4ca-44d3-a944-0cf892ab0b85'}:{created:true,order:row()});
+ expect((await composePostgresA2aOriginals(c.port,false,ownedIdentity).createA2aOrder(fixture().order)).created).toBe(true);expect(JSON.parse(c.call.mock.calls[1][1][1])).not.toHaveProperty('owner');
 });

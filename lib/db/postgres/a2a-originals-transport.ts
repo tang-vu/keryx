@@ -7,10 +7,15 @@ import { PostgresStorageUnavailable } from './connection';
 import { acceptanceOriginalMetadata } from './acceptance-metadata';
 import { captureA2aRecovery } from './a2a-recovery-packet';
 import { captureNativeA2aCreate } from './a2a-create-packet';
+import { capturePostgresPendingOwnerAdmission,type PendingOwnerSessionProof } from '../../a2a/pending-owner-session';
+import type { PostgresPendingOwnerAdmissionPacket } from '../../a2a/pending-owner-association';
+import { validateStorageIdentity,type StorageIdentity } from '../storage-identity';
+import { readRuntimeStorageDeployment } from '../runtime-storage-config';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
 export interface PostgresA2aOriginalsPort {
  hasA2aOriginalSettlement(expected:A2aOriginalClaim):Promise<boolean>;
  createA2aOrder(order:A2aOrder):Promise<{created:boolean;order:A2aOrder}>;
+ createOwnedA2aOrder(order:A2aOrder,proof:PendingOwnerSessionProof):Promise<{created:boolean;order:A2aOrder}>;
  getA2aOrder(id:string):Promise<A2aOrder|null>;
  completeA2aOrder(id:string,response:Record<string,unknown>,updatedAt:string):Promise<boolean>;
  resolveA2aOrder(id:string,update:A2aOrderResolutionUpdate):Promise<boolean>;
@@ -31,8 +36,12 @@ function order(raw:unknown):A2aOrder{
 }
 /** Qualified fixed ports only. Construction grants no installed provenance,
  * original purchase, provider execution, ownership association or write retry. */
-export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOnly:boolean):PostgresA2aOriginalsPort{
- if(typeof readOnly!=='boolean')throw unavailable();const live=()=>{if(channel.closed)throw unavailable();};
+export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOnly:boolean,rawIdentity?:StorageIdentity):PostgresA2aOriginalsPort{
+ if(arguments.length>3||typeof readOnly!=='boolean')throw unavailable();const live=()=>{if(channel.closed)throw unavailable();};
+ // Identity is comparison data, never installed provenance. Only the private
+ // route WeakMap can supply the independently authenticated native proof.
+ const identity=rawIdentity===undefined?undefined:validateStorageIdentity(rawIdentity);
+ if(identity&&identity.authorityMode!=='mainnet-real')throw unavailable();
  const binding=(raw:A2aOriginalClaim)=>{const value=validateA2aOriginalClaim(raw,ARC_MAINNET_PROFILE),wire=canonicalJson(value);if(Buffer.byteLength(wire)>8192)throw unavailable();return {value,wire};};
  const selector=(id:unknown)=>{if(typeof id!=='string'||id.length<1||id.length>256||Buffer.byteLength(id)>1024||id.includes('\0')||Buffer.from(id).toString('utf8')!==id)throw unavailable();return id;};
  const timestamp=(at:unknown)=>{if(typeof at!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(at)||!Number.isFinite(Date.parse(at))||new Date(at).toISOString()!==at)throw unavailable();return at;};
@@ -56,11 +65,17 @@ export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOn
   const result=await channel.call(operation,operation==='a2aFail'?[id,errorCode!,at]:[id,at]);
   if(channel.closed||typeof result!=='boolean')throw new PostgresDomainWriteOutcomeUnknown();return result;
  };
- return Object.freeze({
-  async createA2aOrder(raw){
-   live();if(readOnly)throw unavailable();const captured=captureNativeA2aCreate(raw),context=await channel.call('a2aOriginalStore',[]);live();
+ const create=async(captured:ReturnType<typeof captureNativeA2aCreate>,owner?:Readonly<PostgresPendingOwnerAdmissionPacket>)=>{
+   const context=await channel.call('a2aOriginalStore',[]);live();
    if(!context||typeof context!=='object'||Array.isArray(context)||Object.keys(context).join(',')!=='storeId'||typeof Reflect.get(context,'storeId')!=='string')throw unavailable();
-   const projection=acceptanceOriginalMetadata(captured.row,Reflect.get(context,'storeId') as string),packet=JSON.stringify({binding:captured.binding,rowWire:captured.rowWire,projection});if(Buffer.byteLength(packet)>262144)throw unavailable();
+   const projection=acceptanceOriginalMetadata(captured.row,Reflect.get(context,'storeId') as string),packet=JSON.stringify({binding:captured.binding,rowWire:captured.rowWire,projection,...(owner?{owner}:{})});if(Buffer.byteLength(packet)>262144)throw unavailable();
+   if(owner){
+    // Proof consumption happened before the first await. The pinned runtime
+    // manifest must still match at the last synchronous submission boundary.
+    const selected=readRuntimeStorageDeployment(),now=Date.now();
+    if(selected.backend.kind!=='postgres'||canonicalJson(selected.identity)!==canonicalJson(owner.identity)
+     ||owner.proofExpiresAt<=now||owner.session.expiresAt<=now||owner.session.issuedAt>now)throw unavailable();
+   }
    const result=await channel.call('a2aCreate',[captured.order.id,packet,captured.order.createdAt]);
    try{
     if(channel.closed||!result||typeof result!=='object'||Array.isArray(result)||Object.keys(result).sort().join(',')!=='created,order'||typeof Reflect.get(result,'created')!=='boolean')throw unavailable();
@@ -68,6 +83,15 @@ export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOn
     if(saved.id!==captured.order.id||created&&(!matchesA2aOriginalBinding(saved,captured.binding)||saved.status!=='running'||saved.startedAt!==null||saved.workerId!==null||saved.executionJournalVersion!==1||saved.paymentStartedAt!==null||saved.resultSavingAt!==null||saved.response!==null||saved.errorCode!==null||saved.resolution!==null||saved.createdAt!==captured.order.createdAt||saved.updatedAt!==captured.order.updatedAt))throw unavailable();
     return {created,order:saved};
    }catch{throw new PostgresDomainWriteOutcomeUnknown();}
+ };
+ return Object.freeze({
+  async createA2aOrder(raw){
+   live();if(readOnly)throw unavailable();return create(captureNativeA2aCreate(raw));
+  },
+  async createOwnedA2aOrder(raw,proof){
+   live();if(readOnly||!identity)throw unavailable();
+   const captured=captureNativeA2aCreate(raw),owner=capturePostgresPendingOwnerAdmission(proof,identity,captured.order);
+   return create(captured,owner);
   },
   async getA2aOrder(id){
    live();const retained=await snapshot(id);if(retained===null)return null;
