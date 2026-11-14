@@ -5,18 +5,24 @@
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
+import {mkdirSync,mkdtempSync,writeFileSync,existsSync,unlinkSync,rmdirSync} from 'node:fs';
+import {resolve,join,dirname} from 'node:path';
 import type {Client} from 'pg';
 import type {QueryRun} from '../../lib/types';
-import type {StorageIdentity} from '../../lib/db/storage-identity';
+import {validateStorageIdentity,type StorageIdentity} from '../../lib/db/storage-identity';
 import type {PostgresConnectionOptions} from '../../lib/db/postgres/connection';
 import {canonicalJson} from '../../lib/canonical-json';
 import {installMainnetApplicationSchema} from '../../lib/db/mainnet-application-schema';
 import {installNativeUserDomainSchema} from '../../lib/db/native-user-domain-schema';
 import {writeSqliteQueryRun} from '../../lib/db/query-run-record';
-import {createSqliteRunPrivacy} from '../../lib/db/run-privacy-sqlite';
-import {createSqliteRunOwnershipHistory} from '../../lib/db/run-ownership-history-sqlite';
-import {createSqlitePersonalHistory} from '../../lib/db/personal-history-sqlite';
-import {createSqlitePrivateProfiles} from '../../lib/db/private-profiles-sqlite';
+import {createEnrolledSqliteRunPrivacy} from '../../lib/db/run-privacy-sqlite';
+import {createEnrolledSqliteRunOwnershipHistory} from '../../lib/db/run-ownership-history-sqlite';
+import {createEnrolledSqlitePersonalHistory} from '../../lib/db/personal-history-sqlite';
+import {createEnrolledSqlitePrivateProfiles} from '../../lib/db/private-profiles-enrolled-sqlite';
+import {insertStorageIdentity,installStorageFences} from '../../lib/db/storage-identity-sqlite';
+import {openVerifiedSqliteStorage} from '../../lib/db/storage-identity-connection';
+import {supportedSqliteApplicationProfiles} from '../../lib/db/enrolled-sqlite-schema-profile';
+import {inspectStorageDeploymentManifest} from '../../lib/db/runtime-storage-config';
 import {SQLITE_DASHBOARD_INPUT_ROWS,dashboardMetricsFromSqliteRows} from '../../lib/db/dashboard-metric-rows';
 import {capturePublicationSourcePacket,capturePostgresPublication} from '../../lib/db/postgres/publication-packet';
 import {publicationScalarText} from '../../lib/db/postgres/publication-scalar-text';
@@ -26,23 +32,31 @@ import {PRIVACY_CALLS} from '../../lib/db/postgres/privacy-calls';
 import {startCommitAckLossProxy} from './commit-ack-loss.mts';
 
 export async function qualifyPublication(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string}){
- const db=new DatabaseSync(':memory:'),channel=createPostgresDomainChannel(input.options,input.identity,input.digest),native=composePostgresUserDomainTransport(channel,input.identity,false,true);
+ const tempRoot=process.platform==='linux'?resolve('.local/tmp/postgres-mainnet-migration-20261111/os-tmp'):resolve('D:/repos/server/Github/Hackathon/keryx/.local/tmp/postgres-mainnet-migration-20261111/agents/managed_policy');mkdirSync(tempRoot,{recursive:true});
+ const sourceIdentity=validateStorageIdentity(input.identity),folder=mkdtempSync(join(tempRoot,'publication-source-')),file=join(folder,'source.sqlite'),manifestPath=join(folder,'storage.json'),manifest=canonicalJson({format:'keryx-storage-deployment-v1',identity:sourceIdentity,backend:{kind:'sqlite',databasePath:file}});
+ const db=new DatabaseSync(file),channel=createPostgresDomainChannel(input.options,input.identity,input.digest),native=composePostgresUserDomainTransport(channel,input.identity,false,true);
  const owner='0x'+randomBytes(20).toString('hex'),other='0x'+randomBytes(20).toString('hex'),session=randomBytes(32).toString('hex'),binding={network:input.identity.network,origin:'https://keryx.cc'},actor={wallet:owner,sessionHash:session,binding},date=new Date().toISOString(),prefix='synthetic-publication-'+randomBytes(5).toString('hex')+'-';
  const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",pg=(sql:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+sql+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
- let vectors=0;const writeTimes:number[]=[],ids:string[]=[];
+ let source:ReturnType<typeof openVerifiedSqliteStorage>|undefined;let vectors=0;const writeTimes:number[]=[],ids:string[]=[];
  const outcome=async(work:()=>unknown|Promise<unknown>)=>{try{return {ok:true as const,value:await work()};}catch{return {ok:false as const};}};
  const same=async(a:()=>unknown|Promise<unknown>,b:()=>unknown|Promise<unknown>)=>{assert.deepEqual(await outcome(a),await outcome(b));vectors++;};
  const base=(suffix:string):QueryRun=>({id:prefix+suffix,createdAt:date,question:suffix+' question',answer:'PAID_BODY_'+suffix,engine:'heuristic',budget:1,totalSpent:0.1,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[],asker:owner,paymentMode:'offline'});
  try{
   assert.equal(input.ownerSql('SELECT count(*) FROM public.query_runs;'),'0','Publication requires an isolated empty QueryRun namespace');
   for(const table of ['payment_events','answer_feedback','gap_intents'])assert.equal(input.ownerSql('SELECT count(*) FROM public.'+table+';'),'0','Publication metric oracle requires its empty namespace');
-  db.exec('BEGIN');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);db.exec('COMMIT');
-  const ownership=createSqliteRunOwnershipHistory(db),privacy=createSqliteRunPrivacy(db,ownership),history=createSqlitePersonalHistory(db),profiles=createSqlitePrivateProfiles(db),creation={privacy:{runPrivacy:privacy,runPrivacyActive:true},enrolled:false};
+  // This connection is explicitly the fixture owner, never an application
+  // facade or a registered proof. Bootstrap schema/identity/fences before open.
+  db.exec('PRAGMA foreign_keys=ON;BEGIN IMMEDIATE');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);
   db.prepare('INSERT INTO web_sessions(hash,wallet,issued_at,expires_at) VALUES(?,?,?,?)').run(session,owner,Date.now()-10000,Date.now()+3600000);
+  insertStorageIdentity(db,sourceIdentity);installStorageFences(db,sourceIdentity);db.exec('COMMIT');
+  writeFileSync(manifestPath,manifest,{flag:'wx',mode:0o600});
+  source=openVerifiedSqliteStorage(file,sourceIdentity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(canonicalJson(inspectStorageDeploymentManifest({KERYX_STORAGE_MANIFEST:manifestPath})),manifest)});
+  const ownership=createEnrolledSqliteRunOwnershipHistory(source.db),privacy=createEnrolledSqliteRunPrivacy(source.db),history=createEnrolledSqlitePersonalHistory(source.db),profiles=createEnrolledSqlitePrivateProfiles(source.db);assert(profiles);
+  const creation={privacy:{runPrivacy:privacy,runPrivacyActive:true},enrolled:true};
   pg(`INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES(${q(session)},${q(owner)},${Date.now()-10000},${Date.now()+3600000});`);
   const protocolSave=async(run:QueryRun,visibility:'public'|'private'|'unlisted'='public')=>{
    const packet=capturePublicationSourcePacket(run,{visibility}),sha=createHash('sha256').update(Buffer.from(JSON.parse(packet.wire).originalHex,'hex')).digest('hex'),started=performance.now(),result=await channel.call('publicationSave',[packet.wire]);writeTimes.push(performance.now()-started);
-   assert.deepEqual(result,{id:run.id,originalSha256:sha});writeSqliteQueryRun(db,run,true,{...creation,publication:{visibility}});ids.push(run.id);
+   assert.deepEqual(result,{id:run.id,originalSha256:sha});writeSqliteQueryRun(source!.db,run,true,{...creation,publication:{visibility}});ids.push(run.id);
    assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(run.id)};`),db.prepare('SELECT data FROM query_runs WHERE id=?').get(run.id)!.data);vectors++;
    return packet;
   };
@@ -82,6 +96,29 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
    const expected=operation==='get_query_run'?{data:JSON.parse(String(db.prepare('SELECT data FROM query_runs WHERE id=?').get(cases[1].id)!.data))}:operation==='list_follow_ups'?[]:db.prepare('SELECT data FROM query_runs'+(operation==='list_query_runs_by_asker'?' WHERE asker=?':'')+' ORDER BY created_at DESC').all(...(operation==='list_query_runs_by_asker'?[owner]:[])).map(row=>({data:JSON.parse(String(row.data))}));
    const value=await native.applicationRead(operation,args);if(Array.isArray(value)&&Array.isArray(expected)){const order=(rows:{data:unknown}[])=>rows.slice().sort((a,b)=>String(Reflect.get(a.data as object,'id')).localeCompare(String(Reflect.get(b.data as object,'id'))));assert.deepEqual(order(value as {data:unknown}[]),order(expected));}else assert.deepEqual(value,expected);vectors++;
   }
+  // Valid Source dates are TEXT, so offsets and sub-millisecond precision
+  // affect byte ordering even when their parsed native instants compare apart
+  // or collapse. Raw scalar dates and their privacy clocks must remain exact.
+  const dateWires=['2099-11-15T00:00:00.000Z','2099-11-15T01:00:00.000+02:00','2099-11-15T00:00:00.000100Z','2099-11-15T00:00:00.000900Z','2099-11-15T00:00:00.123456789Z'],dateParent=prefix+'date-parent',dateRuns:QueryRun[]=[];
+  for(const [index,createdAt] of dateWires.entries()){
+   const run={...base('date-'+index),createdAt,asker:other,parentId:dateParent};dateRuns.push(run);await protocolSave(run);
+   const observed=db.prepare('SELECT created_at FROM query_runs WHERE id=?').get(run.id)!;
+   assert.equal(input.ownerSql(`SELECT convert_from(decode(s.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') FROM keryx_storage.run_privacy_projection s WHERE run_id=${q(run.id)};`),observed.created_at);
+   assert.equal(input.ownerSql(`SELECT updated_at FROM public.run_privacy WHERE run_id=${q(run.id)};`),createdAt);
+   await same(()=>native.runPrivacy.read(run.id),()=>privacy.read(run.id));await same(()=>native.runPrivacy.settlement(run.id),()=>privacy.settlement(run.id));vectors++;
+  }
+  for(const [operation,args,ascending] of [
+   ['list_query_runs_by_asker',{p_asker:other,p_limit:1000},false],['list_follow_ups',{p_parent_id:dateParent},true],['list_recent_queries',{p_limit:dateRuns.length},false],
+  ] as const){
+   const expected=db.prepare('SELECT data FROM query_runs WHERE asker=? ORDER BY created_at '+(ascending?'ASC':'DESC')).all(other).map(row=>({data:JSON.parse(String(row.data))}));
+   assert.deepEqual(await native.applicationRead(operation,args),expected);vectors++;
+  }
+  await same(()=>native.runPrivacy.list({parentId:dateParent,take:32}),()=>privacy.list({parentId:dateParent,take:32}));
+  await same(()=>native.runPrivacy.list({parentId:dateParent,before:{id:dateRuns[0].id,createdAt:dateWires[0]},take:32}),()=>privacy.list({parentId:dateParent,before:{id:dateRuns[0].id,createdAt:dateWires[0]},take:32}));
+  // Source's strict history output schemas reject these noncanonical dates;
+  // do not silently normalize them to manufacture valid history cursors.
+  assert(!(await outcome(()=>history.list(other,{filters:{},take:51}))).ok);await same(()=>native.personalHistory.list(other,{filters:{},take:51}),()=>history.list(other,{filters:{},take:51}));
+  await same(()=>native.runOwnershipHistory.list(other,{binding,filters:{},take:51}),()=>ownership.list(other,{binding,filters:{},take:51}));
   const privateRun=base('private');await protocolSave(privateRun,'private');assert.deepEqual(await native.runPrivacy.questions!([privateRun.id]),[]);assert.equal((await native.runPrivacy.read(privateRun.id)).item,null);vectors++;
   for(const source of [cases[6],cases[7]])assert.throws(()=>input.ownerSql(`SELECT keryx_storage.claim_original(${q(source.id)},${q(date)});`),/claim_unavailable/);
   // A caller cannot turn malformed non-null Source ownership into a valid
@@ -111,12 +148,16 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
    await input.contentionClient.query('BEGIN');held=true;await input.contentionClient.query('SELECT pg_advisory_xact_lock(634781904177022::bigint)');pending=channel.call('publicationSave',[packet.wire]);
    let blocked=false;for(let attempt=0;attempt<30;attempt++){const seen=await input.contentionClient.query('SELECT count(*) n FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND pg_backend_pid()=ANY(pg_blocking_pids(pid))');if(Number(seen.rows[0].n)>0){blocked=true;break;}await new Promise(resolve=>setTimeout(resolve,20));}assert(blocked,'publication must wait behind the genuine writer lock');
    const erased=await input.contentionClient.query(PRIVACY_CALLS.privacyErase.sql,[canonicalJson(input.identity),input.digest,race.id,JSON.stringify(actor),JSON.stringify({revision:0,requestId}),true]);const raw=erased.rows[0].result,value=typeof raw==='string'?JSON.parse(raw):raw;assert.equal(value.state.erased,true);await input.contentionClient.query('COMMIT');held=false;
-   assert.deepEqual(await pending,{error:'privacy_unavailable'});pending=undefined;await privacy.erase(race.id,actor,{revision:0,requestId});assert.throws(()=>writeSqliteQueryRun(db,replacement,true,{...creation,publication:{visibility:'public'}}));await same(()=>native.runPrivacy.read(race.id,actor),()=>privacy.read(race.id,actor));vectors++;
+   assert.deepEqual(await pending,{error:'privacy_unavailable'});pending=undefined;await privacy.erase(race.id,actor,{revision:0,requestId});assert.throws(()=>writeSqliteQueryRun(source!.db,replacement,true,{...creation,publication:{visibility:'public'}}));await same(()=>native.runPrivacy.read(race.id,actor),()=>privacy.read(race.id,actor));vectors++;
   }finally{if(held)await input.contentionClient.query('ROLLBACK');if(pending)await pending.catch(()=>{});}
   assert(input.options.endpoint.kind==='loopback');const proxy=await startCommitAckLossProxy(input.options.endpoint.port),loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);
   try{const run={...base('lost-ack'),answer:'PAID_BODY_LOST_ACK\0\udc00'},packet=capturePublicationSourcePacket(run);proxy.arm();await assert.rejects(loss.call('publicationSave',[packet.wire]),PostgresDomainWriteOutcomeUnknown);assert(proxy.observation().dropped);assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(run.id)};`),Buffer.from(JSON.parse(packet.wire).originalHex,'hex').toString());vectors++;}finally{await loss.close();await proxy.close();}
   const reader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(reader.call('publicationSave',[capturePublicationSourcePacket(base('reader')).wire]));vectors++;}finally{await reader.close();}
   assert.throws(()=>capturePostgresPublication(cases[1]));assert.throws(()=>capturePostgresPublication(cases[2]));assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
-  return {vectors,genuineSqliteOracle:true,pureFixedProtocol:true,rawScalarVsJsonExtraction:true,rawOriginalPreserved:true,metadataExcludesPaidAnswer:true,unicodeJsOwnerBoundary:true,noNullOwnerFallback:true,staleScalarRefused:true,erasureAfterWriterWaitRefused:true,largeOriginalBytes:4000000,completeCollectionBytes:33554432,largeWriteMaximumMs:Math.max(...writeTimes),lostAckUnknownNoRetry:true,readerRefused:true,unsafeCaptureStillClosed:true,compiled512MiBQualified:false,fullFactoryQualified:false,retainedSyntheticRows:Number(input.ownerSql('SELECT count(*) FROM public.query_runs;')),providerCalls:0,paymentActions:0,schedulesCreated:0};
- }finally{await channel.close();db.close();}
+  return {vectors,genuineSqliteOracle:true,verifiedEnrolledSqlite:true,rawSourceDateOrder:true,offsetAndSubmillisecondDates:true,strictHistoryDateRefusal:true,pureFixedProtocol:true,rawScalarVsJsonExtraction:true,rawOriginalPreserved:true,metadataExcludesPaidAnswer:true,unicodeJsOwnerBoundary:true,noNullOwnerFallback:true,staleScalarRefused:true,erasureAfterWriterWaitRefused:true,largeOriginalBytes:4000000,completeCollectionBytes:33554432,largeWriteMaximumMs:Math.max(...writeTimes),lostAckUnknownNoRetry:true,readerRefused:true,unsafeCaptureStillClosed:true,compiled512MiBQualified:false,fullFactoryQualified:false,retainedSyntheticRows:Number(input.ownerSql('SELECT count(*) FROM public.query_runs;')),providerCalls:0,paymentActions:0,schedulesCreated:0};
+ }finally{
+  try{await channel.close();}finally{try{source?.close();}finally{db.close();}}
+  // Only this uniquely created canonical TEMP fixture, with resolved path checks.
+  for(const path of [file,file+'-wal',file+'-shm',file+'-journal',manifestPath]){assert.equal(dirname(resolve(path)),resolve(folder));if(existsSync(path))unlinkSync(path);}assert.equal(dirname(resolve(folder)),resolve(tempRoot));rmdirSync(folder);
+ }
 }

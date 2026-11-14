@@ -39,6 +39,8 @@ export function nativeBoundedReadApplicationSource(){
    fn=fn.replace('select "data" from public."query_runs"',`select encode(convert_to("data"::text,'UTF8'),'hex') AS "nativeOriginalHex" from public."query_runs" q JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=q.id`);
    fn=fn.replace('where "parent_id" = p_parent_id',"where sc.scalar_cells->'parent_id'->>'boundHex'=encode(convert_to(p_parent_id,'UTF8'),'hex')");
    fn=fn.replace('where "asker" = p_asker',"where sc.scalar_cells->'asker'->>'boundHex'=encode(convert_to(p_asker,'UTF8'),'hex')");
+   const dateWire=`convert_from(decode(sc.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C"`;
+   fn=fn.replace('order by "created_at" asc',`order by ${dateWire} ASC NULLS FIRST`).replace('order by "created_at" desc',`order by ${dateWire} DESC NULLS LAST`);
    fn=fn.replace('  select coalesce(jsonb_agg',scalarReady+'  select coalesce(jsonb_agg');
   }
   const aggregate=/select coalesce\(jsonb_agg\(to_jsonb\(r\)\),'\[\]'::jsonb\) from \(([\s\S]*?)\) r into result;/g;

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { erasedRun,validatePrivacyRun,visibilitySchema,PrivacyError } from '../../run-privacy/contracts';
 import { parseRunProvenance,recordedRunProvenance } from '../../research/run-provenance';
 import { ownershipHistoryOriginal,summarizeOwnershipOriginal } from '../../run-claims/history';
-import { historyDateSchema,historyIdSchema } from '../../history/personal-history';
+import { historyIdSchema } from '../../history/personal-history';
 import { runEvidenceMetrics } from '../dashboard-metrics';
 import { economicsRunSample } from '../../economics/testnet-economics';
 import { archiveEntryFromRun } from '../../answers-archive';
@@ -66,7 +66,7 @@ function text(value:unknown,nullable=false):string|null{
 }
 function capturePublicationRecord(input:QueryRun,publication?:{visibility:z.infer<typeof visibilitySchema>}){
  const initial=JSON.stringify(input);if(Buffer.byteLength(initial)>4000000)throw new PrivacyError('privacy_unavailable');
- const captured=JSON.parse(initial) as QueryRun;validatePrivacyRun(captured);const run=recordedRunProvenance(captured);validatePrivacyRun(run);historyIdSchema.parse(run.id);historyDateSchema.parse(run.createdAt);
+ const captured=JSON.parse(initial) as QueryRun;validatePrivacyRun(captured);const run=recordedRunProvenance(captured);validatePrivacyRun(run);historyIdSchema.parse(run.id);if(!Number.isFinite(Date.parse(run.createdAt)))throw new PrivacyError('privacy_unavailable');
  if(run.id.startsWith('prv_')||run.parentId?.startsWith('prv_'))throw new PrivacyError('privacy_unavailable');
  const selected=publication===undefined?undefined:z.object({visibility:visibilitySchema}).strict().parse(publication);
  const wire=JSON.stringify(run);if(Buffer.byteLength(wire)>4000000)throw new PrivacyError('privacy_unavailable');

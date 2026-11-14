@@ -56,6 +56,19 @@ describe('pure native publication packet vs current SQLite record mapping',()=>{
    expect(db.prepare('SELECT data FROM query_runs').get()?.data).toBe(original);
   }finally{db.close();}
  });
+ it.each(['2099-11-15T00:00:00.000Z','2099-11-15T01:00:00.000+02:00','2099-11-15T00:00:00.000100Z','2099-11-15T00:00:00.000900Z','2099-11-15T00:00:00.123456789Z'])('retains the exact valid Source date wire %s',createdAt=>compare({...base(),createdAt}));
+ it('orders Source dates as observed TEXT and preserves held scalar/original mismatches',()=>{
+  const db=new DatabaseSync(':memory:');try{installSqliteApplicationSchema(db);
+   const dates=['2099-11-15T00:00:00.000Z','2099-11-15T01:00:00.000+02:00','2099-11-15T00:00:00.000100Z','2099-11-15T00:00:00.000900Z'];
+   for(const [index,createdAt] of dates.entries())writeSqliteQueryRun(db,{...base(),id:'date-'+index,createdAt},false);
+   const ordered=db.prepare('SELECT id,created_at FROM query_runs ORDER BY created_at DESC').all();
+   expect(ordered.map(row=>row.id)).toEqual(['date-1','date-0','date-3','date-2']);
+   expect(Date.parse(dates[1])).toBeLessThan(Date.parse(dates[0]));expect(Date.parse(dates[2])).toBe(Date.parse(dates[3]));
+   const observed='2099-11-15T00:00:00.987654321+03:00';db.prepare('UPDATE query_runs SET created_at=? WHERE id=?').run(observed,'date-0');
+   const projection=sqlitePublicationScalarProjection(db,'date-0');expect(projection.scalarCells.created_at.boundHex).toBe(Buffer.from(observed).toString('hex'));
+   expect(JSON.parse(String(db.prepare('SELECT data FROM query_runs WHERE id=?').get('date-0')!.data)).createdAt).toBe(dates[0]);
+  }finally{db.close();}
+ });
  it('preserves exact new original, anonymous eligibility and all private derivatives',()=>compare(base()));
  it('preserves recorded ownership, Unicode, unknown escaped bytes and scalar mapping',()=>compare({...base(),asker:owner.toUpperCase().replace('0X','0x'),parentId:'parent',origin:'mcp',durationMs:12,paymentAttempts:0,settledPayments:0,uninterpreted:'\0\ud800'} as QueryRun));
  it('captures before caller mutation and validates publication intent',()=>{const run=base(),packet=capturePostgresPublication(run,{visibility:'private'});run.question='Changed';const captured=JSON.parse(packet.wire);expect(JSON.parse(Buffer.from(captured.originalHex,'hex').toString()).question).toBe('Question "unicode đ"');expect(captured.publication).toEqual({visibility:'private'});expect(()=>capturePostgresPublication(base(),{visibility:'bad'} as never)).toThrow();});

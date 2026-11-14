@@ -45,7 +45,7 @@ BEGIN
   LEFT JOIN keryx_storage.run_ownership_projection o ON o.run_id=q.id
   LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
   WHERE q.id=selected_id AND coalesce(v.erased,0)=0 AND(sc.scalar_cells->'asker'->>'boundHex'=encode(convert_to(wallet,'UTF8'),'hex') OR(sc.scalar_cells->'asker'->>'boundHex' IS NULL AND claims AND c.claimed_wallet=wallet AND c.claimed_at IS NOT NULL
-   AND q.created_at=c.completed_at::timestamptz AND h.original_created_at=c.completed_at AND h.original_sha256=c.original_sha256
+   AND EXISTS(SELECT 1 FROM keryx_storage.run_privacy_projection date_cell WHERE date_cell.run_id=q.id AND convert_from(decode(date_cell.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8')=c.completed_at) AND q.created_at=c.completed_at::timestamptz AND h.original_created_at=c.completed_at AND h.original_sha256=c.original_sha256
    AND o.history_eligible AND o.claimed_valid AND octet_length(q.data::text)<=4000000
    AND o.original_sha256=c.original_sha256 AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
    AND NOT EXISTS(SELECT 1 FROM public.a2a_orders a WHERE a.query_id=q.id))));
@@ -75,7 +75,7 @@ BEGIN
   LEFT JOIN keryx_storage.run_ownership_projection o ON o.run_id=q.id
   LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
   WHERE q.id IN(SELECT jsonb_array_elements_text(selected->'runIds')) AND v.visibility='public' AND v.erased=0 AND EXISTS(SELECT 1 FROM keryx_storage.run_privacy_projection sc WHERE sc.run_id=q.id AND sc.scalar_cells->'asker'->>'boundHex' IS NULL) AND c.claimed_wallet=s.wallet AND c.claimed_at IS NOT NULL
-   AND q.created_at=c.completed_at::timestamptz AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
+   AND EXISTS(SELECT 1 FROM keryx_storage.run_privacy_projection date_cell WHERE date_cell.run_id=q.id AND convert_from(decode(date_cell.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8')=c.completed_at) AND q.created_at=c.completed_at::timestamptz AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
    AND NOT EXISTS(SELECT 1 FROM public.a2a_orders a WHERE a.query_id=q.id)
    AND(h.original_created_at IS NULL OR h.original_sha256 IS DISTINCT FROM c.original_sha256
     OR h.original_created_at=c.completed_at AND(o.history_eligible IS DISTINCT FROM true OR o.claimed_valid IS DISTINCT FROM true OR o.original_sha256 IS DISTINCT FROM c.original_sha256))) THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;
@@ -83,7 +83,7 @@ BEGIN
   FROM public.query_runs q JOIN public.run_privacy v ON v.run_id=q.id
   LEFT JOIN keryx_storage.run_privacy_projection m ON m.run_id=q.id LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
   WHERE q.id IN(SELECT jsonb_array_elements_text(selected->'runIds')) AND v.visibility='public' AND v.erased=0
-   AND keryx_storage.public_profile_owned(q.id,s.wallet,binding,claims) ORDER BY q.created_at DESC,q.id COLLATE "C" DESC LIMIT 50 LOOP
+   AND keryx_storage.public_profile_owned(q.id,s.wallet,binding,claims) ORDER BY convert_from(decode(m.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C" DESC NULLS LAST,q.id COLLATE "C" DESC LIMIT 50 LOOP
   IF r.profile_fields IS NULL OR r.data_bytes IS DISTINCT FROM r.actual_bytes OR r.original_sha256 IS DISTINCT FROM r.original_hash
    OR r.asker_hex IS NOT NULL AND(r.owner_invalid IS DISTINCT FROM false OR r.recorded_owner IS NOT NULL AND r.recorded_owner<>s.wallet)
   THEN RAISE EXCEPTION 'public_profile_unavailable';END IF;

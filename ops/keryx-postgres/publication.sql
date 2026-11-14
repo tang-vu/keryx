@@ -8,7 +8,7 @@ BEGIN
  PERFORM keryx_storage.require_operation(expected,digest,'publication_ready');RETURN jsonb_build_object('domain','run-publication-v1');
 END;$$;
 CREATE FUNCTION keryx_storage.publication_save(packet_wire text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE packet jsonb;r jsonb;original_wire text;original json;selected_id text;fresh boolean;chosen_visibility text;fingerprint text;tokens jsonb;question_scalar jsonb;answer_scalar jsonb;
+DECLARE packet jsonb;r jsonb;original_wire text;original json;selected_id text;fresh boolean;had_privacy boolean;chosen_visibility text;fingerprint text;tokens jsonb;question_scalar jsonb;answer_scalar jsonb;
 BEGIN
  IF packet_wire IS NULL OR octet_length(packet_wire)>33554432 THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
  packet:=packet_wire::jsonb;r:=packet->'row';selected_id:=r->>'id';
@@ -18,8 +18,7 @@ BEGIN
  THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
  original_wire:=convert_from(decode(packet->>'originalHex','hex'),'UTF8');original:=original_wire::json;tokens:=keryx_storage.source_scalar_text(original_wire,'tokens');fingerprint:=encode(sha256(convert_to(original_wire,'UTF8')),'hex');
  IF json_typeof(original) IS DISTINCT FROM 'object' OR keryx_storage.source_scalar_text(tokens->>'id','scalar')->>'sourceHex' IS DISTINCT FROM encode(convert_to(selected_id,'UTF8'),'hex') OR keryx_storage.source_scalar_text(tokens->>'createdAt','scalar')->>'sourceHex' IS DISTINCT FROM encode(convert_to(r->>'created_at','UTF8'),'hex')
-  OR r->>'created_at' !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
-  OR to_char((r->>'created_at')::timestamptz AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')<>r->>'created_at'
+  OR NOT isfinite((r->>'created_at')::timestamptz)
   OR packet->'history'->>'sha256' IS DISTINCT FROM fingerprint OR packet->'ownership'->>'sha256' IS DISTINCT FROM fingerprint
   OR packet->'privacy'->>'sha256' IS DISTINCT FROM fingerprint OR packet->'privacy'->>'valid' IS DISTINCT FROM 'true'
   OR packet->'privacy'->'usage'->>'sha256' IS DISTINCT FROM fingerprint OR packet->'privacy'->'usage'->>'bodyIdentityValid' IS DISTINCT FROM 'true'
@@ -27,6 +26,7 @@ BEGIN
  THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
  question_scalar:=keryx_storage.source_scalar_text(tokens->>'question','scalar');answer_scalar:=keryx_storage.source_scalar_text(tokens->>'answer','scalar');
  IF EXISTS(SELECT 1 FROM public.run_privacy WHERE run_id=selected_id AND erased=1) THEN RAISE EXCEPTION 'privacy_erased';END IF;
+ had_privacy:=EXISTS(SELECT 1 FROM public.run_privacy WHERE run_id=selected_id);
  fresh:=NOT EXISTS(SELECT 1 FROM public.query_runs WHERE id=selected_id) AND NOT EXISTS(SELECT 1 FROM public.run_privacy WHERE run_id=selected_id);
  IF packet?'publication' THEN
   IF jsonb_typeof(packet->'publication')<>'object' OR (packet->'publication')-'visibility'<>'{}'::jsonb OR packet->'publication'->>'visibility' IS NULL OR packet->'publication'->>'visibility' NOT IN('public','private','unlisted') THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
@@ -37,6 +37,7 @@ BEGIN
   r->>'parent_id',r->>'asker',r->>'origin',(r->>'duration_ms')::bigint,r->>'payment_mode',(r->>'payment_attempts')::integer,(r->>'settled_payments')::integer,r->>'confidence_level',r->>'mcp_client',(r->>'evidence_claim_count')::integer,(r->>'grounded_claim_count')::integer,(r->>'rewarded_citation_count')::integer,(r->>'economics_data')::json)
  ON CONFLICT(id) DO UPDATE SET created_at=excluded.created_at,question=excluded.question,budget=excluded.budget,engine=excluded.engine,total_spent=excluded.total_spent,total_to_creators=excluded.total_to_creators,answer=excluded.answer,data=excluded.data,
   parent_id=excluded.parent_id,asker=excluded.asker,origin=excluded.origin,duration_ms=excluded.duration_ms,payment_mode=excluded.payment_mode,payment_attempts=excluded.payment_attempts,settled_payments=excluded.settled_payments,confidence_level=excluded.confidence_level,mcp_client=excluded.mcp_client,evidence_claim_count=excluded.evidence_claim_count,grounded_claim_count=excluded.grounded_claim_count,rewarded_citation_count=excluded.rewarded_citation_count,economics_data=excluded.economics_data;
+ IF NOT had_privacy THEN UPDATE public.run_privacy SET updated_at=r->>'created_at' WHERE run_id=selected_id;END IF;
  IF fresh THEN UPDATE public.run_privacy p SET visibility=chosen_visibility WHERE p.run_id=selected_id AND revision=0 AND erased=0;IF NOT FOUND THEN RAISE EXCEPTION 'privacy_unavailable';END IF;END IF;
  DELETE FROM keryx_storage.run_history_projection WHERE run_id=selected_id;
  DELETE FROM keryx_storage.run_ownership_projection WHERE run_id=selected_id;

@@ -17,7 +17,7 @@ BEGIN
  INTO total,bounded FROM jsonb_array_elements_text(ids) wanted LEFT JOIN public.query_runs q ON q.id=wanted;
  IF NOT bounded OR total>16000000 THEN RAISE EXCEPTION 'account_unavailable';END IF;
  IF EXISTS(SELECT 1 FROM jsonb_array_elements_text(ids) wanted JOIN public.query_runs q ON q.id=wanted LEFT JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=q.id WHERE sc.run_id IS NULL OR sc.scalar_identity_sha256 IS DISTINCT FROM (SELECT identity_digest FROM keryx_storage.identity WHERE singleton)) THEN RAISE EXCEPTION 'account_unavailable';END IF;
- FOR r IN SELECT q.id,sc.scalar_cells->'asker'->>'boundHex' AS asker,q.created_at AS created_instant,to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+ FOR r IN SELECT q.id,sc.scalar_cells->'asker'->>'boundHex' AS asker,q.created_at AS created_instant,convert_from(decode(sc.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') AS created_at,
   keryx_storage.run_original_sha256(q.data) AS original_hash,h.original_created_at,h.original_sha256 AS history_original_sha256,
   p.run_id AS p_id,p.visibility,p.revision,p.erased,p.retained_owner,p.retained_digest,p.retained_binding,p.updated_at,
   c.run_id AS c_id,c.network AS c_network,c.origin AS c_origin,c.claimed_wallet,c.claimed_at,c.completed_at,c.original_sha256,
@@ -37,7 +37,7 @@ BEGIN
   IF r.erased=1 THEN RAISE EXCEPTION 'account_unavailable';END IF;
   IF r.asker IS NOT NULL THEN
    IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(account->'membership'->'members') m WHERE encode(convert_to(m->>'wallet','UTF8'),'hex')=r.asker) THEN RAISE EXCEPTION 'account_unavailable';END IF;
-  ELSIF r.claimed_at IS NULL OR r.completed_at IS DISTINCT FROM r.original_created_at OR r.created_instant IS DISTINCT FROM r.completed_at::timestamptz
+  ELSIF r.claimed_at IS NULL OR r.created_at IS DISTINCT FROM r.completed_at OR r.completed_at IS DISTINCT FROM r.original_created_at OR r.created_instant IS DISTINCT FROM r.completed_at::timestamptz
    OR r.original_sha256 IS DISTINCT FROM r.history_original_sha256 OR r.original_sha256 IS DISTINCT FROM r.original_hash OR r.a2a<>0
    OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(account->'membership'->'members') m WHERE m->>'wallet'=r.claimed_wallet)
   THEN RAISE EXCEPTION 'account_unavailable';END IF;
