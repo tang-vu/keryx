@@ -1275,3 +1275,31 @@ new purchases must meet current Source policy. Current Source mutations,
 complete catalog/getter composition, pending-owner integration and the genuine
 application writer remain separate requirements. Production continues serving
 SQLite until the full migration and operational cutover gates pass.
+
+
+### Current Source catalog, owned originals and exact clocks
+
+The native Source port observes the current catalog, managed claim/challenge and
+registry-origin sidecars in one transaction. Source upsert captures immutable
+input before awaiting and compares the complete predecessor after acquiring the
+writer lock. It preserves retained managed and registry identities, including
+free or stale metadata; a refusing snapshot has no generic-row fallback.
+
+An owned original requires the existing signed-cookie route proof. The native
+producer captures that capability before its first await and atomically inserts
+the original, derivatives and owner after current session and deployment checks.
+Replay never creates an owner association. The async settlement hook does not
+retry or invoke a legacy hook after an unknown write result.
+
+`keryx_storage.a2a_original_time_projection` is the ninth held-intake derivative.
+It stores exact Source TEXT creation/update/start/payment/result clocks,
+independently of paid-body and acceptance projections. Missing metadata refuses
+raw original and queue observations. Intake and new original/monthly writers
+must install it atomically; no timestamp formatting or acceptance-row fallback
+may fabricate the original clock.
+
+The readonly application factory composes the nine current Source observations
+and exposes the pending-owner reader with its opaque proof checks. Its admission
+and write paths remain closed. These prepared protocols do not activate the
+complete application writer, switch production, execute a job, or authorize a
+payment, funding, renewal or schedule.

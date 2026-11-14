@@ -32,9 +32,9 @@ const identity: StorageIdentity = { format: "keryx-mainnet-storage-identity-v1",
 const order = (): A2aOrder => {
   const binding = { network: identity.network, payer: `0x${"22".repeat(20)}`, payee: `0x${"33".repeat(20)}`, authorizationId: `0x${"44".repeat(32)}` };
   const id = a2aOrderId(binding);
-  return { ...binding, id, queryId: id, requestHash: "a".repeat(64), createdAt: new Date(now).toISOString(),
-    updatedAt: new Date(now).toISOString(), request: { network: identity.network, question: "fixture", origin: "a2a" },
-    status: "running", startedAt: null, workerId: null, response: null, resolution: null } as A2aOrder;
+  return { ...syntheticA2aOriginal(1869, ARC_MAINNET_PROFILE).order, ...binding, id, queryId: id, requestHash: "a".repeat(64), createdAt: new Date(now).toISOString(),
+    updatedAt: new Date(now).toISOString(), request: { ...syntheticA2aOriginal(1869, ARC_MAINNET_PROFILE).order.request, network: identity.network, question: "fixture", origin: "a2a" },
+    status: "running", startedAt: null, workerId: null, response: null, resolution: null };
 };
 let durable: WebSessionRecord | null;
 const db = { pendingJobOwners: {}, async createWebSession(row: WebSessionRecord) { durable = row; }, async getWebSession() { return durable; } };

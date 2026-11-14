@@ -32,7 +32,7 @@ it('preserves every existing named TypeScript call and its argument/result/write
   const selected=OPERATIONAL_WRITE_OPERATIONS[name],entry=OPERATIONAL_WRITE_CALLS[selected];
   expect(selected).toBe('operational_'+name);
   expect(entry).toEqual({sql:`SELECT public.storage_application_operational_write($1::jsonb,$2::text,'${name}',$3::jsonb) AS result`,args:1,write:true,bytes:4194304});
-  const input={marker:name,selected_action:'caller-cannot-select-another-operation'};
+  const input:{marker:string;selected_action:string}={marker:name,selected_action:'caller-cannot-select-another-operation'};
   const pending=port.applicationWrite(name,input);input.marker='mutated after capture';expect(await pending).toBeNull();
   expect(call.mock.calls.at(-1)).toEqual([selected,[JSON.stringify({marker:name,selected_action:'caller-cannot-select-another-operation'})]]);
  }

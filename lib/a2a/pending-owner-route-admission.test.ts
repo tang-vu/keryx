@@ -3,6 +3,7 @@
  * this qualifies route wiring, never native installed proof/writer admission.
  * Vendor/readiness transports are synthetic and no payment is executed. */
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { PendingOwnerSessionProof } from "./pending-owner-session";
 import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync,writeFileSync,readFileSync,lstatSync,existsSync,unlinkSync,rmdirSync } from "node:fs";
 import { join } from "node:path";
@@ -71,8 +72,8 @@ function options(){return mocks.seller.mock.calls[0][1] as PaidOptions;}
 function composeAsync(wait:()=>Promise<void>,afterObservation?:()=>Promise<void>){
  const genuine=native.pendingJobOwners!;
  const port:PendingJobOwnersStore=Object.freeze({
-  async assertAdmissionAsync(proof){events.push("async-start");await wait();genuine.assertAdmission(proof);events.push("async-current");await afterObservation?.();},
-  assertAdmission(proof){events.push("sync-final");genuine.assertAdmission(proof);},list:genuine.list.bind(genuine),
+  async assertAdmissionAsync(proof:PendingOwnerSessionProof){events.push("async-start");await wait();genuine.assertAdmission(proof);events.push("async-current");await afterObservation?.();},
+  assertAdmission(proof:PendingOwnerSessionProof){events.push("sync-final");genuine.assertAdmission(proof);},list:genuine.list.bind(genuine),
  });
  // Only the route's ownerDb lookup receives this explicit protocol composition.
  // Cookie proof minting and all installed/financial calls use the genuine

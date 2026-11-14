@@ -5,7 +5,7 @@ import { retainedRecoveryMatches } from '../../a2a/overdue-escalation-queue';
 import { syntheticA2aOriginal } from '../a2a-original-fixture';
 import { STORAGE_MAINNET_PROFILE_DIGEST,storageIdentityDigest,type StorageIdentity } from '../storage-identity';
 import { captureA2aTimeMetadata } from './a2a-time-metadata';
-import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql } from '../../../scripts/postgres/a2a-time-projection.mts';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql } from '../../../scripts/postgres/a2a-time-projection.mjs';
 
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',deploymentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',storageId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,enrollmentId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',enrolledAt:'2026-10-01T00:00:00.000Z',provenanceDigest:'dd'.repeat(32)};
 const row=()=>({id:'a2a_'+'aa'.repeat(32),query_id:'a2a_'+'aa'.repeat(32),request_hash:'ab'.repeat(32),
