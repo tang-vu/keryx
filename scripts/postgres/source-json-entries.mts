@@ -1,8 +1,12 @@
 /** Fixed SOURCE-generated JSON adapters; never a runtime query translator. */
 const quote=(s:string)=>"'"+s.replaceAll("'","''")+"'";
-export function nativeApplicationJsonEntrySource(names:readonly string[],write=false,inputBytes=65536):string{
+export function nativeApplicationJsonEntrySource(names:readonly string[],write=false,inputBytes=65536,group?:'operational_write'):string{
  if(names.length<1||names.length>128||new Set(names).size!==names.length||names.some(n=>!/^[_a-z][_a-z0-9]{0,62}$/.test(n)))throw new Error('Native entry source inventory refused');
  if(!Number.isSafeInteger(inputBytes)||inputBytes<65536||inputBytes>8388608)throw new Error('Native entry source input bound refused');
+ if(group!==undefined){
+  if(group!=='operational_write'||write!==true||names.length!==11||inputBytes!==65536)throw new Error('Native grouped entry source refused');
+  return operationalWriteGroupSource(names);
+ }
  return `DO $build$ DECLARE original record;arg record;fields text;arguments text;keys text[];body text;selected text;counted integer:=0;
 BEGIN
  FOREACH selected IN ARRAY ARRAY[${names.map(quote).join(',')}] LOOP
@@ -39,6 +43,66 @@ BEGIN
   counted:=counted+1;
  END LOOP;
  IF counted<>${names.length} THEN RAISE EXCEPTION 'application read inventory incomplete';END IF;
+END;$build$;
+`;
+}
+
+/** Fresh SOURCE compilation only. The runtime router contains a closed CASE,
+ * not EXECUTE or a caller-selected function, relation or transaction callback. */
+function operationalWriteGroupSource(names:readonly string[]):string{
+ const expected=new Set(['consume_rate_limit','delete_expired_rate_limits','acquire_reasoning_circuit','record_reasoning_circuit_failure',
+  'clear_reasoning_circuit','mint_api_key','verify_api_key_2','revoke_api_key','upsert_api_key_usage','record_feedback','increment_activation_event']);
+ if(names.some(name=>!expected.has(name)))throw new Error('Operational grouped SOURCE inventory refused');
+ return `DO $build$
+DECLARE original record;arg record;fields text;call_arguments text;keys text[];body text;selected text;row_var text;
+ declarations text:='';branches text:='';statement text;counted integer:=0;
+BEGIN
+ FOREACH selected IN ARRAY ARRAY[${names.map(quote).join(',')}] LOOP
+  counted:=counted+1;row_var:='typed_'||counted;
+  SELECT * INTO STRICT original FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='storage_'||selected;
+  fields:='';call_arguments:='p_expected_identity=>expected';keys:=ARRAY[]::text[];
+  FOR arg IN SELECT ord,type_oid FROM unnest(coalesce(original.proallargtypes,original.proargtypes::oid[])) WITH ORDINALITY a(type_oid,ord) LOOP
+   IF original.proargmodes IS NOT NULL AND original.proargmodes[arg.ord] NOT IN('i','b','v') THEN CONTINUE;END IF;
+   IF original.proargnames[arg.ord]='p_expected_identity' THEN CONTINUE;END IF;
+   IF original.proargnames[arg.ord] IS NULL THEN RAISE EXCEPTION 'unnamed application domain argument';END IF;
+   fields:=fields||CASE WHEN fields='' THEN '' ELSE ',' END||format('%I %s',original.proargnames[arg.ord],format_type(arg.type_oid,NULL));
+   keys:=array_append(keys,original.proargnames[arg.ord]);
+   call_arguments:=call_arguments||format(',%I=>%I.%I',original.proargnames[arg.ord],row_var,original.proargnames[arg.ord]);
+  END LOOP;
+  IF octet_length(fields)>32768 THEN RAISE EXCEPTION 'operational argument SOURCE bound';END IF;
+  IF fields<>'' THEN
+   EXECUTE format('CREATE TYPE keryx_storage.%I AS (%s)','args_'||selected,fields);
+   declarations:=declarations||format('%I keryx_storage.%I;',row_var,'args_'||selected);
+  END IF;
+  IF original.proretset THEN body:=format('SELECT coalesce(jsonb_agg(to_jsonb(r)),''[]''::jsonb) INTO result FROM public.%I(%s) r;',original.proname,call_arguments);
+  ELSIF original.prorettype='void'::regtype THEN body:=format('PERFORM public.%I(%s);result:=NULL;',original.proname,call_arguments);
+  ELSE body:=format('SELECT to_jsonb(public.%I(%s)) INTO result;',original.proname,call_arguments);END IF;
+  branches:=branches||format($branch$WHEN %L THEN
+   SELECT coalesce(array_agg(key ORDER BY key),ARRAY[]::text[]) INTO actual FROM jsonb_object_keys(payload) key;
+   IF actual IS DISTINCT FROM (SELECT coalesce(array_agg(k ORDER BY k),ARRAY[]::text[]) FROM unnest(%L::text[]) k) THEN RAISE EXCEPTION 'native application argument keys refused';END IF;
+   PERFORM keryx_storage.require_operation(expected,digest,%L);
+   %s
+   %s
+  $branch$,selected,keys,selected,
+   CASE WHEN fields='' THEN '' ELSE format('SELECT * INTO %I FROM jsonb_populate_record(NULL::keryx_storage.%I,payload);',row_var,'args_'||selected) END,body);
+  IF octet_length(declarations)>32768 OR octet_length(branches)>32768 THEN RAISE EXCEPTION 'operational branch SOURCE bound';END IF;
+ END LOOP;
+ IF counted<>11 THEN RAISE EXCEPTION 'application operational inventory incomplete';END IF;
+ statement:=format($entry$CREATE FUNCTION public.storage_application_operational_write(expected jsonb,digest text,op text,payload jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $fn$
+ DECLARE result jsonb;actual text[];%s
+ BEGIN
+  IF current_setting('transaction_read_only')<>'off' OR payload IS NULL OR jsonb_typeof(payload)<>'object' OR octet_length(payload::text)>65536 THEN RAISE EXCEPTION 'native application read arguments refused';END IF;
+  CASE op
+   %s
+   ELSE RAISE EXCEPTION 'native application operational action refused';
+  END CASE;
+  IF result IS NOT NULL AND octet_length(result::text)>4194304 THEN RAISE EXCEPTION 'native application read result bound';END IF;
+  RETURN result;
+ END;$fn$;$entry$,declarations,branches);
+ IF octet_length(statement)>32768 THEN RAISE EXCEPTION 'operational expanded SOURCE bound';END IF;
+ EXECUTE statement;
+ REVOKE ALL ON FUNCTION public.storage_application_operational_write(jsonb,text,text,jsonb) FROM PUBLIC,anon,authenticated,service_role,keryx_reader;
+ GRANT EXECUTE ON FUNCTION public.storage_application_operational_write(jsonb,text,text,jsonb) TO keryx_app;
 END;$build$;
 `;
 }
