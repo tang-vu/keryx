@@ -70,3 +70,16 @@ it('removes pending factory server registration after a real listen refusal',asy
  try{await expect(startCommitAckLossProxy(5432)).rejects.toThrow('Synthetic listen refused');expect(isCommitAckLossServerFor(owned,5432)).toBe(false);}
  finally{hook.mockRestore();expect(Server.prototype.listen).toBe(listen);}
 });
+it('keeps a newer port registration when an old server later receives a real bind failure',async()=>{
+ const upstream=await fixture(),listen=Server.prototype.listen;let oldServer:Server|undefined,reuse:number|undefined;
+ const hook=vi.spyOn(Server.prototype,'listen').mockImplementation(function(this:Server,...args:unknown[]){
+  oldServer??=this;if(reuse!==undefined&&args[0]===0)args[0]=reuse;return Reflect.apply(listen,this,args);
+ } as Server['listen']);
+ let first:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined,next:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined;
+ try{
+  first=await startCommitAckLossProxy(upstream.port);reuse=first.port;await first.close();next=await startCommitAckLossProxy(upstream.port);
+  expect(next.port).toBe(reuse);const failed=new Promise<NodeJS.ErrnoException>(done=>oldServer!.once('error',done));
+  Reflect.apply(listen,oldServer!,[reuse,'127.0.0.1']);expect((await failed).code).toBe('EADDRINUSE');
+  expect(isCommitAckLossProxyFor(next.port,upstream.port)).toBe(true);
+ }finally{hook.mockRestore();await first?.close();await next?.close();await upstream.close();}
+});

@@ -56,7 +56,7 @@ export async function startCommitAckLossProxy(upstreamPort: number) {
       }
     });
   });
-  let port:number|undefined;const unregister=()=>{ownedServers.delete(server);if(port!==undefined)ownedPorts.delete(port);};
+  let port:number|undefined;const unregister=()=>{ownedServers.delete(server);if(port!==undefined&&ownedPorts.get(port)?.server===server)ownedPorts.delete(port);};
   ownedServers.set(server,upstreamPort);server.once('close',unregister);server.once('error',unregister);
   try{
     await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
