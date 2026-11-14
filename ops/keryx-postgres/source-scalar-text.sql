@@ -26,7 +26,7 @@ BEGIN
    WHILE pos<size LOOP
     scan:=substring(raw FROM pos+1 FOR 4096);scan_size:=octet_length(scan);quote_at:=position(decode('22','hex') IN scan);
     IF quote_at>0 THEN scan:=substring(scan FROM 1 FOR quote_at-1);END IF;
-    slashes:=CASE WHEN octet_length(scan)>0 AND get_byte(scan,octet_length(scan)-1)=92 THEN (octet_length(scan)*2-length(regexp_replace(encode(scan,'hex'),'(5c)+$','')))/2 ELSE 0 END;
+    slashes:=CASE WHEN octet_length(scan)=0 THEN 0 WHEN get_byte(scan,octet_length(scan)-1)=92 THEN (octet_length(scan)*2-length(regexp_replace(encode(scan,'hex'),'(5c)+$','')))/2 ELSE 0 END;
     IF quote_at>0 AND slashes%2=0 THEN pos:=pos+quote_at-1;EXIT;
     ELSIF quote_at>0 THEN pos:=pos+quote_at;
     ELSE pos:=pos+scan_size-slashes%2;IF scan_size=1 AND slashes%2=1 THEN pos:=pos+2;END IF;END IF;
@@ -44,7 +44,7 @@ BEGIN
      WHILE pos<size LOOP
       scan:=substring(raw FROM pos+1 FOR 4096);scan_size:=octet_length(scan);quote_at:=position(decode('22','hex') IN scan);
       IF quote_at>0 THEN scan:=substring(scan FROM 1 FOR quote_at-1);END IF;
-      slashes:=CASE WHEN octet_length(scan)>0 AND get_byte(scan,octet_length(scan)-1)=92 THEN (octet_length(scan)*2-length(regexp_replace(encode(scan,'hex'),'(5c)+$','')))/2 ELSE 0 END;
+      slashes:=CASE WHEN octet_length(scan)=0 THEN 0 WHEN get_byte(scan,octet_length(scan)-1)=92 THEN (octet_length(scan)*2-length(regexp_replace(encode(scan,'hex'),'(5c)+$','')))/2 ELSE 0 END;
       IF quote_at>0 AND slashes%2=0 THEN pos:=pos+quote_at-1;EXIT;
       ELSIF quote_at>0 THEN pos:=pos+quote_at;
       ELSE pos:=pos+scan_size-slashes%2;IF scan_size=1 AND slashes%2=1 THEN pos:=pos+2;END IF;END IF;
@@ -174,6 +174,26 @@ BEGIN
     WHEN '707269766174655f6a6f62' THEN 'private_job'
     WHEN '6c696e6b6564536f757263654964' THEN 'linkedSourceId'
     WHEN '6c696e6b65645f736f757263655f6964' THEN 'linked_source_id'
+    WHEN '6f726967696e616c46756c66696c6c6d656e74' THEN 'originalFulfillment'
+    WHEN '737562436c61696d73' THEN 'subClaims'
+    WHEN '746f74616c5370656e74' THEN 'totalSpent'
+    WHEN '746f74616c546f43726561746f7273' THEN 'totalToCreators'
+    WHEN '70656e64696e675370656e6455736463' THEN 'pendingSpendUsdc'
+    WHEN '7061796d656e74417474656d707473' THEN 'paymentAttempts'
+    WHEN '736574746c65645061796d656e7473' THEN 'settledPayments'
+    WHEN '70656e64696e675061796d656e7473' THEN 'pendingPayments'
+    WHEN '72657472794f66' THEN 'retryOf'
+    WHEN '6475726174696f6e4d73' THEN 'durationMs'
+    WHEN '72657365617263684d6f6465' THEN 'researchMode'
+    WHEN '627564676574' THEN 'budget'
+    WHEN '666f726d6174' THEN 'format'
+    WHEN '636c61696d4964' THEN 'claimId'
+    WHEN '6f726967696e616c4661696c757265536861323536' THEN 'originalFailureSha256'
+    WHEN '617574686f72697479536861323536' THEN 'authoritySha256'
+    WHEN '70726f76696465724c6564676572536861323536' THEN 'providerLedgerSha256'
+    WHEN '6e6f4e6577496e626f756e645061796d656e74' THEN 'noNewInboundPayment'
+    WHEN '696e707574536861323536' THEN 'inputSha256'
+    WHEN '6f726967696e616c50726f766964657242696c6c696e67' THEN 'originalProviderBilling'
    END;
    IF key_wire IS NOT NULL THEN
     value_wire:=btrim(convert_from(substring(raw FROM start_at+1 FOR pos-start_at),'UTF8'),E' \t\r\n');
