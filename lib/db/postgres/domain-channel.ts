@@ -169,8 +169,11 @@ export function createPostgresDomainChannel(options: PostgresConnectionOptions, 
         const value: unknown = JSON.parse(row[0]);
         if (closed || value === null) unavailable();
         return value;
-      } catch {
+      } catch (error) {
         if (selected.write && submitted) throw new PostgresDomainWriteOutcomeUnknown();
+        // Recognized lock contention is a request failure, not evidence that
+        // strict Source data or the selected connection has become invalid.
+        if (!closed && !selected.write && error instanceof Error && 'code' in error && error.code === '55P03') throw new PostgresStorageBusy();
         return unavailable();
       } finally { pending--; if (request) inFlight.delete(request); }
     },
