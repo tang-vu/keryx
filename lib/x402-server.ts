@@ -138,10 +138,10 @@ export async function settleThenServe(
     checkAdmission(); return facilitator.verify(selected, requirements);
   };
   const settlePayment = async (selected: typeof payload) => {
-    checkAdmission();
     // No asynchronous work follows the final synchronous hooks before handing
     // this exact authorization to the provider.
     if (opts.beforeSettlementAsync) {
+      checkAdmission();
       let held;
       try { held = await opts.beforeSettlementAsync(); }
       catch { throw new PaidAdmissionHeld(NextResponse.json({ error: "paid admission unavailable" }, { status: 503 })); }
