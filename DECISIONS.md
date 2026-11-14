@@ -9586,3 +9586,25 @@ Its final native observation follows the asynchronous authority check; no full
 original, caller SQL, pool, transaction callback or cached admission escapes.
 Retain finite per-snapshot and complete-response bounds, exact facade provenance
 and terminal disposal. Complete writer/import/load/production gates remain open.
+
+## Preserve postpaid A2A JSON and commit its derivatives atomically (2026-11-14)
+
+Store native response/resolution JSON as `json`, retaining NUL and unpaired
+surrogate escapes that JSONB refuses. Carry raw cells as TEXT for original
+comparison and direct order snapshots; never normalize an already retained
+acceptance wire or fingerprint. Other original fields retain their existing
+checks, and request/package representability remains a prepayment producer gate.
+
+Capture new response bytes before awaits. A fixed completion operation compares
+the complete predecessor under the writer lock, updates a running order, and
+installs its Source-compatible acceptance and health derivatives atomically.
+Retain private original/digest fences, rollback and terminal-state behavior.
+Lost acknowledgements stay unknown and never authorize an execution/payment retry.
+Use dedicated finite completion-packet bounds without raising small setters.
+
+Health consumes recorded cohort labels and bounded marker sizes rather than
+extracting receipts from full paid answers. Intake follows SQLite first-key
+semantics and new writes share the Source classifier. Missing completion metadata
+refuses health; labels never establish financial settlement. Keep the complete
+writer closed until remaining producer, repair, current-domain and operational
+migration gates pass.

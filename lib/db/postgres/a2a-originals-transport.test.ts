@@ -49,3 +49,28 @@ it('never retries a checkpoint after an unknown or malformed write response',asy
  await expect(native.markA2aOrderPaymentStarted(id,at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call).toHaveBeenCalledOnce();
  c.call.mockClear();c.call.mockRejectedValue(new PostgresDomainWriteOutcomeUnknown());await expect(native.markA2aOrderResultSaving(id,at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call).toHaveBeenCalledOnce();
 });
+
+function retained(){const r=row();for(const field of ['package_data','request_data','response_data','resolution_data'] as const)if(r[field]!==null)(r as Record<string,unknown>)[field]=JSON.stringify(r[field]);return {storeId:'3821e833-f4ca-44d3-a944-0cf892ab0b85',orderWire:JSON.stringify(r)};}
+it('captures postpaid JSON before awaits and submits one atomic completion packet',async()=>{
+ const c=channel(),native=composePostgresA2aOriginals(c.port,false),snapshot=retained(),response={answer:'paid\0answer\ud800'},id=fixture().order.id;
+ c.call.mockImplementation(async(operation)=>operation==='a2aOriginalSnapshot'?snapshot:true);
+ const result=native.completeA2aOrder(id,response,at);response.answer='changed after admission';expect(await result).toBe(true);
+ expect(c.call.mock.calls.map(call=>call[0])).toEqual(['a2aOriginalSnapshot','a2aComplete']);const packet=JSON.parse(c.call.mock.calls[1][1][1]);
+ expect(JSON.parse(packet.responseWire).answer).toBe('paid\0answer\ud800');expect(packet.beforeWire).toBe(snapshot.orderWire);expect(packet.projection.health.cohort).toBe('unknown');expect(JSON.parse(packet.projection.orderWire)).toMatchObject({status:'completed',response_data:packet.responseWire,error_code:null,updated_at:at});
+});
+it('refuses readonly completion before getters, and invalid selectors/bounds before SQL',async()=>{
+ const c=channel(),id=fixture().order.id;let reads=0;const response={get answer(){reads++;return 'private';}};
+ await expect(composePostgresA2aOriginals(c.port,true).completeA2aOrder(id,response,at)).rejects.toThrow();expect(reads).toBe(0);
+ const native=composePostgresA2aOriginals(c.port,false);await expect(native.completeA2aOrder(id,response,'invalid')).rejects.toThrow();expect(reads).toBe(0);
+ await expect(native.completeA2aOrder(id,{answer:'x'.repeat(4000001)},at)).rejects.toThrow();expect(c.call).not.toHaveBeenCalled();
+});
+it('preserves raw order JSON on reads and does not overwrite a finished or stale original',async()=>{
+ const c=channel(),id=fixture().order.id,native=composePostgresA2aOriginals(c.port,false),snapshot=retained(),r=JSON.parse(snapshot.orderWire);r.response_data=JSON.stringify({answer:'retained\0\ud800'});r.status='completed';
+ c.call.mockResolvedValue({...snapshot,orderWire:JSON.stringify(r)});expect((await native.getA2aOrder(id))?.response?.answer).toBe('retained\0\ud800');expect(await native.completeA2aOrder(id,{answer:'replacement'},at)).toBe(false);expect(c.call.mock.calls.every(call=>call[0]==='a2aOriginalSnapshot')).toBe(true);
+ c.call.mockImplementation(async(operation)=>operation==='a2aOriginalSnapshot'?snapshot:false);expect(await native.completeA2aOrder(id,{answer:'stale'},at)).toBe(false);
+});
+it('reports an unknown completion after malformed ACK or disposal without retrying',async()=>{
+ const c=channel(),id=fixture().order.id,native=composePostgresA2aOriginals(c.port,false);c.call.mockImplementation(async(operation)=>operation==='a2aOriginalSnapshot'?retained():{});
+ await expect(native.completeA2aOrder(id,{answer:'saved'},at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(call=>call[0]==='a2aComplete')).toHaveLength(1);
+ c.call.mockClear();c.call.mockImplementation(async(operation)=>{if(operation==='a2aOriginalSnapshot')return retained();c.state.closed=true;return true;});await expect(native.completeA2aOrder(id,{answer:'saved'},at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(call=>call[0]==='a2aComplete')).toHaveLength(1);
+});

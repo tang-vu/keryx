@@ -1147,3 +1147,39 @@ JSONB cell cannot represent. Preserve those original wires or refuse the payload
 before settlement; never discover that incompatibility after a debit. These ports
 do not admit the generic worker producer, pending-owner proof/session association,
 full application writer, production load/startup or cutover.
+
+### Raw paid A2A response and atomic completion
+
+Fresh native `a2a_orders.response_data` and `resolution_data` use PostgreSQL
+`json`. Preserve JSON escape bytes for NUL and unpaired surrogates; JSONB cannot
+represent every valid response produced after payment. Fixed queue/claim reads
+return `json`, and the direct order read carries raw JSON cells as bounded TEXT
+inside its protected snapshot. Request/package JSONB compatibility still requires
+prepayment qualification before the complete producer can be admitted.
+
+The fixed completion port captures the response before its first await. A
+read-only snapshot preserves raw cells and the acceptance store ID. The writer
+compares the complete predecessor tuple after taking the native writer lock,
+updates only a running order, and replaces its acceptance original and health
+metadata in the same transaction. The existing private projection fence checks
+all original fields and digests. An invalid derivative rolls the entire update
+back. A competing completion returns false; a missing or finished order is never
+reopened. An uncertain write acknowledgement remains unknown with no automatic
+retry, payment or worker execution.
+
+Keep the existing 4,000,000-byte original bound. The completion packet has its own
+16MiB UTF-8 bound and 32MiB encoded channel-input bound for the old/new nested
+original wires; small checkpoint and authentication limits are unchanged.
+
+Health reads consume only a small recorded cohort derivative, bound to the same
+original at intake/commit. SQLite intake uses the actual first-key health
+expressions; new JSON.stringify writes use the shared Source cohort classifier.
+Keep ordinary, recovered and unknown separate without constructing receipts or
+hydrating paid answer bodies for health. A completed original with missing
+metadata refuses the observation. Cohort labels grant no settlement authority.
+Legacy IDs may retain health observations but cannot mint an acceptance binding.
+
+The genuine observation factory still cannot mutate these protocols. Repair,
+producer/pending-owner/managed/browser integration, the complete application
+writer, fresh live baseline/final delta, startup/load and authorized cutover remain
+separate migration requirements.
