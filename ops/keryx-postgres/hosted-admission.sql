@@ -11,7 +11,7 @@ BEGIN
  selection:=selector::jsonb;
  IF jsonb_typeof(selection) IS DISTINCT FROM 'object' OR selection-'sourceId'-'identity'<>'{}'::jsonb OR NOT(selection?'sourceId' AND selection?'identity')
   OR selection->'sourceId'<>'null'::jsonb AND(jsonb_typeof(selection->'sourceId')<>'string' OR keryx_storage.a2a_utf16_length(selection->>'sourceId') NOT BETWEEN 1 AND 256)
-  OR selection->'identity'<>'null'::jsonb AND(jsonb_typeof(selection->'identity')<>'object' OR selection->'identity'-'network'-'payer'-'authorizationId'<>'{}'::jsonb
+  OR selection->'identity'<>'null'::jsonb AND(jsonb_typeof(selection->'identity')<>'object' OR (selection->'identity')-'network'-'payer'-'authorizationId'<>'{}'::jsonb
    OR jsonb_typeof(selection#>'{identity,network}') IS DISTINCT FROM 'string' OR jsonb_typeof(selection#>'{identity,payer}') IS DISTINCT FROM 'string'
    OR jsonb_typeof(selection#>'{identity,authorizationId}') IS DISTINCT FROM 'string') THEN RAISE EXCEPTION 'source policy selector refused';END IF;
  -- These two baseline PostgreSQL columns are booleans; Source observes SQLite
@@ -52,11 +52,11 @@ BEGIN
   policy_wire:=packet->>'policyWire';
   IF policy_wire IS NULL OR octet_length(policy_wire)>2048 OR policy_wire::jsonb IS DISTINCT FROM packet->'policySnapshot'
    OR packet#>>'{policySnapshot,sourceId}' IS DISTINCT FROM selection->>'sourceId'
-   OR packet->'policySnapshot'-'sourceId'-'receipt'-'kind'<>'{}'::jsonb OR packet#>>'{policySnapshot,kind}' NOT IN('fetch','citation','operating-fee')
+   OR (packet->'policySnapshot')-'sourceId'-'receipt'-'kind'<>'{}'::jsonb OR packet#>>'{policySnapshot,kind}' NOT IN('fetch','citation','operating-fee')
    THEN RAISE EXCEPTION 'source policy capture refused';END IF;
  ELSE IF packet->'policyWire'<>'null'::jsonb OR selection->'sourceId'<>'null'::jsonb THEN RAISE EXCEPTION 'source policy capture refused';END IF;END IF;
  IF operation='purchase' AND selection->'identity'<>'null'::jsonb AND NOT(packet->>'existing')::boolean AND purchase_row IS NOT NULL
-  AND jsonb_typeof(packet->'purchaseRow')='object' AND purchase_row IS NOT DISTINCT FROM packet->'purchaseRow'-'issued_data' THEN
+  AND jsonb_typeof(packet->'purchaseRow')='object' AND purchase_row IS NOT DISTINCT FROM (packet->'purchaseRow')-'issued_data' THEN
   -- Two identical Source BEGIN IMMEDIATE claims both succeed: the later one is
   -- an exact replay. Reconstruct only the first writer's known changes. Never
   -- absorb another source/history/signing-original change into this exception.
