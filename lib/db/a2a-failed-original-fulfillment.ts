@@ -1,11 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { ArcNetworkProfile } from "../arc-network-profile";
-import type { A2aOrder, A2aOrderResolution } from "../a2a/order";
+import type { A2aOrder } from "../a2a/order";
 import { validateA2aOriginalClaim, matchesA2aOriginalBinding } from "../a2a/original-claim";
 import { canonicalJson } from "../canonical-json";
 import {
   fulfillmentAuthoritySchema, fulfillmentClaimInputSchema, fulfillmentCompletionInputSchema,
-  fulfillmentObjectSha256, matchesFailedFulfillmentOriginal, validateFulfilledQueryRun,
+  matchesFailedFulfillmentOriginal, validateFulfilledQueryRun,
   type A2aFulfillmentClaim, type A2aFulfillmentCompletion, type A2aFulfillmentRecord,
   type FulfillmentAuthority, type FulfillmentClaimInput, type FulfillmentCompletionInput,
 } from "../a2a/failed-original-fulfillment-protocol";
@@ -15,7 +15,7 @@ import { writeSqliteQueryRun } from "./query-run-record";
 import type { QueryRun } from "../types";
 import type { FulfillmentEvidenceCapability } from "../a2a/fulfillment-supplement-evidence";
 import { a2aResponseFromRun, quoteFromA2aOrder } from "../a2a/result";
-import { historicalNativeEvidenceCsv } from "./a2a-historical-evidence-csv";
+import { fulfillmentResolution as resolution, fulfilledOriginalOrders } from "../a2a/fulfillment-delivery";
 
 const same = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
 const originalId = (value: string) => { if (!/^a2a_[a-f0-9]{64}$/.test(value)) throw new Error("Fulfillment original refused"); return value; };
@@ -70,43 +70,6 @@ export function claimSqliteA2aFulfillment(db: DatabaseSync, raw: FulfillmentClai
     return claim;
   });
 }
-function resolution(claim: A2aFulfillmentClaim, completion: FulfillmentCompletionInput): A2aOrderResolution {
-  return { action: "fulfill_failed_original", actor: "operator-cli", reason: "verified_failed_original_fulfilled",
-    resolvedAt: completion.completedAt,
-    evidence: { executionJournalVersion: 1, paymentBoundaryCrossed: false, resultSaveBoundaryCrossed: true,
-      creatorAttempts: 0, settledCreatorMicros: 0, pendingCreatorMicros: 0, failedCreatorMicros: 0,
-      simulatedCreatorMicros: 0, queryRunFound: true },
-    fulfillment: { claimId: claim.claimId, originalFailureSha256: claim.authority.originalEvidenceSha256,
-      authoritySha256: fulfillmentObjectSha256(claim.authority), providerLedgerSha256: completion.providerLedgerSha256,
-      runSha256: completion.runSha256 } };
-}
-/** One complete historical presentation, only after native result validation. V1/V2
- * committed the run, not a presentation stamp. Never remove fields from the stored
- * response: all money, evidence, identity and unknown fields still compare exactly. */
-function preCslNativeResponse(run: QueryRun, response: ReturnType<typeof a2aResponseFromRun>) {
-  if (run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v1" &&
-      run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v2") return null;
-  const { bibtex, ris, evidenceCsv } = response.researchExports;
-  return { ...response, researchExports: { bibtex, ris, evidenceCsv },
-    ...(response.bibliography ? { bibliographyExports: response.bibliography.bibliographyExports } : {}) };
-}
-/** Older original receipts predate the public checkpoint-unavailable marker.
- * Construct only that complete historical expected shape; never normalize the
- * stored response or discard a present checkpoint, money, evidence or unknown field. */
-function preCheckpointNativeResponse<T extends { readCheckpoints: unknown }>(run: QueryRun, response: T) {
-  if (run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v1" &&
-      run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v2") return null;
-  const { readCheckpoints, ...historical } = response;
-  return same(readCheckpoints, { status: "unavailable" }) ? historical : null;
-}
-/** Native V1/V2 committed their run before extraction-scope CSV columns existed.
- * Construct that complete historical CSV only on the expected side, after native
- * authority/run validation. Every stored field still participates in equality. */
-function preReadScopeNativeResponse(run: QueryRun, response: ReturnType<typeof a2aResponseFromRun>) {
-  if (run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v1" &&
-      run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v2") return null;
-  return { ...response, researchExports: { ...response.researchExports, evidenceCsv: historicalNativeEvidenceCsv(run) } };
-}
 function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
   readOrder: (row: Record<string, unknown>) => A2aOrder, evidenceCapability?: FulfillmentEvidenceCapability): boolean {
   const record = readRecord(db, authority.original.id);
@@ -123,22 +86,7 @@ function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
     !noCreatorAttempts(db, order.id)) return false;
   try { validateFulfilledQueryRun(run, record.claim, record.completion, evidenceCapability); }
   catch { return false; }
-  const expected = { ...record.claim.failedOrder, status: "completed", errorCode: null,
-    resultSavingAt: record.completion.completedAt, updatedAt: record.completion.completedAt,
-    resolution: resolution(record.claim, record.completion),
-    response: a2aResponseFromRun(run, quoteFromA2aOrder(record.claim.failedOrder),
-      { acceptedAt: record.claim.failedOrder.createdAt, startedAt: record.claim.failedOrder.startedAt }) };
-  const preReadScope = preReadScopeNativeResponse(run, expected.response);
-  for (const response of preReadScope === null ? [expected.response] : [expected.response, preReadScope]) {
-    if (same(order, { ...expected, response })) return true;
-    const legacyResponse = preCslNativeResponse(run, response);
-    if (legacyResponse !== null && same(order, { ...expected, response: legacyResponse })) return true;
-    const historicalResponse = preCheckpointNativeResponse(run, response);
-    if (historicalResponse !== null && same(order, { ...expected, response: historicalResponse })) return true;
-    const historicalPreCsl = legacyResponse === null ? null : preCheckpointNativeResponse(run, legacyResponse);
-    if (historicalPreCsl !== null && same(order, { ...expected, response: historicalPreCsl })) return true;
-  }
-  return false;
+  return fulfilledOriginalOrders(run, record.claim, record.completion).some(expected => same(order, expected));
 }
 /** One native transaction inserts the actual run once and commits only the matching failed
  * original. A rollback cannot strand a saved run or erase the immutable failure snapshot. */

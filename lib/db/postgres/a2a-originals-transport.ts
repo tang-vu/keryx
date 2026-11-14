@@ -34,6 +34,7 @@ function order(raw:unknown):A2aOrder{
  if(fields.some(field=>!Object.hasOwn(r,field)))throw unavailable();
  return {id:String(r.id),queryId:String(r.query_id),authorizationId:String(r.authorization_id),requestHash:String(r.request_hash),payer:String(r.payer),payee:String(r.payee),amountUsdc:Number(r.amount_usdc),creatorBudgetUsdc:Number(r.creator_budget_usdc),serviceFeeUsdc:Number(r.service_fee_usdc),researchMode:r.research_mode==='quick'?'quick':'deep',researchPackage:(r.package_data??null) as A2aOrder['researchPackage'],status:r.status as A2aOrder['status'],transaction:String(r.transaction_id),request:(r.request_data??null) as A2aOrder['request'],startedAt:r.started_at==null?null:String(r.started_at),workerId:r.worker_id==null?null:String(r.worker_id),executionJournalVersion:r.execution_journal_version===1?1:null,paymentStartedAt:r.payment_started_at==null?null:String(r.payment_started_at),resultSavingAt:r.result_saving_at==null?null:String(r.result_saving_at),response:(r.response_data??null) as A2aOrder['response'],errorCode:r.error_code==null?null:String(r.error_code),resolution:(r.resolution_data??null) as A2aOrder['resolution'],createdAt:String(r.created_at),updatedAt:String(r.updated_at)};
 }
+export { order as decodePostgresA2aOrder };
 /** Qualified fixed ports only. Construction grants no installed provenance,
  * original purchase, provider execution, ownership association or write retry. */
 export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOnly:boolean,rawIdentity?:StorageIdentity):PostgresA2aOriginalsPort{
