@@ -56,6 +56,29 @@ BEGIN
  SELECT * INTO o FROM public.a2a_orders WHERE id=b->>'id';
  RETURN to_jsonb(FOUND AND keryx_storage.a2a_original_matches(o,b) AND keryx_storage.a2a_original_settled(o,b));
 END;$$;
+<<<<<<< HEAD
+=======
+CREATE FUNCTION public.storage_a2a_original_unfinished(expected jsonb,digest text,take integer) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+DECLARE o public.a2a_orders;rows json:='[]'::json;item json;bytes bigint:=64;
+BEGIN
+ IF current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION 'native original readonly transaction required';END IF;
+ PERFORM keryx_storage.require_operation(expected,digest,'a2a_original_unfinished');
+ IF take IS NULL OR take NOT BETWEEN 1 AND 500 THEN RAISE EXCEPTION 'native unfinished bound refused';END IF;
+ IF EXISTS(SELECT 1 FROM public.a2a_orders a LEFT JOIN keryx_storage.a2a_original_time_projection t ON t.order_id=a.id
+  WHERE a.status IN('running','failed') AND t.order_id IS NULL) THEN RAISE EXCEPTION 'native unfinished Source time unavailable';END IF;
+ FOR o IN SELECT a.* FROM public.a2a_orders a JOIN keryx_storage.a2a_original_time_projection t ON t.order_id=a.id
+  WHERE a.status IN('running','failed') ORDER BY t.created_at COLLATE "C",a.id COLLATE "C" LIMIT take+1 LOOP
+  item:=keryx_storage.a2a_original_row(o);bytes:=bytes+octet_length(item::text)+2;IF bytes>4194304 THEN RAISE EXCEPTION 'native unfinished response bound';END IF;
+ END LOOP;
+ -- Check the complete response before aggregation. A second fixed read under
+ -- the same shared data lock avoids quadratic concatenation of private bodies.
+ WITH selected AS MATERIALIZED(SELECT a AS original,t.created_at source_created_at FROM public.a2a_orders a
+  JOIN keryx_storage.a2a_original_time_projection t ON t.order_id=a.id WHERE a.status IN('running','failed')
+  ORDER BY t.created_at COLLATE "C",a.id COLLATE "C" LIMIT take+1)
+ SELECT coalesce(json_agg(keryx_storage.a2a_original_row(original) ORDER BY source_created_at COLLATE "C",(original).id COLLATE "C"),'[]'::json) INTO rows FROM selected;
+ RETURN json_build_object('rows',rows);
+END;$$;
+>>>>>>> f69d925d (fix(storage): retain Source text ordering for native queue)
 CREATE FUNCTION public.storage_a2a_original_execution(expected jsonb,digest text,execution text,selector text,detail text,started text) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE b jsonb;o public.a2a_orders;result json;operation text;changed bigint;packet jsonb;p jsonb;store text;resolution jsonb;e jsonb;field text;actual record;budget_micros double precision;r jsonb;owned boolean;owner_packet jsonb;owner_session jsonb;owner_original jsonb;stamp bigint;
 BEGIN
