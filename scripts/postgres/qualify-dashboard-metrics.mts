@@ -9,6 +9,7 @@ import { assembleNativePostgresBusinessCore } from '../../lib/db/supabase-adapte
 import { createPostgresApplicationDomainAuthority } from '../../lib/db/postgres/application-domain-authority';
 import type { PostgresApplicationDomainTransport } from '../../lib/db/postgres/application-domain-transport';
 import type { StorageIdentity } from '../../lib/db/storage-identity';
+import { heldQueryRunFixture } from './held-query-run-fixture.mts';
 export async function qualifyDashboardMetrics(input:{transport:PostgresApplicationDomainTransport;identity:StorageIdentity;ownerSql:(sql:string)=>string}){
  const db=new DatabaseSync(':memory:'),stamp='2026-01-02T03:04:05.000Z',wallet='0x'+'a6'.repeat(20),q=(s:string)=>"'"+s.replaceAll("'","''")+"'";let vectors=0;
  const native=assembleNativePostgresBusinessCore({identity:input.identity,authority:createPostgresApplicationDomainAuthority(input.transport),assertEntry:()=>{},verify:async()=>{await input.transport.applicationRead('get_sync_state',{p_key:'synthetic-dashboard-authority'});}});
@@ -21,7 +22,9 @@ export async function qualifyDashboardMetrics(input:{transport:PostgresApplicati
   const runRows=[['web',null,null,null,null],['web','',null,2,0],['web',wallet,null,3,1],['mcp',null,'codex',null,null],['mcp',null,'claude',0,0],['mcp',null,null,1,0],['mcp',null,'codex',5,2]] as const;
   for(let i=0;i<runRows.length;i++){
    const [origin,asker,client,evidence,rewarded]=runRows[i];
-   both(`INSERT INTO query_runs(id,created_at,question,budget,data,origin,asker,mcp_client,evidence_claim_count,rewarded_citation_count) VALUES('synthetic-metric-run-${i}',${q(stamp)},'synthetic',0,'{}',${q(origin)},${asker===null?'NULL':q(asker)},${client===null?'NULL':q(client)},${evidence??'NULL'},${rewarded??'NULL'});`);
+   const id='synthetic-metric-run-'+i;
+   db.exec(`INSERT INTO query_runs(id,created_at,question,budget,data,origin,asker,mcp_client,evidence_claim_count,rewarded_citation_count) VALUES(${q(id)},${q(stamp)},'synthetic',0,'{}',${q(origin)},${asker===null?'NULL':q(asker)},${client===null?'NULL':q(client)},${evidence??'NULL'},${rewarded??'NULL'});`);
+   const row=heldQueryRunFixture(db,id);pg(row.physicalSql+row.scalarSql);
   }
   for(const address of [wallet,wallet.toUpperCase(),'not-a-wallet'])both(`INSERT INTO users(wallet_address,role,display_handle,first_seen_at,last_seen_at) VALUES(${q(address)},'reader','synthetic',${q(stamp)},${q(stamp)});`);
   for(const [i,status] of ['pending','running','filled','missed','unpaid','stale','failed'].entries())both(`INSERT INTO gap_intents(id,gap_id,claim,question,failed_query_id,source_id,owner_wallet,status,created_at,updated_at) VALUES('synthetic-metric-gap-${i}','gap-${i}','synthetic','synthetic','synthetic','synthetic',${q(wallet)},${q(status)},${q(stamp)},${q(stamp)});`);
@@ -40,8 +43,15 @@ export async function qualifyDashboardMetrics(input:{transport:PostgresApplicati
   }
   // Tens of thousands of persisted answers do not become Node input rows.
   const baseline=await native.adapter.metrics();
-  pg("INSERT INTO public.query_runs(id,question,budget,data,origin) SELECT 'synthetic-metric-scale-'||g,'synthetic',0,jsonb_build_object('answer',repeat('x',4096)),'web' FROM generate_series(1,20000) g;");
+  const insert=db.prepare("INSERT INTO query_runs(id,created_at,question,budget,data,origin) VALUES(?,?,'synthetic',0,?,'web')"),raw=JSON.stringify({answer:'x'.repeat(4096)});let batch='',batchBytes=0;
+  db.exec('BEGIN');
+  for(let i=1;i<=20000;i++){
+   const id='synthetic-metric-scale-'+i;insert.run(id,stamp,raw);const row=heldQueryRunFixture(db,id),sql=row.physicalSql+row.scalarSql,size=Buffer.byteLength(sql);
+   if(batchBytes+size>524288){pg(batch);batch='';batchBytes=0;}batch+=sql;batchBytes+=size;
+  }
+  if(batch)pg(batch);db.exec('COMMIT');
   const scaled=await native.adapter.metrics();assert.equal(scaled.totalQueries,baseline.totalQueries+20000);assert.equal(scaled.guestQuestions,baseline.guestQuestions!+20000);assert.equal(scaled.totalPayments,baseline.totalPayments);assert(Buffer.byteLength(JSON.stringify(scaled))<8192);vectors++;
+  assert.deepEqual(scaled,await sqlite.metrics());vectors++;
   return {vectors,currentSqliteDashboardParity:true,settlementClassificationAndEcmascriptWhitespace:true,mcpChannelsAndEvidenceCounters:true,validNormalizedAccountAggregate:true,scaleRows:20000,resultBytes:Buffer.byteLength(JSON.stringify(scaled)),rawAnswerTransport:false,productionData:false,paidOperations:0};
  }finally{
   native.hooks.close();db.close();
