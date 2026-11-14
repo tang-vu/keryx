@@ -160,6 +160,8 @@ BEGIN
     WHEN '636f6e74657874' THEN 'context'
     WHEN '707269766174654a6f62' THEN 'privateJob'
     WHEN '707269766174655f6a6f62' THEN 'private_job'
+    WHEN '6c696e6b6564536f757263654964' THEN 'linkedSourceId'
+    WHEN '6c696e6b65645f736f757263655f6964' THEN 'linked_source_id'
    END;
    IF key_wire IS NOT NULL THEN
     value_wire:=btrim(convert_from(substring(raw FROM start_at+1 FOR pos-start_at),'UTF8'),E' \t\r\n');
