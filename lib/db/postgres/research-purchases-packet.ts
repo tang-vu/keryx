@@ -8,7 +8,7 @@ import { monthlyOrderId,monthlyOrderToRow,monthlyPurchaseId,validateMonthlyPurch
 
 const address=z.string().regex(/^0x[0-9a-fA-F]{40}$/),id=z.string().regex(/^monthly_[0-9a-f]{64}$/),requestId=z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),at=z.string().datetime({offset:true});
 const seconds=z.string().regex(/^(0|[1-9]\d{0,15})$/);
-const issued=z.object({validAfter:seconds,validBefore:seconds,expiresAt:seconds}).strict().refine(v=>BigInt(v.validBefore)-BigInt(v.validAfter)>=604800n&&BigInt(v.validBefore)-BigInt(v.validAfter)<=2592000n&&BigInt(v.expiresAt)>BigInt(v.validAfter)&&BigInt(v.expiresAt)<BigInt(v.validBefore));
+const issued=z.object({validAfter:seconds,validBefore:seconds,expiresAt:seconds}).strict().refine(v=>BigInt(v.validBefore)-BigInt(v.validAfter)>=BigInt(604800)&&BigInt(v.validBefore)-BigInt(v.validAfter)<=BigInt(2592000)&&BigInt(v.expiresAt)>BigInt(v.validAfter)&&BigInt(v.expiresAt)<BigInt(v.validBefore));
 const claimSchema=z.object({network:z.literal(ARC_MAINNET_PROFILE.networkId),asset:z.literal(ARC_MAINNET_PROFILE.usdcAddress.toLowerCase()).optional(),payer:address,payee:address,authorizationId:z.string().min(1).max(256),purpose:z.enum(['a2a','monthly','resource']),requestHash:z.string().regex(/^[0-9a-f]{64}$/),amountMicros:z.number().int().positive().max(Number.MAX_SAFE_INTEGER),requireExisting:z.boolean().optional(),issued:issued.optional(),resourceSourceId:z.string().min(1).max(256).optional(),resourceKind:z.enum(['fetch','citation','operating-fee']).optional(),sourceClaim:z.object({sourceId:z.string().min(1).max(256),receipt:sourceClaimReceiptSchema,kind:z.enum(['fetch','citation'])}).strict().optional()}).strict();
 
 /** Snapshot before the first await. PostgreSQL JSONB cannot represent NUL or an
@@ -23,7 +23,7 @@ export function captureResearchPurchaseClaim(raw:ResearchPurchaseClaim,now=Date.
  if(value.sourceClaim&&(value.purpose!=='resource'||value.resourceSourceId&&value.resourceSourceId!==value.sourceClaim.sourceId||value.resourceKind&&value.resourceKind!==value.sourceClaim.kind))throw Error('Research source claim context differs from seller resource');
  if(required&&(!value.issued||value.purpose!=='monthly'))throw Error('Issued Monthly authorization required');
  if(value.issued){const n=BigInt(Math.floor(now/1000)),a=BigInt(value.issued.validAfter),b=BigInt(value.issued.validBefore),e=BigInt(value.issued.expiresAt);
-  if(value.purpose!=='monthly'||!required&&(a<n-660n||n<=a||b<n+604800n||e<=n||e>n+660n))throw Error('Issued Monthly authorization expired or invalid');}
+  if(value.purpose!=='monthly'||!required&&(a<n-BigInt(660)||n<=a||b<n+BigInt(604800)||e<=n||e>n+BigInt(660)))throw Error('Issued Monthly authorization expired or invalid');}
  return {required,context:{sourceId:value.resourceSourceId??value.sourceClaim?.sourceId,receipt:value.sourceClaim?.receipt,kind:value.sourceClaim?.kind??value.resourceKind},row:{network:ARC_MAINNET_PROFILE.networkId,asset:ARC_MAINNET_PROFILE.usdcAddress.toLowerCase(),payer:value.payer.toLowerCase(),payee:value.payee.toLowerCase(),authorization_id:value.authorizationId.toLowerCase(),product:value.purpose,purchase_id:value.purpose==='monthly'?monthlyPurchaseId(value):a2aOrderId(value),request_hash:value.requestHash,amount_micros:value.amountMicros,issued_data:value.issued??null}};
 }
 export function captureResearchMonthly(raw:MonthlyPurchase){return validateMonthlyPurchase(capture(raw),ARC_MAINNET_PROFILE);}
