@@ -22,7 +22,7 @@ export async function qualifyPendingOwner(input:{options:PostgresConnectionOptio
  const pg=(sql:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+sql+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
  const channel=createPostgresDomainChannel(input.options,input.identity,input.digest);
  let source:Awaited<ReturnType<typeof nativePendingOwnerFixture>>|undefined,reader:ReturnType<typeof createPostgresDomainChannel>|undefined,wrong:ReturnType<typeof createPostgresDomainChannel>|undefined,admin:Client|undefined,vectors=0,imported=false;
- let originalWorker:string|null=null;
+ let originalWorker:{value:string;updated_at:string}|null=null;
  const normalize=(rows:Record<string,unknown>[])=>rows.map(row=>({...row,package_data:typeof row.package_data==='string'?JSON.parse(row.package_data):row.package_data}));
  const admission=(packet:PostgresPendingOwnerSessionPacket)=>channel.call('pendingOwnerAdmission',[JSON.stringify(packet)]);
  const list=async(packet:PostgresPendingOwnerSessionPacket,before?:{createdAt:string;id:string},id?:string)=>{
@@ -32,9 +32,12 @@ export async function qualifyPendingOwner(input:{options:PostgresConnectionOptio
   assert(source);assert.deepEqual(normalize(value.rows),normalize(source.rows(before,id)));
   assert(!JSON.stringify(value).includes('Synthetic original'));assert(value.rows.every(row=>!Object.hasOwn(row,'payer')&&!Object.hasOwn(row,'request_data')&&!Object.hasOwn(row,'response_data')));vectors++;return value;
  };
- const blocked=async()=>{for(let i=0;i<30;i++){const r=await input.contentionClient.query('SELECT count(*) n FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND pg_backend_pid()=ANY(pg_blocking_pids(pid))');if(Number(r.rows[0].n)>0)return;await new Promise(resolve=>setTimeout(resolve,10));}assert.fail('Pending owner observer did not reach native data lock');};
+ // pg_stat_activity freezes its session list inside this held transaction.
+ // Refresh it so a reconnect after a deliberate SQL refusal is observable.
+ // https://www.postgresql.org/docs/17/monitoring-stats.html
+ const blocked=async(outcome:{settled:boolean},proofExpiresAt?:number)=>{const deadline=Date.now()+4000;while(Date.now()<deadline){await input.contentionClient.query('SELECT pg_stat_clear_snapshot()');const r=await input.contentionClient.query('SELECT count(*) n FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND pg_backend_pid()=ANY(pg_blocking_pids(pid))');if(Number(r.rows[0].n)>0){assert(!outcome.settled);if(proofExpiresAt!==undefined)assert(Date.now()<proofExpiresAt,'Pending proof expired before actual data lock');return;}assert(!outcome.settled,'Pending observer terminated before actual data lock');await new Promise(resolve=>setTimeout(resolve,10));}assert.fail('Pending owner observer did not reach native data lock');};
  try{
-  const oldWorker=input.ownerSql("SELECT coalesce(to_json(value)::text,'null') FROM public.sync_state WHERE key='a2aWorker';");originalWorker=oldWorker?JSON.parse(oldWorker) as string|null:null;
+  const oldWorker=input.ownerSql("SELECT row_to_json(r)::text FROM(SELECT value,updated_at FROM public.sync_state WHERE key='a2aWorker')r;");originalWorker=oldWorker?JSON.parse(oldWorker) as typeof originalWorker:null;
   assert.equal(input.ownerSql('SELECT count(*) FROM public.pending_job_owners;'),'0');
   source=await nativePendingOwnerFixture(folder,input.identity);
   // Fixture owner imports a synthetic retained prefix. This never exercises or
@@ -77,32 +80,33 @@ export async function qualifyPendingOwner(input:{options:PostgresConnectionOptio
   // rejects admission before touching any supplied proof/getter or native SQL.
   let touched=0;const fake=new Proxy({}, {get(){touched++;throw Error('untrusted proof touched');}});
   const readPort=composePostgresPendingJobOwners(reader,input.identity,true);assert.throws(()=>readPort.assertAdmission(fake as never));await assert.rejects(readPort.assertAdmissionAsync!(fake as never));assert.equal(touched,0);vectors++;
+  const calibrationStarted=performance.now();assert.equal(await admission(source.packet(true)),true);const calibrationMs=Math.max(1,Math.ceil(performance.now()-calibrationStarted));assert(calibrationMs<=4000);const proofTtlMs=calibrationMs+400;
   // Native SQL takes its clock after actually obtaining the data lock.
   await input.contentionClient.query('BEGIN');try{
    await input.contentionClient.query('SELECT pg_advisory_xact_lock_shared(634781904177021::bigint),pg_advisory_xact_lock(634781904177022::bigint)');
-   const packet={...source.packet(true),proofExpiresAt:Date.now()+700},pending=admission(packet).then(value=>({value}),error=>({error}));await blocked();
-   await new Promise(resolve=>setTimeout(resolve,Math.max(0,packet.proofExpiresAt-Date.now()+10)));await input.contentionClient.query('COMMIT');assert('error' in await pending);assert.throws(()=>source!.current(packet));vectors++;
+   const packet={...source.packet(true),proofExpiresAt:Date.now()+proofTtlMs},outcome={settled:false},pending=admission(packet).then(value=>{outcome.settled=true;return {value};},error=>{outcome.settled=true;return {error};});await blocked(outcome,packet.proofExpiresAt);
+   await new Promise(resolve=>setTimeout(resolve,Math.max(0,packet.proofExpiresAt-Date.now()+10)));assert(Date.now()>=packet.proofExpiresAt);assert(!outcome.settled,'Pending observer timed out before release');await input.contentionClient.query('COMMIT');assert('error' in await pending);assert.throws(()=>source!.current(packet));vectors++;
   }finally{await input.contentionClient.query('ROLLBACK');}
   // Source-owner auth fault injection while the independent app data lock is
   // held: no application-side extra writer, factory bypass or payment action.
   assert(input.options.endpoint.kind==='loopback');admin=new Client({host:'127.0.0.1',port:input.options.endpoint.port,user:'postgres',database:input.options.database,password:input.options.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=5000 -c lock_timeout=1000'});await admin.connect();
   await input.contentionClient.query('BEGIN');try{
    await input.contentionClient.query('SELECT pg_advisory_xact_lock_shared(634781904177021::bigint),pg_advisory_xact_lock(634781904177022::bigint)');
-   const pending=admission(source.packet(true)).then(value=>({value}),error=>({error}));await blocked();
+   const outcome={settled:false},pending=admission(source.packet(true)).then(value=>{outcome.settled=true;return {value};},error=>{outcome.settled=true;return {error};});await blocked(outcome);
    await admin.query(`BEGIN;INSERT INTO keryx_storage.writer(transaction_id,identity_digest,operation) SELECT txid_current(),identity_digest,'revoke_web_session' FROM keryx_storage.identity;DELETE FROM public.web_sessions WHERE hash=${q(source.session.hash)};DELETE FROM keryx_storage.writer WHERE transaction_id=txid_current();COMMIT;`);
    source.owner(writer=>writer.prepare('DELETE FROM web_sessions WHERE hash=?').run(source!.session.hash));await input.contentionClient.query('COMMIT');assert('error' in await pending);assert.throws(()=>source!.current(source!.packet(true)));vectors++;
   }finally{await input.contentionClient.query('ROLLBACK');}
   await assert.rejects(reader.call('pendingOwnerList',[JSON.stringify(source.packet()),null,null]));vectors++;
   await channel.close();await assert.rejects(admission(source.packet(true)));vectors++;
   assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
-  return {vectors,actualPostgres:true,actualVerifiedSqliteCore:true,actualSourceSessionHelper:true,sourceMetadataJoinAndPagingCompared:true,exactOffsetOriginalDateText:true,allFiveSourceTimeWiresRetained:true,subMillisecondRecoveryRemainsFalse:true,bodyProjectionDeletionDoesNotEraseTimes:true,immutableCreationAndCurrentNativeTimesFenced:true,privateTimeMetadataDeniedToApp:true,escapedNulAndSurrogateResponseRetained:true,exactOriginalJoinExclusions:true,currentSessionAfterNativeLock:true,proofExpiryAfterNativeLock:true,readerObservationOnly:true,allNineIdentityFieldsCompared:true,rawNativePacketsSynthetic:true,ownerAssociationsImportedSynthetic:true,installedNativeProofQualified:false,atomicOwnedProducerQualified:false,fullWriterQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
+  return {vectors,expiryLockTiming:{calibrationMs,proofTtlMs},actualPostgres:true,actualVerifiedSqliteCore:true,actualSourceSessionHelper:true,sourceMetadataJoinAndPagingCompared:true,exactOffsetOriginalDateText:true,allFiveSourceTimeWiresRetained:true,subMillisecondRecoveryRemainsFalse:true,bodyProjectionDeletionDoesNotEraseTimes:true,immutableCreationAndCurrentNativeTimesFenced:true,privateTimeMetadataDeniedToApp:true,escapedNulAndSurrogateResponseRetained:true,exactOriginalJoinExclusions:true,currentSessionAfterNativeLock:true,proofExpiryAfterNativeLock:true,readerObservationOnly:true,allNineIdentityFieldsCompared:true,rawNativePacketsSynthetic:true,ownerAssociationsImportedSynthetic:true,installedNativeProofQualified:false,atomicOwnedProducerQualified:false,fullWriterQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
  }finally{
   try{
   await Promise.allSettled([admin?.end(),wrong?.close(),reader?.close(),channel.close()]);source?.selected.close();
   if(imported&&source){const ids=source.orders.map(o=>q(o.id)).join(',');
    // The disposable fixture owner alone removes its imported retained prefix,
    // restoring the exact retention trigger before subsequent domain checks.
-   pg(`ALTER TABLE public.pending_job_owners DISABLE TRIGGER native_pending_owner_retained;DELETE FROM public.pending_job_owners WHERE job_id IN(${ids});ALTER TABLE public.pending_job_owners ENABLE TRIGGER native_pending_owner_retained;DELETE FROM public.a2a_orders WHERE id IN(${ids});DELETE FROM public.web_sessions WHERE hash=${q(source.session.hash)};DELETE FROM public.deliverable_acceptance_store WHERE id=${q(source.storeId)};`+(originalWorker===null?"DELETE FROM public.sync_state WHERE key='a2aWorker';":`INSERT INTO public.sync_state(key,value) VALUES('a2aWorker',${q(originalWorker)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value;`));
+   pg(`ALTER TABLE public.pending_job_owners DISABLE TRIGGER native_pending_owner_retained;DELETE FROM public.pending_job_owners WHERE job_id IN(${ids});ALTER TABLE public.pending_job_owners ENABLE TRIGGER native_pending_owner_retained;DELETE FROM public.a2a_orders WHERE id IN(${ids});DELETE FROM public.web_sessions WHERE hash=${q(source.session.hash)};DELETE FROM public.deliverable_acceptance_store WHERE id=${q(source.storeId)};`+(originalWorker===null?"DELETE FROM public.sync_state WHERE key='a2aWorker';":`INSERT INTO public.sync_state(key,value,updated_at) VALUES('a2aWorker',${q(originalWorker.value)},${q(originalWorker.updated_at)}) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at;`));
   }
   }finally{for(const path of paths)if(existsSync(path))unlinkSync(path);rmdirSync(folder);}
  }

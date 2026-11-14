@@ -119,7 +119,7 @@ async function qualifyOwnedCreateProtocol(input:{options:PostgresConnectionOptio
   // rather than assuming admission finishes inside a 300ms polling sweep.
   const deadline=Date.now()+4000;
   while(Date.now()<deadline){
-   const r=await input.contentionClient.query('SELECT count(*) n FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND pg_backend_pid()=ANY(pg_blocking_pids(pid))');
+   await input.contentionClient.query('SELECT pg_stat_clear_snapshot()');const r=await input.contentionClient.query('SELECT count(*) n FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND pg_backend_pid()=ANY(pg_blocking_pids(pid))');
    if(Number(r.rows[0].n)>0){const observedAt=Date.now();assert(observedAt<proofExpiresAt,'Owned proof expired before actual data lock was observed');assert(!outcome.settled,'Owned create settled before actual data lock observation');return observedAt;}
    assert(!outcome.settled,'Owned create terminated before reaching actual data lock');
    await new Promise(resolve=>setTimeout(resolve,10));

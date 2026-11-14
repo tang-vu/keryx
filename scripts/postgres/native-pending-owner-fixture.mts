@@ -38,7 +38,7 @@ export async function nativePendingOwnerFixture(folder:string,rawIdentity:Storag
   owner(writer=>{
    const insert=writer.prepare('INSERT INTO pending_job_owners(job_id,query_id,request_hash,network,wallet,session_hash,issued_at,expires_at,admitted_at) VALUES(?,?,?,?,?,?,?,?,?)');
    for(let i=0;i<orders.length;i++){const o=orders[i];insert.run(o.id,o.queryId,i===28?'ff'.repeat(32):o.requestHash,identity.network,i===29?'0x'+'ef'.repeat(20):session.wallet,session.hash,session.issuedAt,session.expiresAt,i===30?new Date(stamp-5000).toISOString():o.createdAt);}
-   writer.prepare("INSERT INTO sync_state(key,value) VALUES('a2aWorker',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(recovery);
+   writer.prepare("INSERT INTO sync_state(key,value,updated_at) VALUES('a2aWorker',?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at").run(recovery,new Date().toISOString());
   });
   const q=(value:string)=>"'"+value.replaceAll("'","''")+"'";
   const storeId=String(selected.db.prepare('SELECT id FROM deliverable_acceptance_store').get()!.id);
