@@ -16,6 +16,8 @@ import { requirePublicProfiles,type PublicProfileActor,type PublicProfileSnapsho
 import { readPublicProfileJson } from '../../lib/profiles/public-profile-route';
 import type { KeryxDB } from '../../lib/db/keryx-db';
 import { createAssignmentRoutes } from '../../lib/owner-run-assignments/http';
+import { syntheticA2aOriginal } from '../../lib/db/a2a-original-fixture';
+import { ARC_MAINNET_PROFILE } from '../../lib/arc-network-profile';
 async function main(){
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
  const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient};publicProfile:{actor:PublicProfileActor;handle:string;snapshot:PublicProfileSnapshot;settings:PublicProfileSettings;sitemap:Array<{handle:string;updatedAt:string}>}};
@@ -206,6 +208,12 @@ async function main(){
   progress('restored-cold-admission');const restored=await application.createReadonlyApplicationStorage();assert(restored);checks++;
   try{
    assert.deepEqual(await native.assertPostgresRuntimeIdentity(restored),input.identity);checks++;
+   const original=syntheticA2aOriginal(739,ARC_MAINNET_PROFILE);
+   const hasOriginal=restored.hasA2aOriginalSettlement,unfinished=restored.listUnfinishedA2aOrders;assert(hasOriginal&&unfinished);
+   assert.equal(await hasOriginal(original.binding),true);checks++;
+   assert.equal(await hasOriginal({...original.binding,requestHash:'ab'.repeat(32)}),false);checks++;
+   assert.deepEqual(await unfinished(1),{orders:[],unreadable:0,truncated:false});checks++;
+   await assert.rejects(async()=>restored.claimNextA2aOrder('synthetic-readonly-worker',new Date().toISOString(),original.binding));checks++;
    assert.equal((await restored.metrics()).totalQueries,1);checks++;
    assert.deepEqual(await restored.accountMembership!.resolve(input.account.session,input.account.binding),input.account.snapshot);checks++;
    assert.deepEqual(await chatAccountPort(restored)!.lookup(input.chat.recipient,input.account.binding),input.chat.link);checks++;
