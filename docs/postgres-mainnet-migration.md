@@ -1179,7 +1179,35 @@ hydrating paid answer bodies for health. A completed original with missing
 metadata refuses the observation. Cohort labels grant no settlement authority.
 Legacy IDs may retain health observations but cannot mint an acceptance binding.
 
-The genuine observation factory still cannot mutate these protocols. Repair,
-producer/pending-owner/managed/browser integration, the complete application
+The genuine observation factory still cannot mutate these protocols.
+Producer/pending-owner/managed/browser integration, the complete application
 writer, fresh live baseline/final delta, startup/load and authorized cutover remain
 separate migration requirements.
+
+### Native A2A saved-run repair and no-result close
+
+The fixed recovery ports preserve current `resolveA2aOrder` semantics. Capture a
+strict current typed resolution and raw response before awaiting. Compare the
+complete predecessor row under the native writer lock; recompute all current
+non-inbound payment attempts and status totals in that same transaction. Preserve
+Source SQL rounding, exact submitted evidence counts, the creator cap and the
+journal/payment/result-save predicates. Outer TypeScript inspection still checks
+exact nonnegative micro-USDC and saved-run accounting; this SQL port does not
+replace those checks or authenticate a provider settlement.
+
+A saved-run repair requires a started running order, an existing same-id real
+QueryRun, no simulated creator amount, matching evidence and settled plus pending
+spend within the original creator allocation. A retained null journal may be
+repaired when the Source predicates match. No-result closure requires journal v1,
+no saved run, no creator attempt or execution boundary, and the caller's exact
+started-before cutoff. It clears the response and stores only the fixed reviewed
+no-result error. Neither action reopens a terminal order or runs a provider.
+
+The original response/resolution, acceptance and recorded health metadata commit
+atomically. A malformed derivative rolls back the update; an actual lost commit
+acknowledgement stays unknown without retry. Keep at most 10,000 observed creator
+attempts and safe integer totals; exceeding a bound refuses the whole operation.
+Raw postpaid response escapes remain independent of the small closed recovery
+metadata. Failed-original fulfillment has its own authority and is not admitted
+through these running-order recovery tags. Full factory/caller/producer and
+operational migration gates remain open.

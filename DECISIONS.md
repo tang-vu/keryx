@@ -9608,3 +9608,19 @@ semantics and new writes share the Source classifier. Missing completion metadat
 refuses health; labels never establish financial settlement. Keep the complete
 writer closed until remaining producer, repair, current-domain and operational
 migration gates pass.
+
+## Recompute current A2A recovery evidence under the native writer lock (2026-11-14)
+
+Use fixed saved-real-run repair and reviewed no-result close actions with captured
+current typed metadata. The native writer compares the complete predecessor,
+recomputes current creator attempts/status amounts and enforces the existing
+budget, saved-run, journal, boundary and age-cutoff predicates atomically. Keep
+Source SQL rounding separately from the unchanged stricter caller micro-USDC
+validation. A retained legacy journal can recover an existing real result; only
+v1 with no execution boundary or creator attempt can close without a result.
+
+Commit raw result/resolution and their original/health derivatives together.
+Refuse oversized evidence rather than summing partially. Preserve rollback,
+terminal-state and lost-acknowledgement behavior without retry or provider work.
+This is running-order recovery only; failed-original fulfillment, complete
+application composition and production migration retain their separate gates.

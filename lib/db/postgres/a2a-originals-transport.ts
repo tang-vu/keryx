@@ -2,14 +2,16 @@ import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
 import { canonicalJson } from '../../canonical-json';
 import { validateA2aOriginalClaim,validateA2aClaimWorker,matchesA2aOriginalBinding,type A2aOriginalClaim } from '../../a2a/original-claim';
 import { decodeUnfinishedA2aOrders,unfinishedA2aOrderLimit,type UnfinishedA2aOrders } from '../../a2a/overdue-escalation-queue';
-import type { A2aOrder } from '../../a2a/order';
+import type { A2aOrder,A2aOrderResolutionUpdate } from '../../a2a/order';
 import { PostgresStorageUnavailable } from './connection';
 import { acceptanceOriginalMetadata } from './acceptance-metadata';
+import { captureA2aRecovery } from './a2a-recovery-packet';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
 export interface PostgresA2aOriginalsPort {
  hasA2aOriginalSettlement(expected:A2aOriginalClaim):Promise<boolean>;
  getA2aOrder(id:string):Promise<A2aOrder|null>;
  completeA2aOrder(id:string,response:Record<string,unknown>,updatedAt:string):Promise<boolean>;
+ resolveA2aOrder(id:string,update:A2aOrderResolutionUpdate):Promise<boolean>;
  listUnfinishedA2aOrders(limit:number):Promise<UnfinishedA2aOrders>;
  claimA2aOriginal(expected:A2aOriginalClaim,workerId:string,startedAt:string):Promise<A2aOrder|null>;
  markA2aOrderPaymentStarted(id:string,startedAt:string):Promise<boolean>;
@@ -67,6 +69,13 @@ export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOn
    const projection=acceptanceOriginalMetadata({...retained.row,status:'completed',response_data:responseWire,error_code:null,updated_at:updatedAt},retained.storeId);
    const packet=JSON.stringify({beforeWire:retained.orderWire,responseWire,projection});if(Buffer.byteLength(packet)>16777216)throw unavailable();
    const result=await channel.call('a2aComplete',[id,packet,updatedAt]);if(channel.closed||typeof result!=='boolean')throw new PostgresDomainWriteOutcomeUnknown();return result;
+  },
+  async resolveA2aOrder(id,update){
+   live();if(readOnly)throw unavailable();selector(id);const captured=captureA2aRecovery(update);if(captured===null)return false;
+   const {input,resolutionWire,responseWire}=captured,at=input.resolution.resolvedAt,retained=await snapshot(id);live();if(retained===null||retained.row.status!=='running')return false;
+   const projection=acceptanceOriginalMetadata({...retained.row,status:input.status,response_data:responseWire,error_code:input.status==='failed'?input.errorCode:null,resolution_data:resolutionWire,updated_at:at},retained.storeId);
+   const packet=JSON.stringify({beforeWire:retained.orderWire,...(input.status==='completed'?{responseWire}:{startedBefore:input.startedBefore,errorCode:input.errorCode}),resolutionWire,projection});if(Buffer.byteLength(packet)>16777216)throw unavailable();
+   const result=await channel.call(input.status==='completed'?'a2aResolveCompleted':'a2aResolveFailed',[id,packet,at]);if(channel.closed||typeof result!=='boolean')throw new PostgresDomainWriteOutcomeUnknown();return result;
   },
   async hasA2aOriginalSettlement(raw){live();const input=binding(raw),result=await channel.call('a2aOriginalSettled',[input.wire]);live();if(typeof result!=='boolean')throw unavailable();return result;},
   async listUnfinishedA2aOrders(raw){live();const take=unfinishedA2aOrderLimit(raw),result=await channel.call('a2aOriginalUnfinished',[String(take)]);live();if(!result||typeof result!=='object'||Array.isArray(result)||Object.keys(result).join(',')!=='rows')throw unavailable();const rows=Reflect.get(result,'rows');if(!Array.isArray(rows)||rows.length>take+1)throw unavailable();return decodeUnfinishedA2aOrders(rows,take,order);},

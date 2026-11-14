@@ -74,3 +74,5 @@ it('reports an unknown completion after malformed ACK or disposal without retryi
  await expect(native.completeA2aOrder(id,{answer:'saved'},at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(call=>call[0]==='a2aComplete')).toHaveLength(1);
  c.call.mockClear();c.call.mockImplementation(async(operation)=>{if(operation==='a2aOriginalSnapshot')return retained();c.state.closed=true;return true;});await expect(native.completeA2aOrder(id,{answer:'saved'},at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(call=>call[0]==='a2aComplete')).toHaveLength(1);
 });
+
+it('refuses readonly recovery before inspecting the update',async()=>{const c=channel();let reads=0;await expect(composePostgresA2aOriginals(c.port,true).resolveA2aOrder(fixture().order.id,{get status(){reads++;return 'completed';}} as never)).rejects.toThrow();expect(reads).toBe(0);expect(c.call).not.toHaveBeenCalled();});
