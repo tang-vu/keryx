@@ -12,7 +12,7 @@ INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VA
 CREATE FUNCTION public.storage_browser_journal_evidence(expected jsonb,digest text,action text,packet_wire text) RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 <<source_browser>>
-DECLARE operation text;packet jsonb;selected jsonb;snapshot jsonb;controls jsonb;wire text;wire_sha text;
+DECLARE browser_writer boolean:=false;signing_writer boolean:=false;operation text;packet jsonb;selected jsonb;snapshot jsonb;controls jsonb;wire text;wire_sha text;
  i public.browser_authorization_intents;b public.browser_journal_bindings;e public.payment_events;after_e public.payment_events;
  original public.browser_signing_originals;q public.browser_signing_queries;n public.browser_signing_namespaces;g public.session_grants;
  raw_payment keryx_storage.payment_event_originals;before_wire text;current_json json;updated_json json;current_projection jsonb;
@@ -36,7 +36,7 @@ BEGIN
  IF jsonb_typeof(packet) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'native browser packet refused';END IF;
  SELECT coalesce((SELECT active FROM public.browser_journal_control WHERE id=1),false),coalesce((SELECT active FROM public.browser_signing_v2_control WHERE id=1),false) INTO active,signing_active;
  IF action='control' THEN RETURN to_json(active);END IF;
- IF action='grant-expired' AND active THEN PERFORM keryx_storage.leave_operation();RETURN 'true'::json;END IF;
+ IF action='grant-expired' AND active THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'true'::json;END IF;
  IF action IN('grant-get','grant-add','grant-release','grant-delete','grant-revoke','grant-expired') THEN
   IF action='grant-expired' THEN
    IF (packet-'now'='{}'::jsonb AND jsonb_typeof(packet->'now')='number') IS NOT TRUE THEN RAISE EXCEPTION 'native grant expiry input refused';END IF;
@@ -46,19 +46,19 @@ BEGIN
    SELECT * INTO g FROM public.session_grants WHERE session_id=packet->>'sessionId';
    IF action='grant-get' THEN RETURN CASE WHEN FOUND THEN to_json(g) ELSE NULL::json END;END IF;
    IF action='grant-delete' THEN
-    IF active THEN INSERT INTO public.browser_journal_writer VALUES(txid_current()) ON CONFLICT DO NOTHING;UPDATE public.session_grants SET expiry=0 WHERE session_id=packet->>'sessionId';
+    IF active THEN INSERT INTO public.browser_journal_writer VALUES(txid_current());browser_writer:=true;UPDATE public.session_grants SET expiry=0 WHERE session_id=packet->>'sessionId';
     ELSE DELETE FROM public.session_grants WHERE session_id=packet->>'sessionId';END IF;
    ELSE
     IF (jsonb_typeof(packet->'grantEpoch')='string' AND jsonb_typeof(packet->'sessAddr')='string') IS NOT TRUE THEN RAISE EXCEPTION 'native grant original selector refused';END IF;
     IF g.session_id IS NULL OR g.grant_epoch IS DISTINCT FROM packet->>'grantEpoch' OR translate(g.sess_addr,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz') IS DISTINCT FROM translate(packet->>'sessAddr','ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz') THEN
-     PERFORM keryx_storage.leave_operation();RETURN CASE WHEN action='grant-release' THEN 'true'::json ELSE 'false'::json END;
+     IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN CASE WHEN action='grant-release' THEN 'true'::json ELSE 'false'::json END;
     END IF;
     IF action='grant-revoke' THEN
-     IF active THEN INSERT INTO public.browser_journal_writer VALUES(txid_current()) ON CONFLICT DO NOTHING;UPDATE public.session_grants SET expiry=0 WHERE session_id=g.session_id;
+     IF active THEN INSERT INTO public.browser_journal_writer VALUES(txid_current());browser_writer:=true;UPDATE public.session_grants SET expiry=0 WHERE session_id=g.session_id;
      ELSE DELETE FROM public.session_grants WHERE session_id=g.session_id;END IF;
-     PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
+     IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
     END IF;
-    IF action='grant-add' AND g.expiry<=floor(extract(epoch FROM clock_timestamp())*1000) THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+    IF action='grant-add' AND g.expiry<=floor(extract(epoch FROM clock_timestamp())*1000) THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
     IF jsonb_typeof(packet->'amount') IS DISTINCT FROM 'number' THEN RAISE EXCEPTION 'native grant amount refused';END IF;numeric_amount:=(packet->>'amount')::double precision;
     before_number:=CASE WHEN action='grant-add' THEN g.spent+numeric_amount ELSE g.spent-numeric_amount END;
     -- SQLite ROUND(x,6) rounds the actual IEEE binary value, not a shortest
@@ -71,14 +71,14 @@ BEGIN
     numerator:=mantissa*1000000*power(2::numeric,greatest(binary_exponent,0));denominator:=power(2::numeric,greatest(-binary_exponent,0));
     quotient:=div(numerator,denominator);IF mod(numerator,denominator)*2>=denominator THEN quotient:=quotient+1;END IF;
     rounded_grant:=(CASE WHEN get_bit(float_bits,0)=1 THEN -quotient ELSE quotient END/1000000)::double precision;
-    IF action='grant-add' AND rounded_grant>g.cap THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+    IF action='grant-add' AND rounded_grant>g.cap THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
     -- These two legacy Source methods never acquire a browser writer. Preserve
     -- their real matched-row refusal while active, including zero-row results.
     IF active THEN RAISE EXCEPTION 'browser journal writer required';END IF;
     UPDATE public.session_grants SET spent=CASE WHEN action='grant-add' THEN rounded_grant ELSE greatest(0::double precision,rounded_grant) END WHERE session_id=g.session_id;
    END IF;
   END IF;
-  PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
+  IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
  END IF;
  IF action='history' THEN
   IF (packet-ARRAY['signer','afterNonce','limit']='{}'::jsonb AND packet->>'signer' ~ '^0x[0-9a-f]{40}$' AND(packet->>'afterNonce'='' OR packet->>'afterNonce' ~ '^0x[0-9a-f]{64}$') AND jsonb_typeof(packet->'limit')='number' AND packet->>'limit' ~ '^[1-9][0-9]?$') IS NOT TRUE THEN RAISE EXCEPTION 'Withdrawal payment history unavailable';END IF;
@@ -102,30 +102,30 @@ BEGIN
   verified:=packet->'verified';p:=verified->'policy';input_proof:=packet->>'proofWire';
   IF (packet-'sessionId'-'verified'-'proofWire'='{}'::jsonb AND jsonb_typeof(p)='object' AND jsonb_typeof(packet->'sessionId')='string' AND octet_length(packet->>'sessionId') BETWEEN 1 AND 1024 AND input_proof IS NOT NULL AND octet_length(input_proof)<=8192 AND input_proof::jsonb=jsonb_build_object('policy',p,'signature',verified->'signature')
    AND p->>'protocol'='durable-v2' AND p->>'service'='https://keryx.cc' AND verified->>'namespace' ~ '^0x[0-9a-f]{64}$' AND verified->>'proofDigest' ~ '^0x[0-9a-f]{64}$' AND verified->>'signature' ~ '^0x[0-9a-f]{130}$') IS NOT TRUE THEN RAISE EXCEPTION 'native browser verified query capture refused';END IF;
-  IF NOT(active AND signing_active) THEN PERFORM keryx_storage.leave_operation();RETURN '{"status":"inactive"}'::json;END IF;
+  IF NOT(active AND signing_active) THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '{"status":"inactive"}'::json;END IF;
   FOR field IN SELECT unnest(ARRAY['owner','signer']) LOOP IF p->>field !~ '^0x[0-9a-f]{40}$' THEN RAISE EXCEPTION 'native browser query identity refused';END IF;END LOOP;
   FOR field IN SELECT unnest(ARRAY['policyId','requestNonce','questionDigest']) LOOP IF p->>field !~ '^0x[0-9a-f]{64}$' THEN RAISE EXCEPTION 'native browser query digest refused';END IF;END LOOP;
   FOR field IN SELECT unnest(ARRAY['queryCeilingMicros','lifetimeCeilingMicros','jobLimit','expiresAt']) LOOP IF coalesce(p->>field,'') !~ '^[1-9][0-9]{0,15}$' OR (p->>field)::numeric>9007199254740991 THEN RAISE EXCEPTION 'native browser query number refused';END IF;END LOOP;
   PERFORM (p->>'queryId')::uuid;PERFORM (p->>'grantEpoch')::uuid;
   SELECT * INTO q FROM public.browser_signing_queries WHERE query_id=p->>'queryId' OR namespace=verified->>'namespace' AND(request_nonce=p->>'requestNonce' OR policy_id=p->>'policyId') LIMIT 1;
   IF FOUND THEN
-   PERFORM keryx_storage.leave_operation();IF q.query_id=p->>'queryId' AND q.namespace=verified->>'namespace' AND q.session_id=packet->>'sessionId' AND q.proof_digest=verified->>'proofDigest' THEN RETURN json_build_object('status','admitted','namespace',q.namespace,'queryId',q.query_id);END IF;RETURN '{"status":"refused"}'::json;
+   IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();IF q.query_id=p->>'queryId' AND q.namespace=verified->>'namespace' AND q.session_id=packet->>'sessionId' AND q.proof_digest=verified->>'proofDigest' THEN RETURN json_build_object('status','admitted','namespace',q.namespace,'queryId',q.query_id);END IF;RETURN '{"status":"refused"}'::json;
   END IF;
   SELECT * INTO g FROM public.session_grants WHERE session_id=packet->>'sessionId';
   scaled:=g.cap::double precision*1000000;rounded:=floor(scaled);IF scaled-rounded>=0.5 THEN rounded:=rounded+1;END IF;
-  IF g.session_id IS NULL OR lower(g.owner_addr) IS DISTINCT FROM p->>'owner' OR lower(g.sess_addr) IS DISTINCT FROM p->>'signer' OR g.grant_epoch IS DISTINCT FROM p->>'grantEpoch' OR g.expiry<=floor(extract(epoch FROM clock_timestamp())*1000) OR (p->>'expiresAt')::bigint<=floor(extract(epoch FROM clock_timestamp())*1000) OR (p->>'expiresAt')::bigint>g.expiry THEN PERFORM keryx_storage.leave_operation();RETURN '{"status":"refused"}'::json;END IF;
+  IF g.session_id IS NULL OR lower(g.owner_addr) IS DISTINCT FROM p->>'owner' OR lower(g.sess_addr) IS DISTINCT FROM p->>'signer' OR g.grant_epoch IS DISTINCT FROM p->>'grantEpoch' OR g.expiry<=floor(extract(epoch FROM clock_timestamp())*1000) OR (p->>'expiresAt')::bigint<=floor(extract(epoch FROM clock_timestamp())*1000) OR (p->>'expiresAt')::bigint>g.expiry THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '{"status":"refused"}'::json;END IF;
   IF rounded<0 OR rounded>9007199254740991 OR abs(scaled-rounded)>=0.000001 THEN RAISE EXCEPTION 'invalid browser signing capacity';END IF;
-  IF (p->>'lifetimeCeilingMicros')::bigint>rounded::bigint THEN PERFORM keryx_storage.leave_operation();RETURN '{"status":"refused"}'::json;END IF;
+  IF (p->>'lifetimeCeilingMicros')::bigint>rounded::bigint THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '{"status":"refused"}'::json;END IF;
   SELECT * INTO n FROM public.browser_signing_namespaces WHERE namespace=verified->>'namespace';allocated:=coalesce(n.allocated_micro,0);jobs:=coalesce(n.jobs,0);amount:=(p->>'queryCeilingMicros')::bigint;
-  IF amount>(p->>'lifetimeCeilingMicros')::bigint OR allocated+amount>9007199254740991 OR allocated+amount>(p->>'lifetimeCeilingMicros')::bigint OR jobs+1>9007199254740991 OR jobs+1>(p->>'jobLimit')::bigint THEN PERFORM keryx_storage.leave_operation();RETURN '{"status":"refused"}'::json;END IF;
+  IF amount>(p->>'lifetimeCeilingMicros')::bigint OR allocated+amount>9007199254740991 OR allocated+amount>(p->>'lifetimeCeilingMicros')::bigint OR jobs+1>9007199254740991 OR jobs+1>(p->>'jobLimit')::bigint THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '{"status":"refused"}'::json;END IF;
   IF n.namespace IS NOT NULL AND ROW(n.owner,n.signer,n.service,n.network) IS DISTINCT FROM ROW(p->>'owner',p->>'signer',p->>'service','eip155:5042002') THEN RAISE EXCEPTION 'browser signing namespace mismatch';END IF;
   INSERT INTO public.browser_signing_namespaces(namespace,owner,signer,service,network,ceiling_micro,job_limit,allocated_micro,jobs,proof) VALUES(verified->>'namespace',p->>'owner',p->>'signer',p->>'service','eip155:5042002',(p->>'lifetimeCeilingMicros')::bigint,(p->>'jobLimit')::bigint,allocated+amount,jobs+1,input_proof)
    ON CONFLICT(namespace) DO UPDATE SET ceiling_micro=excluded.ceiling_micro,job_limit=excluded.job_limit,allocated_micro=excluded.allocated_micro,jobs=excluded.jobs,proof=excluded.proof;
   INSERT INTO public.browser_signing_queries(query_id,namespace,policy_id,request_nonce,session_id,grant_epoch,proof,proof_digest,ceiling_micro,spent_micro) VALUES(p->>'queryId',verified->>'namespace',p->>'policyId',p->>'requestNonce',packet->>'sessionId',p->>'grantEpoch',input_proof,verified->>'proofDigest',amount,0);
-  PERFORM keryx_storage.leave_operation();RETURN json_build_object('status','admitted','namespace',verified->>'namespace','queryId',p->>'queryId');
+  IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN json_build_object('status','admitted','namespace',verified->>'namespace','queryId',p->>'queryId');
  END IF;
 
- IF action IN('grant','activate') THEN INSERT INTO public.browser_journal_writer VALUES(txid_current()) ON CONFLICT DO NOTHING;END IF;
+ IF action IN('grant','activate') THEN INSERT INTO public.browser_journal_writer VALUES(txid_current());browser_writer:=true;END IF;
  IF action='grant' THEN
   p:=packet->'grant';signer:=lower(p->>'sessAddr');cap:=(packet->>'capMicros')::bigint;
   IF cap<0 OR cap>9007199254740991 OR p->>'sessAddr' !~* '^0x[0-9a-f]{40}$' OR (p->>'cap')::double precision*1000000-cap>=0.000001 OR abs((p->>'cap')::double precision*1000000-cap)>=0.000001 THEN RAISE EXCEPTION 'native browser grant capacity refused';END IF;
@@ -137,10 +137,10 @@ BEGIN
   ELSE spent:=0;END IF;
   INSERT INTO public.session_grants(session_id,sess_addr,owner_addr,cap,spent,expiry,tx_hash,grant_epoch) VALUES(p->>'sessionId',p->>'sessAddr',p->>'ownerAddr',(p->>'cap')::double precision,spent::double precision/1000000,(p->>'expiry')::bigint,p->>'txHash',p->>'grantEpoch')
    ON CONFLICT(session_id) DO UPDATE SET sess_addr=excluded.sess_addr,owner_addr=excluded.owner_addr,cap=excluded.cap,spent=excluded.spent,expiry=excluded.expiry,tx_hash=excluded.tx_hash,grant_epoch=excluded.grant_epoch;
-  PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
+  IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
  END IF;
  IF action='activate' THEN
-  IF active THEN PERFORM keryx_storage.leave_operation();RETURN 'true'::json;END IF;
+  IF active THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'true'::json;END IF;
   IF (SELECT count(*) FROM public.session_grants)>1000 OR (SELECT count(*) FROM public.payment_events WHERE grant_epoch IS NOT NULL AND settlement_status IN('pending','settled'))>10000 THEN RAISE EXCEPTION 'native browser activation complete input bound';END IF;
   IF EXISTS(SELECT 1 FROM public.session_grants GROUP BY grant_epoch HAVING count(*)>1) THEN RAISE EXCEPTION 'native browser activation requires Source legacy epoch order qualification';END IF;
   rows_json:='{}'::jsonb;
@@ -161,7 +161,7 @@ BEGIN
   END LOOP;
   IF EXISTS(SELECT 1 FROM public.browser_signer_capacity WHERE spent_micro>9007199254740991) THEN RAISE EXCEPTION 'legacy browser signer capacity unavailable';END IF;
   UPDATE public.session_grants SET spent=(SELECT spent_micro::double precision/1000000 FROM public.browser_signer_capacity WHERE browser_signer_capacity.signer=lower(session_grants.sess_addr));UPDATE public.browser_journal_control SET active=true WHERE id=1;
-  PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
+  IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
  END IF;
 
  IF action IN('state','finish','v2','v3','v3-finish') THEN
@@ -225,7 +225,7 @@ GRANT EXECUTE ON FUNCTION public.storage_browser_journal_evidence(jsonb,text,tex
 CREATE FUNCTION public.storage_browser_journal(expected jsonb,digest text,action text,packet_wire text) RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 <<source_browser>>
-DECLARE operation text;packet jsonb;selected jsonb;snapshot jsonb;controls jsonb;wire text;wire_sha text;
+DECLARE browser_writer boolean:=false;signing_writer boolean:=false;operation text;packet jsonb;selected jsonb;snapshot jsonb;controls jsonb;wire text;wire_sha text;
  i public.browser_authorization_intents;b public.browser_journal_bindings;e public.payment_events;after_e public.payment_events;
  original public.browser_signing_originals;q public.browser_signing_queries;n public.browser_signing_namespaces;g public.session_grants;
  raw_payment keryx_storage.payment_event_originals;before_wire text;current_json json;updated_json json;current_projection jsonb;
@@ -275,14 +275,14 @@ BEGIN
   -- closed against an already active journal rather than bypassing its fence.
   UPDATE public.session_grants AS sg SET spent=(round(sg.spent*1000000)+amount)::double precision/1000000 WHERE session_id=intent->>'sessionId' AND grant_epoch=intent->>'grantEpoch' AND lower(sess_addr)=lower(intent->>'signer') AND expiry>floor(extract(epoch FROM clock_timestamp())*1000)
    AND abs(sg.cap::double precision*1000000-round(sg.cap::double precision*1000000))<0.000001 AND abs(sg.spent::double precision*1000000-round(sg.spent::double precision*1000000))<0.000001 AND round(sg.spent*1000000)+amount<=round(sg.cap*1000000);GET DIAGNOSTICS changed=ROW_COUNT;
-  IF changed=0 THEN PERFORM keryx_storage.leave_operation();RETURN '"grant_or_cap_refused"'::json;END IF;
+  IF changed=0 THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '"grant_or_cap_refused"'::json;END IF;
   INSERT INTO public.browser_authorization_intents(nonce,session_id,request_id,query_id,grant_epoch,signer,network,token,gateway_contract,source_id,offer_id,kind,payee,amount_micro_usdc,phase,created_at) VALUES(intent->>'nonce',intent->>'sessionId',intent->>'requestId',intent->>'queryId',intent->>'grantEpoch',intent->>'signer',intent->>'network',intent->>'token',intent->>'gatewayContract',intent->>'sourceId',intent->>'offerId',intent->>'kind',intent->>'payee',amount,'prepared',intent->>'createdAt');
-  PERFORM keryx_storage.leave_operation();RETURN '"admitted"'::json;
+  IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '"admitted"'::json;
  END IF;
 
- INSERT INTO public.browser_journal_writer VALUES(txid_current()) ON CONFLICT DO NOTHING;
+ INSERT INTO public.browser_journal_writer VALUES(txid_current());browser_writer:=true;
  IF action='admit' THEN
-  IF NOT active THEN PERFORM keryx_storage.leave_operation();RETURN '"inactive"'::json;END IF;
+  IF NOT active THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '"inactive"'::json;END IF;
   intent:=packet->'intent';payload:=packet->'payment';source_policy:=packet->'sourcePolicy';requirements:=keryx_storage.source_scalar_text(packet->>'requirementsWire','tokens');extra_tokens:=keryx_storage.source_scalar_text(requirements->>'extra','tokens');metadata:=keryx_storage.source_scalar_text(packet->>'paymentMetadataWire','tokens');
   context:=CASE WHEN packet->>'paymentContextWire' IS NULL THEN '{}'::jsonb ELSE keryx_storage.source_scalar_text(packet->>'paymentContextWire','tokens') END;item_tokens:=CASE WHEN context->>'item' IS NULL OR context->>'item'='null' THEN '{}'::jsonb ELSE keryx_storage.source_scalar_text(context->>'item','tokens') END;
   IF packet-'intent'-'requirementsWire'-'paymentMetadataWire'-'paymentContextWire'-'payment'-'sourcePolicy'<>'{}'::jsonb OR jsonb_typeof(intent) IS DISTINCT FROM 'object' OR octet_length(packet->>'requirementsWire')>1048576 OR octet_length(packet->>'paymentMetadataWire')>1048576 OR octet_length(packet->>'paymentContextWire')>1048576 THEN RAISE EXCEPTION 'native browser original capture refused';END IF;
@@ -298,10 +298,10 @@ BEGIN
   IF nullif(context->>'sourceClaim','null') IS NOT NULL AND nullif(item_tokens->>'sourceClaim','null') IS NOT NULL AND(context->>'sourceClaim')::jsonb IS DISTINCT FROM(item_tokens->>'sourceClaim')::jsonb THEN RAISE EXCEPTION 'browser journal source claim differs from item context';END IF;
   PERFORM keryx_storage.source_claim_purchase_policy('assert',source_policy->>'selector',source_policy);
   SELECT * INTO g FROM public.session_grants WHERE session_id=intent->>'session_id' AND grant_epoch=intent->>'grant_epoch' AND lower(sess_addr)=source_browser.signer AND expiry>floor(extract(epoch FROM clock_timestamp())*1000);
-  IF NOT FOUND THEN PERFORM keryx_storage.leave_operation();RETURN '"grant_or_cap_refused"'::json;END IF;
+  IF NOT FOUND THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '"grant_or_cap_refused"'::json;END IF;
   SELECT spent_micro INTO spent FROM public.browser_signer_capacity WHERE browser_signer_capacity.signer=source_browser.signer;
   scaled:=g.cap::double precision*1000000;rounded:=floor(scaled);IF scaled-rounded>=0.5 THEN rounded:=rounded+1;END IF;IF rounded<0 OR rounded>9007199254740991 OR abs(scaled-rounded)>=0.000001 THEN RAISE EXCEPTION 'browser grant exact capacity unavailable';END IF;
-  IF spent IS NULL OR spent+amount>rounded::bigint THEN PERFORM keryx_storage.leave_operation();RETURN '"grant_or_cap_refused"'::json;END IF;
+  IF spent IS NULL OR spent+amount>rounded::bigint THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '"grant_or_cap_refused"'::json;END IF;
   IF jsonb_typeof(payload) IS DISTINCT FROM 'object' OR payload-'rowWire'-'sha256'-'projection'-'unprojectedFields'<>'{}'::jsonb OR octet_length(payload->>'rowWire')>1048576 OR payload->>'sha256' IS DISTINCT FROM encode(sha256(convert_to(payload->>'rowWire','UTF8')),'hex') THEN RAISE EXCEPTION 'browser payment original capture refused';END IF;
   raw_json:=(payload->>'rowWire')::json;raw_tokens:=keryx_storage.source_scalar_text(payload->>'rowWire','tokens');projection:=payload->'projection';SELECT count(*),count(DISTINCT value) INTO counted,distinct_keys FROM jsonb_array_elements_text(raw_tokens->'_rootKeys');IF counted<>27 OR distinct_keys<>27 OR (SELECT count(*) FROM jsonb_object_keys(projection))<>27 THEN RAISE EXCEPTION 'browser payment original field inventory';END IF;
   SELECT coalesce(array_agg(value ORDER BY value),'{}') INTO unprojected FROM jsonb_array_elements_text(payload->'unprojectedFields');
@@ -323,25 +323,25 @@ BEGIN
   INSERT INTO keryx_storage.payment_event_originals(payment_id,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields) VALUES(after_e.id,raw_json,payload->>'sha256',raw_json,payload->>'sha256',to_jsonb(after_e),unprojected);
   UPDATE public.browser_signer_capacity SET spent_micro=spent_micro+amount WHERE browser_signer_capacity.signer=source_browser.signer;UPDATE public.browser_retained_grants SET spent_micro=spent_micro+amount WHERE grant_epoch=intent->>'grant_epoch';
   IF (SELECT count(*) FROM public.session_grants WHERE lower(sess_addr)=source_browser.signer)>1000 THEN RAISE EXCEPTION 'browser signer alias bound';END IF;UPDATE public.session_grants SET spent=(source_browser.spent+amount)::double precision/1000000 WHERE lower(sess_addr)=source_browser.signer;
-  PERFORM keryx_storage.leave_operation();RETURN '"admitted"'::json;
+  IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '"admitted"'::json;
  END IF;
 
- IF NOT(has_intent AND has_binding AND has_payment) THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+ IF NOT(has_intent AND has_binding AND has_payment) THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
  current_json:=before_wire::json;current_tokens:=keryx_storage.source_scalar_text(before_wire,'tokens');unprojected:=raw_payment.unprojected_fields;target_phase:=e.authorization_phase;status:=e.settlement_status;
  IF action IN('expose','submit') THEN
-  IF e.authorization_phase IS DISTINCT FROM CASE action WHEN 'expose' THEN 'prepared' ELSE 'signed' END OR e.settlement_status IS DISTINCT FROM 'pending' THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+  IF e.authorization_phase IS DISTINCT FROM CASE action WHEN 'expose' THEN 'prepared' ELSE 'signed' END OR e.settlement_status IS DISTINCT FROM 'pending' THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
   target_phase:=CASE action WHEN 'expose' THEN 'exposed' ELSE 'submission_attempted' END;
  ELSIF action='cancel' THEN
-  IF e.authorization_phase IS DISTINCT FROM 'prepared' OR e.settlement_status IS DISTINCT FROM 'pending' THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+  IF e.authorization_phase IS DISTINCT FROM 'prepared' OR e.settlement_status IS DISTINCT FROM 'pending' THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
   target_phase:='cancelled_unexposed';status:='failed';release_capacity:=true;
  ELSIF action='sign' THEN
-  IF e.authorization_phase IS NULL OR e.authorization_phase NOT IN('exposed','signed','submission_attempted','settled','failed') THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+  IF e.authorization_phase IS NULL OR e.authorization_phase NOT IN('exposed','signed','submission_attempted','settled','failed') THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
   metadata_raw:=keryx_storage.source_scalar_text(packet->>'metadataWire','tokens');canonical:=(packet->>'canonical')::boolean;
-  IF has_original AND NOT canonical THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+  IF has_original AND NOT canonical THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
   IF canonical AND(NOT has_original OR packet->>'originalSha256' IS DISTINCT FROM encode(sha256(convert_to(original.original,'UTF8')),'hex')) THEN RAISE EXCEPTION 'browser immutable signing original changed';END IF;
-  IF coalesce(b.header_hash,'')<>'' THEN PERFORM keryx_storage.leave_operation();RETURN to_json(to_json(b.header_hash)::text=(metadata_raw->>'headerHash') AND to_json(b.valid_after)::text=(metadata_raw->>'validAfter') AND to_json(b.valid_before)::text=(metadata_raw->>'validBefore'));END IF;
-  IF e.authorization_phase<>'exposed' THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
-  IF has_original THEN original_tokens:=keryx_storage.source_scalar_text(original.original,'tokens');authorization_tokens:=keryx_storage.source_scalar_text(original_tokens->>'authorization','tokens');IF metadata_raw->>'validAfter' IS DISTINCT FROM authorization_tokens->>'validAfter' OR metadata_raw->>'validBefore' IS DISTINCT FROM authorization_tokens->>'validBefore' THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;END IF;
+  IF coalesce(b.header_hash,'')<>'' THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN to_json(to_json(b.header_hash)::text=(metadata_raw->>'headerHash') AND to_json(b.valid_after)::text=(metadata_raw->>'validAfter') AND to_json(b.valid_before)::text=(metadata_raw->>'validBefore'));END IF;
+  IF e.authorization_phase<>'exposed' THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+  IF has_original THEN original_tokens:=keryx_storage.source_scalar_text(original.original,'tokens');authorization_tokens:=keryx_storage.source_scalar_text(original_tokens->>'authorization','tokens');IF metadata_raw->>'validAfter' IS DISTINCT FROM authorization_tokens->>'validAfter' OR metadata_raw->>'validBefore' IS DISTINCT FROM authorization_tokens->>'validBefore' THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;END IF;
   metadata:='{}'::jsonb;FOREACH field IN ARRAY ARRAY['validAfter','validBefore','headerHash'] LOOP
    IF octet_length(metadata_raw->>field)>8192 THEN RAISE EXCEPTION 'native browser signed metadata bound';END IF;scalar:=keryx_storage.source_scalar_text(metadata_raw->>field,'scalar');
    IF position(decode('00','hex') IN decode(scalar->>'sourceHex','hex'))>0 THEN RAISE EXCEPTION 'native browser signed scalar NUL unsupported';END IF;
@@ -361,13 +361,13 @@ BEGIN
   day_number:=floor(milliseconds::numeric/86400000)+719468;era:=floor(day_number::numeric/146097);doe:=day_number-era*146097;yoe:=floor((doe-floor(doe::numeric/1460)+floor(doe::numeric/36524)-floor(doe::numeric/146096))/365);year_number:=yoe+era*400;doy:=doe-(365*yoe+floor(yoe::numeric/4)-floor(yoe::numeric/100));mp:=floor((5*doy+2)::numeric/153);day_month:=doy-floor((153*mp+2)::numeric/5)+1;month_number:=mp+CASE WHEN mp<10 THEN 3 ELSE -9 END;year_number:=year_number+CASE WHEN month_number<=2 THEN 1 ELSE 0 END;day_ms:=milliseconds-floor(milliseconds::numeric/86400000)*86400000;
   stamp:=CASE WHEN year_number BETWEEN 0 AND 9999 THEN lpad(year_number::text,4,'0') ELSE CASE WHEN year_number<0 THEN '-' ELSE '+' END||lpad(abs(year_number)::text,6,'0') END||'-'||lpad(month_number::text,2,'0')||'-'||lpad(day_month::text,2,'0')||'T'||lpad(floor(day_ms::numeric/3600000)::text,2,'0')||':'||lpad((floor(day_ms::numeric/60000)::bigint%60)::text,2,'0')||':'||lpad((floor(day_ms::numeric/1000)::bigint%60)::text,2,'0')||'.'||lpad((day_ms%1000)::text,3,'0')||'Z';
   IF year_number BETWEEN 1 AND 9999 THEN projection_expiry:=stamp::timestamptz;unprojected:=array_remove(unprojected,'authorization_expires_at');ELSE projection_expiry:=NULL;IF NOT 'authorization_expires_at'=ANY(unprojected) THEN unprojected:=array_append(unprojected,'authorization_expires_at');END IF;END IF;
-  IF canonical THEN INSERT INTO public.browser_signing_v2_writer VALUES(txid_current()) ON CONFLICT DO NOTHING;END IF;
+  IF canonical THEN INSERT INTO public.browser_signing_v2_writer VALUES(txid_current());signing_writer:=true;END IF;
   UPDATE public.browser_journal_bindings SET valid_after=metadata->>'validAfter',valid_before=metadata->>'validBefore',header_hash=metadata->>'headerHash' WHERE nonce=i.nonce AND header_hash IS NULL;
   target_phase:='signed';update_expiry:=true;
  END IF;
  IF cardinality(unprojected)>0 AND strpos(pg_get_functiondef('keryx_storage.require_operation(jsonb,text,text)'::regprocedure),'Native payment raw observation guard v1')=0 THEN RAISE EXCEPTION 'native payment raw observation guard unavailable';END IF;
  UPDATE public.payment_events SET authorization_phase=target_phase,settlement_status=status,authorization_expires_at=CASE WHEN update_expiry THEN projection_expiry ELSE authorization_expires_at END WHERE id=e.id AND authorization_phase=e.authorization_phase AND settlement_status='pending';GET DIAGNOSTICS changed=ROW_COUNT;
- IF changed<>1 THEN DELETE FROM public.browser_signing_v2_writer WHERE transaction_id=txid_current();PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+ IF changed<>1 THEN IF signing_writer THEN DELETE FROM public.browser_signing_v2_writer WHERE transaction_id=txid_current();END IF;IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
  IF release_capacity THEN
   metadata:=keryx_storage.source_scalar_text(b.payment_metadata,'tokens');scaled:=(metadata->>'amountUsdc')::double precision*1000000;rounded:=floor(scaled);IF scaled-rounded>=0.5 THEN rounded:=rounded+1;END IF;
   IF rounded<0 OR rounded>9007199254740991 OR abs(scaled-rounded)>=0.000001 THEN RAISE EXCEPTION 'retained browser original amount unavailable';END IF;
@@ -378,7 +378,7 @@ BEGIN
  SELECT ('{'||string_agg(to_json(key)::text||':'||CASE key WHEN 'authorization_phase' THEN to_json(target_phase)::text WHEN 'settlement_status' THEN to_json(status)::text WHEN 'authorization_expires_at' THEN CASE WHEN update_expiry THEN to_json(stamp)::text ELSE value#>>'{}' END ELSE value#>>'{}' END,',' ORDER BY key COLLATE "C")||'}')::json INTO updated_json FROM jsonb_each(current_tokens) WHERE key<>'_rootKeys';
  SELECT * INTO after_e FROM public.payment_events WHERE id=e.id;
  UPDATE keryx_storage.payment_event_originals SET current_wire=updated_json,current_sha256=encode(sha256(convert_to(updated_json::text,'UTF8')),'hex'),native_projection=to_jsonb(after_e),unprojected_fields=unprojected WHERE payment_id=e.id;
- DELETE FROM public.browser_signing_v2_writer WHERE transaction_id=txid_current();PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
+ IF signing_writer THEN DELETE FROM public.browser_signing_v2_writer WHERE transaction_id=txid_current();END IF;IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
 END;$$;
 REVOKE ALL ON FUNCTION public.storage_browser_journal(jsonb,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.storage_browser_journal(jsonb,text,text,text) TO keryx_app,keryx_reader;

@@ -151,7 +151,7 @@ BEGIN
  END LOOP;
  IF original_tokens->>'tx_hash' IS DISTINCT FROM transaction_raw::text OR after_row.settlement_status IS DISTINCT FROM CASE WHEN failed THEN 'failed' ELSE 'settled' END OR after_row.settled IS DISTINCT FROM (NOT failed)
   OR after_row.authorization_phase IS DISTINCT FROM CASE WHEN dispatch IN('hosted','browser') THEN CASE WHEN failed THEN 'failed' ELSE 'settled' END ELSE current_row.authorization_phase END THEN RAISE EXCEPTION 'native payment terminal capture mismatch';END IF;
- INSERT INTO public.browser_journal_writer VALUES(txid_current()) ON CONFLICT DO NOTHING;
+ INSERT INTO public.browser_journal_writer VALUES(txid_current());
  UPDATE public.payment_events SET settled=after_row.settled,settlement_status=after_row.settlement_status,tx_hash=after_row.tx_hash,authorization_phase=after_row.authorization_phase WHERE id=current_row.id;
  IF release_kind='retained' THEN
   scaled:=amount*1000000::double precision;rounded:=floor(scaled);IF scaled-rounded>=0.5::double precision THEN rounded:=rounded+1;END IF;
@@ -168,7 +168,7 @@ BEGIN
  INSERT INTO keryx_storage.payment_event_originals(payment_id,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields)
   VALUES(current_row.id,before_json,encode(sha256(convert_to(before_wire,'UTF8')),'hex'),original_json,payload->>'sha256',to_jsonb(after_row),unprojected)
   ON CONFLICT(payment_id) DO UPDATE SET current_wire=excluded.current_wire,current_sha256=excluded.current_sha256,native_projection=excluded.native_projection,unprojected_fields=excluded.unprojected_fields;
- PERFORM keryx_storage.leave_operation();RETURN json_build_object('resolved',resolved,'reservationReleased',released);
+ DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();PERFORM keryx_storage.leave_operation();RETURN json_build_object('resolved',resolved,'reservationReleased',released);
 END;$$;
 REVOKE ALL ON FUNCTION public.storage_payment_events(jsonb,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.storage_payment_events(jsonb,text,text,text) TO keryx_app,keryx_reader;
