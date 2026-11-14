@@ -1,7 +1,7 @@
 SET ROLE keryx_owner;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
  ('owner_assignment_act',ARRAY['owner269_operations','owner269_associations']::text[],true,false),
- ('owner_assignment_reply',ARRAY['owner269_operations','owner269_associations','query_runs','run_privacy','anonymous_run_claims','a2a_orders','payment_events','account267_accounts','account267_members','account267_credentials','account267_sessions','web_sessions']::text[],true,true);
+ ('owner_assignment_reply',ARRAY['owner269_operations','owner269_associations','query_runs','run_privacy','run_privacy_projection','anonymous_run_claims','a2a_orders','payment_events','account267_accounts','account267_members','account267_credentials','account267_sessions','web_sessions']::text[],true,true);
 CREATE TRIGGER native_owner269_operations_writer BEFORE INSERT OR UPDATE OR DELETE ON public.owner269_operations FOR EACH ROW EXECUTE FUNCTION keryx_storage.write_fence();
 CREATE TRIGGER native_owner269_associations_writer BEFORE INSERT OR UPDATE OR DELETE ON public.owner269_associations FOR EACH ROW EXECUTE FUNCTION keryx_storage.write_fence();
 CREATE FUNCTION keryx_storage.owner269_retention() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
@@ -94,10 +94,11 @@ CREATE FUNCTION keryx_storage.owner269_original(manifest jsonb,member jsonb,stam
 DECLARE original record;rails jsonb;
 BEGIN
  PERFORM keryx_storage.owner269_bound(manifest);
- SELECT q.asker,q.created_at,octet_length(q.data::text) bytes,CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data) END hash,
+ SELECT decode(sc.scalar_cells->'asker'->>'boundHex','hex') asker,convert_from(decode(sc.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') created_at,q.created_at native_created_at,sc.run_id scalar_id,sc.scalar_identity_sha256,sc.scalar_cells,octet_length(q.data::text) bytes,CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data) END hash,
   h.original_sha256,h.original_created_at,h.anonymous_claim_eligible,v.visibility,v.erased INTO original FROM public.query_runs q
-  LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id LEFT JOIN public.run_privacy v ON v.run_id=q.id WHERE q.id=member->>'runId';
- IF NOT FOUND OR original.asker IS NOT NULL OR original.bytes>4000000 OR original.created_at IS DISTINCT FROM(member->>'completedAt')::timestamptz
+  LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id LEFT JOIN public.run_privacy v ON v.run_id=q.id LEFT JOIN keryx_storage.run_privacy_projection sc ON sc.run_id=q.id WHERE q.id=member->>'runId';
+ IF FOUND AND(original.scalar_id IS NULL OR original.scalar_identity_sha256 IS DISTINCT FROM (SELECT identity_digest FROM keryx_storage.identity WHERE singleton) OR jsonb_typeof(original.scalar_cells->'created_at'->'boundHex') IS DISTINCT FROM 'string' OR jsonb_typeof(original.scalar_cells->'asker'->'boundHex') NOT IN('string','null') OR original.scalar_cells->'asker'->'boundHex' IS NULL OR original.created_at::timestamptz IS DISTINCT FROM original.native_created_at) THEN RAISE EXCEPTION 'assignment_unavailable';END IF;
+ IF NOT FOUND OR original.asker IS NOT NULL OR original.bytes>4000000 OR original.created_at IS DISTINCT FROM member->>'completedAt'
   OR extract(epoch FROM(member->>'completedAt')::timestamptz)*1000>stamp OR original.hash IS DISTINCT FROM member->>'originalSha256'
   OR EXISTS(SELECT 1 FROM public.a2a_orders WHERE query_id=member->>'runId') OR EXISTS(SELECT 1 FROM public.anonymous_run_claims WHERE run_id=member->>'runId')
   OR original.visibility IS NOT NULL AND(original.erased<>0 OR original.visibility NOT IN('public','unlisted')) THEN RAISE EXCEPTION 'assignment_ineligible';END IF;
