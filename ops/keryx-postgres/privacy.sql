@@ -1,22 +1,4 @@
 SET ROLE keryx_owner;
-CREATE TABLE keryx_storage.run_privacy_projection(
- run_id text PRIMARY KEY REFERENCES public.query_runs(id) ON DELETE CASCADE,
- original_sha256 text NOT NULL CHECK(original_sha256 ~ '^[a-f0-9]{64}$'),
- data_bytes integer NOT NULL CHECK(data_bytes BETWEEN 0 AND 4000000),original_valid boolean NOT NULL,
- scalar_identity_sha256 text NOT NULL CHECK(scalar_identity_sha256 ~ '^[a-f0-9]{64}$'),
- scalar_cells jsonb NOT NULL CHECK(jsonb_typeof(scalar_cells)='object' AND octet_length(scalar_cells::text)<=8388608),
- -- Answer is independently toastable and never selected by metadata readers.
- answer_scalar bytea CHECK(octet_length(answer_scalar)<=4000000),
- erase_wire text CHECK(octet_length(erase_wire)<=4000000),original_fulfillment boolean NOT NULL,
- question_fields text CHECK(octet_length(question_fields)<=8000000),
- history_fields text CHECK(octet_length(history_fields)<=8000000),
- history_references jsonb NOT NULL CHECK(jsonb_typeof(history_references)='array' AND jsonb_array_length(history_references)<=10000 AND octet_length(history_references::text)<=4194304),
- learning_fields text CHECK(octet_length(learning_fields)<=8000000),
- profile_fields text CHECK(octet_length(profile_fields)<=262144),
- payment_offline boolean,funding_offline boolean,funding_treasury boolean,
- archive_wire text CHECK(octet_length(archive_wire)<=2097152),
- erase_projection jsonb CHECK(erase_projection IS NULL OR octet_length(erase_projection::text)<=16777216)
-);
 CREATE FUNCTION keryx_storage.privacy_projection_fence() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE original json;shadows jsonb;tokens jsonb;confidence_tokens jsonb;field text;root_field text;token text;raw_kind text;cell jsonb;parsed jsonb;bound bytea;raw_owner text;expected_shadow text;
  held boolean:=session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held';retained_erasure boolean;
@@ -41,7 +23,7 @@ BEGIN
  FOREACH field IN ARRAY ARRAY['id','created_at','question','engine','parent_id','asker','origin','mcp_client','payment_mode','confidence_level'] LOOP
   root_field:=CASE field WHEN 'created_at' THEN 'createdAt' WHEN 'parent_id' THEN 'parentId' WHEN 'mcp_client' THEN 'mcpClient' WHEN 'payment_mode' THEN 'paymentMode' ELSE field END;
   token:=CASE WHEN field='confidence_level' THEN confidence_tokens->>'level' ELSE tokens->>root_field END;cell:=NEW.scalar_cells->field;parsed:=NULL;
-  IF jsonb_typeof(cell) IS DISTINCT FROM 'object' OR cell-CASE WHEN field='asker' THEN ARRAY['rawKind','rawHex','boundHex'] ELSE ARRAY['rawKind','boundHex'] END<>'{}'::jsonb OR (SELECT count(*) FROM jsonb_object_keys(cell))<>CASE WHEN field='asker' AND cell?'rawHex' THEN 3 ELSE 2 END
+  IF jsonb_typeof(cell) IS DISTINCT FROM 'object' OR cell-(CASE WHEN field='asker' THEN ARRAY['rawKind','rawHex','boundHex'] ELSE ARRAY['rawKind','boundHex'] END)<>'{}'::jsonb OR (SELECT count(*) FROM jsonb_object_keys(cell))<>(CASE WHEN field='asker' AND cell?'rawHex' THEN 3 ELSE 2 END)
    OR field='asker' AND cell?'rawHex' AND jsonb_typeof(cell->'rawHex') NOT IN('string','null') OR jsonb_typeof(cell->'boundHex') NOT IN('string','null')
   THEN RAISE EXCEPTION 'native Source scalar shape unavailable';END IF;
   raw_kind:=CASE WHEN token IS NULL THEN 'missing' ELSE json_typeof(token::json) END;

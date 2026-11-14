@@ -23,7 +23,8 @@ export function nativeApplicationDomainsReferenceSource(){
   for(const [index,name] of [...names].sort().entries()){
     const call=APPLICATION_READ_CALLS[APPLICATION_READ_OPERATIONS[name as keyof typeof APPLICATION_READ_OPERATIONS]];
     const expected=`SELECT public.storage_application_read_group_${Math.floor(index/8)}($1::jsonb,$2::text,'${name}',$3::jsonb) AS result`;
-    if(call.sql!==expected||call.args!==1||call.write!==false||call.bytes!==4194304||call.transaction!==true)throw Error('Application read group fixed call changed');
+    const bytes=name==='get_query_run'?8000512:['list_follow_ups','list_query_runs_by_asker','list_recent_queries'].includes(name)?33554432:4194304;
+    if(call.sql!==expected||call.args!==1||call.write!==false||call.bytes!==bytes||call.transaction!==true)throw Error('Application read group fixed call changed');
   }
   const sql=financial.sql+`
 SET ROLE keryx_owner;

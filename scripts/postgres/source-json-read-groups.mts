@@ -44,7 +44,7 @@ BEGIN
    %s
    ELSE RAISE EXCEPTION 'native application read action refused';
   END CASE;
-  IF result IS NOT NULL AND octet_length(result::text)>4194304 THEN RAISE EXCEPTION 'native application read result bound';END IF;
+  IF result IS NOT NULL AND octet_length(result::text)>(CASE selected_action WHEN 'get_query_run' THEN 8000512 WHEN 'list_follow_ups' THEN 33554432 WHEN 'list_query_runs_by_asker' THEN 33554432 WHEN 'list_recent_queries' THEN 33554432 ELSE 4194304 END) THEN RAISE EXCEPTION 'native application read result bound';END IF;
   RETURN result;
  END;$fn$;$entry$,declarations,branches);
  REVOKE ALL ON FUNCTION public.storage_application_read_group_${index}(jsonb,text,text,jsonb) FROM PUBLIC,anon,authenticated,service_role;

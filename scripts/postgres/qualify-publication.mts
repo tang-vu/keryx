@@ -13,8 +13,7 @@ import {canonicalJson} from '../../lib/canonical-json';
 import {installMainnetApplicationSchema} from '../../lib/db/mainnet-application-schema';
 import {installNativeUserDomainSchema} from '../../lib/db/native-user-domain-schema';
 import {writeSqliteQueryRun} from '../../lib/db/query-run-record';
-import {RUN_CLAIMS_SQL} from '../../lib/db/run-claims-sqlite';
-import {RUN_PRIVACY_SQL,createSqliteRunPrivacy} from '../../lib/db/run-privacy-sqlite';
+import {createSqliteRunPrivacy} from '../../lib/db/run-privacy-sqlite';
 import {createSqliteRunOwnershipHistory} from '../../lib/db/run-ownership-history-sqlite';
 import {createSqlitePersonalHistory} from '../../lib/db/personal-history-sqlite';
 import {createSqlitePrivateProfiles} from '../../lib/db/private-profiles-sqlite';
@@ -37,7 +36,7 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
  try{
   assert.equal(input.ownerSql('SELECT count(*) FROM public.query_runs;'),'0','Publication requires an isolated empty QueryRun namespace');
   for(const table of ['payment_events','answer_feedback','gap_intents'])assert.equal(input.ownerSql('SELECT count(*) FROM public.'+table+';'),'0','Publication metric oracle requires its empty namespace');
-  db.exec('BEGIN');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);db.exec('COMMIT');db.exec(RUN_CLAIMS_SQL);db.exec(RUN_PRIVACY_SQL);
+  db.exec('BEGIN');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);db.exec('COMMIT');
   const ownership=createSqliteRunOwnershipHistory(db),privacy=createSqliteRunPrivacy(db,ownership),history=createSqlitePersonalHistory(db),profiles=createSqlitePrivateProfiles(db),creation={privacy:{runPrivacy:privacy,runPrivacyActive:true},enrolled:false};
   db.prepare('INSERT INTO web_sessions(hash,wallet,issued_at,expires_at) VALUES(?,?,?,?)').run(session,owner,Date.now()-10000,Date.now()+3600000);
   pg(`INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES(${q(session)},${q(owner)},${Date.now()-10000},${Date.now()+3600000});`);

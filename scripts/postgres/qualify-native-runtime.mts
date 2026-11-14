@@ -32,7 +32,7 @@ import type { AcceptanceSnapshot,PublicAcceptance,AcceptanceMetrics } from '../.
 import { nativeAccountFixture,nativeAccountFixturePaths,nativeAccountFixtureTables } from './native-account-fixture.mts';
 import { nativeChatFixture } from './native-chat-fixture.mts';
 import { nativePublicProfileFixture } from './native-public-profile-fixture.mts';
-import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql } from './a2a-time-projection.mts';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql,sqliteA2aOriginalCellProjection,heldA2aOriginalCellProjectionSql } from './a2a-time-projection.mts';
 import { SqliteAdapter } from '../../lib/db/sqlite-adapter';
 import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy } from '../../lib/db/public-source-claims';
 import type { Source } from '../../lib/types';
@@ -103,7 +103,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
    for(const table of ['a2a_orders','payment_events','research_purchase_authorizations','deliverable_acceptance_entries','sources','source_meta','sync_state'])for(const row of selected.db.prepare('SELECT * FROM '+table).all()){
     const keys=Object.keys(row);assert(keys.every(k=>/^[a-z][a-z0-9_]*$/.test(k)));
     seed+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(k=>{const v=row[k];if(v===null)return 'NULL';if(['settled','active','verified'].includes(k))return v===1?'true':'false';if(table==='sync_state'&&k==='key')sourceClaimKeys.push(String(v));if(typeof v==='number'||typeof v==='bigint')return String(v);assert(typeof v==='string');return q(v)+(table==='a2a_orders'&&['request_data','response_data','package_data','resolution_data'].includes(k)||table==='sources'&&['tags','authors'].includes(k)?'::jsonb':'');}).join(',')});`;
-   }pg(seed+heldA2aTimeProjectionSql(sqliteA2aTimeProjection(selected.db,order.id,input.identity))+heldAcceptanceProjectionSql(projection));
+   }pg(seed+heldA2aTimeProjectionSql(sqliteA2aTimeProjection(selected.db,order.id,input.identity))+heldA2aOriginalCellProjectionSql(sqliteA2aOriginalCellProjection(selected.db,order.id,input.identity))+heldAcceptanceProjectionSql(projection));
   }finally{selected.close();}
   for(const table of nativeAccountFixtureTables)assert.equal(input.ownerSql(`SELECT count(*) FROM public.${table};`),'0');
   const accountSeed=await nativeAccountFixture(folder,input.identity,session,{freshLogin:true});account=accountSeed.observation;accountId=accountSeed.accountId;pg(accountSeed.sql);
