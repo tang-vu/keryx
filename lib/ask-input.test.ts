@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode, isWellFormedAskText } from "./ask-input";
+import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode, isWellFormedAskText, AskQuestionSchema } from "./ask-input";
 
 describe("parseAskQuestion", () => {
   it("trims a bounded question", () => {
@@ -37,4 +37,10 @@ describe("public request text before payment", () => {
     expect(isWellFormedAskText(value)).toBe(true);
     expect(parseAskQuestion(value)).toEqual({ success: true, question: value });
   });
+});
+
+it("preserves retained task text while refusing it as a fresh public question", () => {
+  const retained = "legacy question\0";
+  expect(AskQuestionSchema.parse(retained)).toBe(retained);
+  expect(parseAskQuestion(retained)).toMatchObject({ success: false });
 });

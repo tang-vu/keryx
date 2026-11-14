@@ -1214,11 +1214,13 @@ operational migration gates remain open.
 
 ### Reject incompatible fresh request text before payment
 
-The shared public question schema refuses NUL and unpaired UTF-16 surrogates.
+The fresh public question parser refuses NUL and unpaired UTF-16 surrogates.
 Keep the existing trimming and 2,000-character bound; preserve valid Unicode,
 including emoji, combining characters, newlines and literal backslash escape
-text. Web ask, OpenAI-compatible chat, buyer/MCP, sponsored and Monthly request
-schemas consume this same validator. This does not rewrite retained originals or
+text. Web ask, OpenAI-compatible chat and buyer/MCP entry points consume this
+parser. The bounded question schema used by retained Operator/buyer/Monthly
+contracts stays unchanged; old tasks still reopen under their original checks.
+This does not rewrite retained originals or
 restrict the raw postpaid answer/resolution storage described above.
 
 The A2A route also validates its final trimmed/truncated model selector before
