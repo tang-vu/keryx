@@ -5,7 +5,7 @@ INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VA
  ('research_purchase_claim',ARRAY['research_purchase_authorizations','sync_state'],true,false),
  ('research_monthly_create',ARRAY['research_purchase_authorizations','research_monthly','sync_state'],true,false),
  ('research_monthly_get',ARRAY['research_monthly','research_monthly_redemptions','acceptance_original_projection'],true,true),
- ('research_monthly_redeem',ARRAY['research_monthly','research_monthly_redemptions','a2a_orders','deliverable_acceptance_store','acceptance_original_projection'],true,false);
+ ('research_monthly_redeem',ARRAY['research_monthly','research_monthly_redemptions','a2a_orders','a2a_original_time_projection','deliverable_acceptance_store','acceptance_original_projection'],true,false);
 CREATE FUNCTION public.storage_research_purchases(expected jsonb,digest text,action text,packet_wire text,accepted_at text) RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE packet jsonb;proposed jsonb;p jsonb;r jsonb;req jsonb;projection jsonb;redemptions jsonb;result json;
@@ -166,6 +166,10 @@ BEGIN
   IF projection->>'storeId' IS DISTINCT FROM store THEN RAISE EXCEPTION 'Monthly acceptance store mismatch';END IF;
   INSERT INTO public.research_monthly_redemptions(monthly_id,request_id,order_id,request_hash,created_at,slot) VALUES(chosen_id,packet->>'requestId',o.id,o.request_hash,accepted_at,used);
   INSERT INTO public.a2a_orders SELECT (o).*;
+  -- The Source row dates remain exact TEXT; equal native instants cannot
+  -- reconstruct offset spelling or submillisecond original representations.
+  INSERT INTO keryx_storage.a2a_original_time_projection(order_id,identity_digest,query_id,request_hash,created_at,updated_at,started_at,payment_started_at,result_saving_at)
+   VALUES(o.id,keryx_storage.identity_digest(expected),o.query_id,o.request_hash,r->>'created_at',r->>'updated_at',r->>'started_at',r->>'payment_started_at',r->>'result_saving_at');
   INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta) VALUES(o.id,store,projection->>'orderWire',projection->>'orderSha256',projection->>'deliveryToken',projection->>'owner',projection->>'network',nullif(projection->'binding','null'::jsonb),projection->'health');order_wire:=packet->>'rowWire';
  END IF;
  result:=json_build_object('created',NOT existed,'orderWire',order_wire);PERFORM keryx_storage.leave_operation();RETURN result;
