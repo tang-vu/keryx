@@ -9,11 +9,11 @@ import { configuredOperatingFeePolicy,operatingFeePolicyDigest,operatingFeeMaxMi
 import { validateStorageIdentity,type StorageIdentity } from '../storage-identity';
 import { PostgresStorageUnavailable } from './connection';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
+import { captureHostedSourceClaimPolicy,sourceClaimPolicySelector,sourceClaimPolicyRuntime } from './source-claim-purchase-policy';
 const micro=z.string().regex(/^(0|[1-9][0-9]{0,15})$/).refine(v=>BigInt(v)<=BigInt(Number.MAX_SAFE_INTEGER));
 const accounting=z.object({retainedMicroUsdc:micro,confirmedMicroUsdc:micro}).strict();
 export interface PostgresHostedAdmissionPort {admitHostedAuthorization(input:HostedAuthorizationAdmission):Promise<string>;}
-/** Fixed native admission for unmanaged sources and original private executions.
- * Managed claims remain refused until their current-policy protocol is qualified.
+/** Fixed native admission with digest-bound current SOURCE policy capture.
  * This port grants no installed provenance, custody, signing or provider access. */
 export function composePostgresHostedAdmission(channel:PostgresDomainChannel,identity:StorageIdentity,readOnly:boolean):PostgresHostedAdmissionPort{
  const expected=validateStorageIdentity(identity),fail=()=>{throw new PostgresStorageUnavailable();};
@@ -32,17 +32,27 @@ export function composePostgresHostedAdmission(channel:PostgresDomainChannel,ide
    const fee=configuredOperatingFeePolicy(expected,policy.origin,policy.signer);
    if(context.operatingFee.policyDigest!==operatingFeePolicyDigest(fee)||String(payload.message.to).toLowerCase()!==fee.beneficiary||String(amount)!==context.operatingFee.amountMicroUsdc||BigInt(amount)>BigInt(operatingFeeMaxMicroUsdc(context.queryBudgetMicroUsdc)))fail();
    feeWire=canonicalJson(fee);
-  }else if(context.sourceClaim)fail();
+  }
   // PostgreSQL identifiers cannot carry NUL or unpaired UTF-16. Reject before
   // dispatch; JSON escape bytes in a later paid answer are a separate protocol.
   const strings=[context.queryId,context.sourceId,context.itemId,...(context.privateJob?Object.values(context.privateJob):[])];
   if(strings.some(v=>v!==null&&(v.includes('\0')||Buffer.from(v).toString('utf8')!==v)))fail();
+  let runtimeWire:string|null=null;
+  if(context.kind!=='operating-fee'){
+   const runtime=sourceClaimPolicyRuntime();runtimeWire=canonicalJson(runtime);
+   const selector=sourceClaimPolicySelector({sourceId:context.sourceId,identity:null});
+   const snapshot=await channel.call('hostedSourcePolicySnapshot' as Parameters<PostgresDomainChannel['call']>[0],[selector]);
+   if(channel.closed||canonicalJson(sourceClaimPolicyRuntime())!==runtimeWire)fail();
+   const sourcePolicy=captureHostedSourceClaimPolicy(snapshot,{sourceId:context.sourceId,expected:context.sourceClaim??null,kind:context.kind,network:policy.network},runtime);
+   feeWire=canonicalJson({sourcePolicy});
+  }
   const result=await channel.call('hostedAdmitAuthorization',[canonicalJson(policy),hostedTreasuryPolicyDigest(policy),original,canonicalJson(totals),available,feeWire]);
   if(channel.closed||result!==nonce)throw new PostgresDomainWriteOutcomeUnknown();
   try{
    if(policy.expiresAtSeconds<=Math.floor(Date.now()/1000))fail();
    createSessionSigningPolicy(ARC_MAINNET_PROFILE).validatePayment(payload,policy.signer);
-   if(feeWire!==null&&canonicalJson(configuredOperatingFeePolicy(expected,policy.origin,policy.signer))!==feeWire)fail();
+   if(context.kind==='operating-fee'&&canonicalJson(configuredOperatingFeePolicy(expected,policy.origin,policy.signer))!==feeWire)fail();
+   if(runtimeWire!==null&&canonicalJson(sourceClaimPolicyRuntime())!==runtimeWire)fail();
   }catch{throw new PostgresDomainWriteOutcomeUnknown();}
   return nonce;
  }} satisfies PostgresHostedAdmissionPort);
