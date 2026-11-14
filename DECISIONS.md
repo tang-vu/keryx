@@ -9743,3 +9743,23 @@ The unsafe publication capture wrapper and complete application writer remain
 closed until their actual PostgreSQL, compiled memory/deadline, intake, consumer
 and deployment requirements pass. Prepared protocols grant no installed writer,
 funding, supplier execution or retry authority.
+
+## Compose financial application names without enrolling a writer (2026-11-15)
+
+Map 33 application methods onto the existing fixed native financial protocols,
+then supply that typed port only to explicitly configured shared business cores.
+Invoke each port before awaiting so its original inputs are captured immediately.
+Preserve readonly rejection before input getters, current core checks before and
+after asynchronous work, and the original unknown-commit result without retries
+or legacy RPC fallback. A core that closes after a successful write must report
+an unknown outcome rather than implying the write was refused before submission.
+
+Keep `listSessionWithdrawalPayments` explicitly unported. Neither this mapping
+nor a caller-supplied core guard can mint installed-facade provenance. The native
+writer factory and installed readonly financial namespace retain their current
+admission boundaries. Verify an already selected application through the awaited
+backend-specific `applicationStorageIdentity` guard; method presence, a manifest
+alone, proxy wrapping and core construction are never provenance. Its genuine
+native readonly positive belongs to the compiled Linux qualification, with write,
+forged, changed-credential and close-during-await refusals. Custody, funding,
+signing, provider actions and production cutover remain separate authority gates.

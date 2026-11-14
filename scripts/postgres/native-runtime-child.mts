@@ -238,6 +238,11 @@ async function main(){
  try{
   assert.deepEqual(await native.assertPostgresRuntimeIdentity(reader),input.identity);checks++;
   await assert.rejects(native.assertPostgresRuntimeIdentity(reader,'write'));await assert.rejects(native.assertPostgresRuntimeIdentity(new Proxy(reader,{})));checks++;
+  assert.deepEqual(await application.applicationStorageIdentity(reader),input.identity);checks++;
+  await assert.rejects(application.applicationStorageIdentity(reader,'write'),/readonly_operation/);checks++;
+  let identityFields=0;const forgedIdentity=new Proxy({identity:input.identity},{get(){identityFields++;throw Error('Caller identity fields are not provenance');}}) as unknown as typeof reader;
+  for(const candidate of [forgedIdentity,new Proxy(reader,{}),Object.create(reader) as typeof reader])for(const access of ['read','write'] as const)await assert.rejects(application.applicationStorageIdentity(candidate,access),/adapter_not_initialized/);
+  assert.equal(identityFields,0);checks++;
   await assert.rejects(application.createApplicationStorage());checks++;
   const metrics=await reader.metrics();assert.equal(metrics.totalQueries,1);checks++;
   const sourceEqual=(value:unknown,expected:unknown)=>assert.deepEqual(JSON.parse(JSON.stringify(value)),expected);
@@ -320,9 +325,11 @@ async function main(){
   const bibliographies=reader.privateBibliographies!,bound=reader.topicWatches!.bindSession(input.session),reviews=reader.decisionReviews!;
   const before=performance.now();await reader.metrics();const observedReadMs=performance.now()-before;
   // A changed credential is not adopted by an already-created facade.
-  writeFileSync(readerPath,credential('keryx_reader','different-synthetic-password'));assert.throws(()=>reader.metrics());writeFileSync(readerPath,credential('keryx_reader'));checks++;
+  writeFileSync(readerPath,credential('keryx_reader','different-synthetic-password'));assert.throws(()=>reader.metrics());await assert.rejects(application.applicationStorageIdentity(reader),/identity_mismatch/);writeFileSync(readerPath,credential('keryx_reader'));checks++;
   progress('terminal-drain');const captured=reader.personalHistory!,request=captured.list(input.owner,{filters:{},take:1}),outcome=request.then(()=>({returned:true}),()=>({returned:false}));
+  const identityOutcome=application.applicationStorageIdentity(reader).then(()=>true,()=>false);
   await application.closeReadonlyApplicationStorage(reader);assert.equal((await outcome).returned,false);await assert.rejects(native.assertPostgresRuntimeIdentity(reader));await assert.rejects(captured.list(input.owner,{filters:{},take:1}));checks++;
+  assert.equal(await identityOutcome,false);await assert.rejects(application.applicationStorageIdentity(reader),/adapter_not_initialized/);checks++;
   await assert.rejects(ownership.read(input.owner,binding,'synthetic-runtime-run'));checks++;
   await assert.rejects(privacy.read(id,actor));checks++;
   await assert.rejects(bibliographies.list(input.owner));await assert.rejects(bound.list());checks++;
@@ -336,7 +343,7 @@ async function main(){
   await assert.rejects(disposedHistory());checks++;
   await assert.rejects(async()=>reader.getSource(sourceExpected.source.id));await assert.rejects(pendingOwners.list(fakeProof));checks++;
   await assert.rejects(chat.lookup(input.chat.recipient,input.account.binding));await assert.rejects(chat.list(input.account.snapshot));checks++;
-  progress('complete');assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,phaseMs,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
+  progress('complete');assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,phaseMs,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,awaitedSelectedReadonlyIdentity:true,forgedWrappedAndWriteIdentityRefused:true,identityResultSuppressedOnClose:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
  }finally{await native.closePostgresRuntimeAdapter(reader);}
 }
 void main().catch(error=>{console.error(error);process.exitCode=1;});
