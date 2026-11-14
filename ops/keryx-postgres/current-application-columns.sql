@@ -49,6 +49,10 @@ ALTER TABLE public.query_runs DROP CONSTRAINT query_runs_mcp_client_check;
 -- identity/SHA-bound Source scalars rather than an encoded shadow as authority.
 ALTER TABLE public.query_runs DROP CONSTRAINT query_runs_origin_check;
 ALTER TABLE public.query_runs DROP CONSTRAINT query_runs_payment_mode_check;
+-- Existing SQLite rows may have SQL NULL in these observed totals. Financial
+-- consumers still validate their own evidence; import must not invent zeroes.
+ALTER TABLE public.query_runs ALTER COLUMN total_spent DROP NOT NULL;
+ALTER TABLE public.query_runs ALTER COLUMN total_to_creators DROP NOT NULL;
 -- JSON.stringify cells retain escaped NUL/surrogates independently of scalars.
 ALTER TABLE public.query_runs ALTER COLUMN economics_data TYPE json USING economics_data::json;
 ALTER TABLE public.browser_journal_bindings ADD COLUMN payment_context text CHECK(payment_context IS NULL OR payment_context IS JSON);
