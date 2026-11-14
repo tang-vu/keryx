@@ -20,7 +20,7 @@ import { heldHistoryProjectionSql,sqliteOriginalHistoryProjection } from './run-
 import { type Manifest,type RecipientAction,type Receipt } from '../../lib/owner-run-assignments/contracts';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
 import { Client } from 'pg';
-import { sqlitePublicationScalarProjection,heldPublicationScalarProjectionSql } from './privacy-projection.mts';
+import { heldQueryRunFixture } from './held-query-run-fixture.mts';
 import { composePostgresRunClaims } from '../../lib/db/postgres/claims-transport';
 import { createEnrolledSqliteRunClaims } from '../../lib/db/run-claims-sqlite';
 export async function qualifyOwnerAssignments(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string}){
@@ -32,9 +32,8 @@ export async function qualifyOwnerAssignments(input:{options:PostgresConnectionO
  const runIds:string[]=[],operationIds:string[]=[];
  const owner=(work:(db:DatabaseSync)=>void)=>{const db=new DatabaseSync(paths[0]);try{registerStorageCapability(db,input.identity,()=>true);db.exec('BEGIN IMMEDIATE');work(db);db.exec('COMMIT');}finally{db.close();}};
  const originalSql=(db:DatabaseSync,id:string)=>{
-  const row=db.prepare('SELECT data,created_at,budget,total_spent,total_to_creators FROM query_runs WHERE id=?').get(id)!,scalar=sqlitePublicationScalarProjection(db,id);
-  const values={id,created_at:row.created_at,data:row.data,budget:row.budget,total_spent:row.total_spent,total_to_creators:row.total_to_creators,...Object.fromEntries(Object.entries(scalar.shadows).filter(([key])=>!['id','created_at'].includes(key))),answer:scalar.answerShadow},keys=Object.keys(values) as (keyof typeof values)[];
-  return `INSERT INTO public.query_runs(${keys.join(',')}) VALUES(${keys.map(key=>{const value=values[key];return value===null?'NULL':typeof value==='number'?String(value):q(String(value))+(key==='data'?'::json':'');}).join(',')}) ON CONFLICT(id) DO UPDATE SET ${keys.filter(key=>key!=='id').map(key=>`${key}=excluded.${key}`).join(',')};`+heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id))+heldPublicationScalarProjectionSql(id,scalar);
+  const row=heldQueryRunFixture(db,id,'replace');
+  return row.physicalSql+row.scalarSql+heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id));
  };
  const open=()=>{const manifest=readFileSync(paths[4],'utf8');selected=openVerifiedSqliteStorage(paths[0],input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(readFileSync(paths[4],'utf8'),manifest)});oracle=createEnrolledSqliteOwnerRunAssignments(selected.db);assert(oracle);};
  const clean=(value:unknown):unknown=>JSON.parse(JSON.stringify(value),(key,v)=>['committedAt','assignedAt','confirmedAt'].includes(key)&&v!==null?'generated-time':v);
