@@ -9624,3 +9624,13 @@ Refuse oversized evidence rather than summing partially. Preserve rollback,
 terminal-state and lost-acknowledgement behavior without retry or provider work.
 This is running-order recovery only; failed-original fulfillment, complete
 application composition and production migration retain their separate gates.
+
+## Refuse incompatible research input before settlement (2026-11-14)
+
+Validate public questions and the A2A retained model selector for NUL/unpaired
+surrogates before challenge or settlement. Preserve existing input bounds,
+trimming and valid Unicode bytes; never silently repair malformed text. Keep one
+shared question validator across web, chat, buyer/MCP, sponsored and Monthly
+schemas. This closes fresh request JSONB representability before a debit while
+raw postpaid responses and retained originals keep their independent storage
+contracts. Complete native producer/factory and operational gates still apply.
