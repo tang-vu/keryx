@@ -25,7 +25,7 @@ export async function qualifyHostedAdmission(input:{options:PostgresConnectionOp
  const pg=(s:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+s+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
  let vectors=0,proxy:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined,loss:ReturnType<typeof createPostgresDomainChannel>|undefined;
  const previous={json:process.env.KERYX_OPERATING_FEE_POLICY_JSON,digest:process.env.KERYX_OPERATING_FEE_POLICY_DIGEST};
- const previousConfig={baseUrl:config.baseUrl,registryOrigins:config.registryOrigins};
+ const previousConfig={baseUrl:config.baseUrl,registryOrigins:config.registryOrigins,registryReadAddress:config.registryReadAddress};
  const fresh=async(role:'public'|'private'='public',caps={lifetime:'100',query:'20'})=>{
   const policy={format:'keryx-hosted-treasury-policy-v1' as const,network:profile.networkId,storageIdentityDigest:storageIdentityDigest(input.identity),origin:'https://keryx.cc',signer:wallet(),lifetimeCapMicroUsdc:caps.lifetime,queryCapMicroUsdc:caps.query,expiresAtSeconds:Math.floor(Date.now()/1000)+3600};
   admitSqliteHostedPolicy(db,policy,input.identity,role);await ledger.admitHostedTreasuryPolicy(policy,role);
@@ -57,7 +57,7 @@ export async function qualifyHostedAdmission(input:{options:PostgresConnectionOp
   return {value,claim,challenge,sourceId};
  };
  try{
-  Object.assign(config,{baseUrl:'https://keryx.cc',registryOrigins:''});
+  Object.assign(config,{baseUrl:'https://keryx.cc',registryOrigins:'',registryReadAddress:'0x'+'88'.repeat(20)});
   db.exec('BEGIN');installMainnetApplicationSchema(db);db.exec('COMMIT');
   // Mainnet application schema contains the actual source-claim payment tables.
   const first=await fresh();await compare(first,true);assert.throws(()=>admitSqliteHostedAuthorization(db,first,input.identity));await assert.rejects(native.admitHostedAuthorization(first));vectors++;
