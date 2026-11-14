@@ -18,7 +18,7 @@ const snapshotSchema=z.object({selector:selectorSchema,source:row.nullable(),row
  hosted:z.object({authorization:row,policy:row.nullable()}).strict().nullable(),purchase:row.nullable()}).strict();
 const historySchema=z.object({claim:sourceClaimSchema,action:z.enum(['verified','linked-free','policy']),at:z.string().datetime(),evidence:z.unknown()}).strict();
 const bindingSchema=z.object({sourceId:z.string().min(1).max(256),claimId:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
-const runtimeSchema=z.object({deploymentOrigin:z.string().url(),fallbackAddress:z.string(),authorities:z.array(sourceRegistryAuthoritySchema).max(4)}).strict();
+const runtimeSchema=z.object({deploymentOrigin:z.string().url(),fallbackAddress:z.string(),authorities:z.array(sourceRegistryAuthoritySchema).max(4),unavailable:z.boolean().optional()}).strict();
 export type SourceClaimPolicyRuntime=z.infer<typeof runtimeSchema>;
 export interface SourceClaimPolicySelector {sourceId:string|null;identity:{network:string;payer:string;authorizationId:string}|null;}
 export interface SourceClaimPurchasePolicyInput {identity:{network:string;payer:string;authorizationId:string};existing:boolean;sourceId?:string;receipt?:SourceClaimReceipt;kind?:'fetch'|'citation'|'operating-fee';payee:string;amountMicros:number;requestHash?:string;}
@@ -28,7 +28,8 @@ export function sourceClaimPolicyRuntime():SourceClaimPolicyRuntime{
  // deployment URL. Retain an invalid value here; the managed-policy parser
  // rejects it only on the path that actually consumes that authority.
  let deploymentOrigin=config.baseUrl;try{deploymentOrigin=new URL(config.baseUrl).origin;}catch{}
- return {deploymentOrigin,fallbackAddress:config.registryReadAddress?.toLowerCase()??'',authorities:configuredRegistryAuthorities()};
+ let authorities:SourceClaimPolicyRuntime['authorities']=[],unavailable=false;try{authorities=configuredRegistryAuthorities();}catch{unavailable=true;}
+ return {deploymentOrigin,fallbackAddress:config.registryReadAddress?.toLowerCase()??'',authorities,...(unavailable?{unavailable:true}:{})};
 }
 export function sourceClaimPolicySelector(value:SourceClaimPolicySelector):string{
  const parsed=selectorSchema.parse(value),wire=canonicalJson(parsed);
@@ -73,6 +74,7 @@ export function assertSourceClaimPaymentPolicy(snapshot:Snapshot,input:{sourceId
  const claim=currentClaim(snapshot,input.sourceId),source=snapshot.source;
  if(!claim){if(input.expected||source?.source_claim_id)throw Error('Managed source claim binding is unavailable');return null;}
  const expected=sourceClaimReceiptSchema.parse(input.expected),now=input.now??Date.now(),settings=runtimeSchema.parse(runtime),onchain=source?.onchain_id;
+ if(settings.unavailable)throw Error('Source registry configuration unavailable');
  let authority:ReturnType<typeof sourceRegistryAuthoritySchema.parse>|undefined;
  if(typeof onchain==='string'&&/^0x[0-9a-fA-F]{64}$/.test(onchain)){
   const raw=reader(snapshot).values.get('keryx:source-registry-origin:v1:'+onchain.toLowerCase());

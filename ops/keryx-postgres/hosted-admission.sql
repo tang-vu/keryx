@@ -5,7 +5,7 @@ SET ROLE keryx_owner;
 -- The digest is only local compare-and-swap authority, never settlement proof.
 CREATE FUNCTION keryx_storage.source_claim_purchase_policy(operation text,selector text,packet jsonb) RETURNS jsonb LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
 DECLARE selection jsonb;source_row jsonb;retained jsonb;browser_row jsonb;hosted_row jsonb;purchase_row jsonb;wire text;sha text;policy_key text;
- row_count bigint;wire_bytes bigint;policy_wire text;replay boolean:=false;before_rows jsonb;before_wire text;
+ row_count bigint;wire_bytes bigint;policy_wire text;replay boolean:=false;before_rows jsonb;before_wire text;source_hash text;fee_policy_key text;
 BEGIN
  IF operation NOT IN('snapshot','assert','purchase') OR selector IS NULL OR octet_length(selector)>2048 THEN RAISE EXCEPTION 'source policy selector refused';END IF;
  selection:=selector::jsonb;
@@ -18,19 +18,28 @@ BEGIN
  -- INTEGER 0/1. Capture that exact business representation before JS checks.
  SELECT to_jsonb(s)||jsonb_build_object('active',CASE WHEN s.active THEN 1 ELSE 0 END,'verified',CASE WHEN s.verified THEN 1 ELSE 0 END)
   INTO source_row FROM public.sources s WHERE s.id=selection->>'sourceId';
- SELECT count(*),coalesce(sum(octet_length(key)+octet_length(value)),0) INTO row_count,wire_bytes FROM public.sync_state
-  WHERE key LIKE 'keryx:source-claims:v1:%' OR key LIKE 'keryx:operating-fee:v1:policy:%' OR key='keryx:source-registry-origin:v1:'||lower(source_row->>'onchain_id');
- IF row_count>10000 OR wire_bytes>7000000 THEN RAISE EXCEPTION 'source policy snapshot bound';END IF;
- SELECT coalesce(jsonb_agg(jsonb_build_object('key',key,'value',value) ORDER BY key COLLATE "C"),'[]'::jsonb) INTO retained FROM public.sync_state
-  WHERE key LIKE 'keryx:source-claims:v1:%' OR key LIKE 'keryx:operating-fee:v1:policy:%' OR key='keryx:source-registry-origin:v1:'||lower(source_row->>'onchain_id');
+ source_hash:=encode(sha256(convert_to(selection->>'sourceId','UTF8')),'hex');
  IF selection->'identity'<>'null'::jsonb THEN
+  policy_key:='keryx:source-claims:v1:purchase-policy:'||encode(sha256(convert_to('{"authorizationId":'||to_json(selection#>>'{identity,authorizationId}')::text||',"network":'||to_json(selection#>>'{identity,network}')::text||',"payer":'||to_json(selection#>>'{identity,payer}')::text||'}','UTF8')),'hex');
   SELECT jsonb_build_object('intent',to_jsonb(i),'binding',to_jsonb(b)) INTO browser_row FROM public.browser_authorization_intents i
    LEFT JOIN public.browser_journal_bindings b USING(nonce) WHERE i.nonce=selection#>>'{identity,authorizationId}';
   SELECT jsonb_build_object('authorization',to_jsonb(a),'policy',to_jsonb(p)) INTO hosted_row FROM public.hosted_treasury_authorizations a
    LEFT JOIN public.hosted_treasury_policies p ON p.digest=a.policy_digest WHERE a.nonce=selection#>>'{identity,authorizationId}';
   SELECT to_jsonb(p)-'issued_data' INTO purchase_row FROM public.research_purchase_authorizations p WHERE p.network=selection#>>'{identity,network}'
    AND p.payer=selection#>>'{identity,payer}' AND p.authorization_id=selection#>>'{identity,authorizationId}' AND p.asset=keryx_storage.a2a_original_profile()->>'asset';
+  fee_policy_key:='keryx:operating-fee:v1:policy:'||((hosted_row#>>'{authorization,original}')::jsonb#>>'{context,operatingFee,policyDigest}');
  END IF;
+ -- An unrelated purchase's policy sidecar is not consumed by Source. Excluding
+ -- it permits independent concurrent seller claims without stale-CAS failures.
+ SELECT count(*),coalesce(sum(octet_length(key)+octet_length(value)),0) INTO row_count,wire_bytes FROM public.sync_state
+  WHERE selection->'sourceId'<>'null'::jsonb AND(key LIKE 'keryx:source-claims:v1:claim:%' OR key LIKE 'keryx:source-claims:v1:history:%'
+   OR key LIKE 'keryx:source-claims:v1:challenge:%' OR key='keryx:source-claims:v1:marker:'||source_hash OR key='keryx:source-claims:v1:source:'||source_hash)
+   OR key=policy_key OR key=fee_policy_key OR key='keryx:source-registry-origin:v1:'||lower(source_row->>'onchain_id');
+ IF row_count>10000 OR wire_bytes>7000000 THEN RAISE EXCEPTION 'source policy snapshot bound';END IF;
+ SELECT coalesce(jsonb_agg(jsonb_build_object('key',key,'value',value) ORDER BY key COLLATE "C"),'[]'::jsonb) INTO retained FROM public.sync_state
+  WHERE selection->'sourceId'<>'null'::jsonb AND(key LIKE 'keryx:source-claims:v1:claim:%' OR key LIKE 'keryx:source-claims:v1:history:%'
+   OR key LIKE 'keryx:source-claims:v1:challenge:%' OR key='keryx:source-claims:v1:marker:'||source_hash OR key='keryx:source-claims:v1:source:'||source_hash)
+   OR key=policy_key OR key=fee_policy_key OR key='keryx:source-registry-origin:v1:'||lower(source_row->>'onchain_id');
  wire:=jsonb_build_object('selector',selection,'source',source_row,'rows',retained,'browser',browser_row,'hosted',hosted_row,'purchase',purchase_row)::text;
  IF octet_length(wire)>8388608 THEN RAISE EXCEPTION 'source policy encoded snapshot bound';END IF;
  sha:=encode(sha256(convert_to(wire,'UTF8')),'hex');
@@ -45,14 +54,6 @@ BEGIN
    OR packet#>>'{policySnapshot,sourceId}' IS DISTINCT FROM selection->>'sourceId'
    OR packet->'policySnapshot'-'sourceId'-'receipt'-'kind'<>'{}'::jsonb OR packet#>>'{policySnapshot,kind}' NOT IN('fetch','citation','operating-fee')
    THEN RAISE EXCEPTION 'source policy capture refused';END IF;
-  IF NOT(packet->>'existing')::boolean AND packet#>'{policySnapshot,receipt}'<>'null'::jsonb THEN
-   IF packet#>>'{policySnapshot,receipt,mode}' NOT IN('paid','citation-only')
-    OR packet#>>'{policySnapshot,kind}'='fetch' AND packet#>>'{policySnapshot,receipt,mode}'<>'paid'
-    OR (packet#>>'{policySnapshot,receipt,verifiedAt}')::timestamptz>clock_timestamp()
-    OR (packet#>>'{policySnapshot,receipt,verifiedAt}')::timestamptz<clock_timestamp()-interval '24 hours'
-    OR (packet#>>'{policySnapshot,receipt,effectiveAt}')::timestamptz>clock_timestamp()
-   THEN RAISE EXCEPTION 'source policy window expired';END IF;
-  END IF;
  ELSE IF packet->'policyWire'<>'null'::jsonb OR selection->'sourceId'<>'null'::jsonb THEN RAISE EXCEPTION 'source policy capture refused';END IF;END IF;
  IF operation='purchase' AND selection->'identity'<>'null'::jsonb AND NOT(packet->>'existing')::boolean AND purchase_row IS NOT NULL
   AND jsonb_typeof(packet->'purchaseRow')='object' AND purchase_row IS NOT DISTINCT FROM packet->'purchaseRow'-'issued_data' THEN
@@ -68,6 +69,14 @@ BEGIN
  END IF;
  IF packet->>'snapshotSha256' IS DISTINCT FROM sha AND NOT replay OR (packet->>'existing')::boolean IS DISTINCT FROM (purchase_row IS NOT NULL) AND NOT replay
  THEN RAISE EXCEPTION 'source policy snapshot changed';END IF;
+ IF NOT(packet->>'existing')::boolean AND NOT replay AND packet#>'{policySnapshot,receipt}'<>'null'::jsonb THEN
+  IF packet#>>'{policySnapshot,receipt,mode}' NOT IN('paid','citation-only')
+   OR packet#>>'{policySnapshot,kind}'='fetch' AND packet#>>'{policySnapshot,receipt,mode}'<>'paid'
+   OR (packet#>>'{policySnapshot,receipt,verifiedAt}')::timestamptz>clock_timestamp()
+   OR (packet#>>'{policySnapshot,receipt,verifiedAt}')::timestamptz<clock_timestamp()-interval '24 hours'
+   OR (packet#>>'{policySnapshot,receipt,effectiveAt}')::timestamptz>clock_timestamp()
+  THEN RAISE EXCEPTION 'source policy window expired';END IF;
+ END IF;
  IF operation='purchase' THEN
   IF selection->'identity'='null'::jsonb THEN RAISE EXCEPTION 'source purchase identity required';END IF;
   IF NOT(packet->>'existing')::boolean AND NOT replay AND policy_wire IS NOT NULL THEN

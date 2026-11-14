@@ -4,8 +4,9 @@ import { afterEach,beforeEach,describe,expect,it,vi } from 'vitest';
 import { config } from '../../config';
 import { canonicalJson } from '../../canonical-json';
 import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy,admitSqliteSourceClaimPurchasePolicy } from '../public-source-claims';
-import { captureSourceClaimPurchasePolicy,captureHostedSourceClaimPolicy,sourceClaimPolicySelector,decodeSourceClaimPolicySnapshot,type SourceClaimPurchasePolicyInput,type SourceClaimPolicyRuntime } from './source-claim-purchase-policy';
+import { captureSourceClaimPurchasePolicy,captureHostedSourceClaimPolicy,sourceClaimPolicySelector,sourceClaimPolicyRuntime,decodeSourceClaimPolicySnapshot,type SourceClaimPurchasePolicyInput,type SourceClaimPolicyRuntime } from './source-claim-purchase-policy';
 import { operatingFeePolicyDigest,operatingFeeRequestHash,OPERATING_FEE_SOURCE_ID,OPERATING_FEE_POLICY_KEY_PREFIX } from '../../payments/operating-fee-policy';
+import { sourceRegistryAuthoritySchema } from '../../registry/source-registry-authority-schema';
 const owner='0x'+'11'.repeat(20),payee='0x'+'22'.repeat(20),registry='0x'+'88'.repeat(20),onchain='0x'+'cc'.repeat(32),nonce='0x'+'ab'.repeat(32),origin='https://keryx.cc',network='eip155:5042',prefix='keryx:source-claims:v1:';
 const runtime:SourceClaimPolicyRuntime={deploymentOrigin:origin,fallbackAddress:registry,authorities:[]};
 const sha=(s:string)=>createHash('sha256').update(s).digest('hex');
@@ -39,6 +40,7 @@ function compare(f:ReturnType<typeof fixture>,allowed:boolean){const native=()=>
 describe('SOURCE managed purchase policy projection',()=>{
  it.each(['paid','citation-only','free'] as const)('preserves %s fetch and citation eligibility',mode=>{const f=fixture(mode);compare(f,mode==='paid');const g=fixture(mode);g.input.kind='citation';compare(g,mode!=='free');});
  it('preserves canonical URL normalization and literal escape text',()=>{const f=fixture();f.db.prepare('UPDATE sources SET url=?').run('https://PUBLISHER.example/Case?a=1#fragment');compare(f,true);});
+ it('keeps unavailable registry configuration closed only on paths that consume it',()=>{const f=fixture();Object.assign(config,{registryOrigins:'malformed retained configuration'});const settings=sourceClaimPolicyRuntime();expect(settings.unavailable).toBe(true);expect(()=>captureSourceClaimPurchasePolicy(envelope(f.db,f.input),f.input,settings)).toThrow();expect(source(f.db,f.input)).toBe(false);const legacy={...f.input,sourceId:'unmanaged-source',receipt:undefined};expect(()=>captureSourceClaimPurchasePolicy(envelope(f.db,legacy),legacy,settings)).not.toThrow();expect(source(f.db,legacy)).toBe(true);});
  it.each(['missing-receipt','revision','effective','verified','id','network','origin','registry','inactive','unverified','scholarly','synthetic','url','onchain','rss','marker','binding','current','first-history','last-history','proof','future','stale'] as const)('refuses %s with the actual Source oracle',kind=>{
   const f=fixture(),key=prefix+'claim:'+f.claim.id,update=(patch:Record<string,unknown>)=>{const c={...f.claim,...patch};f.db.prepare('UPDATE sync_state SET value=? WHERE key=?').run(canonicalJson(c),key);f.db.prepare('UPDATE sync_state SET value=? WHERE key=?').run(canonicalJson({claim:c,action:'policy',at:new Date().toISOString(),evidence:{}}),prefix+'history:'+f.claim.id+':0000000000000003');};
   if(kind==='missing-receipt')delete f.input.receipt;
@@ -82,7 +84,7 @@ describe('SOURCE managed purchase policy projection',()=>{
   compare(f,kind==='valid');
  });
  it('keeps the immutable registry sidecar authoritative over the changed global selection',()=>{
-  const f=fixture(),authority={network,address:registry,version:3 as const,codeHash:'0x'+'dd'.repeat(32),deployBlock:'123'},text=canonicalJson([authority]),oldNetwork=config.networkId;
+  const f=fixture(),authority=sourceRegistryAuthoritySchema.parse({network,address:registry,version:3,codeHash:'0x'+'dd'.repeat(32),deployBlock:'123'}),text=canonicalJson([authority]),oldNetwork=config.networkId;
   try{Object.assign(config,{networkId:network,registryReadAddress:payee,registryOrigins:text});vi.stubEnv('KERYX_REGISTRY_ORIGINS',text);vi.stubEnv('NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS',text);
    f.db.prepare('INSERT INTO sync_state VALUES(?,?,?)').run('keryx:source-registry-origin:v1:'+onchain,canonicalJson({format:'keryx-source-registry-origin-v1',onchainId:onchain,authority}),'now');
    const settings={deploymentOrigin:origin,fallbackAddress:payee,authorities:[authority]};expect(()=>captureSourceClaimPurchasePolicy(envelope(f.db,f.input),f.input,settings)).not.toThrow();expect(source(f.db,f.input)).toBe(true);

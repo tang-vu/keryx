@@ -37,13 +37,15 @@ export function composePostgresHostedAdmission(channel:PostgresDomainChannel,ide
   // dispatch; JSON escape bytes in a later paid answer are a separate protocol.
   const strings=[context.queryId,context.sourceId,context.itemId,...(context.privateJob?Object.values(context.privateJob):[])];
   if(strings.some(v=>v!==null&&(v.includes('\0')||Buffer.from(v).toString('utf8')!==v)))fail();
-  let runtimeWire:string|null=null;
+  let runtimeWire:string|null=null,recheckSource:(()=>void)|null=null;
   if(context.kind!=='operating-fee'){
    const runtime=sourceClaimPolicyRuntime();runtimeWire=canonicalJson(runtime);
    const selector=sourceClaimPolicySelector({sourceId:context.sourceId,identity:null});
    const snapshot=await channel.call('hostedSourcePolicySnapshot' as Parameters<PostgresDomainChannel['call']>[0],[selector]);
    if(channel.closed||canonicalJson(sourceClaimPolicyRuntime())!==runtimeWire)fail();
-   const sourcePolicy=captureHostedSourceClaimPolicy(snapshot,{sourceId:context.sourceId,expected:context.sourceClaim??null,kind:context.kind,network:policy.network},runtime);
+   const sourceInput={sourceId:context.sourceId,expected:context.sourceClaim??null,kind:context.kind,network:policy.network};
+   const sourcePolicy=captureHostedSourceClaimPolicy(snapshot,sourceInput,runtime);
+   recheckSource=()=>{captureHostedSourceClaimPolicy(snapshot,sourceInput,runtime);};
    feeWire=canonicalJson({sourcePolicy});
   }
   const result=await channel.call('hostedAdmitAuthorization',[canonicalJson(policy),hostedTreasuryPolicyDigest(policy),original,canonicalJson(totals),available,feeWire]);
@@ -53,6 +55,7 @@ export function composePostgresHostedAdmission(channel:PostgresDomainChannel,ide
    createSessionSigningPolicy(ARC_MAINNET_PROFILE).validatePayment(payload,policy.signer);
    if(context.kind==='operating-fee'&&canonicalJson(configuredOperatingFeePolicy(expected,policy.origin,policy.signer))!==feeWire)fail();
    if(runtimeWire!==null&&canonicalJson(sourceClaimPolicyRuntime())!==runtimeWire)fail();
+   recheckSource?.();
   }catch{throw new PostgresDomainWriteOutcomeUnknown();}
   return nonce;
  }} satisfies PostgresHostedAdmissionPort);
