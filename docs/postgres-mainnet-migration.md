@@ -1211,3 +1211,22 @@ Raw postpaid response escapes remain independent of the small closed recovery
 metadata. Failed-original fulfillment has its own authority and is not admitted
 through these running-order recovery tags. Full factory/caller/producer and
 operational migration gates remain open.
+
+### Reject incompatible fresh request text before payment
+
+The fresh public question parser refuses NUL and unpaired UTF-16 surrogates.
+Keep the existing trimming and 2,000-character bound; preserve valid Unicode,
+including emoji, combining characters, newlines and literal backslash escape
+text. Web ask, OpenAI-compatible chat and buyer/MCP entry points consume this
+parser. The bounded question schema used by retained Operator/buyer/Monthly
+contracts stays unchanged; old tasks still reopen under their original checks.
+This does not rewrite retained originals or
+restrict the raw postpaid answer/resolution storage described above.
+
+The A2A route also validates its final trimmed/truncated model selector before
+challenge or settlement. If truncating the existing 64-character selector would
+leave an unpaired surrogate, return 400. Signed-request regressions use the real
+seller path and genuine enrolled SQLite facade with unfunded synthetic vendor
+responses; invalid input reaches no facilitator verification/settlement, research
+dependency construction, payment row or order. Native producer/current-domain
+and pending-owner integration remain separate requirements.

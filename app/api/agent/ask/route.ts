@@ -22,7 +22,7 @@ import { a2aDiscovery } from "@/lib/x402-discovery";
 import { verifyApiKey } from "@/lib/api-keys";
 import { hasScope, parseScopes } from "@/lib/api-key-scopes";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
-import { parseAskQuestion } from "@/lib/ask-input";
+import { parseAskQuestion, isWellFormedAskText } from "@/lib/ask-input";
 import { unsupportedDecisionReviewIntent } from "@/lib/research/decision-review-types";
 import {
   parseResearchMode,
@@ -325,6 +325,9 @@ export async function POST(req: NextRequest) {
   if (!treasury) return Response.json({ error: "treasury wallet not configured" }, { status: 500 });
   const model =
     typeof body.model === "string" ? body.model.trim().slice(0, 64) || undefined : undefined;
+  if (model !== undefined && !isWellFormedAskText(model)) {
+    return Response.json({ error: "model contains an invalid text character" }, { status: 400 });
+  }
   if (body.responseMode !== undefined && body.responseMode !== "wait" && body.responseMode !== "async") {
     return Response.json({ error: "responseMode must be wait or async" }, { status: 400 });
   }

@@ -215,6 +215,17 @@ describe("authenticated NEW original through actual signed POST", () => {
     const route = await import("../../app/api/me/jobs/route");
     return cookies.run(jwt, () => route.GET(new Request(`https://keryx.cc/api/me/jobs?pending=owned&id=${id}`)));
   }
+  it.each([
+    { question: "question\0text" }, { question: "question\ud800" }, { question: "\udfffquestion" },
+    { model: "model\0name" }, { model: "model\ud800" }, { model: "x".repeat(63) + "\ud83d\udd12" },
+  ])("rejects incompatible signed request text before purchase or settlement", async invalid => {
+    const jwt = await token(), original = await signed("quick", invalid);
+    const response = await cookies.run(jwt, () => POST(original.req()));
+    expect(response.status).toBe(400); expect(mocks.settleThenServe).not.toHaveBeenCalled();
+    expect(mocks.vendorVerify).not.toHaveBeenCalled(); expect(mocks.vendorSettle).not.toHaveBeenCalled();
+    expect(mocks.getAgentDeps).not.toHaveBeenCalled(); expect(mocks.collectRun).not.toHaveBeenCalled();
+    expect(await native.getA2aOrder(original.id)).toBeNull(); expect(paymentRows(original.id)).toEqual([]);
+  });
   it.each(["quick", "deep"] as const)("actual %s producer associates only cookie owner and projects exact retained hold before target", async mode => {
     const jwt = await token(), original = await signed(mode);
     const response = await cookies.run(jwt, () => POST(original.req()));
