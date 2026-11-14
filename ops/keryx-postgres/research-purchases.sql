@@ -51,11 +51,11 @@ BEGIN
   PERFORM keryx_storage.source_claim_purchase_policy('purchase',projection->>'selector',projection);
   IF NOT existed AND NOT required THEN
    INSERT INTO public.research_purchase_authorizations(network,asset,payer,payee,authorization_id,product,purchase_id,request_hash,amount_micros,issued_data)
-    VALUES(r->>'network',r->>'asset',r->>'payer',r->>'payee',r->>'authorization_id',r->>'product',r->>'purchase_id',r->>'request_hash',(r->>'amount_micros')::bigint,CASE WHEN challenge IS NULL THEN NULL ELSE challenge||'{"submitted":false}'::jsonb END);
+    VALUES(r->>'network',r->>'asset',r->>'payer',r->>'payee',r->>'authorization_id',r->>'product',r->>'purchase_id',r->>'request_hash',(r->>'amount_micros')::bigint,CASE WHEN challenge IS NULL THEN NULL ELSE (challenge||'{"submitted":false}'::jsonb)::text END);
    SELECT * INTO retained FROM public.research_purchase_authorizations WHERE network=r->>'network' AND asset=r->>'asset' AND payer=r->>'payer' AND authorization_id=r->>'authorization_id';existed:=FOUND;
   END IF;
   IF NOT existed OR to_jsonb(retained)-'issued_data' IS DISTINCT FROM r-'issued_data' THEN RAISE EXCEPTION 'research authorization claim conflict';END IF;
-  p:=retained.issued_data;
+  p:=retained.issued_data::jsonb;
   IF p IS NOT NULL THEN
    IF (jsonb_typeof(p)='object' AND p-'validAfter'-'validBefore'-'expiresAt'-'submitted'='{}'::jsonb AND jsonb_typeof(p->'submitted')='boolean') IS NOT TRUE THEN RAISE EXCEPTION 'invalid stored issued challenge';END IF;
    FOREACH field IN ARRAY ARRAY['validAfter','validBefore','expiresAt'] LOOP
@@ -66,7 +66,7 @@ BEGIN
   IF required AND p IS NULL OR challenge IS NOT NULL AND (p IS NULL OR p-'submitted' IS DISTINCT FROM challenge) THEN RAISE EXCEPTION 'issued Monthly authorization mismatch';END IF;
   IF required AND p->'submitted'='false'::jsonb THEN
    IF now_seconds<=(p->>'validAfter')::numeric OR now_seconds>=(p->>'validBefore')::numeric OR now_seconds>=(p->>'expiresAt')::numeric THEN RAISE EXCEPTION 'issued Monthly authorization expired';END IF;
-   UPDATE public.research_purchase_authorizations SET issued_data=jsonb_set(issued_data,'{submitted}','true'::jsonb) WHERE network=retained.network AND asset=retained.asset AND payer=retained.payer AND authorization_id=retained.authorization_id;
+   UPDATE public.research_purchase_authorizations SET issued_data=jsonb_set(issued_data::jsonb,'{submitted}','true'::jsonb)::text WHERE network=retained.network AND asset=retained.asset AND payer=retained.payer AND authorization_id=retained.authorization_id;
   END IF;
   PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
  END IF;
@@ -77,7 +77,7 @@ BEGIN
   IF action='get' AND packet-'id'<>'{}'::jsonb THEN RAISE EXCEPTION 'monthly selector refused';END IF;
  END IF;
  IF chosen_id IS NULL OR chosen_id !~ '^monthly_[a-f0-9]{64}$' THEN RAISE EXCEPTION 'monthly identity refused';END IF;
- SELECT data INTO p FROM public.research_monthly WHERE id=chosen_id;existed:=FOUND;
+ SELECT data::jsonb INTO p FROM public.research_monthly WHERE id=chosen_id;existed:=FOUND;
  IF NOT existed THEN
   IF action='get' THEN RETURN NULL;END IF;
   IF action<>'create' THEN RAISE EXCEPTION 'Monthly purchase unavailable';END IF;p:=proposed;
@@ -104,10 +104,10 @@ BEGIN
  IF used>4 OR EXISTS(SELECT 1 FROM(SELECT *,row_number() OVER(ORDER BY slot)-1 expected_slot FROM public.research_monthly_redemptions WHERE monthly_id=chosen_id) x
   WHERE slot<>expected_slot OR request_id !~ '^[A-Za-z0-9_-]{1,128}$' OR request_hash !~ '^[a-f0-9]{64}$'
    OR order_id<>'a2a_'||encode(sha256(convert_to('["keryx-monthly-redemption-v1",'||to_json(chosen_id)::text||','||to_json(request_id)::text||']','UTF8')),'hex')
-   OR date_trunc('milliseconds',created_at)<date_trunc('milliseconds',(p->>'createdAt')::timestamptz) OR date_trunc('milliseconds',created_at)>=date_trunc('milliseconds',(p->>'expiresAt')::timestamptz)) THEN RAISE EXCEPTION 'invalid stored Monthly redemptions';END IF;
+   OR date_trunc('milliseconds',created_at::timestamptz)<date_trunc('milliseconds',(p->>'createdAt')::timestamptz) OR date_trunc('milliseconds',created_at::timestamptz)>=date_trunc('milliseconds',(p->>'expiresAt')::timestamptz)) THEN RAISE EXCEPTION 'invalid stored Monthly redemptions';END IF;
  IF action='get' THEN
-  SELECT coalesce(jsonb_agg(jsonb_build_object('requestId',d.request_id,'orderId',d.order_id,'requestHash',d.request_hash,'createdAt',coalesce(a.source_order_wire::jsonb->>'created_at',to_char(d.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')),'slot',d.slot) ORDER BY d.slot),'[]'::jsonb) INTO redemptions
-   FROM public.research_monthly_redemptions d LEFT JOIN keryx_storage.acceptance_original_projection a ON a.order_id=d.order_id WHERE d.monthly_id=chosen_id;
+  SELECT coalesce(jsonb_agg(jsonb_build_object('requestId',d.request_id,'orderId',d.order_id,'requestHash',d.request_hash,'createdAt',d.created_at,'slot',d.slot) ORDER BY d.slot),'[]'::jsonb) INTO redemptions
+   FROM public.research_monthly_redemptions d WHERE d.monthly_id=chosen_id;
   RETURN json_build_object('purchase',p,'redemptions',redemptions);
  END IF;
  IF action='create' THEN
@@ -115,8 +115,8 @@ BEGIN
    IF p-'payer'-'payee'-'authorizationId' IS DISTINCT FROM proposed-'payer'-'payee'-'authorizationId' OR lower(p->>'payer') IS DISTINCT FROM lower(proposed->>'payer') OR lower(p->>'payee') IS DISTINCT FROM lower(proposed->>'payee') OR lower(p->>'authorizationId') IS DISTINCT FROM lower(proposed->>'authorizationId') THEN RAISE EXCEPTION 'Monthly purchase replay conflict';END IF;
   ELSE
    SELECT * INTO c FROM public.research_purchase_authorizations WHERE network=profile->>'network' AND asset=profile->>'asset' AND payer=lower(p->>'payer') AND authorization_id=lower(p->>'authorizationId');
-   IF NOT FOUND OR c.product<>'monthly' OR c.purchase_id<>chosen_id OR c.payee<>lower(p->>'payee') OR c.request_hash<>p->>'quoteId' OR c.amount_micros<>(p->>'totalMicros')::numeric OR c.issued_data->'submitted' IS DISTINCT FROM 'true'::jsonb THEN RAISE EXCEPTION 'submitted original Monthly challenge required';END IF;
-   challenge:=c.issued_data;
+   IF NOT FOUND OR c.product<>'monthly' OR c.purchase_id<>chosen_id OR c.payee<>lower(p->>'payee') OR c.request_hash<>p->>'quoteId' OR c.amount_micros<>(p->>'totalMicros')::numeric OR c.issued_data::jsonb->'submitted' IS DISTINCT FROM 'true'::jsonb THEN RAISE EXCEPTION 'submitted original Monthly challenge required';END IF;
+   challenge:=c.issued_data::jsonb;
    IF (jsonb_typeof(challenge)='object' AND challenge-'validAfter'-'validBefore'-'expiresAt'-'submitted'='{}'::jsonb) IS NOT TRUE THEN RAISE EXCEPTION 'invalid submitted Monthly original';END IF;
    FOREACH field IN ARRAY ARRAY['validAfter','validBefore','expiresAt'] LOOP
     IF (jsonb_typeof(challenge->field)='string' AND challenge->>field ~ '^(0|[1-9][0-9]{0,15})$') IS NOT TRUE THEN RAISE EXCEPTION 'invalid submitted Monthly epoch';END IF;
@@ -126,7 +126,7 @@ BEGIN
    IF ((projection->>'selector')::jsonb->'identity'=jsonb_build_object('network',p->>'network','payer',lower(p->>'payer'),'authorizationId',lower(p->>'authorizationId'))
     AND (projection->>'selector')::jsonb->'sourceId'='null'::jsonb AND projection->'existing'='true'::jsonb) IS NOT TRUE THEN RAISE EXCEPTION 'Monthly source policy identity mismatch';END IF;
    PERFORM keryx_storage.source_claim_purchase_policy('purchase',projection->>'selector',projection);
-   INSERT INTO public.research_monthly(id,payer,data) VALUES(chosen_id,lower(p->>'payer'),p);
+   INSERT INTO public.research_monthly(id,payer,data) VALUES(chosen_id,lower(p->>'payer'),p::text);
   END IF;
   result:=json_build_object('created',NOT existed,'purchase',p);PERFORM keryx_storage.leave_operation();RETURN result;
  END IF;
@@ -164,7 +164,7 @@ BEGIN
   IF (jsonb_typeof(projection)='object' AND projection-'orderId'-'storeId'-'orderWire'-'orderSha256'-'deliveryToken'-'owner'-'network'-'binding'-'health'='{}'::jsonb AND projection->>'orderId'=o.id AND projection->>'orderWire'=packet->>'rowWire') IS NOT TRUE THEN RAISE EXCEPTION 'Monthly acceptance projection refused';END IF;
   IF (SELECT count(*) FROM public.deliverable_acceptance_store)<>1 THEN RAISE EXCEPTION 'Monthly acceptance store unavailable';END IF;SELECT id INTO store FROM public.deliverable_acceptance_store;
   IF projection->>'storeId' IS DISTINCT FROM store THEN RAISE EXCEPTION 'Monthly acceptance store mismatch';END IF;
-  INSERT INTO public.research_monthly_redemptions(monthly_id,request_id,order_id,request_hash,created_at,slot) VALUES(chosen_id,packet->>'requestId',o.id,o.request_hash,accepted_at::timestamptz,used);
+  INSERT INTO public.research_monthly_redemptions(monthly_id,request_id,order_id,request_hash,created_at,slot) VALUES(chosen_id,packet->>'requestId',o.id,o.request_hash,accepted_at,used);
   INSERT INTO public.a2a_orders SELECT (o).*;
   INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta) VALUES(o.id,store,projection->>'orderWire',projection->>'orderSha256',projection->>'deliveryToken',projection->>'owner',projection->>'network',nullif(projection->'binding','null'::jsonb),projection->'health');order_wire:=packet->>'rowWire';
  END IF;
