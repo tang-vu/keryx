@@ -1359,6 +1359,13 @@ Publication and receipt candidates still require actual PostgreSQL and compiled
 512 MiB acceptance, complete held intake and consumer coverage. Their factory
 and production cutover remain closed while these checks are incomplete.
 
+Hosted acceptance requires successful contracts, core, tail, synthetic intake,
+contained publication and failed-original fulfillment jobs. Fulfillment uses the
+same pinned full runtime catalog in its separate job; `--native-runtime` still
+runs the complete protocol sequence. The aggregate rejects every missing,
+skipped, cancelled or failed required job. Historical NULL totals and leading
+UTF-8 BOM bytes are retained without substituting values or normalizing text.
+
 ## Optional native financial application composition
 
 The internal runtime transport maps 33 existing application methods to fixed

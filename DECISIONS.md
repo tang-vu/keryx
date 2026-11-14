@@ -9744,6 +9744,12 @@ closed until their actual PostgreSQL, compiled memory/deadline, intake, consumer
 and deployment requirements pass. Prepared protocols grant no installed writer,
 funding, supplier execution or retry authority.
 
+Preserve SQL NULL totals in historical Source QueryRuns; an import must not
+replace them with zero to satisfy a stronger legacy PostgreSQL constraint.
+Preserve a leading UTF-8 BOM as TEXT data during materialization, including
+checked scalar shadows. Re-reading a converted value is insufficient evidence
+when that same conversion can discard original bytes.
+
 ## Compose financial application names without enrolling a writer (2026-11-15)
 
 Map 33 application methods onto the existing fixed native financial protocols,
