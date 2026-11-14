@@ -76,3 +76,19 @@ it('reports an unknown completion after malformed ACK or disposal without retryi
 });
 
 it('refuses readonly recovery before inspecting the update',async()=>{const c=channel();let reads=0;await expect(composePostgresA2aOriginals(c.port,true).resolveA2aOrder(fixture().order.id,{get status(){reads++;return 'completed';}} as never)).rejects.toThrow();expect(reads).toBe(0);expect(c.call).not.toHaveBeenCalled();});
+
+it('captures a fresh original before store-context await and uses only the fixed create operation',async()=>{
+ const c=channel(),input=fixture().order,question=input.request!.question,native=composePostgresA2aOriginals(c.port,false);
+ c.call.mockImplementation(async(operation)=>operation==='a2aOriginalStore'?{storeId:'3821e833-f4ca-44d3-a944-0cf892ab0b85'}:{created:true,order:row()});
+ const request=native.createA2aOrder(input);input.request!.question='changed';expect((await request).created).toBe(true);expect(c.call.mock.calls.map(call=>call[0])).toEqual(['a2aOriginalStore','a2aCreate']);
+ const packet=JSON.parse(c.call.mock.calls[1][1][1]);expect(JSON.parse(JSON.parse(packet.rowWire).request_data).question).toBe(question);expect(packet.projection.orderWire).toBe(packet.rowWire);
+});
+it('refuses readonly fresh creation before getters and malformed store context before writing',async()=>{
+ const c=channel();let reads=0;await expect(composePostgresA2aOriginals(c.port,true).createA2aOrder({get id(){reads++;return 'unused';}} as never)).rejects.toThrow();expect(reads).toBe(0);expect(c.call).not.toHaveBeenCalled();
+ c.call.mockResolvedValue(null);await expect(composePostgresA2aOriginals(c.port,false).createA2aOrder(fixture().order)).rejects.toThrow();expect(c.call.mock.calls.map(call=>call[0])).toEqual(['a2aOriginalStore']);
+});
+it('does not retry malformed or disposed fresh-create acknowledgements',async()=>{
+ const c=channel(),native=composePostgresA2aOriginals(c.port,false);c.call.mockImplementation(async(operation)=>operation==='a2aOriginalStore'?{storeId:'3821e833-f4ca-44d3-a944-0cf892ab0b85'}:{created:true,order:{}});
+ await expect(native.createA2aOrder(fixture().order)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(call=>call[0]==='a2aCreate')).toHaveLength(1);
+ c.call.mockClear();c.call.mockImplementation(async(operation)=>{if(operation==='a2aOriginalStore')return {storeId:'3821e833-f4ca-44d3-a944-0cf892ab0b85'};c.state.closed=true;return {created:true,order:row()};});await expect(native.createA2aOrder(fixture().order)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(call=>call[0]==='a2aCreate')).toHaveLength(1);
+});

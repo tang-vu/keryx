@@ -492,6 +492,7 @@ try {
     ...(accountHistory?{accountHistory}:{}),
     ...(ownerAssignments?{ownerAssignments}:{}),
     ...(a2aOriginals?{a2aOriginals}:{}),
+    ...(a2aCreate?{a2aCreate}:{}),
     ...(chatLinks?{chatLinks}:{}),
     ...(publicProfiles?{publicProfiles}:{}),
     ...(publicLedger?{publicLedger}:{}),
