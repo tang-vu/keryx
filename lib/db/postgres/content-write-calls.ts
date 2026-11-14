@@ -1,5 +1,6 @@
 /** Fixed native content/ingestion calls. No query/table selector escapes. */
 export const CONTENT_WRITE_CALLS=Object.freeze({
+ content_source_upsert_snapshot:{sql:"SELECT public.storage_source_item_by_link($1::jsonb,$2::text,NULL,$3::text) AS result",args:1,write:false,bytes:16777216,inputBytes:8192,transaction:true},
  content_add_items:{sql:"SELECT public.storage_application_add_items($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304,inputBytes:16785408},
  content_claim_gap_intent:{sql:"SELECT public.storage_application_claim_gap_intent($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304},
  content_create_gap_intent:{sql:"SELECT public.storage_application_create_gap_intent($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304},
@@ -16,7 +17,7 @@ export const CONTENT_WRITE_CALLS=Object.freeze({
  content_set_source_notify_email:{sql:"SELECT public.storage_application_set_source_notify_email($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304},
  content_set_source_preview_depth:{sql:"SELECT public.storage_application_set_source_preview_depth($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304},
  content_set_sync_state:{sql:"SELECT public.storage_application_set_sync_state($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304,inputBytes:2105344},
- content_upsert_source:{sql:"SELECT public.storage_application_upsert_source($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304,inputBytes:532480},
+ content_upsert_source:{sql:"SELECT public.storage_application_upsert_source($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304,inputBytes:1064960},
 } as const);
 export const CONTENT_WRITE_OPERATIONS=Object.freeze({
  add_items:"content_add_items",
@@ -37,4 +38,4 @@ export const CONTENT_WRITE_OPERATIONS=Object.freeze({
  set_sync_state:"content_set_sync_state",
  upsert_source:"content_upsert_source",
 } as const);
-export const CONTENT_WRITE_INPUT_BYTES=Object.freeze({"add_items":8388608,"set_cached":8388608,"save_query_memory":1048576,"set_source_meta":262144,"set_sync_state":1048576,"upsert_source":262144});
+export const CONTENT_WRITE_INPUT_BYTES=Object.freeze({"add_items":8388608,"set_cached":8388608,"save_query_memory":1048576,"set_source_meta":262144,"set_sync_state":1048576,"upsert_source":524288});

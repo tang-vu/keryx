@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash,randomUUID } from 'node:crypto';
+import { Client } from 'pg';
+import { canonicalJson } from '../../lib/canonical-json';
 import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
 import { installNativeUserDomainSchema } from '../../lib/db/native-user-domain-schema';
 import { SqliteAdapter } from '../../lib/db/sqlite-adapter';
@@ -9,7 +11,8 @@ import { assembleNativePostgresBusinessCore } from '../../lib/db/supabase-adapte
 import { createPostgresApplicationDomainAuthority } from '../../lib/db/postgres/application-domain-authority';
 import { createPostgresApplicationDomainTransport,type PostgresApplicationDomainTransport } from '../../lib/db/postgres/application-domain-transport';
 import { PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-channel';
-import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection';
+import { postgresPoolConfiguration,type PostgresConnectionOptions } from '../../lib/db/postgres/connection';
+import { OPERATIONAL_WRITE_OPERATIONS } from '../../lib/db/postgres/operational-write-calls';
 import type { StorageIdentity } from '../../lib/db/storage-identity';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
 export async function qualifyOperationalDomains(input:{transport:PostgresApplicationDomainTransport;options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
@@ -46,7 +49,35 @@ export async function qualifyOperationalDomains(input:{transport:PostgresApplica
   assert.equal(input.options.endpoint.kind,'loopback');const proxy=await startCommitAckLossProxy(input.options.endpoint.port),broken=createPostgresApplicationDomainTransport({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);
   try{proxy.arm();await assert.rejects(broken.applicationWrite('upsert_api_key_usage',{p_key_id:minted.id,p_day:day}),PostgresDomainWriteOutcomeUnknown);assert.deepEqual(proxy.observation(),{dropped:true,commands:1});assert.deepEqual(await native.adapter.getUsage(minted.id),[{day,count:3}]);vectors++;}finally{await broken.close();await proxy.close();}
   const reader=createPostgresApplicationDomainTransport({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(reader.applicationWrite('consume_rate_limit',{p_bucket:'refused',p_points:1,p_window_ms:100,p_now:now}));vectors++;}finally{await reader.close();}
+  const operations=Object.keys(OPERATIONAL_WRITE_OPERATIONS);assert.equal(operations.length,11);
+  const privateNames=operations.map(name=>'storage_'+name),legacyNames=operations.map(name=>'storage_application_'+name);
+  assert.equal(input.ownerSql(`SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY[${legacyNames.map(q).join(',')}]::text[]);`),'0');vectors++;
+  const permissions=JSON.parse(input.ownerSql(`SELECT jsonb_build_object('count',count(*),'untrusted',count(*) FILTER(WHERE EXISTS(
+   SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.privilege_type='EXECUTE'
+    AND(a.grantee=0 OR a.grantee IN(SELECT oid FROM pg_roles WHERE rolname=ANY(ARRAY['anon','authenticated','service_role','keryx_app','keryx_reader']))))))::text
+   FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.proname=ANY(ARRAY[${privateNames.map(q).join(',')}]::text[]);`));
+  assert.deepEqual(permissions,{count:11,untrusted:0});vectors++;
+  assert.equal(input.ownerSql("SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='storage_application_operational_write' AND pg_get_function_identity_arguments(oid)='expected jsonb, digest text, op text, payload jsonb' AND octet_length(prosrc)<=32768;"),'1');vectors++;
+  const state=()=>input.ownerSql(`SELECT encode(sha256(convert_to(jsonb_build_array(${['rate_limit_counters','reasoning_circuits','api_keys','api_key_usage','answer_feedback','activation_events'].map(table=>`(SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text),'[]'::jsonb) FROM public.${table} r)`).join(',')})::text,'UTF8')),'hex');`),before=state();
+  const direct=new Client(postgresPoolConfiguration(input.options)),directReader=new Client(postgresPoolConfiguration({...input.options,role:'keryx_reader'}));
+  direct.on('error',()=>{});directReader.on('error',()=>{});
+  const statement='SELECT public.storage_application_operational_write($1::jsonb,$2::text,$3::text,$4::jsonb) AS result',identity=canonicalJson(input.identity);
+  const code=(expected:string)=>(error:unknown)=>!!error&&typeof error==='object'&&Reflect.get(error,'code')===expected;
+  try{
+   await direct.connect();await directReader.connect();
+   for(const operation of [null,'','unreviewed_operation','upsert_user','set_sync_state','consume_rate_limit;DROP TABLE public.api_keys']){
+    await assert.rejects(direct.query(statement,[identity,input.digest,operation,'{}']),code('P0001'));vectors++;
+   }
+   for(const payload of ['null','[]','{"unexpected":true}',JSON.stringify({p_bucket:'x'.repeat(65537)})]){
+    await assert.rejects(direct.query(statement,[identity,input.digest,'consume_rate_limit',payload]),code('P0001'));vectors++;
+   }
+   await direct.query('BEGIN READ ONLY');try{await assert.rejects(direct.query(statement,[identity,input.digest,'consume_rate_limit',JSON.stringify({p_bucket:'refused-native',p_points:1,p_window_ms:100,p_now:now})]),code('P0001'));vectors++;}finally{await direct.query('ROLLBACK');}
+   await assert.rejects(directReader.query(statement,[identity,input.digest,'consume_rate_limit','{}']),code('42501'));vectors++;
+   await assert.rejects(direct.query('SELECT public.storage_application_consume_rate_limit($1::jsonb,$2::text,$3::jsonb)',[identity,input.digest,'{}']),code('42883'));vectors++;
+   await assert.rejects(direct.query('SELECT public.storage_delete_expired_rate_limits($1::jsonb,$2)',[identity,String(now)]),code('42501'));vectors++;
+  }finally{await Promise.allSettled([direct.end(),directReader.end()]);}
+  assert.equal(state(),before);vectors++;
   assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
-  return {vectors,concurrentRateAdmission:true,singleCircuitProbe:true,walletScopedKeyRevocation:true,keyScopeRetention:true,awaitedNativeAuthenticationAudit:true,concurrentCounters:true,actualLostCommitAck:true,noAutomaticRetry:true,readonlyWritesRefused:true,productionData:false,paidOperations:0};
+  return {vectors,concurrentRateAdmission:true,singleCircuitProbe:true,walletScopedKeyRevocation:true,keyScopeRetention:true,awaitedNativeAuthenticationAudit:true,concurrentCounters:true,actualLostCommitAck:true,noAutomaticRetry:true,readonlyWritesRefused:true,elevenOperationsOneFixedRouter:true,legacyJsonEntriesAbsent:true,privateBusinessRpcPermissionsRetained:true,unknownAndForeignOpcodesRefused:true,malformedPayloadAndNativeReadonlyRefused:true,negativeProbesLeaveOperationalStateUnchanged:true,productionData:false,paidOperations:0};
  }finally{native.hooks.close();db.close();}
 }

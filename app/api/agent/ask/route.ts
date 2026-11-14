@@ -404,8 +404,15 @@ export async function POST(req: NextRequest) {
         && Math.round(previous.amountUsdc * 1e6) === Math.round(quote.totalPriceUsdc * 1e6)) admissionHash = oldHash;
     } catch { /* The seller helper rejects malformed or unauthenticated envelopes. */ }
   }
+  const ownerAdmission = ownerDb?.pendingJobOwners;
   return settleThenServe(req, { ...requirements(quote.totalPriceUsdc, treasury),
     admissionCheck: checkCanaryAdmission,
+    ...(ownerProof && typeof ownerAdmission?.assertAdmissionAsync === "function" ? {
+      beforeSettlementAsync: async () => {
+        try { await ownerAdmission.assertAdmissionAsync!(ownerProof); return null; }
+        catch { return Response.json({ error: "Original account session unavailable" }, { status: 401, headers: { "Cache-Control": "no-store" } }); }
+      },
+    } : {}),
     beforeSettlement: () => {
       if (ownerProof) {
         try { ownerDb!.pendingJobOwners!.assertAdmission(ownerProof); }

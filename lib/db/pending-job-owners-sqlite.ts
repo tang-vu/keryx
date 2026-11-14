@@ -14,8 +14,12 @@ const contention = (error: unknown) => error instanceof Error && "code" in error
 
 /** Native selected-store metadata reader. No DDL, writer or ordinary fallback. */
 export interface PendingJobOwnersStore {
-  /** Synchronous fresh durable-session check at the existing financial hook. */
+  /** Final synchronous hook. SQLite checks the durable row here; a native store
+   * requires its just-completed async phase and rechecks local proof/canaries. */
   assertAdmission(proof: PendingOwnerSessionProof): void;
+  /** Native stores await their durable observation in a separate phase. The
+   * synchronous hook is still required immediately before the provider call. */
+  assertAdmissionAsync?(proof: PendingOwnerSessionProof): Promise<void>;
   list(proof: PendingOwnerSessionProof, before?: { createdAt: string; id: string }, id?: string): Promise<OwnedPendingJob[]>;
 }
 export type OwnedPendingJob = ReturnType<typeof accountHistoryItem> & { attention: "needs_review" | "unknown"; recoveryState: "held" | "unknown" };

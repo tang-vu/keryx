@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { StorageIdentity } from "../db/storage-identity";
 
 const id = z.string().regex(/^a2a_[a-f0-9]{64}$/);
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -29,6 +30,18 @@ export const pendingOwnerAdmissionCandidateSchema = z.object({
 }).strict();
 
 export type PendingOwnerAdmissionCandidate = z.infer<typeof pendingOwnerAdmissionCandidateSchema>;
+/** Captured metadata for a fixed native operation, never a credential or writer.
+ * Only the opaque route proof consumer may derive this from authenticated state.
+ * Native SQL must still compare identity and the current durable session itself. */
+export interface PostgresPendingOwnerSessionPacket {
+  readonly identity: Readonly<StorageIdentity>;
+  readonly session: Readonly<z.infer<typeof session>>;
+  readonly proofExpiresAt: number;
+  readonly binding: Readonly<{ id: string; requestHash: string }> | null;
+}
+export interface PostgresPendingOwnerAdmissionPacket extends PostgresPendingOwnerSessionPacket {
+  readonly original: Readonly<PendingOwnerAdmissionCandidate["original"]>;
+}
 export type PendingOwnerAdmissionErrorCode = "invalid_admission" | "existing_original"
   | "session_unavailable" | "owner_association_unavailable" | "atomic_admission_unavailable";
 export class PendingOwnerAdmissionError extends Error {

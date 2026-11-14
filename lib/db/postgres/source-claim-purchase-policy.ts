@@ -46,30 +46,57 @@ export function decodeSourceClaimPolicySnapshot(value:unknown,selector:string){
  return {snapshot,sha256:envelope.sha256};
 }
 type Snapshot=ReturnType<typeof decodeSourceClaimPolicySnapshot>['snapshot'];
-function reader(snapshot:Snapshot){const values=new Map(snapshot.rows.map(r=>[r.key,r.value]));return {values,read:(key:string)=>{const v=values.get(PREFIX+key);return v===undefined?null:JSON.parse(v);}};}
-function currentClaim(snapshot:Snapshot,sourceId:string):SourceClaim|null{
- const {values,read}=reader(snapshot),suffix=sha(sourceId),bound=values.get(PREFIX+'source:'+suffix),marker=values.get(PREFIX+'marker:'+suffix)??bound;
+type RetainedRows=Pick<Snapshot,'rows'>&{readonly retainedValues?:ReadonlyMap<string,string>};
+function reader(snapshot:RetainedRows){const values=snapshot.retainedValues??new Map(snapshot.rows.map(r=>[r.key,r.value]));return {values,read:(key:string)=>{const v=values.get(PREFIX+key);return v===undefined?null:JSON.parse(v);}};}
+/** SQLite json_extract observes the first duplicate object key. Keep that
+ * lookup distinct from JSON.parse's last-key claim/history schema validation. */
+export function retainedSourceLinkedIdentity(raw:string):string|undefined{
+ JSON.parse(raw);
+ const first=(wire:string,wanted:string):string|undefined=>{
+  let i=0;const space=()=>{while(i<wire.length&&/\s/.test(wire[i]))i++;};
+  const quoted=()=>{const start=i++;while(i<wire.length){const c=wire[i++];if(c==='\\')i++;else if(c==='"')return wire.slice(start,i);}throw Error('Retained source JSON unavailable');};
+  const skip=()=>{space();const start=i;if(wire[i]==='"'){quoted();return wire.slice(start,i);}if(wire[i]==='{'||wire[i]==='['){let depth=0;do{const c=wire[i];if(c==='"'){quoted();continue;}i++;if(c==='{'||c==='[')depth++;if(c==='}'||c===']')depth--;if(depth>1000)throw Error('Retained source JSON depth unavailable');}while(depth&&i<wire.length);return wire.slice(start,i);}while(i<wire.length&&!/[\s,}\]]/.test(wire[i]))i++;return wire.slice(start,i);};
+  space();if(wire[i++]!=='{')return undefined;space();if(wire[i]==='}')return undefined;
+  while(i<wire.length){space();const key=JSON.parse(quoted()) as string;space();i++;const value=skip();if(key===wanted)return value;space();if(wire[i++]==='}')return undefined;}
+  return undefined;
+ };
+ const direct=first(raw,'linkedSourceId');let value=direct===undefined?null:JSON.parse(direct);
+ if(value===null){const claim=first(raw,'claim'),nested=claim===undefined?undefined:first(claim,'linkedSourceId');value=nested===undefined?null:JSON.parse(nested);}
+ if(value===null)return undefined;
+ if(typeof value!=='string'||value.length<1||value.length>256||value.includes('\0')||Buffer.from(value).toString('utf8')!==value)throw Error('Retained managed source link unavailable');
+ return value;
+}
+/** Current retained identity/history only; no paid-mode or clock authority. */
+export function sourceClaimByIdSnapshot(snapshot:RetainedRows,id:string):SourceClaim|null{
+ if(!/^[a-f0-9]{64}$/.test(id))return null;
+ const {read}=reader(snapshot),raw=read('claim:'+id);if(!raw)return null;
+ const claim=sourceClaimSchema.parse(raw),original=historySchema.parse(read('history:'+id+':0000000000000001')),
+  latest=historySchema.parse(read('history:'+id+':'+String(claim.revision).padStart(16,'0')));
+ if(original.action!=='verified'||original.claim.revision!==1||original.claim.mode!=='free'||original.claim.ownerWallet!==claim.ownerWallet||original.claim.canonicalUrl!==claim.canonicalUrl||original.claim.network!==claim.network||original.claim.deploymentOrigin!==claim.deploymentOrigin||canonicalJson(latest.claim)!==canonicalJson(claim))throw Error('Source claim history is missing or inconsistent');
+ const proof=z.object({challengeId:z.string().regex(/^[a-f0-9]{64}$/),proofDigest:z.string().regex(/^[a-f0-9]{64}$/)}).strict().parse(original.evidence),challenge=sourceClaimChallengeSchema.parse(read('challenge:'+proof.challengeId));
+ if(!challenge.consumedAt||challenge.claimId!==claim.id||challenge.wallet!==claim.ownerWallet)throw Error('Original source-control proof history is unavailable');
+ return claim;
+}
+function currentClaim(snapshot:RetainedRows,sourceId:string):SourceClaim|null{
+ const {values}=reader(snapshot),suffix=sha(sourceId),bound=values.get(PREFIX+'source:'+suffix),marker=values.get(PREFIX+'marker:'+suffix)??bound;
  if(bound===undefined){
   if(marker!==undefined)throw Error('Retained managed source binding is unavailable');
   for(const [key,raw] of values)if(key.startsWith(PREFIX+'claim:')||key.startsWith(PREFIX+'history:')){
    // Unsupported malformed retained JSON is an explicit hold. It cannot be
    // reinterpreted as absence or grant unmanaged payment authority.
-   const v=JSON.parse(raw),linked=v?.linkedSourceId??v?.claim?.linkedSourceId;
-   if(linked===sourceId)throw Error('Retained managed source binding is unavailable');
+   if(retainedSourceLinkedIdentity(raw)===sourceId)throw Error('Retained managed source binding is unavailable');
   }
   return null;
  }
  const binding=bindingSchema.parse(JSON.parse(bound));
  if(binding.sourceId!==sourceId||canonicalJson(bindingSchema.parse(JSON.parse(marker!)))!==canonicalJson(binding))throw Error('Retained source binding differs from its marker');
- const raw=read('claim:'+binding.claimId);if(!raw)throw Error('Orphaned source claim binding');
- const claim=sourceClaimSchema.parse(raw),original=historySchema.parse(read('history:'+binding.claimId+':0000000000000001')),
-  latest=historySchema.parse(read('history:'+binding.claimId+':'+String(claim.revision).padStart(16,'0')));
- if(original.action!=='verified'||original.claim.revision!==1||original.claim.mode!=='free'||original.claim.ownerWallet!==claim.ownerWallet||original.claim.canonicalUrl!==claim.canonicalUrl||original.claim.network!==claim.network||original.claim.deploymentOrigin!==claim.deploymentOrigin||canonicalJson(latest.claim)!==canonicalJson(claim))throw Error('Source claim history is missing or inconsistent');
- const proof=z.object({challengeId:z.string().regex(/^[a-f0-9]{64}$/),proofDigest:z.string().regex(/^[a-f0-9]{64}$/)}).strict().parse(original.evidence),challenge=sourceClaimChallengeSchema.parse(read('challenge:'+proof.challengeId));
- if(!challenge.consumedAt||challenge.claimId!==claim.id||challenge.wallet!==claim.ownerWallet)throw Error('Original source-control proof history is unavailable');
+ const claim=sourceClaimByIdSnapshot(snapshot,binding.claimId);if(!claim)throw Error('Orphaned source claim binding');
  if(claim.linkedSourceId!==sourceId)throw Error('Orphaned source claim binding');
  return claim;
 }
+/** Metadata refresh uses the same retained identity/history reader without
+ * adding the separate paid-mode or fresh-proof admission requirements. */
+export function sourceClaimForSourceSnapshot(snapshot:RetainedRows,sourceId:string):SourceClaim|null{return currentClaim(snapshot,sourceId);}
 export function assertSourceClaimPaymentPolicy(snapshot:Snapshot,input:{sourceId:string;expected?:SourceClaimReceipt|null;kind:'fetch'|'citation';network:string;now?:number},runtime:SourceClaimPolicyRuntime):SourceClaim|null{
  const claim=currentClaim(snapshot,input.sourceId),source=snapshot.source;
  if(!claim){if(input.expected||source?.source_claim_id)throw Error('Managed source claim binding is unavailable');return null;}

@@ -1,4 +1,17 @@
 SET ROLE keryx_owner;
+-- Body-less Source time wires survive disposable full-original derivatives.
+-- Native timestamptz columns retain instants; these TEXT cells retain exact
+-- offsets and fractional precision for the unchanged Source predicates.
+CREATE TABLE keryx_storage.a2a_original_time_projection(
+ order_id text PRIMARY KEY REFERENCES public.a2a_orders(id) ON DELETE CASCADE,
+ identity_digest text NOT NULL CHECK(identity_digest ~ '^[a-f0-9]{64}$'),
+ query_id text NOT NULL,request_hash text NOT NULL,
+ created_at text NOT NULL CHECK(octet_length(created_at) BETWEEN 1 AND 64),
+ updated_at text NOT NULL CHECK(octet_length(updated_at) BETWEEN 1 AND 64),
+ started_at text CHECK(octet_length(started_at) BETWEEN 1 AND 64),
+ payment_started_at text CHECK(octet_length(payment_started_at) BETWEEN 1 AND 64),
+ result_saving_at text CHECK(octet_length(result_saving_at) BETWEEN 1 AND 64)
+);
 CREATE TABLE keryx_storage.acceptance_original_projection(
  order_id text PRIMARY KEY REFERENCES public.a2a_orders(id) ON DELETE CASCADE,
  store_id text NOT NULL CHECK(store_id ~* '^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$'),
@@ -40,20 +53,46 @@ CREATE FUNCTION keryx_storage.acceptance_projection_fence() RETURNS trigger LANG
 BEGIN
  IF NOT(session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held') AND NOT EXISTS(
   SELECT 1 FROM keryx_storage.writer w JOIN keryx_storage.operations o ON o.operation=w.operation JOIN keryx_storage.identity i ON i.identity_digest=w.identity_digest
-  WHERE w.transaction_id=txid_current() AND NOT o.read_only AND 'a2a_orders'=ANY(o.relations) AND 'acceptance_original_projection'=ANY(o.relations))
+  WHERE w.transaction_id=txid_current() AND NOT o.read_only AND 'a2a_orders'=ANY(o.relations) AND TG_TABLE_NAME=ANY(o.relations))
  THEN RAISE EXCEPTION 'native acceptance original writer required';END IF;
+ IF TG_TABLE_NAME='a2a_original_time_projection' THEN
+  IF TG_OP='DELETE' THEN
+   IF NOT(session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held')
+    AND EXISTS(SELECT 1 FROM public.a2a_orders WHERE id=OLD.order_id) THEN RAISE EXCEPTION 'native original creation retained';END IF;
+   RETURN OLD;
+  END IF;
+  IF TG_OP='UPDATE' AND (NEW.order_id IS DISTINCT FROM OLD.order_id OR NEW.identity_digest IS DISTINCT FROM OLD.identity_digest
+   OR NEW.query_id IS DISTINCT FROM OLD.query_id OR NEW.request_hash IS DISTINCT FROM OLD.request_hash OR NEW.created_at IS DISTINCT FROM OLD.created_at)
+  THEN RAISE EXCEPTION 'native original creation retained';END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.a2a_orders a JOIN keryx_storage.identity i ON i.singleton AND i.identity_digest=NEW.identity_digest
+   WHERE a.id=NEW.order_id AND a.query_id=NEW.query_id AND a.request_hash=NEW.request_hash
+    AND a.created_at IS NOT DISTINCT FROM NEW.created_at::timestamptz AND a.updated_at IS NOT DISTINCT FROM NEW.updated_at::timestamptz
+    AND a.started_at IS NOT DISTINCT FROM NEW.started_at::timestamptz
+    AND a.payment_started_at IS NOT DISTINCT FROM NEW.payment_started_at::timestamptz
+    AND a.result_saving_at IS NOT DISTINCT FROM NEW.result_saving_at::timestamptz)
+  THEN RAISE EXCEPTION 'native original time binding refused';END IF;
+  RETURN NEW;
+ END IF;
  IF TG_OP='DELETE' THEN RETURN OLD;END IF;
  IF NEW.source_order_sha256<>encode(sha256(convert_to(NEW.source_order_wire,'UTF8')),'hex') OR NOT EXISTS(
   SELECT 1 FROM public.a2a_orders a WHERE a.id=NEW.order_id AND keryx_storage.acceptance_original_matches(NEW.source_order_wire,a))
  THEN RAISE EXCEPTION 'native acceptance original binding refused';END IF;
  IF (NEW.source_order_wire::jsonb->'response_data') IS DISTINCT FROM NEW.delivery_token::jsonb THEN RAISE EXCEPTION 'native acceptance delivery token refused';END IF;
+ IF EXISTS(SELECT 1 FROM keryx_storage.a2a_original_time_projection t WHERE t.order_id=NEW.order_id AND
+  (t.created_at IS DISTINCT FROM (NEW.source_order_wire::json->>'created_at') OR t.updated_at IS DISTINCT FROM (NEW.source_order_wire::json->>'updated_at')
+   OR t.started_at IS DISTINCT FROM (NEW.source_order_wire::json->>'started_at')
+   OR t.payment_started_at IS DISTINCT FROM (NEW.source_order_wire::json->>'payment_started_at')
+   OR t.result_saving_at IS DISTINCT FROM (NEW.source_order_wire::json->>'result_saving_at')))
+ THEN RAISE EXCEPTION 'native acceptance exact Source time required';END IF;
  RETURN NEW;
 END;$$;
+CREATE TRIGGER a2a_original_time_writer BEFORE INSERT OR UPDATE OR DELETE ON keryx_storage.a2a_original_time_projection FOR EACH ROW EXECUTE FUNCTION keryx_storage.acceptance_projection_fence();
+CREATE TRIGGER a2a_original_time_no_truncate BEFORE TRUNCATE ON keryx_storage.a2a_original_time_projection FOR EACH STATEMENT EXECUTE FUNCTION keryx_storage.immutable();
 CREATE TRIGGER acceptance_original_projection_writer BEFORE INSERT OR UPDATE OR DELETE ON keryx_storage.acceptance_original_projection FOR EACH ROW EXECUTE FUNCTION keryx_storage.acceptance_projection_fence();
 CREATE FUNCTION keryx_storage.acceptance_projection_invalidate() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 BEGIN DELETE FROM keryx_storage.acceptance_original_projection WHERE order_id=OLD.id;RETURN NEW;END;$$;
 CREATE TRIGGER native_acceptance_projection_invalidate AFTER UPDATE ON public.a2a_orders FOR EACH ROW EXECUTE FUNCTION keryx_storage.acceptance_projection_invalidate();
-UPDATE keryx_storage.operations SET relations=array_append(relations,'acceptance_original_projection') WHERE NOT read_only AND 'a2a_orders'=ANY(relations);
-REVOKE ALL ON keryx_storage.acceptance_original_projection FROM PUBLIC,keryx_app,keryx_reader;
+UPDATE keryx_storage.operations SET relations=array_append(array_append(relations,'acceptance_original_projection'),'a2a_original_time_projection') WHERE NOT read_only AND 'a2a_orders'=ANY(relations);
+REVOKE ALL ON keryx_storage.acceptance_original_projection,keryx_storage.a2a_original_time_projection FROM PUBLIC,keryx_app,keryx_reader;
 REVOKE ALL ON FUNCTION keryx_storage.acceptance_original_matches(text,public.a2a_orders),keryx_storage.acceptance_projection_fence(),keryx_storage.acceptance_projection_invalidate() FROM PUBLIC,keryx_app,keryx_reader;
 RESET ROLE;

@@ -50,6 +50,61 @@ function paidRequest(): NextRequest {
 const VALID = { isValid: true, payer: "0xbuyer" };
 const SETTLED = { success: true, transaction: "0xtx", payer: "0xbuyer", network: "eip155:5042002" };
 
+describe("explicit native async settlement admission", () => {
+  it("awaits durable admission then runs fresh synchronous hooks immediately before HTTP", async () => {
+    verifyMock.mockResolvedValue(VALID);
+    const events: string[] = [];
+    let finish!: () => void, started!: () => void;
+    const observing = new Promise<void>(resolve => { started = resolve; });
+    const barrier = new Promise<void>(resolve => { finish = resolve; });
+    settleMock.mockImplementation(async () => { events.push("provider"); return SETTLED; });
+    const pending = settleThenServe(paidRequest(), { ...baseOpts,
+      admissionCheck: () => { events.push("sync-check"); return null; },
+      beforeSettlementAsync: async () => { events.push("async-start"); started(); await barrier; events.push("async-finish"); return null; },
+      beforeSettlement: () => { events.push("sync-final"); return null; },
+    }, () => ({ ok: true }));
+    await observing; expect(settleMock).not.toHaveBeenCalled();
+    finish(); expect((await pending).status).toBe(200);
+    expect(events.slice(-4)).toEqual(["async-finish", "sync-check", "sync-final", "provider"]);
+  });
+  it("rechecks a canary changed during native admission before exposing payment", async () => {
+    verifyMock.mockResolvedValue(VALID);
+    let active = true;
+    const final = vi.fn(() => null);
+    const response = await settleThenServe(paidRequest(), { ...baseOpts,
+      admissionCheck: () => active ? null : new Response("held", { status: 503 }),
+      beforeSettlementAsync: async () => { active = false; return null; }, beforeSettlement: final,
+    }, () => ({ ok: true }));
+    expect(response.status).toBe(503); expect(settleMock).not.toHaveBeenCalled(); expect(final).not.toHaveBeenCalled();
+  });
+  it.each(["refused", "thrown"])("contains %s native admission without retry or provider work", async kind => {
+    verifyMock.mockResolvedValue(VALID);
+    const admission = vi.fn(async () => {
+      if (kind === "thrown") throw new Error("session query unavailable");
+      return new Response("revoked", { status: 401 });
+    });
+    const response = await settleThenServe(paidRequest(), { ...baseOpts, discovery: DISCOVERY,
+      beforeSettlementAsync: admission }, () => ({ ok: true }));
+    expect(response.status).toBe(kind === "refused" ? 401 : 503);
+    expect(admission).toHaveBeenCalledTimes(1); expect(settleMock).not.toHaveBeenCalled();
+  });
+  it("never retries an unknown settlement after native async admission", async () => {
+    verifyMock.mockResolvedValue(VALID); settleMock.mockRejectedValue(new Error("commit acknowledgement lost"));
+    const admission = vi.fn(async () => null), produce = vi.fn();
+    const response = await settleThenServe(paidRequest(), { ...baseOpts, discovery: DISCOVERY,
+      beforeSettlementAsync: admission }, produce);
+    expect(response.status).toBe(500); expect(settleMock).toHaveBeenCalledTimes(1);
+    expect(admission).toHaveBeenCalledTimes(1); expect(produce).not.toHaveBeenCalled();
+  });
+  it("refuses a Promise incorrectly passed to a synchronous hook", async () => {
+    verifyMock.mockResolvedValue(VALID);
+    const wrongHook = () => Promise.reject(new Error("async hook in sync slot"));
+    const response = await settleThenServe(paidRequest(), { ...baseOpts,
+      beforeSettlement: wrongHook as unknown as NonNullable<PaidOptions["beforeSettlement"]> }, () => ({ ok: true }));
+    expect(response.status).toBe(503); expect(settleMock).not.toHaveBeenCalled();
+  });
+});
+
 beforeEach(() => {
   verifyMock.mockReset();
   settleMock.mockReset();

@@ -1,7 +1,7 @@
 SET ROLE keryx_owner;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
  ('a2a_original_snapshot',ARRAY['a2a_orders','deliverable_acceptance_store','acceptance_original_projection'],true,true),
- ('a2a_create',ARRAY['a2a_orders','research_purchase_authorizations','payment_events','research_monthly_redemptions','acceptance_original_projection','deliverable_acceptance_store','owner269_associations'],true,false),
+ ('a2a_create',ARRAY['a2a_orders','research_purchase_authorizations','payment_events','research_monthly_redemptions','acceptance_original_projection','deliverable_acceptance_store','owner269_associations','web_sessions','pending_job_owners'],true,false),
  ('a2a_resolve_completed',ARRAY['a2a_orders','deliverable_acceptance_store','acceptance_original_projection','query_runs','payment_events'],true,false),
  ('a2a_resolve_failed',ARRAY['a2a_orders','deliverable_acceptance_store','acceptance_original_projection','query_runs','payment_events'],true,false),
  ('a2a_complete',ARRAY['a2a_orders','deliverable_acceptance_store','acceptance_original_projection'],true,false),
@@ -11,8 +11,10 @@ INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VA
  ('a2a_result_saving',ARRAY['a2a_orders','acceptance_original_projection'],true,false),
  ('a2a_fail',ARRAY['a2a_orders','acceptance_original_projection'],true,false),
  ('a2a_original_claim',ARRAY['a2a_orders','research_purchase_authorizations','payment_events','research_monthly_redemptions','query_runs','acceptance_original_projection'],true,false);
+UPDATE keryx_storage.operations SET relations=array_append(relations,'a2a_original_time_projection')
+ WHERE 'a2a_orders'=ANY(relations) AND NOT 'a2a_original_time_projection'=ANY(relations);
 CREATE FUNCTION public.storage_a2a_original_observe(expected jsonb,digest text,observation text,selector text) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE b jsonb;o public.a2a_orders;wire text;store text;take integer;rows json:='[]'::json;item json;bytes bigint:=64;
+DECLARE b jsonb;o public.a2a_orders;wire text;store text;take integer;rows json:='[]'::json;item json;bytes bigint:=64;current_row json;field text;
 BEGIN
  IF current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION 'native original readonly transaction required';END IF;
  IF observation IS NULL OR observation NOT IN('settled','snapshot','store','queue') THEN RAISE EXCEPTION 'native original observation refused';END IF;
@@ -20,13 +22,18 @@ BEGIN
  IF observation='queue' THEN
   IF selector IS NULL OR selector !~ '^[1-9][0-9]{0,2}$' THEN RAISE EXCEPTION 'native unfinished bound refused';END IF;take:=selector::integer;
   IF take NOT BETWEEN 1 AND 500 THEN RAISE EXCEPTION 'native unfinished bound refused';END IF;
- FOR o IN SELECT * FROM public.a2a_orders WHERE status IN('running','failed') ORDER BY created_at,id COLLATE "C" LIMIT take+1 LOOP
+ IF EXISTS(SELECT 1 FROM public.a2a_orders a LEFT JOIN keryx_storage.a2a_original_time_projection t ON t.order_id=a.id
+  WHERE a.status IN('running','failed') AND t.order_id IS NULL) THEN RAISE EXCEPTION 'native unfinished Source time unavailable';END IF;
+ FOR o IN SELECT a.* FROM public.a2a_orders a JOIN keryx_storage.a2a_original_time_projection t ON t.order_id=a.id
+  WHERE a.status IN('running','failed') ORDER BY t.created_at COLLATE "C",a.id COLLATE "C" LIMIT take+1 LOOP
   item:=keryx_storage.a2a_original_row(o);bytes:=bytes+octet_length(item::text)+2;IF bytes>4194304 THEN RAISE EXCEPTION 'native unfinished response bound';END IF;
  END LOOP;
  -- Check the complete response before aggregation. A second fixed read under
  -- the same shared data lock avoids quadratic concatenation of private bodies.
- WITH selected AS MATERIALIZED(SELECT a AS original FROM public.a2a_orders a WHERE status IN('running','failed') ORDER BY created_at,id COLLATE "C" LIMIT take+1)
- SELECT coalesce(json_agg(keryx_storage.a2a_original_row(original) ORDER BY (original).created_at,(original).id COLLATE "C"),'[]'::json) INTO rows FROM selected;
+ WITH selected AS MATERIALIZED(SELECT a AS original,t.created_at source_created_at FROM public.a2a_orders a
+  JOIN keryx_storage.a2a_original_time_projection t ON t.order_id=a.id WHERE a.status IN('running','failed')
+  ORDER BY t.created_at COLLATE "C",a.id COLLATE "C" LIMIT take+1)
+ SELECT coalesce(json_agg(keryx_storage.a2a_original_row(original) ORDER BY source_created_at COLLATE "C",(original).id COLLATE "C"),'[]'::json) INTO rows FROM selected;
  RETURN json_build_object('rows',rows);
  END IF;
  IF observation='store' THEN
@@ -38,8 +45,14 @@ BEGIN
   SELECT * INTO o FROM public.a2a_orders WHERE id=selector;IF NOT FOUND THEN RETURN NULL;END IF;
   IF (SELECT count(*) FROM public.deliverable_acceptance_store)<>1 THEN RAISE EXCEPTION 'native acceptance store unavailable';END IF;
   SELECT id INTO store FROM public.deliverable_acceptance_store;
+  -- Validate protected current metadata even if a disposable body projection
+  -- remains present. Its deletion must never normalize the retained time wires.
+  current_row:=keryx_storage.a2a_original_row(o,true);
   SELECT source_order_wire INTO wire FROM keryx_storage.acceptance_original_projection WHERE order_id=selector;
-  IF wire IS NULL THEN wire:=keryx_storage.a2a_original_row(o,true)::text;END IF;
+  IF wire IS NULL THEN wire:=current_row::text;END IF;
+  FOREACH field IN ARRAY ARRAY['created_at','updated_at','started_at','payment_started_at','result_saving_at'] LOOP
+   IF (wire::json->>field) IS DISTINCT FROM (current_row->>field) THEN RAISE EXCEPTION 'native original Source time mismatch';END IF;
+  END LOOP;
   IF NOT keryx_storage.acceptance_original_matches(wire,o) THEN RAISE EXCEPTION 'native original snapshot mismatch';END IF;
   RETURN jsonb_build_object('orderWire',wire,'storeId',store);
  END IF;
@@ -48,8 +61,9 @@ BEGIN
  SELECT * INTO o FROM public.a2a_orders WHERE id=b->>'id';
  RETURN to_jsonb(FOUND AND keryx_storage.a2a_original_matches(o,b) AND keryx_storage.a2a_original_settled(o,b));
 END;$$;
+
 CREATE FUNCTION public.storage_a2a_original_execution(expected jsonb,digest text,execution text,selector text,detail text,started text) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE b jsonb;o public.a2a_orders;result json;operation text;changed bigint;packet jsonb;p jsonb;store text;resolution jsonb;e jsonb;field text;actual record;budget_micros double precision;r jsonb;
+DECLARE b jsonb;o public.a2a_orders;result json;operation text;changed bigint;packet jsonb;p jsonb;store text;resolution jsonb;e jsonb;field text;actual record;budget_micros double precision;r jsonb;owned boolean;owner_packet jsonb;owner_session jsonb;owner_original jsonb;stamp bigint;
 BEGIN
  operation:=CASE execution WHEN 'claim' THEN 'a2a_original_claim' WHEN 'payment-start' THEN 'a2a_payment_start' WHEN 'result-saving' THEN 'a2a_result_saving' WHEN 'fail' THEN 'a2a_fail' WHEN 'complete' THEN 'a2a_complete' WHEN 'repair' THEN 'a2a_resolve_completed' WHEN 'close' THEN 'a2a_resolve_failed' WHEN 'create' THEN 'a2a_create' END;
  IF operation IS NULL THEN RAISE EXCEPTION 'native original execution refused';END IF;
@@ -58,8 +72,8 @@ BEGIN
   OR to_char(started::timestamptz AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')<>started THEN RAISE EXCEPTION 'native original execution date refused';END IF;
  IF execution='create' THEN
   IF selector IS NULL OR selector !~ '^a2a_[a-f0-9]{64}$' OR detail IS NULL OR octet_length(detail)>262144 THEN RAISE EXCEPTION 'native create packet bound';END IF;
-  packet:=detail::jsonb;b:=packet->'binding';p:=packet->'projection';
-  IF (jsonb_typeof(packet)='object' AND packet-'binding'-'rowWire'-'projection'='{}'::jsonb AND jsonb_typeof(packet->'rowWire')='string'
+  packet:=detail::jsonb;b:=packet->'binding';p:=packet->'projection';owned:=packet?'owner';owner_packet:=packet->'owner';
+  IF (jsonb_typeof(packet)='object' AND packet-'binding'-'rowWire'-'projection'-'owner'='{}'::jsonb AND jsonb_typeof(packet->'rowWire')='string'
    AND octet_length(packet->>'rowWire')<=65536 AND keryx_storage.a2a_original_binding_valid(b) AND b->>'id'=selector
    AND jsonb_typeof(p)='object' AND p-'orderId'-'storeId'-'orderWire'-'orderSha256'-'deliveryToken'-'owner'-'network'-'binding'-'health'='{}'::jsonb
    AND p->>'orderId'=selector AND p->>'orderWire'=packet->>'rowWire') IS NOT TRUE THEN RAISE EXCEPTION 'native create packet refused';END IF;
@@ -70,11 +84,46 @@ BEGIN
   IF (keryx_storage.a2a_original_matches(o,b) AND o.status='running' AND o.started_at IS NULL AND o.worker_id IS NULL AND o.execution_journal_version=1
    AND o.payment_started_at IS NULL AND o.result_saving_at IS NULL AND o.response_data IS NULL AND o.error_code IS NULL AND o.resolution_data IS NULL
    AND o.created_at=started::timestamptz AND o.updated_at=o.created_at) IS NOT TRUE THEN RAISE EXCEPTION 'native fresh original refused';END IF;
+  IF owned THEN
+   owner_session:=owner_packet->'session';owner_original:=owner_packet->'original';stamp:=floor(extract(epoch FROM clock_timestamp())*1000)::bigint;
+   IF (jsonb_typeof(owner_packet)='object' AND owner_packet-'identity'-'session'-'proofExpiresAt'-'binding'-'original'='{}'::jsonb
+    AND owner_packet->'identity'=expected AND expected->>'authorityMode'='mainnet-real' AND expected->>'network'=b->>'network'
+    AND jsonb_typeof(owner_session)='object' AND owner_session-'hash'-'wallet'-'issuedAt'-'expiresAt'='{}'::jsonb
+    AND jsonb_typeof(owner_session->'hash')='string' AND jsonb_typeof(owner_session->'wallet')='string'
+    AND owner_session->>'hash' ~ '^[a-f0-9]{64}$' AND owner_session->>'wallet' ~ '^0x[a-f0-9]{40}$'
+    AND jsonb_typeof(owner_session->'issuedAt')='number' AND owner_session->>'issuedAt' ~ '^(0|[1-9][0-9]{0,15})$'
+    AND jsonb_typeof(owner_session->'expiresAt')='number' AND owner_session->>'expiresAt' ~ '^[1-9][0-9]{0,15}$'
+    AND (owner_session->>'issuedAt')::numeric<=extract(epoch FROM o.created_at)*1000 AND extract(epoch FROM o.created_at)*1000<=stamp
+    AND (owner_session->>'expiresAt')::numeric>stamp AND (owner_session->>'expiresAt')::numeric<=9007199254740991
+    AND jsonb_typeof(owner_packet->'proofExpiresAt')='number' AND owner_packet->>'proofExpiresAt' ~ '^[1-9][0-9]{0,15}$'
+    AND (owner_packet->>'proofExpiresAt')::numeric>stamp AND (owner_packet->>'proofExpiresAt')::numeric<=stamp+300000
+    AND (owner_packet->>'proofExpiresAt')::numeric<=(owner_session->>'expiresAt')::numeric
+    AND jsonb_typeof(owner_packet->'binding')='object' AND (owner_packet->'binding')-'id'-'requestHash'='{}'::jsonb
+    AND jsonb_typeof(owner_packet->'binding'->'id')='string' AND jsonb_typeof(owner_packet->'binding'->'requestHash')='string'
+    AND owner_packet->'binding'->>'id'=selector AND owner_packet->'binding'->>'requestHash'=b->>'requestHash'
+    AND jsonb_typeof(owner_original)='object' AND owner_original-'id'-'queryId'-'requestHash'-'network'-'createdAt'='{}'::jsonb
+    AND jsonb_typeof(owner_original->'id')='string' AND jsonb_typeof(owner_original->'queryId')='string' AND jsonb_typeof(owner_original->'requestHash')='string'
+    AND jsonb_typeof(owner_original->'network')='string' AND jsonb_typeof(owner_original->'createdAt')='string'
+    AND owner_original->>'id'=selector AND owner_original->>'queryId'=selector AND owner_original->>'requestHash'=b->>'requestHash'
+    AND owner_original->>'network'=expected->>'network' AND owner_original->>'createdAt'=started) IS NOT TRUE
+   THEN RAISE EXCEPTION 'native owned original session packet refused';END IF;
+   IF NOT EXISTS(SELECT 1 FROM public.web_sessions w WHERE w.hash=owner_session->>'hash' AND w.wallet=owner_session->>'wallet'
+    AND w.issued_at=(owner_session->>'issuedAt')::numeric AND w.expires_at=(owner_session->>'expiresAt')::numeric)
+   THEN RAISE EXCEPTION 'native owned original current session required';END IF;
+  END IF;
   -- Conflict returns the retained original; caller replay checks still compare
   -- its complete economic tuple. No retained bytes or acceptance are replaced.
   IF EXISTS(SELECT 1 FROM public.a2a_orders WHERE id=selector) THEN
    SELECT * INTO o FROM public.a2a_orders WHERE id=selector;
-   result:=json_build_object('created',false,'order',keryx_storage.a2a_original_row(o));PERFORM keryx_storage.leave_operation();RETURN result;
+   result:=json_build_object('created',false,'order',keryx_storage.a2a_original_row(o));
+   IF owned THEN
+    stamp:=floor(extract(epoch FROM clock_timestamp())*1000)::bigint;
+    IF (owner_packet->>'proofExpiresAt')::numeric<=stamp OR (owner_session->>'expiresAt')::numeric<=stamp
+     OR NOT EXISTS(SELECT 1 FROM public.web_sessions w WHERE w.hash=owner_session->>'hash' AND w.wallet=owner_session->>'wallet'
+      AND w.issued_at=(owner_session->>'issuedAt')::numeric AND w.expires_at=(owner_session->>'expiresAt')::numeric)
+    THEN RAISE EXCEPTION 'native owned original current session required';END IF;
+   END IF;
+   PERFORM keryx_storage.leave_operation();RETURN result;
   END IF;
   -- This prototype consumes already retained local facts. It cannot manufacture
   -- a purchase claim, inbound record, provider settlement or ownership proof.
@@ -83,9 +132,24 @@ BEGIN
   SELECT id INTO store FROM public.deliverable_acceptance_store;IF p->>'storeId' IS DISTINCT FROM store THEN RAISE EXCEPTION 'native acceptance store mismatch';END IF;
   INSERT INTO public.a2a_orders SELECT (o).* ON CONFLICT DO NOTHING;GET DIAGNOSTICS changed=ROW_COUNT;
   IF changed<>1 THEN RAISE EXCEPTION 'native original conflict could not be read';END IF;
+  INSERT INTO keryx_storage.a2a_original_time_projection(order_id,identity_digest,query_id,request_hash,created_at,updated_at,started_at,payment_started_at,result_saving_at)
+   VALUES(selector,keryx_storage.identity_digest(expected),o.query_id,o.request_hash,r->>'created_at',r->>'updated_at',r->>'started_at',r->>'payment_started_at',r->>'result_saving_at');
   INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta)
    VALUES(selector,store,p->>'orderWire',p->>'orderSha256',p->>'deliveryToken',p->>'owner',p->>'network',nullif(p->'binding','null'::jsonb),p->'health');
-  result:=json_build_object('created',true,'order',keryx_storage.a2a_original_row(o));PERFORM keryx_storage.leave_operation();RETURN result;
+  IF owned THEN
+   INSERT INTO public.pending_job_owners(job_id,query_id,request_hash,network,wallet,session_hash,issued_at,expires_at,admitted_at)
+    VALUES(selector,selector,b->>'requestHash',expected->>'network',owner_session->>'wallet',owner_session->>'hash',
+     (owner_session->>'issuedAt')::numeric,(owner_session->>'expiresAt')::numeric,started);
+  END IF;
+  result:=json_build_object('created',true,'order',keryx_storage.a2a_original_row(o));
+  IF owned THEN
+   stamp:=floor(extract(epoch FROM clock_timestamp())*1000)::bigint;
+   IF (owner_packet->>'proofExpiresAt')::numeric<=stamp OR (owner_session->>'expiresAt')::numeric<=stamp
+    OR NOT EXISTS(SELECT 1 FROM public.web_sessions w WHERE w.hash=owner_session->>'hash' AND w.wallet=owner_session->>'wallet'
+     AND w.issued_at=(owner_session->>'issuedAt')::numeric AND w.expires_at=(owner_session->>'expiresAt')::numeric)
+   THEN RAISE EXCEPTION 'native owned original current session required';END IF;
+  END IF;
+  PERFORM keryx_storage.leave_operation();RETURN result;
  END IF;
  IF execution IN('complete','repair','close') THEN
   IF selector IS NULL OR keryx_storage.a2a_utf16_length(selector) NOT BETWEEN 1 AND 256 OR octet_length(selector)>1024
@@ -103,6 +167,10 @@ BEGIN
   IF NOT FOUND OR o.status<>'running' OR NOT keryx_storage.acceptance_original_matches(packet->>'beforeWire',o) THEN
    PERFORM keryx_storage.leave_operation();RETURN 'false'::json;
   END IF;
+  r:=keryx_storage.a2a_original_row(o,true)::jsonb;
+  FOREACH field IN ARRAY ARRAY['created_at','updated_at','started_at','payment_started_at','result_saving_at'] LOOP
+   IF ((packet->>'beforeWire')::json->>field) IS DISTINCT FROM (r->>field) THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+  END LOOP;
   IF execution IN('repair','close') THEN
    IF (jsonb_typeof(packet->'resolutionWire')='string' AND octet_length(packet->>'resolutionWire')<=32768) IS NOT TRUE THEN RAISE EXCEPTION 'native recovery resolution bound';END IF;
    resolution:=(packet->>'resolutionWire')::jsonb;e:=resolution->'evidence';
@@ -160,6 +228,8 @@ BEGIN
    response_data=CASE execution WHEN 'close' THEN NULL ELSE (packet->>'responseWire')::json END,
    error_code=CASE execution WHEN 'close' THEN packet->>'errorCode' ELSE NULL END,
    resolution_data=CASE execution WHEN 'complete' THEN o.resolution_data::json ELSE (packet->>'resolutionWire')::json END,updated_at=started::timestamptz WHERE id=selector;
+  UPDATE keryx_storage.a2a_original_time_projection SET updated_at=started WHERE order_id=selector;
+  GET DIAGNOSTICS changed=ROW_COUNT;IF changed<>1 THEN RAISE EXCEPTION 'native original Source time unavailable';END IF;
   INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta)
    VALUES(selector,store,p->>'orderWire',p->>'orderSha256',p->>'deliveryToken',p->>'owner',p->>'network',nullif(p->'binding','null'::jsonb),p->'health');
   PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
@@ -177,7 +247,15 @@ BEGIN
   ELSE
    UPDATE public.a2a_orders SET status='failed',error_code=detail,updated_at=started::timestamptz WHERE id=selector AND status='running';
   END IF;
-  GET DIAGNOSTICS changed=ROW_COUNT;PERFORM keryx_storage.leave_operation();RETURN to_json(changed=1);
+  GET DIAGNOSTICS changed=ROW_COUNT;
+  IF changed=1 THEN
+   UPDATE keryx_storage.a2a_original_time_projection SET updated_at=started,
+    payment_started_at=CASE WHEN execution='payment-start' THEN coalesce(payment_started_at,started) ELSE payment_started_at END,
+    result_saving_at=CASE WHEN execution='result-saving' THEN coalesce(result_saving_at,started) ELSE result_saving_at END
+    WHERE order_id=selector;
+   GET DIAGNOSTICS changed=ROW_COUNT;IF changed<>1 THEN RAISE EXCEPTION 'native original Source time unavailable';END IF;
+  END IF;
+  PERFORM keryx_storage.leave_operation();RETURN to_json(changed=1);
  END IF;
  IF selector IS NULL OR octet_length(selector)>8192 OR detail IS NULL OR keryx_storage.a2a_trim(detail)='' OR keryx_storage.a2a_utf16_length(detail)>200 THEN RAISE EXCEPTION 'native original claim selector refused';END IF;
  b:=selector::jsonb;IF NOT keryx_storage.a2a_original_binding_valid(b) THEN RAISE EXCEPTION 'native original binding refused';END IF;
@@ -190,7 +268,11 @@ BEGIN
   AND NOT EXISTS(SELECT 1 FROM public.payment_events WHERE query_id=b->>'queryId' AND kind IS DISTINCT FROM 'inbound') THEN
   UPDATE public.a2a_orders SET started_at=started::timestamptz,worker_id=detail,updated_at=started::timestamptz
    WHERE id=b->>'id' AND status='running' AND started_at IS NULL AND worker_id IS NULL RETURNING * INTO o;
-  IF FOUND THEN result:=keryx_storage.a2a_original_row(o);END IF;
+  IF FOUND THEN
+   UPDATE keryx_storage.a2a_original_time_projection SET started_at=started,updated_at=started WHERE order_id=o.id;
+   GET DIAGNOSTICS changed=ROW_COUNT;IF changed<>1 THEN RAISE EXCEPTION 'native original Source time unavailable';END IF;
+   result:=keryx_storage.a2a_original_row(o);
+  END IF;
  END IF;
  PERFORM keryx_storage.leave_operation();RETURN result;
 END;$$;

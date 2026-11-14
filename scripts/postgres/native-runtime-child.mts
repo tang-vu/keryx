@@ -18,9 +18,13 @@ import type { KeryxDB } from '../../lib/db/keryx-db';
 import { createAssignmentRoutes } from '../../lib/owner-run-assignments/http';
 import { syntheticA2aOriginal } from '../../lib/db/a2a-original-fixture';
 import { ARC_MAINNET_PROFILE } from '../../lib/arc-network-profile';
+import type { Source } from '../../lib/types';
+import type { SourceMeta } from '../../lib/db/keryx-db';
+import type { SourceClaim,SourceClaimChallenge } from '../../lib/sources/public-source-claim';
 async function main(){
+ const sourceMethods=['getSource','getSourceByOnchainId','listSources','listAllSources','getSourceMeta','getSourceClaim','getSourceClaimForSource','getSourceClaimChallenge','listSourceClaims'];
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
- const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient};publicProfile:{actor:PublicProfileActor;handle:string;snapshot:PublicProfileSnapshot;settings:PublicProfileSettings;sitemap:Array<{handle:string;updatedAt:string}>}};
+ const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient};sourceClaims:{source:Source;meta:SourceMeta;claim:SourceClaim;challenge:SourceClaimChallenge};publicProfile:{actor:PublicProfileActor;handle:string;snapshot:PublicProfileSnapshot;settings:PublicProfileSettings;sitemap:Array<{handle:string;updatedAt:string}>}};
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid!(),0);
  const cgroup=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:cgroup('memory.max'),swapMax:cgroup('memory.swap.max'),cpuMax:cgroup('cpu.max'),pidsMax:cgroup('pids.max')};
@@ -160,7 +164,7 @@ async function main(){
  if(input.mode==='public-profiles-off'){
   const reader=await application.createReadonlyApplicationStorage();assert(reader);
   try{
-   assert.equal(reader.publicProfiles,undefined);assert.equal(Object.getOwnPropertyDescriptor(reader,'publicProfiles'),undefined);assert.throws(()=>requirePublicProfiles(reader));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments']);
+   assert.equal(reader.publicProfiles,undefined);assert.equal(Object.getOwnPropertyDescriptor(reader,'publicProfiles'),undefined);assert.throws(()=>requirePublicProfiles(reader));assert.deepEqual(Reflect.ownKeys(reader),[...sourceMethods,'pendingJobOwners','publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments']);
    process.env.KERYX_PUBLIC_PROFILES_ENABLED='true';assert.throws(()=>Reflect.get(reader,'publicProfiles'));assert.equal(outbound,0);
    console.log(JSON.stringify({passed:true,mode:input.mode,checks:7,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,publicProfilesDisabledAbsent:true,changedPublicationFlagRefused:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
   }finally{await native.closePostgresRuntimeAdapter(reader);}
@@ -236,6 +240,19 @@ async function main(){
   await assert.rejects(native.assertPostgresRuntimeIdentity(reader,'write'));await assert.rejects(native.assertPostgresRuntimeIdentity(new Proxy(reader,{})));checks++;
   await assert.rejects(application.createApplicationStorage());checks++;
   const metrics=await reader.metrics();assert.equal(metrics.totalQueries,1);checks++;
+  const sourceEqual=(value:unknown,expected:unknown)=>assert.deepEqual(JSON.parse(JSON.stringify(value)),expected);
+  const sourceExpected=input.sourceClaims;
+  sourceEqual(await reader.getSource(sourceExpected.source.id),sourceExpected.source);checks++;
+  sourceEqual(await reader.getSourceByOnchainId(sourceExpected.source.onchainId!),sourceExpected.source);checks++;
+  sourceEqual((await reader.listSources()).find(row=>row.id===sourceExpected.source.id),sourceExpected.source);checks++;
+  sourceEqual((await reader.listAllSources()).find(row=>row.id===sourceExpected.source.id),sourceExpected.source);checks++;
+  sourceEqual(await reader.getSourceMeta(sourceExpected.source.onchainId!),sourceExpected.meta);checks++;
+  sourceEqual(await reader.getSourceClaim!(sourceExpected.claim.id),sourceExpected.claim);sourceEqual(await reader.getSourceClaimForSource!(sourceExpected.source.id),sourceExpected.claim);checks++;
+  sourceEqual(await reader.getSourceClaimChallenge!(sourceExpected.challenge.id),sourceExpected.challenge);sourceEqual(await reader.listSourceClaims!(input.owner),[sourceExpected.claim]);checks++;
+  for(const name of sourceMethods){const descriptor=Object.getOwnPropertyDescriptor(reader,name);assert(descriptor&&!descriptor.enumerable&&typeof descriptor.value==='function');}checks++;
+  const pendingOwners=reader.pendingJobOwners!;assert(pendingOwners);let parsedProof=0;const fakeProof={get session(){parsedProof++;throw Error();}} as never;
+  await assert.rejects(pendingOwners.list(fakeProof));assert.equal(parsedProof,0);await assert.rejects(pendingOwners.assertAdmissionAsync!(fakeProof));checks++;
+
   const publicUsage=reader.publicUsage!,usageWindow={network:'eip155:5042' as const,since:'1970-01-01T00:00:00.000Z',until:'2026-10-10T00:00:00.000Z',period:'all' as const};
   assert.equal((await publicUsage.summary(usageWindow)).unattributedNetworkRuns,0);assert.equal((await publicUsage.history(usageWindow,'unknown',1))[0]?.answer,'Original answer');checks++;
   assert.equal((await publicUsage.publishedHistory!(usageWindow,'unknown',1)).windowRuns,1);assert.throws(()=>Reflect.get(reader,'prepareUsageHistory'));assert.throws(()=>Reflect.get(reader,'finishUsageHistory'));checks++;
@@ -284,7 +301,7 @@ async function main(){
    assert(await health(healthNow,false));checks++;
    await healthAdmin.query("UPDATE keryx_storage.control SET mode='held';");await assert.rejects(health(healthNow,false));await assert.rejects(sync([]));await assert.rejects(funding(input.owner));checks++;
   }finally{try{await healthAdmin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active';");}finally{await healthAdmin.end();}}
-  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments','publicProfiles']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
+  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),[...sourceMethods,'pendingJobOwners','publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments','publicProfiles']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
   progress('owner-reads');const profile=await reader.privateProfiles!.get(input.owner,'eip155:5042');assert.equal(profile.profile?.handle,input.publicProfile.handle);assert.equal(profile.activity.questions,1);checks++;
   assert.equal((await reader.profileIdentities!.list(input.owner)).identities.length,0);checks++;
   let parsed=0;await assert.rejects(reader.privateProfiles!.update(input.owner,{get displayName(){parsed++;return 'unused';}} as never));assert.equal(parsed,0);checks++;
@@ -317,6 +334,7 @@ async function main(){
   await assert.rejects(acceptance.read(...acceptanceArgs));await assert.rejects(acceptance.publicState(input.acceptance.network,input.acceptance.id));await assert.rejects(acceptance.metrics(input.acceptance.network));checks++;
   await assert.rejects(accounts.resolve(input.account.session,input.account.binding));await assert.rejects(getWebSession(input.session.hash));checks++;
   await assert.rejects(disposedHistory());checks++;
+  await assert.rejects(async()=>reader.getSource(sourceExpected.source.id));await assert.rejects(pendingOwners.list(fakeProof));checks++;
   await assert.rejects(chat.lookup(input.chat.recipient,input.account.binding));await assert.rejects(chat.list(input.account.snapshot));checks++;
   progress('complete');assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,phaseMs,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
  }finally{await native.closePostgresRuntimeAdapter(reader);}

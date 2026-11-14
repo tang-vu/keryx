@@ -6,7 +6,36 @@ SET ROLE keryx_owner;
 CREATE FUNCTION keryx_storage.source_claim_purchase_policy(operation text,selector text,packet jsonb) RETURNS jsonb LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
 DECLARE selection jsonb;source_row jsonb;retained jsonb;browser_row jsonb;hosted_row jsonb;purchase_row jsonb;wire text;sha text;policy_key text;
  row_count bigint;wire_bytes bigint;policy_wire text;replay boolean:=false;before_rows jsonb;before_wire text;source_hash text;fee_policy_key text;
+ read_kind text;catalog jsonb;meta_row jsonb;catalog_count bigint;catalog_bytes bigint;
 BEGIN
+ IF operation='read' THEN
+  IF selector IS NULL OR octet_length(selector)>2048 THEN RAISE EXCEPTION 'source read selector refused';END IF;
+  selection:=selector::jsonb;read_kind:=selection->>'operation';
+  IF jsonb_typeof(selection) IS DISTINCT FROM 'object' OR selection-'operation'-'selector'<>'{}'::jsonb OR NOT(selection?'selector')
+   OR read_kind IS NULL OR read_kind NOT IN('claim','for-source','challenge','claims','source','onchain','sources','all-sources','source-meta')
+   OR selection->'selector'<>'null'::jsonb AND jsonb_typeof(selection->'selector')<>'string'
+   OR read_kind IN('claim','challenge') AND coalesce(selection->>'selector','') !~ '^[a-f0-9]{64}$'
+   OR read_kind IN('for-source','source','onchain','source-meta') AND(selection->>'selector' IS NULL OR keryx_storage.a2a_utf16_length(selection->>'selector') NOT BETWEEN 1 AND 256)
+   OR read_kind IN('sources','all-sources') AND selection->'selector'<>'null'::jsonb THEN RAISE EXCEPTION 'source read selector refused';END IF;
+  SELECT count(*),coalesce(sum(octet_length(to_jsonb(s)::text)),0) INTO catalog_count,catalog_bytes FROM public.sources s WHERE
+   read_kind IN('source','for-source') AND s.id=selection->>'selector' OR read_kind='onchain' AND translate(s.onchain_id,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')=translate(selection->>'selector','ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')
+   OR read_kind='sources' AND s.active OR read_kind='all-sources';
+  IF catalog_count>1000 OR catalog_bytes>4194304 OR read_kind='onchain' AND catalog_count>1 THEN RAISE EXCEPTION 'source catalog complete result bound or ambiguous origin';END IF;
+  SELECT coalesce(jsonb_agg(to_jsonb(s)||jsonb_build_object('active',CASE WHEN s.active IS NULL THEN NULL WHEN s.active THEN 1 ELSE 0 END,'verified',CASE WHEN s.verified IS NULL THEN NULL WHEN s.verified THEN 1 ELSE 0 END) ORDER BY s.created_at COLLATE "C",s.id COLLATE "C"),'[]'::jsonb) INTO catalog FROM public.sources s WHERE
+   read_kind IN('source','for-source') AND s.id=selection->>'selector' OR read_kind='onchain' AND translate(s.onchain_id,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')=translate(selection->>'selector','ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')
+   OR read_kind='sources' AND s.active OR read_kind='all-sources';
+  IF read_kind='source-meta' THEN SELECT to_jsonb(m) INTO meta_row FROM public.source_meta m WHERE m.id=selection->>'selector';IF octet_length(meta_row::text)>4194304 THEN RAISE EXCEPTION 'source metadata complete result bound';END IF;END IF;
+  SELECT count(*),coalesce(sum(octet_length(key)+octet_length(value)),0) INTO row_count,wire_bytes FROM public.sync_state WHERE
+   key LIKE 'keryx:source-claims:v1:claim:%' OR key LIKE 'keryx:source-claims:v1:history:%' OR key LIKE 'keryx:source-claims:v1:challenge:%'
+   OR key LIKE 'keryx:source-claims:v1:marker:%' OR key LIKE 'keryx:source-claims:v1:source:%' OR key LIKE 'keryx:source-registry-origin:v1:%';
+  IF row_count>10000 OR wire_bytes>7000000 THEN RAISE EXCEPTION 'source read retained snapshot bound';END IF;
+  SELECT coalesce(jsonb_agg(jsonb_build_object('key',key,'value',value) ORDER BY key COLLATE "C"),'[]'::jsonb) INTO retained FROM public.sync_state WHERE
+   key LIKE 'keryx:source-claims:v1:claim:%' OR key LIKE 'keryx:source-claims:v1:history:%' OR key LIKE 'keryx:source-claims:v1:challenge:%'
+   OR key LIKE 'keryx:source-claims:v1:marker:%' OR key LIKE 'keryx:source-claims:v1:source:%' OR key LIKE 'keryx:source-registry-origin:v1:%';
+  wire:=jsonb_build_object('selector',selection,'sources',catalog,'rows',retained,'meta',meta_row)::text;
+  IF octet_length(wire)>8388608 THEN RAISE EXCEPTION 'source read complete encoded bound';END IF;
+  RETURN jsonb_build_object('wire',wire,'sha256',encode(sha256(convert_to(wire,'UTF8')),'hex'));
+ END IF;
  IF operation NOT IN('snapshot','assert','purchase') OR selector IS NULL OR octet_length(selector)>2048 THEN RAISE EXCEPTION 'source policy selector refused';END IF;
  selection:=selector::jsonb;
  IF jsonb_typeof(selection) IS DISTINCT FROM 'object' OR selection-'sourceId'-'identity'<>'{}'::jsonb OR NOT(selection?'sourceId' AND selection?'identity')
@@ -89,6 +118,7 @@ BEGIN
  RETURN NULL;
 END;$$;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
+ ('source_claims_read',ARRAY['sources','sync_state','source_meta'],true,true),
  ('source_policy_snapshot',ARRAY['sync_state','sources','browser_authorization_intents','browser_journal_bindings','hosted_treasury_authorizations','hosted_treasury_policies','research_purchase_authorizations'],true,true),
  ('hosted_admit_authorization',ARRAY['hosted_treasury_policies','hosted_treasury_authorizations','payment_events','sync_state','sources','private_research_executions','private_research_intents','private_research_results','private_research_interruptions','browser_journal_writer','browser_authorization_intents','browser_journal_bindings','research_purchase_authorizations'],true,false);
 CREATE FUNCTION public.storage_hosted_admit_authorization(expected jsonb,digest text,policy_wire text,policy_digest text,original_wire text,accounting_wire text,available_wire text,fee_wire text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
@@ -96,8 +126,13 @@ DECLARE p jsonb;c jsonb;payload jsonb;m jsonb;types jsonb;domain jsonb;totals js
  chosen_nonce text;amount numeric;query_amount numeric;first_budget text;before numeric;after numeric;now_seconds bigint:=floor(extract(epoch FROM clock_timestamp()));
  field text;integer_value numeric;parsed_uint numeric[]:=ARRAY[]::numeric[];url text;claim_id text;fee_key text;retained_fee text;role_name text;
 BEGIN
+ IF policy_wire='source-claims-read' THEN
+  IF current_setting('transaction_read_only')<>'on' OR policy_digest IS NOT NULL OR accounting_wire IS NOT NULL OR available_wire IS NOT NULL OR fee_wire IS NOT NULL THEN RAISE EXCEPTION 'source claims read-only snapshot required';END IF;
+  PERFORM keryx_storage.require_operation(expected,digest,'source_claims_read');
+  RETURN keryx_storage.source_claim_purchase_policy('read',original_wire,NULL);
+ END IF;
  IF policy_wire='source-policy-snapshot' THEN
-  IF current_setting('transaction_read_only')<>'on' OR policy_digest IS NOT NULL OR accounting_wire IS NOT NULL OR available_wire IS NOT NULL OR fee_wire IS NOT NULL THEN RAISE EXCEPTION 'source policy read-only snapshot required';END IF;
+  IF session_user<>'keryx_app' OR current_setting('transaction_read_only')<>'on' OR policy_digest IS NOT NULL OR accounting_wire IS NOT NULL OR available_wire IS NOT NULL OR fee_wire IS NOT NULL THEN RAISE EXCEPTION 'source policy read-only snapshot required';END IF;
   PERFORM keryx_storage.require_operation(expected,digest,'source_policy_snapshot');
   RETURN keryx_storage.source_claim_purchase_policy('snapshot',original_wire,NULL);
  END IF;
@@ -194,5 +229,5 @@ BEGIN
 END;$$;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA keryx_storage FROM PUBLIC,keryx_app,keryx_reader;
 REVOKE ALL ON FUNCTION public.storage_hosted_admit_authorization(jsonb,text,text,text,text,text,text,text) FROM PUBLIC,anon,authenticated,service_role,keryx_reader;
-GRANT EXECUTE ON FUNCTION public.storage_hosted_admit_authorization(jsonb,text,text,text,text,text,text,text) TO keryx_app;
+GRANT EXECUTE ON FUNCTION public.storage_hosted_admit_authorization(jsonb,text,text,text,text,text,text,text) TO keryx_app,keryx_reader;
 RESET ROLE;

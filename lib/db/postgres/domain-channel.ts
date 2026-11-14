@@ -22,6 +22,9 @@ import { OWNER_ASSIGNMENT_CALLS } from './owner-assignments-calls';
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
   hostedSourcePolicySnapshot:{sql:"SELECT public.storage_hosted_admit_authorization($1::jsonb,$2::text,'source-policy-snapshot',NULL,$3::text,NULL,NULL,NULL) AS result",args:1,write:false,transaction:true,bytes:16777216,inputBytes:8192},
+  sourceClaimsRead:{sql:"SELECT public.storage_hosted_admit_authorization($1::jsonb,$2::text,'source-claims-read',NULL,$3::text,NULL,NULL,NULL) AS result",args:1,write:false,transaction:true,bytes:16777216,inputBytes:8192},
+  pendingOwnerAdmission:{sql:"SELECT public.storage_pending_owner_observe($1::jsonb,$2::text,'admission',$3::text,NULL,NULL) AS result",args:1,write:false,transaction:true,bytes:128},
+  pendingOwnerList:{sql:"SELECT public.storage_pending_owner_observe($1::jsonb,$2::text,'list',$3::text,$4::text,$5::text) AS result",args:3,write:false,transaction:true,bytes:524288},
   researchPurchaseClaim:{sql:"SELECT public.storage_research_purchases($1::jsonb,$2::text,'claim',$3::text,NULL) AS result",args:1,write:true,bytes:64,inputBytes:262144},
   researchMonthlyCreate:{sql:"SELECT public.storage_research_purchases($1::jsonb,$2::text,'create',$3::text,NULL) AS result",args:1,write:true,bytes:65536,inputBytes:262144},
   researchMonthlyGet:{sql:"SELECT public.storage_research_purchases($1::jsonb,$2::text,'get',$3::text,NULL) AS result",args:1,write:false,transaction:true,bytes:262144,inputBytes:256},

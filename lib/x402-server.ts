@@ -23,6 +23,9 @@ export interface PaidOptions {
   admissionCheck?: () => Response | null;
   /** Trusted retained attempt admission, after native purpose claim and before settlement HTTP. */
   beforeSettlement?: () => Response | null;
+  /** Native durable admission must be explicitly awaited. Synchronous admission
+   * and canary hooks run again after this phase, immediately before HTTP. */
+  beforeSettlementAsync?: () => Promise<Response | null>;
   /** Finite acceptance prohibits retries/fallback after possible settlement exposure. */
   singleSettlementAttempt?: boolean;
   priceUsdc: number;
@@ -119,13 +122,33 @@ export async function settleThenServe(
   if (deniedMerchant) return deniedMerchant;
   const requirements = buildRequirements(opts.priceUsdc, opts.payTo);
   const sig = req.headers.get("payment-signature");
-  const checkAdmission = () => { const held = opts.admissionCheck?.(); if (held) throw new PaidAdmissionHeld(held); };
+  const singleSettlementAttempt = opts.singleSettlementAttempt || !!opts.beforeSettlementAsync;
+  const admissionResult = (held: Response | null | undefined) => {
+    // A Promise in the legacy synchronous hook must fail closed. Never let a
+    // thenable be mistaken for an already completed admission decision.
+    if (held !== undefined && held !== null && !(held instanceof Response)) {
+      // Contain a rejecting, incorrectly supplied async hook as well.
+      void Promise.resolve(held).catch(() => {});
+      throw new PaidAdmissionHeld(NextResponse.json({ error: "paid admission unavailable" }, { status: 503 }));
+    }
+    if (held) throw new PaidAdmissionHeld(held);
+  };
+  const checkAdmission = () => { admissionResult(opts.admissionCheck?.()); };
   const verifyPayment = (selected: typeof payload) => {
     checkAdmission(); return facilitator.verify(selected, requirements);
   };
-  const settlePayment = (selected: typeof payload) => {
+  const settlePayment = async (selected: typeof payload) => {
+    // No asynchronous work follows the final synchronous hooks before handing
+    // this exact authorization to the provider.
+    if (opts.beforeSettlementAsync) {
+      checkAdmission();
+      let held;
+      try { held = await opts.beforeSettlementAsync(); }
+      catch { throw new PaidAdmissionHeld(NextResponse.json({ error: "paid admission unavailable" }, { status: 503 })); }
+      admissionResult(held);
+    }
     checkAdmission();
-    const held = opts.beforeSettlement?.(); if (held) throw new PaidAdmissionHeld(held);
+    admissionResult(opts.beforeSettlement?.());
     return facilitator.settle(selected, requirements);
   };
 
@@ -218,9 +241,9 @@ export async function settleThenServe(
       amountMicros: Number(requirements.amount), resourceSourceId: opts.resourceSourceId, resourceKind: opts.resourceKind, sourceClaim: opts.sourceClaim });
     let settle;
     try {
-      settle = await withRetry(() => settlePayment(activePayload), "settle", opts.endpoint, opts.singleSettlementAttempt ? 1 : 2);
+      settle = await withRetry(() => settlePayment(activePayload), "settle", opts.endpoint, singleSettlementAttempt ? 1 : 2);
     } catch (err) {
-      if (err instanceof PaidAdmissionHeld || opts.singleSettlementAttempt) throw err;
+      if (err instanceof PaidAdmissionHeld || singleSettlementAttempt) throw err;
       // No confirmation was received. Retrying the identical nonce cannot double-debit, but the
       // eventual caller still treats a missing success response as pending rather than failed.
       if (activePayload === payload) throw err;

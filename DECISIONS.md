@@ -9670,3 +9670,34 @@ These ports consume retained local facts; they do not authenticate a chain or
 provider settlement. Current Source catalog/upsert composition, pending-owner
 admission, complete writer, live delta, startup/load and production cutover remain
 separate gates. Ordinary legacy Source and required payment checks stay intact.
+
+
+## Preserve current Source identity and owned A2A originals in native storage (2026-11-15)
+
+Native Source observations read each catalog row, its retained managed-claim
+marker, complete claim history and immutable registry origin in one protected
+snapshot. Missing or corrupt managed history cannot turn a source into an
+unmanaged seller. Free or stale claims remain readable metadata. Protected
+upserts capture the caller's row before awaiting, compare the complete current
+Source/origin tuple after the writer lock, and retain exact JSON history cells.
+The ordinary Supabase construction keeps its existing behavior.
+
+Owned A2A creation consumes only the route's opaque verified session capability,
+then rechecks the complete selected deployment, current session and original
+binding under the native writer lock. It inserts an owner only with a new
+original; replay cannot attach or replace an owner. The asynchronous durable
+settlement hook has one attempt and never falls back to a synchronous legacy
+hook after an error or unknown acknowledgement.
+
+A separate identity-bound time projection retains the exact Source TEXT clocks
+for every A2A original, including originals with no paid body. Reads refuse a
+missing or inconsistent projection; they do not reconstruct creation history
+from formatted PostgreSQL timestamps or a replaceable acceptance projection.
+Held intake materializes this ninth derivative from the original SQLite cells.
+
+Eleven ordinary operational write entries share one fixed action router. Their
+argument shapes, write guards and output bounds stay unchanged, freeing ten
+catalog function slots without changing metadata acceptance limits. The native
+readonly facade exposes current Source observations and rejects fabricated owner
+proofs. The complete application writer and production migration remain closed
+until their separate domain, import, startup, load and cutover requirements pass.

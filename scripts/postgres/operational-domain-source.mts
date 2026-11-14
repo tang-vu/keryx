@@ -3,11 +3,18 @@ import { createHash } from 'node:crypto';
 import { nativeAuthApplicationSource } from './auth-domain-source.mts';
 import { nativeApplicationJsonEntrySource } from './source-json-entries.mts';
 import { BASE_APPLICATION_WRITE_OPERATIONS } from '../../lib/db/postgres/application-domain-transport';
-import { OPERATIONAL_WRITE_OPERATIONS } from '../../lib/db/postgres/operational-write-calls';
+import { OPERATIONAL_WRITE_CALLS,OPERATIONAL_WRITE_OPERATIONS } from '../../lib/db/postgres/operational-write-calls';
 export function nativeOperationalApplicationSource(){
- const base=nativeAuthApplicationSource(),names=Object.keys(BASE_APPLICATION_WRITE_OPERATIONS);
- if(names.length!==17||Object.keys(OPERATIONAL_WRITE_OPERATIONS).length!==11)throw new Error('Operational source inventory changed; review required');
- const sql=base.sql+`\nSET ROLE keryx_owner;
+ const base=nativeAuthApplicationSource(),names=Object.keys(BASE_APPLICATION_WRITE_OPERATIONS),operational=Object.keys(OPERATIONAL_WRITE_OPERATIONS);
+ if(names.length!==17||operational.length!==11||Object.keys(OPERATIONAL_WRITE_CALLS).length!==11)throw new Error('Operational source inventory changed; review required');
+ for(const name of operational){
+  const call=OPERATIONAL_WRITE_CALLS[OPERATIONAL_WRITE_OPERATIONS[name as keyof typeof OPERATIONAL_WRITE_OPERATIONS]];
+  if(call.sql!==`SELECT public.storage_application_operational_write($1::jsonb,$2::text,'${name}',$3::jsonb) AS result`
+   ||call.args!==1||call.write!==true||call.bytes!==4194304)throw new Error('Operational fixed routing changed');
+ }
+ const entries=nativeApplicationJsonEntrySource(operational,true,65536,'operational_write');
+ if(Buffer.byteLength(entries)>32768)throw new Error('Operational entry SOURCE bound');
+ const addition=`\nSET ROLE keryx_owner;
 CREATE OR REPLACE FUNCTION keryx_storage.enter_operation(expected jsonb,selected text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 BEGIN
  IF session_user<>'keryx_app' OR current_setting('transaction_read_only')<>'off'
@@ -32,9 +39,11 @@ $$;
 DO $$ DECLARE t text;BEGIN FOREACH t IN ARRAY ARRAY['rate_limit_counters','reasoning_circuits','api_keys','api_key_usage','answer_feedback','activation_events'] LOOP
  EXECUTE format('CREATE TRIGGER native_operational_writer BEFORE INSERT OR UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION keryx_storage.write_fence()',t);
 END LOOP;END;$$;
-${nativeApplicationJsonEntrySource(Object.keys(OPERATIONAL_WRITE_OPERATIONS),true)}
+${entries}
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA keryx_storage FROM PUBLIC,keryx_app,keryx_reader;
 RESET ROLE;
 `;
+ if(Buffer.byteLength(addition)>32768)throw new Error('Operational SOURCE bound');
+ const sql=base.sql+addition;
  return Object.freeze({sql,sha256:createHash('sha256').update(sql).digest('hex'),limitations:'Operational source/domain only. Complete runtime factory and production migration remain unqualified.'});
 }

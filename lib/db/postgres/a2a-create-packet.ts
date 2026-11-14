@@ -18,5 +18,9 @@ export function captureNativeA2aCreate(raw:A2aOrder){
   ||!Number.isFinite(Date.parse(order.createdAt))||new Date(order.createdAt).toISOString()!==order.createdAt||order.updatedAt!==order.createdAt)throw Error('Native fresh order refused');
  const row=monthlyOrderToRow(order);for(const field of ['request_data','package_data','response_data','resolution_data'])if(row[field]!==null)row[field]=JSON.stringify(row[field]);
  const rowWire=JSON.stringify(row);if(Buffer.byteLength(rowWire)>65536)throw Error('Native fresh original bound');
+ // The opaque session consumer receives this isolated, immutable snapshot.
+ // Neither caller mutation nor an exposed nested package/request can change
+ // the exact original after proof consumption and before native submission.
+ const freeze=(value:unknown):void=>{if(value&&typeof value==='object'){for(const child of Object.values(value))freeze(child);Object.freeze(value);}};freeze(order);
  return Object.freeze({order,binding:Object.freeze(binding),row:Object.freeze(row),rowWire});
 }
