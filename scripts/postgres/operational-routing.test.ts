@@ -3,9 +3,6 @@ import { expect,it,vi } from 'vitest';
 import { nativeApplicationJsonEntrySource } from './source-json-entries.mts';
 import { nativeOperationalApplicationSource } from './operational-domain-source.mts';
 import { nativeAuthApplicationSource } from './auth-domain-source.mts';
-import { AUTH_WRITE_OPERATIONS } from '../../lib/db/postgres/auth-write-calls';
-import { APPLICATION_READ_OPERATIONS } from '../../lib/db/postgres/application-read-calls';
-import { CONTENT_WRITE_OPERATIONS,CONTENT_WRITE_INPUT_BYTES } from '../../lib/db/postgres/content-write-calls';
 import { OPERATIONAL_WRITE_CALLS,OPERATIONAL_WRITE_OPERATIONS } from '../../lib/db/postgres/operational-write-calls';
 import { composePostgresApplicationDomainTransport } from '../../lib/db/postgres/application-domain-transport';
 import type { PostgresDomainChannel } from '../../lib/db/postgres/domain-channel';
@@ -15,6 +12,17 @@ const expected=['consume_rate_limit','delete_expired_rate_limits','acquire_reaso
  'clear_reasoning_circuit','mint_api_key','verify_api_key_2','revoke_api_key','upsert_api_key_usage','record_feedback','increment_activation_event'] as const;
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',deploymentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',storageId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,enrollmentId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',enrolledAt:'2026-10-01T00:00:00.000Z',provenanceDigest:'dd'.repeat(32)};
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
+// Fixed representative inputs, independently evaluated with the pre-grouping
+// f69d925d emitter. Live domain inventories and bounds may evolve separately;
+// those input changes must not be mistaken for a generator regression.
+const defaultEntryReceipts=[
+ {label:'auth write',names:['create_auth_challenge','create_web_session'],write:true,bound:65536,sha256:'772585629f6464eeac6b8d3b3cb490936267cd484611efdd9d03fa724cf2e5d8'},
+ {label:'read',names:['get_sync_state','list_sources'],write:false,bound:65536,sha256:'6d76d66845d147dfed251662c74266ff74c02ecbc6b7a7559b08c3524062aa17'},
+ {label:'large content',names:['set_cached'],write:true,bound:8388608,sha256:'c9c34a721c56fa2fcd3519b92588640aa79f563a43ae12140f47c81e683ceae4'},
+ {label:'memory content',names:['save_query_memory'],write:true,bound:1048576,sha256:'1c90c1d175a17791af3505d4a185fc5a80c74a989c06670b46693c52c9846317'},
+ {label:'historical upsert bound',names:['upsert_source'],write:true,bound:262144,sha256:'749524b568a9e514a49084c24d16e3a9d031822a89e875c3c180339f2c7afb5c'},
+ {label:'larger upsert bound',names:['upsert_source'],write:true,bound:524288,sha256:'81e2e40f95b00d38e5b596c3acc7d730b0341c59d60f70886c9745896f739bc2'},
+] as const;
 
 it('preserves every existing named TypeScript call and its argument/result/write policy behind a fixed literal operation',async()=>{
  expect(Object.keys(OPERATIONAL_WRITE_OPERATIONS)).toEqual(expected);expect(Object.keys(OPERATIONAL_WRITE_CALLS)).toHaveLength(11);
@@ -32,14 +40,8 @@ it('preserves every existing named TypeScript call and its argument/result/write
  await expect(port.applicationWrite('storage_application_operational_write' as never,{})).rejects.toThrow();
  await expect(port.applicationWrite('unreviewed_operation' as never,{})).rejects.toThrow();expect(call).toHaveBeenCalledTimes(count);
 });
-it('leaves all ungrouped auth/content/read generator output byte-identical to f69d925d',()=>{
- // These receipts predate the optional grouped variant. They cover the actual
- // auth/content invocations and the complete generic read inventory.
- expect(hash(nativeApplicationJsonEntrySource(Object.keys(AUTH_WRITE_OPERATIONS),true))).toBe('d60aa66b462b62a8aa6979a013e0cea4e3e2a76de32b489afd6412491f160837');
- const content=Object.keys(CONTENT_WRITE_OPERATIONS).map(name=>nativeApplicationJsonEntrySource([name],true,Object.hasOwn(CONTENT_WRITE_INPUT_BYTES,name)?CONTENT_WRITE_INPUT_BYTES[name as keyof typeof CONTENT_WRITE_INPUT_BYTES]:65536)).join('\n');
- expect(hash(content)).toBe('3d4392a8c3bf1b6b024376c732b83b67e1c5013018c1a33ba82a401728ab31f5');
- expect(hash(nativeApplicationJsonEntrySource(Object.keys(APPLICATION_READ_OPERATIONS)))).toBe('a76b56efa2113477166dbd513d37759f3ee859694e4e9a3fff4e2661f1ffeeae');
- expect(hash(nativeApplicationJsonEntrySource(['get_sync_state']))).toBe('4bcc3447da23e33363333aa6dbf49693cf47cf4c6ed3a29386592c6e527cbc80');
+it.each(defaultEntryReceipts)('preserves pre-grouping default emitter bytes for fixed $label inputs',({names,write,bound,sha256})=>{
+ expect(hash(nativeApplicationJsonEntrySource(names,write,bound))).toBe(sha256);
 });
 it('emits only one bounded operational router while retaining the untouched auth SOURCE prefix',()=>{
  const source=nativeOperationalApplicationSource(),base=nativeAuthApplicationSource();expect(source.sql.startsWith(base.sql)).toBe(true);
