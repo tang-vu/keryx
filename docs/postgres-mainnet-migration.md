@@ -7,6 +7,14 @@ transport test does not admit the current mainnet application to that backend.
 
 ## Current preparation
 
+Native A2A execution groups exact-original claim with payment-start, result-save
+and failure checkpoints under separate fixed operation policies. It preserves
+the first checkpoint timestamp, Source eligibility/false results and immutable
+financial proofs. These ports record metadata and cannot execute or retry a job.
+Read-only installed facades remain closed to mutation. Full A2A production,
+paid-response JSON, resolution/repair and pending-owner association still need
+their complete protocols before the application writer can be enabled.
+
 The closed native hosted-admission port adds atomic new originals for unmanaged
 sources, operating fees and existing private execution tuples. It validates the
 Arc payload and fresh accounting, preserves original nonce/query/lifetime limits

@@ -31,3 +31,21 @@ it('reports unknown write outcomes after malformed/changed replies or disposal w
  const c=channel(),native=composePostgresA2aOriginals(c.port,false);c.call.mockResolvedValue({});await expect(native.claimA2aOriginal(fixture().binding,'worker',at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call).toHaveBeenCalledOnce();
  c.call.mockClear();c.call.mockImplementation(async()=>{c.state.closed=true;return {...row(),started_at:at,worker_id:'worker',updated_at:at};});await expect(native.claimA2aOriginal(fixture().binding,'worker',at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call).toHaveBeenCalledOnce();
 });
+it('uses only fixed checkpoint calls and preserves explicit false results',async()=>{
+ const c=channel(),native=composePostgresA2aOriginals(c.port,false),id=fixture().order.id;c.call.mockResolvedValue(true);
+ expect(await native.markA2aOrderPaymentStarted(id,at)).toBe(true);expect(c.call.mock.calls.at(-1)).toEqual(['a2aPaymentStart',[id,at]]);
+ expect(await native.markA2aOrderResultSaving(id,at)).toBe(true);expect(c.call.mock.calls.at(-1)).toEqual(['a2aResultSaving',[id,at]]);
+ c.call.mockResolvedValue(false);expect(await native.failA2aOrder(id,'research_failed',at)).toBe(false);expect(c.call.mock.calls.at(-1)).toEqual(['a2aFail',[id,'research_failed',at]]);
+});
+it('refuses readonly checkpoints and invalid selectors before SQL',async()=>{
+ const c=channel(),readonly=composePostgresA2aOriginals(c.port,true),native=composePostgresA2aOriginals(c.port,false),id=fixture().order.id;
+ await expect(readonly.markA2aOrderPaymentStarted(id,at)).rejects.toThrow();await expect(readonly.markA2aOrderResultSaving(id,at)).rejects.toThrow();await expect(readonly.failA2aOrder(id,'research_failed',at)).rejects.toThrow();
+ for(const invalid of ['',id+'\0','\ud800'])await expect(native.markA2aOrderPaymentStarted(invalid,at)).rejects.toThrow();
+ for(const date of ['invalid','2026-02-30T00:00:00.000Z','2026-11-14T07:00:00.000+07:00'])await expect(native.markA2aOrderResultSaving(id,date)).rejects.toThrow();
+ for(const code of ['bad\0code','\ud800','x'.repeat(513)])await expect(native.failA2aOrder(id,code,at)).rejects.toThrow();expect(c.call).not.toHaveBeenCalled();
+});
+it('never retries a checkpoint after an unknown or malformed write response',async()=>{
+ const c=channel(),native=composePostgresA2aOriginals(c.port,false),id=fixture().order.id;c.call.mockResolvedValue(null);
+ await expect(native.markA2aOrderPaymentStarted(id,at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call).toHaveBeenCalledOnce();
+ c.call.mockClear();c.call.mockRejectedValue(new PostgresDomainWriteOutcomeUnknown());await expect(native.markA2aOrderResultSaving(id,at)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call).toHaveBeenCalledOnce();
+});

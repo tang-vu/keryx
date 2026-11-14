@@ -9,6 +9,9 @@ export interface PostgresA2aOriginalsPort {
  hasA2aOriginalSettlement(expected:A2aOriginalClaim):Promise<boolean>;
  listUnfinishedA2aOrders(limit:number):Promise<UnfinishedA2aOrders>;
  claimA2aOriginal(expected:A2aOriginalClaim,workerId:string,startedAt:string):Promise<A2aOrder|null>;
+ markA2aOrderPaymentStarted(id:string,startedAt:string):Promise<boolean>;
+ markA2aOrderResultSaving(id:string,startedAt:string):Promise<boolean>;
+ failA2aOrder(id:string,errorCode:string,updatedAt:string):Promise<boolean>;
 }
 const unavailable=()=>new PostgresStorageUnavailable();
 /** Native JSON cells are already decoded; preserve false/0/empty-string JSON
@@ -24,6 +27,14 @@ function order(raw:unknown):A2aOrder{
 export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOnly:boolean):PostgresA2aOriginalsPort{
  if(typeof readOnly!=='boolean')throw unavailable();const live=()=>{if(channel.closed)throw unavailable();};
  const binding=(raw:A2aOriginalClaim)=>{const value=validateA2aOriginalClaim(raw,ARC_MAINNET_PROFILE),wire=canonicalJson(value);if(Buffer.byteLength(wire)>8192)throw unavailable();return {value,wire};};
+ const checkpoint=async(operation:'a2aPaymentStart'|'a2aResultSaving'|'a2aFail',id:string,at:string,errorCode?:string)=>{
+  live();if(readOnly)throw unavailable();
+  const text=(v:unknown,length:number,bytes:number):v is string=>typeof v==='string'&&v.length<=length&&Buffer.byteLength(v)<=bytes&&!v.includes('\0')&&Buffer.from(v).toString('utf8')===v;
+  if(!text(id,256,1024)||id.length<1||typeof at!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(at)||!Number.isFinite(Date.parse(at))||new Date(at).toISOString()!==at
+   ||operation==='a2aFail'&&!text(errorCode,512,2048))throw unavailable();
+  const result=await channel.call(operation,operation==='a2aFail'?[id,errorCode!,at]:[id,at]);
+  if(channel.closed||typeof result!=='boolean')throw new PostgresDomainWriteOutcomeUnknown();return result;
+ };
  return Object.freeze({
   async hasA2aOriginalSettlement(raw){live();const input=binding(raw),result=await channel.call('a2aOriginalSettled',[input.wire]);live();if(typeof result!=='boolean')throw unavailable();return result;},
   async listUnfinishedA2aOrders(raw){live();const take=unfinishedA2aOrderLimit(raw),result=await channel.call('a2aOriginalUnfinished',[String(take)]);live();if(!result||typeof result!=='object'||Array.isArray(result)||Object.keys(result).join(',')!=='rows')throw unavailable();const rows=Reflect.get(result,'rows');if(!Array.isArray(rows)||rows.length>take+1)throw unavailable();return decodeUnfinishedA2aOrders(rows,take,order);},
@@ -33,5 +44,8 @@ export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOn
    const result=await channel.call('a2aOriginalClaim',[input.wire,workerId,startedAt]);if(channel.closed)throw new PostgresDomainWriteOutcomeUnknown();if(result===null)return null;
    try{const claimed=order(result);if(!matchesA2aOriginalBinding(claimed,input.value)||claimed.status!=='running'||claimed.startedAt!==startedAt||claimed.workerId!==workerId||claimed.updatedAt!==startedAt||claimed.executionJournalVersion!==1||claimed.paymentStartedAt!==null||claimed.resultSavingAt!==null||claimed.response!==null||claimed.errorCode!==null||claimed.resolution!==null)throw unavailable();return claimed;}catch{throw new PostgresDomainWriteOutcomeUnknown();}
   },
+  markA2aOrderPaymentStarted:(id,at)=>checkpoint('a2aPaymentStart',id,at),
+  markA2aOrderResultSaving:(id,at)=>checkpoint('a2aResultSaving',id,at),
+  failA2aOrder:(id,errorCode,at)=>checkpoint('a2aFail',id,at,errorCode),
  } satisfies PostgresA2aOriginalsPort);
 }

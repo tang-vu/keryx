@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+## Preserve Source A2A execution checkpoints in one bounded native writer - 2026-11-14
+
+Group exact-original claim and the payment-start, result-saving and failure
+checkpoints in one execution function with closed literal channel entries and
+separate operation policies. Keep the existing function-count, response and
+resource limits. This records journal metadata; it executes no job or payment.
+
+Payment/result checkpoints require a running, started v1 journal. Repeated calls
+retain the first checkpoint timestamp while updating `updated_at`, matching
+SQLite. Failure changes only a running original, including invalid unstarted
+orders, and cannot reopen a finished/failed order. Preserve current original
+claim proofs, shared writer locks and acceptance-projection invalidation.
+Unknown acknowledgements remain unknown; never retry automatically. Read-only
+facades and SQL roles cannot mutate these checkpoints. Producer, paid-response
+JSON, resolution/repair, owner admission and full-factory gates remain open.
+
 ## Admit hosted originals atomically before exposing a native signer - 2026-11-14
 
 Use one closed native operation for hosted authorization admission. Revalidate the
