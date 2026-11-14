@@ -15,9 +15,9 @@ describe('publication containment protocol without execution',()=>{
   expect(()=>parsePublicationChildInput({mode:'qualify',identity,digest:input.digest,password:input.options.password,proof:true})).toThrow();
  });
  it('requires the actual loopback host-port mapping and only the default bridge fixture',()=>{
-  const fixture={Name:'/'+input.postgresContainer,Image:image,State:{Running:true,Paused:false,OOMKilled:false},Config:{User:'postgres'},HostConfig:{NetworkMode:'default'},Mounts:[],NetworkSettings:{Networks:{bridge:{}},Ports:{'5432/tcp':[{HostIp:'127.0.0.1',HostPort:'15432'}]}}};
+  const fixture={Name:'/'+input.postgresContainer,Image:image,State:{Running:true,Paused:false,OOMKilled:false},Config:{User:'postgres',Env:['POSTGRES_PASSWORD='+input.options.password]},HostConfig:{NetworkMode:'default'},Mounts:[],NetworkSettings:{Networks:{bridge:{}},Ports:{'5432/tcp':[{HostIp:'127.0.0.1',HostPort:'15432'}]}}};
   expect(()=>assertPublicationFixture(fixture,input,image)).not.toThrow();
-  for(const value of [{...fixture,Image:'foreign'},{...fixture,State:{...fixture.State,OOMKilled:true}},{...fixture,Mounts:[{Type:'bind'}]},{...fixture,NetworkSettings:{...fixture.NetworkSettings,Networks:{bridge:{},external:{}}}},{...fixture,NetworkSettings:{...fixture.NetworkSettings,Ports:{'5432/tcp':[{HostIp:'0.0.0.0',HostPort:'15432'}]}}}])expect(()=>assertPublicationFixture(value,input,image)).toThrow();
+  for(const value of [{...fixture,Image:'foreign'},{...fixture,State:{...fixture.State,OOMKilled:true}},{...fixture,Config:{...fixture.Config,Env:['POSTGRES_PASSWORD=foreign']}},{...fixture,Mounts:[{Type:'bind'}]},{...fixture,Mounts:[{Type:'volume'}]},{...fixture,NetworkSettings:{...fixture.NetworkSettings,Networks:{bridge:{},external:{}}}},{...fixture,NetworkSettings:{...fixture.NetworkSettings,Ports:{'5432/tcp':[{HostIp:'0.0.0.0',HostPort:'15432'}]}}}])expect(()=>assertPublicationFixture(value,input,image)).toThrow();
  });
  it('keeps the production deadline immutable and emits real resource limits without secrets',()=>{
   const owner=randomUUID(),args=publicationContainerArguments('keryx-publication-qualify-'+randomUUID(),owner,input.postgresContainer,image,'qualify');

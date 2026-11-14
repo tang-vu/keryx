@@ -16,7 +16,7 @@ export function parsePublicationChildInput(raw:unknown):PublicationChildInput{
  try{
   if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).sort().join(',')!=='digest,identity,mode,password')publicationRefused();
   const x=raw as Record<string,unknown>;
-  if(!['qualify','oom','limits','hang'].includes(String(x.mode))||typeof x.digest!=='string'||!/^[a-f0-9]{64}$/.test(x.digest)||typeof x.password!=='string'||!/^[a-f0-9]{48}$/.test(x.password))publicationRefused();
+  if(typeof x.mode!=='string'||!['qualify','oom','limits','hang'].includes(x.mode)||typeof x.digest!=='string'||!/^[a-f0-9]{64}$/.test(x.digest)||typeof x.password!=='string'||!/^[a-f0-9]{48}$/.test(x.password))publicationRefused();
   const identity=validateStorageIdentity(x.identity);if(identity.authorityMode!=='mainnet-real'||identity.network!=='eip155:5042')publicationRefused();
   return {mode:x.mode as PublicationMode,identity,digest:x.digest,password:x.password};
  }catch{return publicationRefused();}

@@ -18,15 +18,15 @@ const LABEL='keryx.publication-contained-owner',BUNDLE_BYTES=16*1024*1024;
 export interface ContainedPublicationInput{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;postgresContainer:string;}
 export function captureContainedPublicationInput(raw:ContainedPublicationInput):ContainedPublicationInput{
  try{
-  if(!raw||Object.keys(raw).sort().join(',')!=='digest,identity,options,postgresContainer'||!/^keryx-postgres-consents-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(raw.postgresContainer))publicationRefused();
+  if(!raw||Object.keys(raw).sort().join(',')!=='digest,identity,options,postgresContainer'||typeof raw.postgresContainer!=='string'||!/^keryx-postgres-consents-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(raw.postgresContainer))publicationRefused();
   const o=raw.options;if(!o||Object.keys(o).sort().join(',')!=='database,endpoint,password,role'||o.database!=='native_target'||o.role!=='keryx_app'||!o.endpoint||Object.keys(o.endpoint).sort().join(',')!=='kind,port'||o.endpoint.kind!=='loopback'||!Number.isSafeInteger(o.endpoint.port)||o.endpoint.port<1||o.endpoint.port>65535)publicationRefused();
   const child=parsePublicationChildInput({mode:'qualify',identity:raw.identity,digest:raw.digest,password:o.password});
   return {postgresContainer:raw.postgresContainer,identity:child.identity,digest:child.digest,options:{database:'native_target',role:'keryx_app',endpoint:{kind:'loopback',port:o.endpoint.port},password:child.password}};
  }catch{return publicationRefused();}
 }
 export function assertPublicationFixture(raw:unknown,input:ContainedPublicationInput,imageId:string){
- const x=raw as {Name?:unknown;Image?:unknown;State?:{Running?:unknown;Paused?:unknown;OOMKilled?:unknown};Config?:{User?:unknown};HostConfig?:{NetworkMode?:unknown};Mounts?:{Type?:unknown}[];NetworkSettings?:{Networks?:Record<string,unknown>;Ports?:Record<string,{HostIp:string;HostPort:string}[]>}};
- if(!x||x.Name!=='/'+input.postgresContainer||x.Image!==imageId||x.State?.Running!==true||x.State.Paused!==false||x.State.OOMKilled!==false||x.Config?.User!=='postgres'||!['default','bridge'].includes(String(x.HostConfig?.NetworkMode))||!Array.isArray(x.Mounts)||x.Mounts.some(m=>m.Type==='bind'))publicationRefused();
+ const x=raw as {Name?:unknown;Image?:unknown;State?:{Running?:unknown;Paused?:unknown;OOMKilled?:unknown};Config?:{User?:unknown;Env?:unknown[]};HostConfig?:{NetworkMode?:unknown};Mounts?:{Type?:unknown}[];NetworkSettings?:{Networks?:Record<string,unknown>;Ports?:Record<string,{HostIp:string;HostPort:string}[]>}};
+ if(!x||x.Name!=='/'+input.postgresContainer||x.Image!==imageId||x.State?.Running!==true||x.State.Paused!==false||x.State.OOMKilled!==false||x.Config?.User!=='postgres'||!x.Config.Env?.includes('POSTGRES_PASSWORD='+input.options.password)||!['default','bridge'].includes(String(x.HostConfig?.NetworkMode))||!Array.isArray(x.Mounts)||x.Mounts.some(m=>m.Type!=='tmpfs'))publicationRefused();
  if(Object.keys(x.NetworkSettings?.Networks??{}).join(',')!=='bridge')publicationRefused();const ports=x.NetworkSettings?.Ports?.['5432/tcp'];
  if(!ports||ports.length!==1||ports[0].HostIp!=='127.0.0.1'||ports[0].HostPort!==String(input.options.endpoint.port))publicationRefused();
 }
