@@ -22,7 +22,9 @@ import { OWNER_ASSIGNMENT_CALLS } from './owner-assignments-calls';
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
   hostedAdmitAuthorization:{sql:'SELECT public.storage_hosted_admit_authorization($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text,$8::text) AS result',args:6,write:true,bytes:128},
-  a2aOriginalSettled:{sql:'SELECT public.storage_a2a_original_settled($1::jsonb,$2::text,$3::text) AS result',args:1,write:false,bytes:128,transaction:true},
+  a2aOriginalSettled:{sql:"SELECT public.storage_a2a_original_observe($1::jsonb,$2::text,'settled',$3::text) AS result",args:1,write:false,bytes:128,transaction:true},
+  a2aOriginalSnapshot:{sql:"SELECT public.storage_a2a_original_observe($1::jsonb,$2::text,'snapshot',$3::text) AS result",args:1,write:false,bytes:8388608,transaction:true},
+  a2aComplete:{sql:"SELECT public.storage_a2a_original_execution($1::jsonb,$2::text,'complete',$3::text,$4::text,$5::text) AS result",args:3,write:true,bytes:128,inputBytes:33554432},
   a2aOriginalUnfinished:{sql:'SELECT public.storage_a2a_original_unfinished($1::jsonb,$2::text,$3::integer) AS result',args:1,write:false,bytes:4194304,transaction:true},
   a2aOriginalClaim:{sql:"SELECT public.storage_a2a_original_execution($1::jsonb,$2::text,'claim',$3::text,$4::text,$5::text) AS result",args:3,write:true,bytes:4194304},
   a2aPaymentStart:{sql:"SELECT public.storage_a2a_original_execution($1::jsonb,$2::text,'payment-start',$3::text,NULL,$4::text) AS result",args:2,write:true,bytes:128},

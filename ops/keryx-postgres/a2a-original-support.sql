@@ -68,12 +68,14 @@ CREATE FUNCTION keryx_storage.a2a_original_settled(o public.a2a_orders,b jsonb) 
   AND c.product='a2a' AND c.purchase_id=b->>'id' AND c.request_hash=b->>'requestHash' AND c.amount_micros=(b->>'amountMicroUsdc')::numeric
   AND NOT EXISTS(SELECT 1 FROM public.research_monthly_redemptions WHERE order_id=c.purchase_id));
 $$;
-CREATE FUNCTION keryx_storage.a2a_original_row(o public.a2a_orders) RETURNS jsonb LANGUAGE plpgsql STABLE SET search_path=pg_catalog,pg_temp AS $$
-DECLARE result jsonb:=to_jsonb(o);field text;
+CREATE FUNCTION keryx_storage.a2a_original_row(o public.a2a_orders,raw_cells boolean DEFAULT false) RETURNS json LANGUAGE plpgsql STABLE SET search_path=pg_catalog,pg_temp AS $$
+DECLARE result json;
 BEGIN
- FOREACH field IN ARRAY ARRAY['created_at','updated_at','started_at','payment_started_at','result_saving_at'] LOOP
-  IF jsonb_typeof(result->field)='string' THEN result:=jsonb_set(result,ARRAY[field],to_jsonb(to_char((result->>field)::timestamptz AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')));END IF;
- END LOOP;
+ SELECT row_to_json(r) INTO result FROM(SELECT o.id,o.query_id,o.authorization_id,o.request_hash,o.payer,o.payee,o.amount_usdc,o.creator_budget_usdc,o.service_fee_usdc,o.research_mode,CASE WHEN raw_cells THEN to_json(o.package_data::text) ELSE o.package_data::json END package_data,o.status,o.transaction_id,CASE WHEN raw_cells THEN to_json(o.request_data::text) ELSE o.request_data::json END request_data,
+  to_char(o.started_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') started_at,o.worker_id,o.execution_journal_version,
+  to_char(o.payment_started_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') payment_started_at,
+  to_char(o.result_saving_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') result_saving_at,CASE WHEN raw_cells THEN to_json(o.response_data::text) ELSE o.response_data::json END response_data,o.error_code,CASE WHEN raw_cells THEN to_json(o.resolution_data::text) ELSE o.resolution_data::json END resolution_data,
+  to_char(o.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') created_at,to_char(o.updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') updated_at)r;
  IF octet_length(result::text)>4000000 THEN RAISE EXCEPTION 'native original row bound';END IF;RETURN result;
 END;$$;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA keryx_storage FROM PUBLIC,keryx_app,keryx_reader;

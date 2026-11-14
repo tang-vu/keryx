@@ -4,9 +4,12 @@ import { validateA2aOriginalClaim,validateA2aClaimWorker,matchesA2aOriginalBindi
 import { decodeUnfinishedA2aOrders,unfinishedA2aOrderLimit,type UnfinishedA2aOrders } from '../../a2a/overdue-escalation-queue';
 import type { A2aOrder } from '../../a2a/order';
 import { PostgresStorageUnavailable } from './connection';
+import { acceptanceOriginalMetadata } from './acceptance-metadata';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
 export interface PostgresA2aOriginalsPort {
  hasA2aOriginalSettlement(expected:A2aOriginalClaim):Promise<boolean>;
+ getA2aOrder(id:string):Promise<A2aOrder|null>;
+ completeA2aOrder(id:string,response:Record<string,unknown>,updatedAt:string):Promise<boolean>;
  listUnfinishedA2aOrders(limit:number):Promise<UnfinishedA2aOrders>;
  claimA2aOriginal(expected:A2aOriginalClaim,workerId:string,startedAt:string):Promise<A2aOrder|null>;
  markA2aOrderPaymentStarted(id:string,startedAt:string):Promise<boolean>;
@@ -27,6 +30,20 @@ function order(raw:unknown):A2aOrder{
 export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOnly:boolean):PostgresA2aOriginalsPort{
  if(typeof readOnly!=='boolean')throw unavailable();const live=()=>{if(channel.closed)throw unavailable();};
  const binding=(raw:A2aOriginalClaim)=>{const value=validateA2aOriginalClaim(raw,ARC_MAINNET_PROFILE),wire=canonicalJson(value);if(Buffer.byteLength(wire)>8192)throw unavailable();return {value,wire};};
+ const selector=(id:unknown)=>{if(typeof id!=='string'||id.length<1||id.length>256||Buffer.byteLength(id)>1024||id.includes('\0')||Buffer.from(id).toString('utf8')!==id)throw unavailable();return id;};
+ const timestamp=(at:unknown)=>{if(typeof at!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(at)||!Number.isFinite(Date.parse(at))||new Date(at).toISOString()!==at)throw unavailable();return at;};
+ const snapshot=async(id:string)=>{
+  const value=await channel.call('a2aOriginalSnapshot',[selector(id)]);live();if(value===null)return null;
+  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join(',')!=='orderWire,storeId')throw unavailable();
+  const {orderWire,storeId}=value as Record<string,unknown>;
+  if(typeof orderWire!=='string'||Buffer.byteLength(orderWire)>4000000||typeof storeId!=='string')throw unavailable();
+  const row=JSON.parse(orderWire) as Record<string,unknown>;
+  if(!row||Array.isArray(row)||row.id!==id)throw unavailable();
+  // Source TEXT cells remain strings in this snapshot, even when their decoded
+  // JSON contains NUL/unpaired surrogates. Metadata captures these exact bytes.
+  const projection=acceptanceOriginalMetadata(row,storeId);
+  return {row,orderWire,storeId,projection};
+ };
  const checkpoint=async(operation:'a2aPaymentStart'|'a2aResultSaving'|'a2aFail',id:string,at:string,errorCode?:string)=>{
   live();if(readOnly)throw unavailable();
   const text=(v:unknown,length:number,bytes:number):v is string=>typeof v==='string'&&v.length<=length&&Buffer.byteLength(v)<=bytes&&!v.includes('\0')&&Buffer.from(v).toString('utf8')===v;
@@ -36,6 +53,21 @@ export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOn
   if(channel.closed||typeof result!=='boolean')throw new PostgresDomainWriteOutcomeUnknown();return result;
  };
  return Object.freeze({
+  async getA2aOrder(id){
+   live();const retained=await snapshot(id);if(retained===null)return null;
+   const row={...retained.row};for(const field of ['request_data','package_data','response_data','resolution_data'])if(typeof row[field]==='string')row[field]=JSON.parse(row[field] as string);
+   return order(row);
+  },
+  async completeA2aOrder(id,response,updatedAt){
+   live();if(readOnly)throw unavailable();selector(id);timestamp(updatedAt);
+   const responseWire=JSON.stringify(response);if(typeof responseWire!=='string'||Buffer.byteLength(responseWire)>4000000)throw unavailable();
+   // Capture before the first await. The fixed SQL compares the entire original
+   // after acquiring its writer lock, then stores result and derivative atomically.
+   const retained=await snapshot(id);live();if(retained===null||retained.row.status!=='running')return false;
+   const projection=acceptanceOriginalMetadata({...retained.row,status:'completed',response_data:responseWire,error_code:null,updated_at:updatedAt},retained.storeId);
+   const packet=JSON.stringify({beforeWire:retained.orderWire,responseWire,projection});if(Buffer.byteLength(packet)>16777216)throw unavailable();
+   const result=await channel.call('a2aComplete',[id,packet,updatedAt]);if(channel.closed||typeof result!=='boolean')throw new PostgresDomainWriteOutcomeUnknown();return result;
+  },
   async hasA2aOriginalSettlement(raw){live();const input=binding(raw),result=await channel.call('a2aOriginalSettled',[input.wire]);live();if(typeof result!=='boolean')throw unavailable();return result;},
   async listUnfinishedA2aOrders(raw){live();const take=unfinishedA2aOrderLimit(raw),result=await channel.call('a2aOriginalUnfinished',[String(take)]);live();if(!result||typeof result!=='object'||Array.isArray(result)||Object.keys(result).join(',')!=='rows')throw unavailable();const rows=Reflect.get(result,'rows');if(!Array.isArray(rows)||rows.length>take+1)throw unavailable();return decodeUnfinishedA2aOrders(rows,take,order);},
   async claimA2aOriginal(raw,workerId,startedAt){

@@ -4,6 +4,7 @@ import { publicHealthSyncKeys,type PublicHealthSnapshot } from '../public-health
 import { dashboardMetricsFromPostgresAggregate } from './dashboard-aggregate';
 import { PostgresStorageUnavailable } from './connection';
 import type { PostgresDomainChannel } from './domain-channel';
+import { summarizeNativeRecordedJobs } from './recorded-job-summary';
 const unavailable=()=>new PostgresStorageUnavailable();
 const stateEntries=z.object({entries:z.array(z.object({keyHex:z.string().max(2048),valueHex:z.string().max(8388608).nullable()}).strict()).max(32)}).strict();
 const jobRow=z.object({status:z.enum(['running','completed','failed']),createdAt:z.string().max(64),updatedAt:z.string().max(64),startedAt:z.string().max(64).nullable(),executionJournalVersion:z.unknown(),researchPackage:z.unknown(),serviceReceipt:z.unknown(),resolution:z.unknown()}).strict();
@@ -19,6 +20,8 @@ function states(raw:unknown,keys:readonly string[]):ReadonlyMap<string,string|nu
 }
 function since(now:number){if(!Number.isSafeInteger(now)||now< -8640000000000000+86400000||now>8640000000000000)throw unavailable();return new Date(now-86400000).toISOString();}
 function jobs(raw:unknown,now:number):A2aOperationsSnapshot{
+  const recorded=z.array(z.object({status:z.enum(['running','completed','failed']),createdAt:z.string().max(64),updatedAt:z.string().max(64),startedAt:z.string().max(64).nullable(),completionCohort:z.enum(['ordinary','recovered','unknown'])}).strict()).max(1000).safeParse(raw);
+  if(recorded.success)return summarizeNativeRecordedJobs(recorded.data,now);
  const rows:A2aOperationsRow[]=jobRows.parse(raw).map(row=>{if(['executionJournalVersion','researchPackage','serviceReceipt','resolution'].some(key=>!Object.hasOwn(row,key)))throw unavailable();return {...row,researchPackage:row.researchPackage??undefined,serviceReceipt:row.serviceReceipt??undefined};});
  return summarizeA2aOperations(rows,now,true);
 }
