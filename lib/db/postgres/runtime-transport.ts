@@ -18,10 +18,11 @@ import type { PublicProfilesStore } from '../../profiles/public-profile';
 import { composePostgresPublicProfiles } from './public-profiles-transport';
 import { composePostgresOwnerAssignments } from './owner-assignments-transport';
 import { composePostgresA2aOriginals,type PostgresA2aOriginalsPort } from './a2a-originals-transport';
+import { composePostgresHostedAdmission,type PostgresHostedAdmissionPort } from './hosted-admission-transport';
 import type { AsyncOwnerRunAssignmentsPort } from '../../owner-run-assignments/contracts';
 const cacheRow=z.object({sourceId:z.string().min(1).max(256),text:z.string().max(2097152)}).strict();
 export interface NativeColdCacheSnapshot {readonly cacheRows:readonly Readonly<{sourceId:string;text:string}>[];readonly cacheRowCount:number;readonly cacheWireBytes:number;}
-export interface PostgresRuntimeTransport extends PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport,PostgresA2aOriginalsPort {readonly deliverableAcceptance:DeliverableAcceptanceStore;readonly accountMembership:AccountMembershipStore;readonly chatAccountLinks:ChatAccountLinksStore;readonly publicProfiles:PublicProfilesStore;readonly ownerRunAssignments:AsyncOwnerRunAssignmentsPort;verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
+export interface PostgresRuntimeTransport extends PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport,PostgresA2aOriginalsPort,PostgresHostedAdmissionPort {readonly deliverableAcceptance:DeliverableAcceptanceStore;readonly accountMembership:AccountMembershipStore;readonly chatAccountLinks:ChatAccountLinksStore;readonly publicProfiles:PublicProfilesStore;readonly ownerRunAssignments:AsyncOwnerRunAssignmentsPort;verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
 /** Actual fixed reads on one native pool. This transport cannot enroll a facade. */
 export function createPostgresRuntimeTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,claimsEnabled=false,privacyActive=false):PostgresRuntimeTransport {
  const expected=validateStorageIdentity(identity);return composePostgresRuntimeTransport(createPostgresDomainChannel(options,expected,digest),expected,digest,options.role!=='keryx_app',claimsEnabled,privacyActive);
@@ -34,6 +35,7 @@ export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,id
  return Object.freeze({
   ...composePostgresUserDomainTransport(channel,expected,readOnly,claimsEnabled),
   ...composePostgresA2aOriginals(channel,readOnly),
+  ...composePostgresHostedAdmission(channel,expected,readOnly),
   ...composePostgresHealth(channel),
   ...composePostgresUsage(channel,privacyActive),
   ...composePostgresPublicLedger(channel,privacyActive),

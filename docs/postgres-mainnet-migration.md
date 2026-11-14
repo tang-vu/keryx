@@ -7,6 +7,30 @@ transport test does not admit the current mainnet application to that backend.
 
 ## Current preparation
 
+The closed native hosted-admission port adds atomic new originals for unmanaged
+sources, operating fees and existing private execution tuples. It validates the
+Arc payload and fresh accounting, preserves original nonce/query/lifetime limits
+and writes the pending public payment with the retained authorization. A late
+payment failure must roll back both. The current source-claim marker/history
+check blocks managed or ambiguous records; managed-source policy admission
+remains a separate missing protocol. This port is absent from the installed
+read-only facade and does not enable the complete application writer.
+An unsupported Unicode escape in retained managed-history JSON also holds new
+admissions. Complete managed-policy/JSON compatibility must be qualified before
+the full writer is enabled; malformed metadata is never ignored as unclaimed.
+
+The isolated protocol command is:
+
+```text
+node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --hosted-admission-only
+```
+
+Its actual SQLite helper comparison covers current caps and original budgets,
+retained source/fee ownership barriers, private execution eligibility, rollback,
+concurrent admissions, writer contention and lost commit acknowledgement.
+Synthetic private dependency imports are declared fixture facts; the private
+payment/execution producer and real custody/provider paths are not run.
+
 `lib/db/postgres/connection.ts` provides an asynchronous, local-only bootstrap
 transport. Its three fixed reads carry the complete expected storage identity and,
 where applicable, the source contract digest as bound parameters. It publishes no

@@ -1,5 +1,27 @@
 # Keryx — Decision Log
 
+## Admit hosted originals atomically before exposing a native signer - 2026-11-14
+
+Use one closed native operation for hosted authorization admission. Revalidate the
+admitted policy and role, exact Arc signing payload, original query budget,
+current accounting and all finite caps under the shared financial writer lock.
+Retain the original and its public pending payment in the same transaction;
+private originals instead require their existing worker/owner/execution tuple.
+Keep the legacy payment fence and its transaction-local writer capability. Every
+successful return removes that capability, and every refusal rolls it back.
+
+Operating fees retain their protected configured policy and exact allocation,
+exclude current/retained owner claims and permit only one original per query,
+across signers and policy renewals. Unmanaged-source admission must inspect
+retained markers, bindings and linked history; missing or corrupt managed
+records never become legacy earning authority. Keep escaped JSON marker bytes
+outside JSONB normalization so unsupported Unicode cannot erase their presence.
+
+This increment keeps managed-source payment policy admission closed pending its
+own protocol qualification. It grants no application writer provenance, custody,
+signature, provider execution, funding or automatic retry. Full factory and
+production cutover remain separate requirements.
+
 ## Qualify exact-original A2A ports before the complete native writer - 2026-11-14
 
 Native A2A observation and exact-original claim use fixed functions on the same
