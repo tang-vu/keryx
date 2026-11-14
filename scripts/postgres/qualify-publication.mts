@@ -85,7 +85,6 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
   }
   for(const search of ['after-nul','after-high','after-low','\ufffd','not-present'])await same(()=>native.personalHistory.list(owner,{filters:{search},take:51}),()=>history.list(owner,{filters:{search},take:51}));
   await same(()=>native.runOwnershipHistory.list(owner,{binding,filters:{search:'\ufffd'},take:51}),()=>ownership.list(owner,{binding,filters:{search:'\ufffd'},take:51}));
-  await same(()=>native.privateProfiles.get(owner,input.identity.network),()=>profiles.get(owner,input.identity.network));
   await same(()=>native.runPrivacy.sourceHistory!(),()=>privacy.sourceHistory!());await same(()=>native.runPrivacy.learningPage!({take:32}),()=>privacy.learningPage!({take:32}));await same(()=>native.runPrivacy.archivePage!({take:32}),()=>privacy.archivePage!({take:32}));
   const metricStatement=db.prepare(SQLITE_DASHBOARD_INPUT_ROWS);metricStatement.setReturnArrays(true);const expectedDashboard=dashboardMetricsFromSqliteRows(metricStatement.all() as never),actualDashboard=await native.dashboardMetrics();
   assert.deepEqual({...actualDashboard,recordedAccounts:undefined},{...expectedDashboard,recordedAccounts:undefined});vectors++;
@@ -153,8 +152,16 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
   assert(input.options.endpoint.kind==='loopback');const proxy=await startCommitAckLossProxy(input.options.endpoint.port),loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);
   try{const run={...base('lost-ack'),answer:'PAID_BODY_LOST_ACK\0\udc00'},packet=capturePublicationSourcePacket(run);proxy.arm();await assert.rejects(loss.call('publicationSave',[packet.wire]),PostgresDomainWriteOutcomeUnknown);assert(proxy.observation().dropped);assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(run.id)};`),Buffer.from(JSON.parse(packet.wire).originalHex,'hex').toString());vectors++;}finally{await loss.close();await proxy.close();}
   const reader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(reader.call('publicationSave',[capturePublicationSourcePacket(base('reader')).wire]));vectors++;}finally{await reader.close();}
+  // The invalid non-null Source origin is a strict private-profile surface
+  // refusal. Its enrolled port deliberately retires the shared verified Source
+  // connection on that unclassified failure, so exercise it LAST. Earlier page
+  // readers must compare live Source rows, not a connection already closed by a
+  // different expected negative. Native installed-facade retirement is still a
+  // separate full-factory blocker; a successful fixed protocol is not that proof.
+  await same(()=>native.privateProfiles.get(owner,input.identity.network),()=>profiles.get(owner,input.identity.network));
+  assert.throws(()=>source!.db.prepare('SELECT count(*) FROM query_runs').get(),/Verified storage connection closed/);vectors++;
   assert.throws(()=>capturePostgresPublication(cases[1]));assert.throws(()=>capturePostgresPublication(cases[2]));assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
-  return {vectors,genuineSqliteOracle:true,verifiedEnrolledSqlite:true,rawSourceDateOrder:true,offsetAndSubmillisecondDates:true,strictHistoryDateRefusal:true,pureFixedProtocol:true,rawScalarVsJsonExtraction:true,rawOriginalPreserved:true,metadataExcludesPaidAnswer:true,unicodeJsOwnerBoundary:true,noNullOwnerFallback:true,staleScalarRefused:true,erasureAfterWriterWaitRefused:true,largeOriginalBytes:4000000,completeCollectionBytes:33554432,largeWriteMaximumMs:Math.max(...writeTimes),lostAckUnknownNoRetry:true,readerRefused:true,unsafeCaptureStillClosed:true,compiled512MiBQualified:false,fullFactoryQualified:false,retainedSyntheticRows:Number(input.ownerSql('SELECT count(*) FROM public.query_runs;')),providerCalls:0,paymentActions:0,schedulesCreated:0};
+  return {vectors,genuineSqliteOracle:true,verifiedEnrolledSqlite:true,rawSourceDateOrder:true,offsetAndSubmillisecondDates:true,strictHistoryDateRefusal:true,pureFixedProtocol:true,rawScalarVsJsonExtraction:true,rawOriginalPreserved:true,metadataExcludesPaidAnswer:true,unicodeJsOwnerBoundary:true,noNullOwnerFallback:true,staleScalarRefused:true,erasureAfterWriterWaitRefused:true,largeOriginalBytes:4000000,completeCollectionBytes:33554432,largeWriteMaximumMs:Math.max(...writeTimes),lostAckUnknownNoRetry:true,readerRefused:true,unsafeCaptureStillClosed:true,compiled512MiBQualified:false,sourceProfileRefusalRetiresConnection:true,nativeFacadeTerminalRetirementQualified:false,fullFactoryBlockers:['native-private-profile-terminal-retirement'],fullFactoryQualified:false,retainedSyntheticRows:Number(input.ownerSql('SELECT count(*) FROM public.query_runs;')),providerCalls:0,paymentActions:0,schedulesCreated:0};
  }finally{
   try{await channel.close();}finally{try{source?.close();}finally{db.close();}}
   // Only this uniquely created canonical TEMP fixture, with resolved path checks.
