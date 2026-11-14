@@ -9649,3 +9649,24 @@ Route the bounded unfinished observation through the existing fixed observer,
 keeping its raw JSON response, ordering and whole-response refusal bound. This
 frees a catalog function for the remaining application domains. Pending-owner,
 purchase producer, complete writer and production migration remain separate gates.
+
+## Bind native research purchases to current Source policy (2026-11-14)
+
+Observe exact retained Source claim, challenge, history, registry-origin and
+browser/hosted original inputs in one bounded read-only snapshot. Evaluate the
+existing Source schemas and payout policy in the protected Node adapter, then
+compare the captured snapshot digest again under the native writer lock. Raw
+history JSON remains TEXT, including escaped NUL and surrogate evidence. A
+missing or corrupt managed binding never becomes an unmanaged purchase.
+
+Keep issued Monthly challenge windows immutable, consume the submitted bit once,
+and allocate exactly four prepaid slots with atomic replay and original/health
+projection updates. Preserve original resource policy on an exact historical
+replay; a new purchase must meet current policy. Concurrent identical first
+claims may reconstruct only that claim's known immutable insertion for replay.
+Lost commit acknowledgements remain unknown without a payment or job retry.
+
+These ports consume retained local facts; they do not authenticate a chain or
+provider settlement. Current Source catalog/upsert composition, pending-owner
+admission, complete writer, live delta, startup/load and production cutover remain
+separate gates. Ordinary legacy Source and required payment checks stay intact.

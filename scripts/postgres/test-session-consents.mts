@@ -66,6 +66,7 @@ import { nativeChatLinksSource } from './chat-links-source.mts';
 import { nativePublicProfilesSource } from './public-profiles-source.mts';
 import { nativeOwnerAssignmentsSource } from './owner-assignments-source.mts';
 import { qualifyHostedAdmission } from './qualify-hosted-admission.mts';
+import { qualifyResearchPurchases } from './qualify-research-purchases.mts';
 import { nativeHostedAdmissionSource } from './hosted-admission-source.mts';
 import { nativeA2aResponseWireSource } from './a2a-response-wire-source.mts';
 import { nativeA2aOriginalsSource } from './a2a-originals-source.mts';
@@ -305,7 +306,7 @@ try {
   if(ownershipHistoryOnly){const ownershipHistory=await qualifyOwnershipHistory({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,ownershipHistoryOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,ownershipHistory,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(runClaimsOnly){const runClaims=await qualifyRunClaims({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,runClaimsOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,runClaims,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(responseWireOnly){const options={endpoint:{kind:'loopback' as const,port},database:'native_target',role:'keryx_app',password},ownerSql=(statement:string)=>sql('native_target',statement);const a2aOriginals=await qualifyA2aOriginals({options,identity,digest:reference.sha256,contentionClient:app,ownerSql,rawResponses:true,recovery:true});const a2aCreate=await qualifyA2aCreate({options,identity,digest:reference.sha256,contentionClient:app,ownerSql});const health=await qualifyHealth({options,identity,digest:reference.sha256,contentionClient:app,ownerSql,rawCompletionMetadata:true});console.log(JSON.stringify({passed:true,responseWireOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,a2aOriginals,a2aCreate,health,runtimeQualified:false,applicationBackendSwitched:false}));return;}
-  if(hostedAdmissionOnly){const hostedAdmission=await qualifyHostedAdmission({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,hostedAdmissionOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,hostedAdmission,runtimeQualified:false,applicationBackendSwitched:false}));return;}
+  if(hostedAdmissionOnly){const context={options:{endpoint:{kind:'loopback' as const,port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:(statement:string)=>sql('native_target',statement)},hostedAdmission=await qualifyHostedAdmission(context),researchPurchases=await qualifyResearchPurchases(context);console.log(JSON.stringify({passed:true,hostedAdmissionOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,hostedAdmission,researchPurchases,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(a2aOriginalsOnly){const a2aOriginals=await qualifyA2aOriginals({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,a2aOriginalsOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,a2aOriginals,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(ownerAssignmentsOnly){const ownerAssignments=await qualifyOwnerAssignments({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,ownerAssignmentsOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,ownerAssignments,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   if(publicProfilesOnly){const publicProfiles=await qualifyPublicProfiles({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)});console.log(JSON.stringify({passed:true,publicProfilesOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,publicProfiles,runtimeQualified:false,applicationBackendSwitched:false}));return;}
@@ -457,6 +458,8 @@ try {
     ownerSql: statement => sql("native_target", statement),applicationTableReference:withApplicationReference }) : undefined;
   const ownerWithdrawals = withOwner ? await qualifyOwnerWithdrawals({ transport: nativeTransport as PostgresOwnerWithdrawalTransport,
     ownerSql: statement => sql("native_target", statement) }) : undefined;
+  // This fixture retains synthetic browser originals until database disposal.
+  const researchPurchases=withNativeRuntime?await qualifyResearchPurchases({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:statement=>sql('native_target',statement)}):undefined;
   assert.throws(() => sql("native_target", "UPDATE keryx_storage.source_contract SET source_digest=repeat('0',64);"));
   sql("native_target", "ALTER TABLE public.session_grants ADD COLUMN unexpected_drift text;");
   await assert.rejects(issue(consent()));
@@ -470,6 +473,7 @@ try {
     ...(creator ? { creator } : {}),
     ...(hostedLedger ? { hostedLedger } : {}),
     ...(hostedAdmission?{hostedAdmission}:{}),
+    ...(researchPurchases?{researchPurchases}:{}),
     ...(ownerWithdrawals ? { ownerWithdrawals } : {}),
     ...(withApplicationReference?{applicationFinancialReference:true,catalogMeasurement,completeApplicationAdmitted:false}:{}),
     ...(currentTables?{currentTableConstraints}:{}),
