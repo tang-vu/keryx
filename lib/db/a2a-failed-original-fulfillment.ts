@@ -14,8 +14,7 @@ import { assertSqliteResearchAuthority } from "./research-monthly";
 import { writeSqliteQueryRun } from "./query-run-record";
 import type { QueryRun } from "../types";
 import type { FulfillmentEvidenceCapability } from "../a2a/fulfillment-supplement-evidence";
-import { a2aResponseFromRun, quoteFromA2aOrder } from "../a2a/result";
-import { fulfillmentResolution as resolution, fulfilledOriginalOrders } from "../a2a/fulfillment-delivery";
+import { fulfillmentResolution as resolution, fulfilledOriginalOrders, fulfilledOriginalReceipt } from "../a2a/fulfillment-delivery";
 
 const same = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
 const originalId = (value: string) => { if (!/^a2a_[a-f0-9]{64}$/.test(value)) throw new Error("Fulfillment original refused"); return value; };
@@ -111,7 +110,7 @@ export function completeSqliteA2aFulfillment(db: DatabaseSync, raw: A2aFulfillme
     if (!order || !matchesFailedFulfillmentOriginal(order, record.claim.authority) ||
       !same(order, record.claim.failedOrder) || !hasSettledProof(db, order, record.claim.authority.original) ||
       !noCreatorAttempts(db, order.id) || db.prepare("SELECT 1 FROM query_runs WHERE id=?").get(run.id)) return false;
-    const receipt = a2aResponseFromRun(run, quoteFromA2aOrder(order), { acceptedAt: order.createdAt, startedAt: order.startedAt });
+    const receipt = fulfilledOriginalReceipt(run, order);
     writeSqliteQueryRun(db, run, false);
     const changed = db.prepare(`UPDATE a2a_orders SET status='completed',response_data=?,error_code=NULL,
       result_saving_at=?,resolution_data=?,updated_at=? WHERE id=? AND status='failed' AND error_code='research_failed'

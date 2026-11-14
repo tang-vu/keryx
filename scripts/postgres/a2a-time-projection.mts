@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { StorageIdentity } from '../../lib/db/storage-identity';
-import { captureA2aTimeMetadata } from '../../lib/db/postgres/a2a-time-metadata';
+import { captureA2aTimeMetadata,captureA2aOriginalCellMetadata } from '../../lib/db/postgres/a2a-time-metadata';
 /** Independent held SOURCE intake. This SELECT never hydrates paid bodies or
  * relies on the disposable acceptance projection to retain creation history. */
 export function sqliteA2aTimeProjection(db:DatabaseSync,id:string,identity:StorageIdentity){
@@ -11,4 +11,13 @@ export function heldA2aTimeProjectionSql(row:ReturnType<typeof captureA2aTimeMet
  const q=(value:string)=>"'"+value.replaceAll("'","''")+"'";
  const keys=Object.keys(row) as (keyof typeof row)[];
  return `INSERT INTO keryx_storage.a2a_original_time_projection(${keys.join(',')}) VALUES(${keys.map(key=>row[key]===null?'NULL':q(row[key]!)).join(',')});`;
+}
+/** Separate immutable request/package intake; never evaluate a result/receipt. */
+export function sqliteA2aOriginalCellProjection(db:DatabaseSync,id:string,identity:StorageIdentity){
+ if(typeof id!=='string'||id.length<1||id.length>256)throw Error('A2A SOURCE cell identity refused');
+ return captureA2aOriginalCellMetadata(db.prepare('SELECT id,query_id,request_hash,package_data,request_data FROM a2a_orders WHERE id=?').get(id),identity);
+}
+export function heldA2aOriginalCellProjectionSql(row:ReturnType<typeof captureA2aOriginalCellMetadata>){
+ const q=(value:string)=>"'"+value.replaceAll("'","''")+"'",keys=Object.keys(row) as (keyof typeof row)[];
+ return `INSERT INTO keryx_storage.a2a_original_cell_projection(${keys.join(',')}) VALUES(${keys.map(key=>row[key]===null?'NULL':q(row[key]!)).join(',')});`;
 }

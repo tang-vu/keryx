@@ -23,8 +23,11 @@ import { postgresPoolConfiguration,type PostgresConnectionOptions } from '../../
 import { createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-channel';
 import { composePostgresA2aFulfillment } from '../../lib/db/postgres/a2a-fulfillment-transport';
 import { composePostgresA2aOriginals } from '../../lib/db/postgres/a2a-originals-transport';
+import { captureNativeA2aCreate } from '../../lib/db/postgres/a2a-create-packet';
+import { acceptanceOriginalMetadata } from '../../lib/db/postgres/acceptance-metadata';
 import { captureNativeFulfillmentClaim,captureNativeFulfillmentCompletion,nativeFulfillmentClaimPacket,nativeFulfillmentCompletionPacket,readNativeFulfillmentSnapshot } from '../../lib/db/postgres/a2a-fulfillment-packet';
-import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql } from './a2a-time-projection.mts';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql,sqliteA2aOriginalCellProjection,heldA2aOriginalCellProjectionSql } from './a2a-time-projection.mts';
+import { sqliteAcceptanceProjection,heldAcceptanceProjectionSql } from './acceptance-projection.mts';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
 
 export async function qualifyA2aFulfillment(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string}){
@@ -32,7 +35,7 @@ export async function qualifyA2aFulfillment(input:{options:PostgresConnectionOpt
  const folder=mkdtempSync(join(tmpdir(),'keryx-native-fulfillment-')),file=join(folder,'source.sqlite'),manifestPath=join(folder,'storage.json');
  const manifest=canonicalJson({format:'keryx-storage-deployment-v1',identity:input.identity,backend:{kind:'sqlite',databasePath:file}});
  const q=(value:string)=>"'"+value.replaceAll("'","''")+"'",pg=(sql:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+sql+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
- const labels=['valid','missing inbound','creator attempt','wrong failure','offset clocks','submillisecond clocks','rollback','race','lost ack','historical v1','revoked payment','changed original','existing run','contention','wallet private','orphan policy'] as const;
+ const labels=['valid','missing inbound','creator attempt','wrong failure','offset clocks','submillisecond clocks','rollback','race','lost ack','historical v1','revoked payment','changed original','existing run','contention','wallet private','orphan policy','scalar trace','missing source cells'] as const;
  const fixtures=labels.map((label,index)=>{
   const f=syntheticFailedOriginal(4300+index,ARC_MAINNET_PROFILE),now=Date.now();
   if(label==='valid')Object.assign(f.order.request!,{retainedSourceExtension:'x'.repeat(200000)});
@@ -56,6 +59,16 @@ export async function qualifyA2aFulfillment(input:{options:PostgresConnectionOpt
   assert.deepEqual(await native.getA2aFailedOriginalFulfillment(id),await core!.getA2aFailedOriginalFulfillment(id));assert.deepEqual(await originals.getA2aOrder(id),await core!.getA2aOrder(id));
   const privacy=source!.db.prepare('SELECT * FROM run_privacy WHERE run_id=?').get(id)??null;
   assert.deepEqual(JSON.parse(input.ownerSql(`SELECT coalesce((SELECT to_jsonb(p)::text FROM public.run_privacy p WHERE run_id=${q(id)}),'null');`)),privacy===null?null:JSON.parse(JSON.stringify(privacy)));
+  const sourceOrder=source!.db.prepare('SELECT * FROM a2a_orders WHERE id=?').get(id)!;
+  const cells=JSON.parse(input.ownerSql(`SELECT row_to_json(c)::text FROM keryx_storage.a2a_original_cell_projection c WHERE order_id=${q(id)};`));
+  assert.equal(cells.package_data_wire,sourceOrder.package_data);assert.equal(cells.request_data_wire,sourceOrder.request_data);
+  if(sourceOrder.status==='completed'){
+   const p=sqliteAcceptanceProjection(source!.db,id),actual=JSON.parse(input.ownerSql(`SELECT row_to_json(p)::text FROM keryx_storage.acceptance_original_projection p WHERE order_id=${q(id)};`));
+   const hash=(wire:string)=>fulfillmentObjectSha256({wire});
+   assert.equal(hash(actual.source_order_wire),hash(p.orderWire),'Completed raw Source row differs');assert.equal(actual.source_order_sha256,p.orderSha256);
+   assert.equal(hash(actual.delivery_token),hash(p.deliveryToken),'Completed raw Source delivery token differs');
+   assert.deepEqual(actual.binding,p.binding);assert.deepEqual(actual.health_meta,p.health);
+  }
  };
  const claim=async(label:typeof labels[number])=>{const f=fixture(label);fresh(f);const expected=await core!.claimA2aFailedOriginalFulfillment(f.input),actual=await native.claimA2aFailedOriginalFulfillment(f.input);assert.deepEqual(actual,expected);await compare(f.order.id);vectors++;return actual;};
  const financial=()=>input.ownerSql("SELECT encode(sha256(convert_to(jsonb_build_array((SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM public.payment_events p),(SELECT jsonb_agg(to_jsonb(p) ORDER BY purchase_id) FROM public.research_purchase_authorizations p))::text,'UTF8')),'hex');");
@@ -65,6 +78,7 @@ export async function qualifyA2aFulfillment(input:{options:PostgresConnectionOpt
    db.exec('BEGIN IMMEDIATE');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);store=String(db.prepare('SELECT id FROM deliverable_acceptance_store').get()!.id);
    for(let index=0;index<fixtures.length;index++){
     const {order:o,binding:b}=fixtures[index],label=labels[index],row=monthlyOrderToRow(o);for(const key of ['package_data','request_data','response_data','resolution_data'])if(row[key]!==null)row[key]=JSON.stringify(row[key]);
+    for(const key of ['package_data','request_data'])row[key]=JSON.stringify(JSON.parse(String(row[key])),null,2);
     db.prepare("INSERT INTO research_purchase_authorizations(network,asset,payer,payee,authorization_id,product,purchase_id,request_hash,amount_micros) VALUES(?,?,?,?,?,'a2a',?,?,?)").run(b.network,b.asset,b.payer,b.payee,b.authorizationId,b.id,b.requestHash,Number(b.amountMicroUsdc));
     const keys=Object.keys(row);db.prepare(`INSERT INTO a2a_orders(${keys.join(',')}) VALUES(${keys.map(()=>'?').join(',')})`).run(...keys.map(key=>row[key]) as (string|number|null)[]);
     if(label!=='missing inbound')db.prepare("INSERT INTO payment_events(id,query_id,kind,source_id,payer,payee,amount_usdc,network,tx_hash,settled,settlement_status,authorization_id,created_at) VALUES(?,?,'inbound','a2a',?,?,?,?,?,1,'settled',?,?)").run('inbound_'+o.id,o.id,o.payer,o.payee,o.amountUsdc,b.network,o.transaction,o.authorizationId,o.createdAt);
@@ -75,7 +89,7 @@ export async function qualifyA2aFulfillment(input:{options:PostgresConnectionOpt
    }
    let sql=`INSERT INTO public.deliverable_acceptance_store(singleton,id) VALUES(1,${q(store)});`;
    for(const table of ['research_purchase_authorizations','a2a_orders','payment_events','a2a_failed_original_fulfillments','run_privacy'])for(const row of db.prepare('SELECT * FROM '+table).all())sql+=copy(table,row);
-   for(const id of ids)sql+=heldA2aTimeProjectionSql(sqliteA2aTimeProjection(db,id,input.identity));
+   for(const id of ids){sql+=heldA2aTimeProjectionSql(sqliteA2aTimeProjection(db,id,input.identity));sql+=heldA2aOriginalCellProjectionSql(sqliteA2aOriginalCellProjection(db,id,input.identity));sql+=heldAcceptanceProjectionSql(sqliteAcceptanceProjection(db,id));}
    insertStorageIdentity(db,input.identity);installStorageFences(db,input.identity);db.exec('COMMIT');pg(sql);seeded=true;
   }finally{db.close();}
   writeFileSync(manifestPath,manifest,{mode:0o600});source=openVerifiedSqliteStorage(file,input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(readFileSync(manifestPath,'utf8'),manifest)});
@@ -87,6 +101,17 @@ export async function qualifyA2aFulfillment(input:{options:PostgresConnectionOpt
   assert.equal(await native.completeA2aFailedOriginalFulfillment(result),await core.completeA2aFailedOriginalFulfillment(result));await compare(result.originalId);
   assert.equal(await native.hasA2aFailedOriginalFulfillment(valid.authority),await core.hasA2aFailedOriginalFulfillment(valid.authority));assert.equal(await native.hasA2aFailedOriginalFulfillment(valid.authority),true);
   assert.equal(await native.completeA2aFailedOriginalFulfillment(result),await core.completeA2aFailedOriginalFulfillment(result));await compare(result.originalId);vectors+=3;
+  const scalar=await claim('scalar trace');assert(scalar);const scalarResult=prepared(scalar);
+  scalarResult.run.trace.push({type:'synthetic-only',detail:'NUL\0 separate-high\ud800 separate-low\udfff'} as never);scalarResult.runSha256=fulfillmentObjectSha256(scalarResult.run);
+  // A discarded full-row derivative cannot erase immutable Source TEXT cells.
+  pg(`DELETE FROM keryx_storage.acceptance_original_projection WHERE order_id=${q(scalarResult.originalId)};`);
+  assert.equal(await native.completeA2aFailedOriginalFulfillment(scalarResult),await core.completeA2aFailedOriginalFulfillment(scalarResult));assert.equal(await native.hasA2aFailedOriginalFulfillment(scalar.authority),true);await compare(scalarResult.originalId);vectors+=2;
+  const missing=await claim('missing source cells');assert(missing);
+  pg(`DELETE FROM keryx_storage.a2a_original_cell_projection WHERE order_id=${q(missing.authority.original.id)};`);
+  await assert.rejects(native.completeA2aFailedOriginalFulfillment(prepared(missing)));
+  const old=fixture('missing source cells').order,replay=captureNativeA2aCreate({...old,status:'running',startedAt:null,workerId:null,executionJournalVersion:1,paymentStartedAt:null,resultSavingAt:null,response:null,errorCode:null,resolution:null,updatedAt:old.createdAt});
+  await assert.rejects(channel.call('a2aCreate',[old.id,JSON.stringify({binding:replay.binding,rowWire:replay.rowWire,projection:acceptanceOriginalMetadata(replay.row,store)}),old.createdAt]),error=>error instanceof PostgresDomainWriteOutcomeUnknown);
+  assert.equal(input.ownerSql(`SELECT count(*) FROM keryx_storage.a2a_original_cell_projection WHERE order_id=${q(old.id)};`),'0');vectors+=2;
   const changed={...result,providerLedgerSha256:'be'.repeat(32)};await assert.rejects(native.completeA2aFailedOriginalFulfillment(changed));await assert.rejects(core.completeA2aFailedOriginalFulfillment(changed));await compare(result.originalId);vectors++;
   const historical=fixture('historical v1'),saved=await native.getA2aFailedOriginalFulfillment(historical.order.id);assert(saved);assert.deepEqual(saved,await core.getA2aFailedOriginalFulfillment(historical.order.id));
   const historicalResult=syntheticFulfilledRun(saved.claim);assert.equal(await native.completeA2aFailedOriginalFulfillment(historicalResult),await core.completeA2aFailedOriginalFulfillment(historicalResult));assert.equal(await native.hasA2aFailedOriginalFulfillment(historical.authority),true);await compare(historical.order.id);vectors++;
@@ -119,9 +144,10 @@ export async function qualifyA2aFulfillment(input:{options:PostgresConnectionOpt
   // Bound dispatch and role authority at the actual SQL boundary too.
   const reader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(reader.call('a2aFulfillmentClaim',[race.order.id,nativeFulfillmentClaimPacket(captureNativeFulfillmentClaim(fresh(race)),race.order)!]));}finally{await reader.close();}vectors++;
   const direct=new Client(postgresPoolConfiguration(input.options));try{await direct.connect();await assert.rejects(direct.query('SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,\'caller-function\',$3::text,NULL)',[canonicalJson(input.identity),input.digest,race.order.id]));
-   await assert.rejects(direct.query('DELETE FROM public.a2a_failed_original_fulfillments WHERE original_id=$1',[race.order.id]),error=>!!error&&typeof error==='object'&&Reflect.get(error,'code')==='42501');}finally{await direct.end();}vectors+=2;
+   await assert.rejects(direct.query('DELETE FROM public.a2a_failed_original_fulfillments WHERE original_id=$1',[race.order.id]),error=>!!error&&typeof error==='object'&&Reflect.get(error,'code')==='42501');
+   await assert.rejects(direct.query('SELECT * FROM keryx_storage.a2a_original_cell_projection'),error=>!!error&&typeof error==='object'&&Reflect.get(error,'code')==='42501');}finally{await direct.end();}vectors+=3;
   assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');assert.equal(financial(),afterExplicitRevocation);
-  return {vectors,genuineVerifiedSqliteSource:true,rawNativeSqlPacketsSynthetic:true,allFourMethodsCompared:true,permanentClaimNoTakeover:true,exactFailedOriginalAndPaidTuple:true,atomicRunReceiptTimesAndCompletion:true,sourceInsertOnlyPrivacyAndOrphanPolicyPreserved:true,historicalAfterExpiryAllowed:true,offsetAndSubmillisecondFailuresKeepSourcePredicateFalse:true,exactReplayNoOverwrite:true,existingRunNeverOverwritten:true,currentPaymentAndCreatorAttemptChecks:true,financialFactsUnchangedByFulfillment:true,concurrentClaimOneWinner:true,actualDataLockContention:true,lostCommitAcknowledgementObservedWithoutRetry:true,readerAndUnknownOpcodeAndDirectTableWritesRefused:true,opaqueNativeProofMinted:false,installedNativeWriterQualified:false,fullOriginalScalarParityQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
+  return {vectors,genuineVerifiedSqliteSource:true,rawNativeSqlPacketsSynthetic:true,allFourMethodsCompared:true,completedRawSourceFingerprintAndDeliveryCompared:true,permanentRawPackageAndRequestCellsPreserved:true,missingSourceCellsCannotBeBackfilledByReplay:true,discardedAcceptanceProjectionKeepsSourceCells:true,unrelatedNulAndUnpairedTraceScalarsPreserved:true,permanentClaimNoTakeover:true,exactFailedOriginalAndPaidTuple:true,atomicRunReceiptTimesAndCompletion:true,sourceInsertOnlyPrivacyAndOrphanPolicyPreserved:true,historicalAfterExpiryAllowed:true,offsetAndSubmillisecondFailuresKeepSourcePredicateFalse:true,exactReplayNoOverwrite:true,existingRunNeverOverwritten:true,currentPaymentAndCreatorAttemptChecks:true,financialFactsUnchangedByFulfillment:true,concurrentClaimOneWinner:true,actualDataLockContention:true,lostCommitAcknowledgementObservedWithoutRetry:true,readerAndUnknownOpcodeAndDirectTableWritesRefused:true,opaqueNativeProofMinted:false,installedNativeWriterQualified:false,fullOriginalScalarParityQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
  }finally{
   try{await loss?.close();await proxy?.close();await channel.close();source?.close();if(seeded){const selected=ids.map(q).join(',');pg(`ALTER TABLE public.a2a_fulfillment_completions DISABLE TRIGGER native_a2a_completion_retained;ALTER TABLE public.a2a_failed_original_fulfillments DISABLE TRIGGER native_a2a_fulfillment_retained;DELETE FROM public.a2a_fulfillment_completions WHERE original_id IN(${selected});DELETE FROM public.a2a_failed_original_fulfillments WHERE original_id IN(${selected});ALTER TABLE public.a2a_fulfillment_completions ENABLE TRIGGER native_a2a_completion_retained;ALTER TABLE public.a2a_failed_original_fulfillments ENABLE TRIGGER native_a2a_fulfillment_retained;DELETE FROM public.a2a_orders WHERE id IN(${selected});DELETE FROM public.query_runs WHERE id IN(${selected});ALTER TABLE public.run_privacy DISABLE TRIGGER native_privacy_tombstone;DELETE FROM public.run_privacy WHERE run_id IN(${selected});ALTER TABLE public.run_privacy ENABLE TRIGGER native_privacy_tombstone;DELETE FROM public.payment_events WHERE query_id IN(${selected});DELETE FROM public.research_purchase_authorizations WHERE purchase_id IN(${selected});DELETE FROM public.deliverable_acceptance_store WHERE id=${q(store)};`);}}
   finally{for(const path of [file,file+'-wal',file+'-shm',file+'-journal',manifestPath])if(existsSync(path))unlinkSync(path);rmdirSync(folder);}

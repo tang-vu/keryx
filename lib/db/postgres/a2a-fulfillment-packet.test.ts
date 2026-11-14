@@ -3,6 +3,7 @@ import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
 import { syntheticFailedOriginal,syntheticFulfilledRun } from '../a2a-fulfillment-fixture';
 import { canonicalJson } from '../../canonical-json';
 import { fulfillmentObjectSha256,failedOriginalEvidenceSha256 } from '../../a2a/failed-original-fulfillment-protocol';
+import { fulfilledOriginalReceipt,fulfillmentResolution } from '../../a2a/fulfillment-delivery';
 import { captureNativeFulfillmentClaim,captureNativeFulfillmentCompletion,nativeFulfillmentClaimPacket,nativeFulfillmentCompletionPacket,
  nativeFulfillmentOrderWire,readNativeFulfillmentRecord,readNativeFulfillmentSnapshot } from './a2a-fulfillment-packet';
 const fixture=()=>{const f=syntheticFailedOriginal(4200,ARC_MAINNET_PROFILE);return {...f,claim:{...f.input,failedOrder:f.order}};};
@@ -52,9 +53,17 @@ it('preserves immutable raw order cells when retained JSON formatting differs fr
  const f=fulfillmentPacketFixture(),before=JSON.parse(f.state.orderWire);
  for(const key of ['package_data','request_data'])before[key]=JSON.stringify(JSON.parse(before[key]),null,2);
  f.state.orderWire=JSON.stringify(before);
- const packet=JSON.parse(nativeFulfillmentCompletionPacket(captureNativeFulfillmentCompletion(f.result),readNativeFulfillmentSnapshot(f.state))),after=JSON.parse(packet.afterWire);
+ const captured=captureNativeFulfillmentCompletion(f.result),packet=JSON.parse(nativeFulfillmentCompletionPacket(captured,readNativeFulfillmentSnapshot(f.state))),after=JSON.parse(packet.afterWire);
  const mutable=new Set(['status','response_data','error_code','result_saving_at','resolution_data','updated_at']);
  for(const key of Object.keys(before))if(!mutable.has(key))expect(after[key],key).toEqual(before[key]);
  expect(after.status).toBe('completed');expect(after.result_saving_at).toBe(f.result.completedAt);
+ expect(after.resolution_data).toBe(canonicalJson(fulfillmentResolution(f.claim,f.result)));
+ expect(after.response_data).toBe(JSON.stringify(fulfilledOriginalReceipt(captured.run,readNativeFulfillmentSnapshot(f.state).original!)));
  expect(packet.projection.orderWire).toBe(packet.afterWire);
+});
+it('retains unrelated NUL/high/low-surrogate trace text while preparing a genuine Source-validated result',()=>{
+ const f=fulfillmentPacketFixture();f.result.run.trace.push({type:'synthetic-only',detail:'NUL\0 high\ud800 low\udfff'} as never);f.result.runSha256=fulfillmentObjectSha256(f.result.run);
+ const packet=JSON.parse(nativeFulfillmentCompletionPacket(captureNativeFulfillmentCompletion(f.result),readNativeFulfillmentSnapshot(f.state)));
+ const run=JSON.parse(Buffer.from(packet.publication.originalHex,'hex').toString('utf8'));
+ expect(run.trace[0].detail).toBe('NUL\0 high\ud800 low\udfff');expect(packet.completion.runSha256).toBe(f.result.runSha256);
 });

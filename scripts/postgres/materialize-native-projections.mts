@@ -17,8 +17,8 @@ import { sqliteOwnershipHistoryProjection } from './ownership-history-projection
 import { sqlitePrivacyProjection } from './privacy-projection.mts';
 import { sqliteWatchProjection } from './watch-projection.mts';
 import { sqliteAcceptanceProjection } from './acceptance-projection.mts';
-import { sqliteA2aTimeProjection } from './a2a-time-projection.mts';
-const tables=['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','a2a_original_time_projection','acceptance_original_projection'] as const;
+import { sqliteA2aTimeProjection,sqliteA2aOriginalCellProjection } from './a2a-time-projection.mts';
+const tables=['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','a2a_original_time_projection','a2a_original_cell_projection','acceptance_original_projection'] as const;
 type Table=typeof tables[number];
 type Kind='json'|'json-null'|'hex';
 type Field={name:string;kind?:Kind};
@@ -70,6 +70,7 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
   let orders=0;for(const r of db.prepare('SELECT id FROM a2a_orders ORDER BY id COLLATE BINARY').iterate()){
    assert(++orders<=10000&&typeof r.id==='string');
    const time=sqliteA2aTimeProjection(db,r.id,identity);await insert('a2a_original_time_projection',['order_id'],Object.keys(time).map(name=>field(name)),time);
+   const cells=sqliteA2aOriginalCellProjection(db,r.id,identity);await insert('a2a_original_cell_projection',['order_id'],Object.keys(cells).map(name=>field(name)),cells);
    const p=sqliteAcceptanceProjection(db,r.id);await insert('acceptance_original_projection',['order_id'],[field('order_id'),field('store_id'),field('source_order_wire'),field('source_order_sha256'),field('delivery_token'),field('owner'),field('network'),field('binding','json'),field('health_meta','json')],{order_id:p.orderId,store_id:p.storeId,source_order_wire:p.orderWire,source_order_sha256:p.orderSha256,delivery_token:p.deliveryToken,owner:p.owner,network:p.network,binding:p.binding,health_meta:p.health});
   }
   stage='projection-final';await verify();for(const name of tables)assert.equal((await pg.query(`SELECT count(*)::text n FROM keryx_storage.${quote(name)}`)).rows[0].n,String(counts[name]));

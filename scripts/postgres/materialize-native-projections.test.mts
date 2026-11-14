@@ -9,7 +9,7 @@ import { insertStorageIdentity } from '../../lib/db/storage-identity-sqlite';
 import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from '../../lib/db/storage-identity';
 import { materializeNativeProjections } from './materialize-native-projections.mts';
 
-const driver=vi.hoisted(()=>({rows:new Map<string,Record<string,unknown>[]>(),queries:[] as string[],identity:undefined as unknown,changeWire:false}));
+const driver=vi.hoisted(()=>({rows:new Map<string,Record<string,unknown>[]>(),queries:[] as string[],identity:undefined as unknown,changeWire:false,changeCells:false}));
 vi.mock('../../lib/db/postgres/runtime-profile',()=>({NATIVE_READONLY_RUNTIME_PROFILE:{catalogSha256:'a'.repeat(64)}}));
 vi.mock('./native-contract.mts',()=>({exportNativePostgresSchemaContract:()=>({sha256:'a'.repeat(64)})}));
 vi.mock('./materialize-native-snapshot.mts',()=>({assertDevelopmentMaterializationContainment:()=>{},NativeMaterializationUnavailable:class extends Error{constructor(readonly diagnostic:unknown){super('Native materialization unavailable');}}}));
@@ -38,14 +38,15 @@ vi.mock('pg',()=>({Client:class{
    const target={...stored,generated_native_date:'unexpected-native-derivative'};
    const selected=Object.fromEntries(keys.map(key=>[key,(target as Record<string,unknown>)[key]]));
    if(driver.changeWire&&table==='a2a_original_time_projection')selected.created_at='2026-11-14T00:00:00.000Z';
+   if(driver.changeCells&&table==='a2a_original_cell_projection')selected.request_data_wire=JSON.stringify(JSON.parse(String(stored.request_data_wire)),null,2);
    return result([{wire:JSON.stringify(selected),nulls:JSON.stringify(keys.map(key=>stored[key]===null))}]);
   }
   throw Error('Unexpected recording-driver query');
  }
 }}));
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',deploymentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',storageId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,enrollmentId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',enrolledAt:'2026-10-01T00:00:00.000Z',provenanceDigest:'dd'.repeat(32)};
-beforeEach(()=>{driver.rows.clear();driver.queries=[];driver.identity=identity;driver.changeWire=false;});
-it.each([false,true])('imports independently captured Source time wires and detects same-instant byte drift (changed=%s)',async changed=>{
+beforeEach(()=>{driver.rows.clear();driver.queries=[];driver.identity=identity;driver.changeWire=false;driver.changeCells=false;});
+it.each(['none','time','cells'] as const)('imports independent Source clocks/cells and refuses native wire drift (%s)',async changed=>{
  const db=new DatabaseSync(':memory:');try{
   insertStorageIdentity(db,identity);
   db.exec('CREATE TABLE query_runs(id TEXT);CREATE TABLE decision_review_records(id TEXT,run_id TEXT,network TEXT,input_json TEXT);CREATE TABLE topic_watches(wallet TEXT,id TEXT);CREATE TABLE deliverable_acceptance_store(singleton INTEGER,id TEXT);');
@@ -54,12 +55,13 @@ it.each([false,true])('imports independently captured Source time wires and dete
   const row=monthlyOrderToRow(original);for(const key of ['request_data','package_data','response_data','resolution_data'])if(row[key]!==null)row[key]=JSON.stringify(row[key]);
   const keys=Object.keys(row);db.exec('CREATE TABLE a2a_orders('+keys.map(key=>key+' '+(typeof row[key]==='number'?'REAL':'TEXT')).join(',')+')');
   db.prepare('INSERT INTO a2a_orders VALUES('+keys.map(()=>'?').join(',')+')').run(...keys.map(key=>row[key] as string|number|null));
-  db.exec('PRAGMA query_only=ON;BEGIN');driver.changeWire=changed;
+  db.exec('PRAGMA query_only=ON;BEGIN');driver.changeWire=changed==='time';driver.changeCells=changed==='cells';
   const pending=materializeNativeProjections(db,{endpoint:{kind:'loopback',port:5432},database:'native_materialized',role:'postgres',password:'b'.repeat(48)});
-  if(changed){await expect(pending).rejects.toMatchObject({diagnostic:{stage:'projection-re-read',table:'a2a_original_time_projection',commitOutcome:'not_attempted'}});expect(driver.rows.size).toBe(0);}
+  if(changed!=='none'){await expect(pending).rejects.toMatchObject({diagnostic:{stage:'projection-re-read',table:changed==='time'?'a2a_original_time_projection':'a2a_original_cell_projection',commitOutcome:'not_attempted'}});expect(driver.rows.size).toBe(0);}
   else{
-   const result=await pending;expect(result.orders).toBe(1);expect(result.domains.find(d=>d.table==='a2a_original_time_projection')?.rows).toBe(1);
+   const result=await pending;expect(result.orders).toBe(1);expect(result.domains.find(d=>d.table==='a2a_original_time_projection')?.rows).toBe(1);expect(result.domains.find(d=>d.table==='a2a_original_cell_projection')?.rows).toBe(1);
    expect(driver.rows.get('a2a_original_time_projection')![0]).toMatchObject({created_at:original.createdAt,updated_at:original.updatedAt,started_at:original.startedAt});
+   expect(driver.rows.get('a2a_original_cell_projection')![0]).toMatchObject({package_data_wire:row.package_data,request_data_wire:row.request_data});
    expect(driver.queries.filter(q=>q.startsWith('SELECT to_jsonb(t)')).every(q=>q.includes('FROM (SELECT '))).toBe(true);
   }
  }finally{db.close();}

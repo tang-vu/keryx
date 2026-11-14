@@ -3,17 +3,17 @@
 SET ROLE keryx_owner;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
  ('a2a_fulfillment_get',ARRAY['a2a_failed_original_fulfillments','a2a_fulfillment_completions'],true,true),
- ('a2a_fulfillment_snapshot',ARRAY['a2a_orders','a2a_original_time_projection','a2a_failed_original_fulfillments','a2a_fulfillment_completions','query_runs','payment_events','research_purchase_authorizations','research_monthly_redemptions','deliverable_acceptance_store'],true,true),
- ('a2a_fulfillment_verify',ARRAY['a2a_orders','a2a_original_time_projection','a2a_failed_original_fulfillments','a2a_fulfillment_completions','query_runs','payment_events','research_purchase_authorizations','research_monthly_redemptions'],true,true),
- ('a2a_fulfillment_claim',ARRAY['a2a_orders','a2a_original_time_projection','a2a_failed_original_fulfillments','a2a_fulfillment_completions','query_runs','payment_events','research_purchase_authorizations','research_monthly_redemptions'],true,false),
- ('a2a_fulfillment_complete',ARRAY['a2a_orders','a2a_original_time_projection','a2a_failed_original_fulfillments','a2a_fulfillment_completions','query_runs','payment_events','research_purchase_authorizations','research_monthly_redemptions','deliverable_acceptance_store','acceptance_original_projection','run_privacy','run_privacy_defaults','run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection'],true,false);
+ ('a2a_fulfillment_snapshot',ARRAY['a2a_orders','a2a_original_time_projection','a2a_original_cell_projection','acceptance_original_projection','a2a_failed_original_fulfillments','a2a_fulfillment_completions','query_runs','payment_events','research_purchase_authorizations','research_monthly_redemptions','deliverable_acceptance_store'],true,true),
+ ('a2a_fulfillment_verify',ARRAY['a2a_orders','a2a_original_time_projection','a2a_original_cell_projection','acceptance_original_projection','a2a_failed_original_fulfillments','a2a_fulfillment_completions','query_runs','payment_events','research_purchase_authorizations','research_monthly_redemptions'],true,true),
+ ('a2a_fulfillment_claim',ARRAY['a2a_orders','a2a_original_time_projection','a2a_original_cell_projection','acceptance_original_projection','a2a_failed_original_fulfillments','a2a_fulfillment_completions','query_runs','payment_events','research_purchase_authorizations','research_monthly_redemptions'],true,false),
+ ('a2a_fulfillment_complete',ARRAY['a2a_orders','a2a_original_time_projection','a2a_original_cell_projection','acceptance_original_projection','a2a_failed_original_fulfillments','a2a_fulfillment_completions','query_runs','payment_events','research_purchase_authorizations','research_monthly_redemptions','deliverable_acceptance_store','run_privacy','run_privacy_defaults','run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection'],true,false);
 CREATE TRIGGER native_a2a_fulfillment_writer BEFORE INSERT OR UPDATE OR DELETE ON public.a2a_failed_original_fulfillments FOR EACH ROW EXECUTE FUNCTION keryx_storage.write_fence();
 CREATE TRIGGER native_a2a_completion_writer BEFORE INSERT OR UPDATE OR DELETE ON public.a2a_fulfillment_completions FOR EACH ROW EXECUTE FUNCTION keryx_storage.write_fence();
 CREATE TRIGGER native_a2a_fulfillment_retained BEFORE UPDATE OR DELETE OR TRUNCATE ON public.a2a_failed_original_fulfillments FOR EACH STATEMENT EXECUTE FUNCTION keryx_storage.immutable();
 CREATE TRIGGER native_a2a_completion_retained BEFORE UPDATE OR DELETE OR TRUNCATE ON public.a2a_fulfillment_completions FOR EACH STATEMENT EXECUTE FUNCTION keryx_storage.immutable();
 CREATE FUNCTION public.storage_a2a_fulfillment(expected jsonb,digest text,action text,selector text,packet_wire text) RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE packet jsonb;a jsonb;b jsonb;f jsonb;i jsonb;c jsonb;p jsonb;r jsonb;original json;metadata json;
+DECLARE packet jsonb;a jsonb;b jsonb;f jsonb;i jsonb;c jsonb;p jsonb;r jsonb;original jsonb;metadata jsonb;tokens jsonb;metadata_tokens jsonb;source_wire text;
  o public.a2a_orders;claim public.a2a_failed_original_fulfillments;completion public.a2a_fulfillment_completions;
  claim_wire text;completion_wire text;order_wire text;run_wire text;store text;stamp bigint;field text;operation text;
  paid boolean:=false;no_attempts boolean:=false;changed bigint;result json;resolution jsonb;run_digest text;published jsonb;
@@ -32,7 +32,15 @@ BEGIN
  IF octet_length(claim_wire)>16777216 OR octet_length(completion_wire)>2048 THEN RAISE EXCEPTION 'native fulfillment retained bound';END IF;
  IF action='get' THEN RETURN json_build_object('claimRowWire',claim_wire,'completionRowWire',completion_wire);END IF;
  SELECT * INTO o FROM public.a2a_orders WHERE id=selector;
- IF FOUND THEN order_wire:=keryx_storage.a2a_original_row(o,true)::text;END IF;
+ IF FOUND THEN
+  order_wire:=keryx_storage.a2a_original_row(o,true)::text;
+  SELECT source_order_wire INTO source_wire FROM keryx_storage.acceptance_original_projection WHERE order_id=selector;
+  IF source_wire IS NOT NULL THEN
+   IF NOT keryx_storage.acceptance_original_matches(source_wire,o) OR source_wire::jsonb IS DISTINCT FROM order_wire::jsonb
+   THEN RAISE EXCEPTION 'native fulfillment Source snapshot refused';END IF;
+   order_wire:=source_wire;
+  END IF;
+ END IF;
  SELECT data::text INTO run_wire FROM public.query_runs WHERE id=selector;
  IF octet_length(run_wire)>4000000 THEN RAISE EXCEPTION 'native fulfillment run bound';END IF;
  IF claim_wire IS NOT NULL THEN a:=claim.authority_data::jsonb;b:=a->'original';END IF;
@@ -177,13 +185,35 @@ BEGIN
   'fulfillment',jsonb_build_object('claimId',claim.claim_id,'originalFailureSha256',a->>'originalEvidenceSha256','authoritySha256',encode(sha256(convert_to(claim.authority_data,'UTF8')),'hex'),'providerLedgerSha256',c->>'providerLedgerSha256','runSha256',c->>'runSha256'));
  IF (r->>'resolution_data')::jsonb IS DISTINCT FROM resolution THEN RAISE EXCEPTION 'native fulfillment resolution refused';END IF;
  IF jsonb_typeof(packet->'publication') IS DISTINCT FROM 'object' OR packet->'publication'?'publication' THEN RAISE EXCEPTION 'native fulfillment publication refused';END IF;
- run_wire:=convert_from(decode(packet->'publication'->>'originalHex','hex'),'UTF8');original:=run_wire::json;metadata:=original->'originalFulfillment';
+ run_wire:=convert_from(decode(packet->'publication'->>'originalHex','hex'),'UTF8');
+ -- Whole-run/metadata JSON getters decode unrelated trace/quote strings. Select
+ -- raw tokens first; only these bounded numeric/ASCII proof cells are decoded.
+ IF octet_length(run_wire)>4000000 THEN RAISE EXCEPTION 'native fulfillment run bound';END IF;
+ IF json_typeof(run_wire::json) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'native fulfillment run object required';END IF;
+ tokens:=keryx_storage.source_scalar_text(run_wire,'tokens');original:='{}';
+ FOREACH field IN ARRAY ARRAY['id','engine','researchMode','origin','paymentMode','createdAt'] LOOP
+  IF json_typeof((tokens->>field)::json) IS DISTINCT FROM 'string' THEN RAISE EXCEPTION 'native fulfillment run scalar refused';END IF;
+  original:=jsonb_set(original,ARRAY[field],(tokens->>field)::jsonb);
+ END LOOP;
+ FOREACH field IN ARRAY ARRAY['budget','totalSpent','totalToCreators','pendingSpendUsdc','paymentAttempts','settledPayments','pendingPayments','durationMs'] LOOP
+  IF tokens?field THEN
+   IF json_typeof((tokens->>field)::json) IS DISTINCT FROM 'number' THEN RAISE EXCEPTION 'native fulfillment run number refused';END IF;
+   original:=jsonb_set(original,ARRAY[field],(tokens->>field)::jsonb);
+  END IF;
+ END LOOP;
+ metadata_tokens:=keryx_storage.source_scalar_text(tokens->>'originalFulfillment','tokens');metadata:='{}';
+ FOREACH field IN ARRAY ARRAY['format','claimId','originalFailureSha256','authoritySha256','providerLedgerSha256','inputSha256','originalProviderBilling'] LOOP
+  IF json_typeof((metadata_tokens->>field)::json) IS DISTINCT FROM 'string' THEN RAISE EXCEPTION 'native fulfillment proof scalar refused';END IF;
+  metadata:=jsonb_set(metadata,ARRAY[field],(metadata_tokens->>field)::jsonb);
+ END LOOP;
+ IF metadata_tokens->>'noNewInboundPayment' IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'native fulfillment inbound flag refused';END IF;
+ metadata:=jsonb_set(metadata,'{noNewInboundPayment}','true');
  IF octet_length(run_wire)>4000000 OR encode(sha256(convert_to(run_wire,'UTF8')),'hex') IS DISTINCT FROM c->>'runSha256'
-  OR original->>'id' IS DISTINCT FROM selector OR original->>'question' IS DISTINCT FROM a->>'question'
+  OR original->>'id' IS DISTINCT FROM selector OR keryx_storage.source_scalar_text(tokens->>'question','scalar')->>'sourceHex' IS DISTINCT FROM encode(convert_to(a->>'question','UTF8'),'hex')
   OR original->>'budget' IS DISTINCT FROM '0.01' OR original->>'engine' IS DISTINCT FROM 'llm:deepseek:deepseek-v4-flash'
   OR original->>'researchMode' IS DISTINCT FROM 'quick' OR original->>'origin' IS DISTINCT FROM 'a2a' OR original->>'paymentMode' IS DISTINCT FROM 'real'
-  OR original->'parentId' IS NOT NULL OR original->'retryOf' IS NOT NULL OR json_typeof(original->'answer') IS DISTINCT FROM 'string'
-  OR keryx_storage.a2a_trim(original->>'answer')='' OR original->>'createdAt' IS NULL
+  OR tokens?'parentId' OR tokens?'retryOf' OR json_typeof((tokens->>'answer')::json) IS DISTINCT FROM 'string'
+  OR keryx_storage.a2a_trim(keryx_storage.source_scalar_text(tokens->>'answer','scalar')->>'shadow')='' OR original->>'createdAt' IS NULL
   OR original->>'createdAt' !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
   OR to_char((original->>'createdAt')::timestamptz AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') IS DISTINCT FROM original->>'createdAt'
   OR (original->>'createdAt')::timestamptz<claim.claimed_at::timestamptz OR (original->>'createdAt')::timestamptz>(c->>'completedAt')::timestamptz
@@ -192,14 +222,14 @@ BEGIN
   OR metadata->>'authoritySha256' IS DISTINCT FROM encode(sha256(convert_to(claim.authority_data,'UTF8')),'hex')
   OR metadata->>'providerLedgerSha256' IS DISTINCT FROM c->>'providerLedgerSha256' OR metadata->>'noNewInboundPayment' IS DISTINCT FROM 'true'
   OR metadata->>'inputSha256' IS DISTINCT FROM encode(sha256(convert_to((claim.authority_data::json->'input')::text,'UTF8')),'hex')
-  OR original->'subClaims' IS NULL OR (original->'subClaims')::jsonb IS DISTINCT FROM a->'input'->'targets'
+  OR tokens->>'subClaims' IS DISTINCT FROM (claim.authority_data::json->'input'->'targets')::text
   OR metadata->>'originalProviderBilling' IS DISTINCT FROM 'unknown'
  THEN RAISE EXCEPTION 'native fulfillment prepared run refused';END IF;
- IF original->'durationMs' IS NOT NULL AND (json_typeof(original->'durationMs') IS DISTINCT FROM 'number'
+ IF original->'durationMs' IS NOT NULL AND (jsonb_typeof(original->'durationMs') IS DISTINCT FROM 'number'
   OR (original->>'durationMs')::numeric IS DISTINCT FROM extract(epoch FROM ((original->>'createdAt')::timestamptz-o.started_at))*1000)
  THEN RAISE EXCEPTION 'native fulfillment prepared duration refused';END IF;
  FOREACH field IN ARRAY ARRAY['totalSpent','totalToCreators','pendingSpendUsdc','paymentAttempts','settledPayments','pendingPayments'] LOOP
-  IF json_typeof(original->field) IS DISTINCT FROM 'number' OR (original->>field)::numeric<>0 THEN RAISE EXCEPTION 'native fulfillment zero new payment required';END IF;
+  IF jsonb_typeof(original->field) IS DISTINCT FROM 'number' OR (original->>field)::numeric<>0 THEN RAISE EXCEPTION 'native fulfillment zero new payment required';END IF;
  END LOOP;
  IF jsonb_typeof(p) IS DISTINCT FROM 'object' OR p->>'orderId' IS DISTINCT FROM selector OR p->>'orderWire' IS DISTINCT FROM packet->>'afterWire'
   OR (SELECT count(*) FROM public.deliverable_acceptance_store)<>1 THEN RAISE EXCEPTION 'native fulfillment projection refused';END IF;

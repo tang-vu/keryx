@@ -5,6 +5,11 @@ import { a2aResponseFromRun,quoteFromA2aOrder } from './result';
 import { fulfillmentObjectSha256,type A2aFulfillmentClaim,type FulfillmentCompletionInput } from './fulfillment-authority';
 import { historicalNativeEvidenceCsv } from '../db/a2a-historical-evidence-csv';
 
+/** The completion writer builds the new receipt from the validated CURRENT
+ * original. A canonical failure snapshot cannot retain its JSON cell order. */
+export function fulfilledOriginalReceipt(run:QueryRun,order:A2aOrder){
+ return a2aResponseFromRun(run,quoteFromA2aOrder(order),{acceptedAt:order.createdAt,startedAt:order.startedAt});
+}
 export function fulfillmentResolution(claim:A2aFulfillmentClaim,completion:FulfillmentCompletionInput):A2aOrderResolution{
  return {action:'fulfill_failed_original',actor:'operator-cli',reason:'verified_failed_original_fulfilled',resolvedAt:completion.completedAt,
   evidence:{executionJournalVersion:1,paymentBoundaryCrossed:false,resultSaveBoundaryCrossed:true,creatorAttempts:0,settledCreatorMicros:0,pendingCreatorMicros:0,failedCreatorMicros:0,simulatedCreatorMicros:0,queryRunFound:true},
@@ -24,7 +29,7 @@ function preCheckpoint<T extends {readCheckpoints:unknown}>(run:QueryRun,respons
  * genuine run/claim and evidence capability; no stored receipt is normalized. */
 export function fulfilledOriginalOrders(run:QueryRun,claim:A2aFulfillmentClaim,completion:FulfillmentCompletionInput):A2aOrder[]{
  const expected={...claim.failedOrder,status:'completed' as const,errorCode:null,resultSavingAt:completion.completedAt,updatedAt:completion.completedAt,
-  resolution:fulfillmentResolution(claim,completion),response:a2aResponseFromRun(run,quoteFromA2aOrder(claim.failedOrder),{acceptedAt:claim.failedOrder.createdAt,startedAt:claim.failedOrder.startedAt})};
+  resolution:fulfillmentResolution(claim,completion),response:fulfilledOriginalReceipt(run,claim.failedOrder)};
  const historical=run.originalFulfillment?.format==='keryx-a2a-original-fulfillment-result-v1'||run.originalFulfillment?.format==='keryx-a2a-original-fulfillment-result-v2';
  const preReadScope=historical?{...expected.response,researchExports:{...expected.response.researchExports,evidenceCsv:historicalNativeEvidenceCsv(run)}}:null;
  const result:A2aOrder[]=[];

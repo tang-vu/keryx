@@ -26,7 +26,7 @@ import { startCommitAckLossProxy } from './commit-ack-loss.mts';
 import { sqliteAcceptanceProjection,heldAcceptanceProjectionSql } from './acceptance-projection.mts';
 import { acceptanceOriginalMetadata } from '../../lib/db/postgres/acceptance-metadata';
 import { composePostgresHealth } from '../../lib/db/postgres/health-transport';
-import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql } from './a2a-time-projection.mts';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql,sqliteA2aOriginalCellProjection,heldA2aOriginalCellProjectionSql } from './a2a-time-projection.mts';
 import type { Client } from 'pg';
 type Case={label:string;withoutPurchaseProof?:boolean;fixture?:(value:ReturnType<typeof syntheticA2aOriginal>)=>void;change?:(db:DatabaseSync,id:string)=>void;settled:boolean;claimable:boolean};
 export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string;rawResponses?:boolean;recovery?:boolean}){
@@ -115,7 +115,7 @@ export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptio
     cases[i].change?.(db,o.id);
    }
    insertStorageIdentity(db,input.identity);installStorageFences(db,input.identity);db.exec('COMMIT');
-   let sql=input.rawResponses?`INSERT INTO public.deliverable_acceptance_store(singleton,id) VALUES(1,${q(String(db.prepare('SELECT id FROM deliverable_acceptance_store').get()!.id))});`:'';for(const table of ['research_purchase_authorizations','research_monthly','a2a_orders','payment_events','query_runs','research_monthly_redemptions'])for(const row of db.prepare('SELECT * FROM '+table).all())sql+=copy(table,row);for(const id of ids)sql+=heldA2aTimeProjectionSql(sqliteA2aTimeProjection(db,id,input.identity));if(input.rawResponses)for(const id of ids)sql+=heldAcceptanceProjectionSql(sqliteAcceptanceProjection(db,id));pg(sql);
+   let sql=input.rawResponses?`INSERT INTO public.deliverable_acceptance_store(singleton,id) VALUES(1,${q(String(db.prepare('SELECT id FROM deliverable_acceptance_store').get()!.id))});`:'';for(const table of ['research_purchase_authorizations','research_monthly','a2a_orders','payment_events','query_runs','research_monthly_redemptions'])for(const row of db.prepare('SELECT * FROM '+table).all())sql+=copy(table,row);for(const id of ids){sql+=heldA2aTimeProjectionSql(sqliteA2aTimeProjection(db,id,input.identity));sql+=heldA2aOriginalCellProjectionSql(sqliteA2aOriginalCellProjection(db,id,input.identity));}if(input.rawResponses)for(const id of ids)sql+=heldAcceptanceProjectionSql(sqliteAcceptanceProjection(db,id));pg(sql);
   }finally{db.close();}
   writeFileSync(manifestPath,manifest,{mode:0o600});source=openVerifiedSqliteStorage(file,input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(readFileSync(manifestPath,'utf8'),manifest)});
   const core=SqliteAdapter.assembleConnectionCore(source.db,input.identity,()=>{assert.equal(canonicalJson(assertVerifiedSqliteConnection(source!.db)),canonicalJson(input.identity));});

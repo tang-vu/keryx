@@ -8,7 +8,7 @@ import { validateA2aOriginalClaim } from '../../a2a/original-claim';
 import { fulfillmentAuthoritySchema,fulfillmentClaimInputSchema,fulfillmentCompletionInputSchema,matchesFailedFulfillmentOriginal,
  validateFulfilledQueryRun,type FulfillmentClaimInput,type FulfillmentAuthority,type A2aFulfillmentCompletion,type A2aFulfillmentRecord } from '../../a2a/failed-original-fulfillment-protocol';
 import type { FulfillmentEvidenceCapability } from '../../a2a/fulfillment-supplement-evidence';
-import { fulfilledOriginalOrders } from '../../a2a/fulfillment-delivery';
+import { fulfilledOriginalOrders,fulfilledOriginalReceipt } from '../../a2a/fulfillment-delivery';
 import { monthlyOrderToRow } from '../research-monthly';
 import { acceptanceOriginalMetadata } from './acceptance-metadata';
 import { capturePostgresPublication } from './publication-packet';
@@ -77,7 +77,8 @@ export function nativeFulfillmentVerifyPacket(state:NativeFulfillmentSnapshot){
 export function nativeFulfillmentCompletionPacket(input:ReturnType<typeof captureNativeFulfillmentCompletion>,state:NativeFulfillmentSnapshot,capability?:FulfillmentEvidenceCapability){
  const {record,original,value}=state;if(!record||!original||!value.orderWire||!value.claimRowWire||!value.storeId||record.claim.claimId!==input.claimId)throw refuse();
  validateFulfilledQueryRun(input.run,record.claim,input,capability);
- const expected=fulfilledOriginalOrders(input.run,record.claim,input)[0],mutable=JSON.parse(nativeFulfillmentOrderWire(expected)) as Record<string,unknown>;
+ const expected=fulfilledOriginalOrders(input.run,record.claim,input)[0],mutable=JSON.parse(nativeFulfillmentOrderWire({...expected,response:fulfilledOriginalReceipt(input.run,original)})) as Record<string,unknown>;
+ mutable.resolution_data=canonicalJson(expected.resolution);
  // Source updates only these cells. Preserve the observed immutable raw JSON
  // cell strings even when canonical claim capture reordered their object keys.
  const row=JSON.parse(value.orderWire) as Record<string,unknown>;

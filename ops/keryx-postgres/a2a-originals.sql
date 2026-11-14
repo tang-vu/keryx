@@ -11,7 +11,7 @@ INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VA
  ('a2a_result_saving',ARRAY['a2a_orders','acceptance_original_projection'],true,false),
  ('a2a_fail',ARRAY['a2a_orders','acceptance_original_projection'],true,false),
  ('a2a_original_claim',ARRAY['a2a_orders','research_purchase_authorizations','payment_events','research_monthly_redemptions','query_runs','acceptance_original_projection'],true,false);
-UPDATE keryx_storage.operations SET relations=array_append(relations,'a2a_original_time_projection')
+UPDATE keryx_storage.operations SET relations=array_append(array_append(relations,'a2a_original_time_projection'),'a2a_original_cell_projection')
  WHERE 'a2a_orders'=ANY(relations) AND NOT 'a2a_original_time_projection'=ANY(relations);
 CREATE FUNCTION public.storage_a2a_original_observe(expected jsonb,digest text,observation text,selector text) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE b jsonb;o public.a2a_orders;wire text;store text;take integer;rows json:='[]'::json;item json;bytes bigint:=64;current_row json;field text;
@@ -63,7 +63,7 @@ BEGIN
 END;$$;
 
 CREATE FUNCTION public.storage_a2a_original_execution(expected jsonb,digest text,execution text,selector text,detail text,started text) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE b jsonb;o public.a2a_orders;result json;operation text;changed bigint;packet jsonb;p jsonb;store text;resolution jsonb;e jsonb;field text;actual record;budget_micros double precision;r jsonb;owned boolean;owner_packet jsonb;owner_session jsonb;owner_original jsonb;stamp bigint;
+DECLARE b jsonb;o public.a2a_orders;result json;operation text;changed bigint;packet jsonb;p jsonb;store text;resolution jsonb;e jsonb;field text;actual record;budget_micros double precision;r jsonb;rawrow jsonb;owned boolean;owner_packet jsonb;owner_session jsonb;owner_original jsonb;stamp bigint;
 BEGIN
  operation:=CASE execution WHEN 'claim' THEN 'a2a_original_claim' WHEN 'payment-start' THEN 'a2a_payment_start' WHEN 'result-saving' THEN 'a2a_result_saving' WHEN 'fail' THEN 'a2a_fail' WHEN 'complete' THEN 'a2a_complete' WHEN 'repair' THEN 'a2a_resolve_completed' WHEN 'close' THEN 'a2a_resolve_failed' WHEN 'create' THEN 'a2a_create' END;
  IF operation IS NULL THEN RAISE EXCEPTION 'native original execution refused';END IF;
@@ -77,7 +77,7 @@ BEGIN
    AND octet_length(packet->>'rowWire')<=65536 AND keryx_storage.a2a_original_binding_valid(b) AND b->>'id'=selector
    AND jsonb_typeof(p)='object' AND p-'orderId'-'storeId'-'orderWire'-'orderSha256'-'deliveryToken'-'owner'-'network'-'binding'-'health'='{}'::jsonb
    AND p->>'orderId'=selector AND p->>'orderWire'=packet->>'rowWire') IS NOT TRUE THEN RAISE EXCEPTION 'native create packet refused';END IF;
-  r:=(packet->>'rowWire')::jsonb;
+  r:=(packet->>'rowWire')::jsonb;rawrow:=r;
   IF (jsonb_typeof(r)='object' AND jsonb_typeof(r->'request_data')='string' AND jsonb_typeof(r->'package_data')='string') IS NOT TRUE THEN RAISE EXCEPTION 'native create body refused';END IF;
   r:=jsonb_set(jsonb_set(r,'{request_data}',(r->>'request_data')::jsonb),'{package_data}',(r->>'package_data')::jsonb);
   SELECT * INTO o FROM jsonb_populate_record(NULL::public.a2a_orders,r);
@@ -134,6 +134,8 @@ BEGIN
   IF changed<>1 THEN RAISE EXCEPTION 'native original conflict could not be read';END IF;
   INSERT INTO keryx_storage.a2a_original_time_projection(order_id,identity_digest,query_id,request_hash,created_at,updated_at,started_at,payment_started_at,result_saving_at)
    VALUES(selector,keryx_storage.identity_digest(expected),o.query_id,o.request_hash,r->>'created_at',r->>'updated_at',r->>'started_at',r->>'payment_started_at',r->>'result_saving_at');
+  INSERT INTO keryx_storage.a2a_original_cell_projection(order_id,identity_digest,query_id,request_hash,package_data_wire,request_data_wire)
+   VALUES(selector,keryx_storage.identity_digest(expected),o.query_id,o.request_hash,rawrow->>'package_data',rawrow->>'request_data');
   INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta)
    VALUES(selector,store,p->>'orderWire',p->>'orderSha256',p->>'deliveryToken',p->>'owner',p->>'network',nullif(p->'binding','null'::jsonb),p->'health');
   IF owned THEN
