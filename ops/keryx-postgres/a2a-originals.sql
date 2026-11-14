@@ -1,6 +1,7 @@
 SET ROLE keryx_owner;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
  ('a2a_original_snapshot',ARRAY['a2a_orders','deliverable_acceptance_store','acceptance_original_projection'],true,true),
+ ('a2a_create',ARRAY['a2a_orders','research_purchase_authorizations','payment_events','research_monthly_redemptions','acceptance_original_projection','deliverable_acceptance_store','owner269_associations'],true,false),
  ('a2a_resolve_completed',ARRAY['a2a_orders','deliverable_acceptance_store','acceptance_original_projection','query_runs','payment_events'],true,false),
  ('a2a_resolve_failed',ARRAY['a2a_orders','deliverable_acceptance_store','acceptance_original_projection','query_runs','payment_events'],true,false),
  ('a2a_complete',ARRAY['a2a_orders','deliverable_acceptance_store','acceptance_original_projection'],true,false),
@@ -14,8 +15,12 @@ CREATE FUNCTION public.storage_a2a_original_observe(expected jsonb,digest text,o
 DECLARE b jsonb;o public.a2a_orders;wire text;store text;
 BEGIN
  IF current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION 'native original readonly transaction required';END IF;
- IF observation IS NULL OR observation NOT IN('settled','snapshot') THEN RAISE EXCEPTION 'native original observation refused';END IF;
- PERFORM keryx_storage.require_operation(expected,digest,'a2a_original_'||observation);
+ IF observation IS NULL OR observation NOT IN('settled','snapshot','store') THEN RAISE EXCEPTION 'native original observation refused';END IF;
+ PERFORM keryx_storage.require_operation(expected,digest,'a2a_original_'||CASE observation WHEN 'store' THEN 'snapshot' ELSE observation END);
+ IF observation='store' THEN
+  IF selector IS NOT NULL OR (SELECT count(*) FROM public.deliverable_acceptance_store)<>1 THEN RAISE EXCEPTION 'native acceptance store unavailable';END IF;
+  SELECT id INTO store FROM public.deliverable_acceptance_store;RETURN jsonb_build_object('storeId',store);
+ END IF;
  IF observation='snapshot' THEN
   IF selector IS NULL OR keryx_storage.a2a_utf16_length(selector) NOT BETWEEN 1 AND 256 OR octet_length(selector)>1024 THEN RAISE EXCEPTION 'native original selector refused';END IF;
   SELECT * INTO o FROM public.a2a_orders WHERE id=selector;IF NOT FOUND THEN RETURN NULL;END IF;
@@ -47,13 +52,44 @@ BEGIN
  RETURN json_build_object('rows',rows);
 END;$$;
 CREATE FUNCTION public.storage_a2a_original_execution(expected jsonb,digest text,execution text,selector text,detail text,started text) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE b jsonb;o public.a2a_orders;result json;operation text;changed bigint;packet jsonb;p jsonb;store text;resolution jsonb;e jsonb;field text;actual record;budget_micros double precision;
+DECLARE b jsonb;o public.a2a_orders;result json;operation text;changed bigint;packet jsonb;p jsonb;store text;resolution jsonb;e jsonb;field text;actual record;budget_micros double precision;r jsonb;
 BEGIN
- operation:=CASE execution WHEN 'claim' THEN 'a2a_original_claim' WHEN 'payment-start' THEN 'a2a_payment_start' WHEN 'result-saving' THEN 'a2a_result_saving' WHEN 'fail' THEN 'a2a_fail' WHEN 'complete' THEN 'a2a_complete' WHEN 'repair' THEN 'a2a_resolve_completed' WHEN 'close' THEN 'a2a_resolve_failed' END;
+ operation:=CASE execution WHEN 'claim' THEN 'a2a_original_claim' WHEN 'payment-start' THEN 'a2a_payment_start' WHEN 'result-saving' THEN 'a2a_result_saving' WHEN 'fail' THEN 'a2a_fail' WHEN 'complete' THEN 'a2a_complete' WHEN 'repair' THEN 'a2a_resolve_completed' WHEN 'close' THEN 'a2a_resolve_failed' WHEN 'create' THEN 'a2a_create' END;
  IF operation IS NULL THEN RAISE EXCEPTION 'native original execution refused';END IF;
  PERFORM keryx_storage.require_operation(expected,digest,operation);
  IF started IS NULL OR started !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$'
   OR to_char(started::timestamptz AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')<>started THEN RAISE EXCEPTION 'native original execution date refused';END IF;
+ IF execution='create' THEN
+  IF selector IS NULL OR selector !~ '^a2a_[a-f0-9]{64}$' OR detail IS NULL OR octet_length(detail)>262144 THEN RAISE EXCEPTION 'native create packet bound';END IF;
+  packet:=detail::jsonb;b:=packet->'binding';p:=packet->'projection';
+  IF (jsonb_typeof(packet)='object' AND packet-'binding'-'rowWire'-'projection'='{}'::jsonb AND jsonb_typeof(packet->'rowWire')='string'
+   AND octet_length(packet->>'rowWire')<=65536 AND keryx_storage.a2a_original_binding_valid(b) AND b->>'id'=selector
+   AND jsonb_typeof(p)='object' AND p-'orderId'-'storeId'-'orderWire'-'orderSha256'-'deliveryToken'-'owner'-'network'-'binding'-'health'='{}'::jsonb
+   AND p->>'orderId'=selector AND p->>'orderWire'=packet->>'rowWire') IS NOT TRUE THEN RAISE EXCEPTION 'native create packet refused';END IF;
+  r:=(packet->>'rowWire')::jsonb;
+  IF (jsonb_typeof(r)='object' AND jsonb_typeof(r->'request_data')='string' AND jsonb_typeof(r->'package_data')='string') IS NOT TRUE THEN RAISE EXCEPTION 'native create body refused';END IF;
+  r:=jsonb_set(jsonb_set(r,'{request_data}',(r->>'request_data')::jsonb),'{package_data}',(r->>'package_data')::jsonb);
+  SELECT * INTO o FROM jsonb_populate_record(NULL::public.a2a_orders,r);
+  IF (keryx_storage.a2a_original_matches(o,b) AND o.status='running' AND o.started_at IS NULL AND o.worker_id IS NULL AND o.execution_journal_version=1
+   AND o.payment_started_at IS NULL AND o.result_saving_at IS NULL AND o.response_data IS NULL AND o.error_code IS NULL AND o.resolution_data IS NULL
+   AND o.created_at=started::timestamptz AND o.updated_at=o.created_at) IS NOT TRUE THEN RAISE EXCEPTION 'native fresh original refused';END IF;
+  -- Conflict returns the retained original; caller replay checks still compare
+  -- its complete economic tuple. No retained bytes or acceptance are replaced.
+  IF EXISTS(SELECT 1 FROM public.a2a_orders WHERE id=selector) THEN
+   SELECT * INTO o FROM public.a2a_orders WHERE id=selector;
+   result:=json_build_object('created',false,'order',keryx_storage.a2a_original_row(o));PERFORM keryx_storage.leave_operation();RETURN result;
+  END IF;
+  -- This prototype consumes already retained local facts. It cannot manufacture
+  -- a purchase claim, inbound record, provider settlement or ownership proof.
+  IF NOT keryx_storage.a2a_original_settled(o,b) THEN RAISE EXCEPTION 'native settled original required';END IF;
+  IF (SELECT count(*) FROM public.deliverable_acceptance_store)<>1 THEN RAISE EXCEPTION 'native acceptance store unavailable';END IF;
+  SELECT id INTO store FROM public.deliverable_acceptance_store;IF p->>'storeId' IS DISTINCT FROM store THEN RAISE EXCEPTION 'native acceptance store mismatch';END IF;
+  INSERT INTO public.a2a_orders SELECT (o).* ON CONFLICT DO NOTHING;GET DIAGNOSTICS changed=ROW_COUNT;
+  IF changed<>1 THEN RAISE EXCEPTION 'native original conflict could not be read';END IF;
+  INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta)
+   VALUES(selector,store,p->>'orderWire',p->>'orderSha256',p->>'deliveryToken',p->>'owner',p->>'network',nullif(p->'binding','null'::jsonb),p->'health');
+  result:=json_build_object('created',true,'order',keryx_storage.a2a_original_row(o));PERFORM keryx_storage.leave_operation();RETURN result;
+ END IF;
  IF execution IN('complete','repair','close') THEN
   IF selector IS NULL OR keryx_storage.a2a_utf16_length(selector) NOT BETWEEN 1 AND 256 OR octet_length(selector)>1024
    OR detail IS NULL OR octet_length(detail)>16777216 THEN RAISE EXCEPTION 'native completion packet bound';END IF;

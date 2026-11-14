@@ -6,9 +6,11 @@ import type { A2aOrder,A2aOrderResolutionUpdate } from '../../a2a/order';
 import { PostgresStorageUnavailable } from './connection';
 import { acceptanceOriginalMetadata } from './acceptance-metadata';
 import { captureA2aRecovery } from './a2a-recovery-packet';
+import { captureNativeA2aCreate } from './a2a-create-packet';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
 export interface PostgresA2aOriginalsPort {
  hasA2aOriginalSettlement(expected:A2aOriginalClaim):Promise<boolean>;
+ createA2aOrder(order:A2aOrder):Promise<{created:boolean;order:A2aOrder}>;
  getA2aOrder(id:string):Promise<A2aOrder|null>;
  completeA2aOrder(id:string,response:Record<string,unknown>,updatedAt:string):Promise<boolean>;
  resolveA2aOrder(id:string,update:A2aOrderResolutionUpdate):Promise<boolean>;
@@ -55,6 +57,18 @@ export function composePostgresA2aOriginals(channel:PostgresDomainChannel,readOn
   if(channel.closed||typeof result!=='boolean')throw new PostgresDomainWriteOutcomeUnknown();return result;
  };
  return Object.freeze({
+  async createA2aOrder(raw){
+   live();if(readOnly)throw unavailable();const captured=captureNativeA2aCreate(raw),context=await channel.call('a2aOriginalStore',[]);live();
+   if(!context||typeof context!=='object'||Array.isArray(context)||Object.keys(context).join(',')!=='storeId'||typeof Reflect.get(context,'storeId')!=='string')throw unavailable();
+   const projection=acceptanceOriginalMetadata(captured.row,Reflect.get(context,'storeId') as string),packet=JSON.stringify({binding:captured.binding,rowWire:captured.rowWire,projection});if(Buffer.byteLength(packet)>262144)throw unavailable();
+   const result=await channel.call('a2aCreate',[captured.order.id,packet,captured.order.createdAt]);
+   try{
+    if(channel.closed||!result||typeof result!=='object'||Array.isArray(result)||Object.keys(result).sort().join(',')!=='created,order'||typeof Reflect.get(result,'created')!=='boolean')throw unavailable();
+    const saved=order(Reflect.get(result,'order')),created=Reflect.get(result,'created') as boolean;
+    if(saved.id!==captured.order.id||created&&(!matchesA2aOriginalBinding(saved,captured.binding)||saved.status!=='running'||saved.startedAt!==null||saved.workerId!==null||saved.executionJournalVersion!==1||saved.paymentStartedAt!==null||saved.resultSavingAt!==null||saved.response!==null||saved.errorCode!==null||saved.resolution!==null||saved.createdAt!==captured.order.createdAt||saved.updatedAt!==captured.order.updatedAt))throw unavailable();
+    return {created,order:saved};
+   }catch{throw new PostgresDomainWriteOutcomeUnknown();}
+  },
   async getA2aOrder(id){
    live();const retained=await snapshot(id);if(retained===null)return null;
    const row={...retained.row};for(const field of ['request_data','package_data','response_data','resolution_data'])if(typeof row[field]==='string')row[field]=JSON.parse(row[field] as string);
