@@ -1340,3 +1340,27 @@ not enable publication capture or grant application roles arbitrary execution.
 The readonly installed factory does not receive these mutation ports. Actual
 Source/native protocol qualification and full SOURCE/catalog pins are required;
 the complete application writer, production intake and cutover remain gated.
+
+## Optional native financial application composition
+
+The internal runtime transport maps 33 existing application methods to fixed
+consent, funding, hosted treasury, session withdrawal and creator withdrawal
+protocols. A shared business core may receive that typed port explicitly. It
+captures inputs before its first await, rejects readonly mutations before caller
+getters, and checks the core again before returning. Refusal or unknown commit
+never invokes a legacy RPC or a second write. Closure after a successful write
+reports an unknown outcome; late read results are suppressed.
+
+This composition supplies no installed-facade provenance. Unconfigured cores
+retain their financial refusals, and `listSessionWithdrawalPayments` remains
+unported. The installed readonly factory keeps its existing observation surface;
+the complete application writer remains closed. No custody, funding, signing,
+network action or production switch follows from constructing these ports.
+
+`applicationStorageIdentity(db, access)` verifies an already selected genuine
+SQLite, Supabase or native facade through that backend's provenance guard. The
+native branch awaits the real catalog/identity guard and never falls back on a
+guard failure. The compiled Linux reader qualification checks the helper's
+readonly positive, write/forged/proxy refusals, changed credentials and terminal
+closure. Those checks require the scheduled actual fixture; unit composition
+tests do not establish an installed native positive.

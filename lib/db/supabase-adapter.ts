@@ -1,3 +1,5 @@
+import { PostgresDomainWriteOutcomeUnknown } from './postgres/domain-channel';
+import type { NativeFinancialApplicationPort } from './postgres/native-financial-application-port';
 import type { PostgresSourceClaimsPort } from './postgres/source-claims-transport';
 import type { composePostgresSourceClaimWrites } from './postgres/source-claims-write-transport';
 import type { composePostgresSourceUpkeep } from './postgres/source-upkeep-transport';
@@ -160,6 +162,7 @@ export interface NativePostgresBusinessCoreOptions {
   readonly assertEntry:()=>void;
   readonly verify:()=>Promise<void>;
   readonly sourceClaims?:PostgresSourceClaimsPort;
+  readonly financialApplication?:NativeFinancialApplicationPort;
   readonly sourceClaimWrites?:ReturnType<typeof composePostgresSourceClaimWrites>;
   readonly sourceUpkeep?:ReturnType<typeof composePostgresSourceUpkeep>;
   readonly sourceUpsert?:(source:Source)=>Promise<void>;
@@ -180,7 +183,8 @@ export function assembleAuthorityBoundSupabaseCore(
 }
 
 /** Shared business-code assembly only. This does not select PostgreSQL, inspect
- * deployment configuration, install optional ports or confer installed authority.
+ * deployment configuration or confer installed authority. Optional typed ports
+ * compose existing fixed protocols without enrolling an application facade.
  * Only a complete zero-argument native factory may later own that provenance. */
 export function assembleNativePostgresBusinessCore(options:NativePostgresBusinessCoreOptions){
   const capability=Object.freeze({});
@@ -262,6 +266,35 @@ export class SupabaseAdapter implements KeryxDB {
       this.assertEntry();
     }, close: () => { this.#enrolled!.ready = false; } });
     const guardedMutation=<A extends unknown[],R>(work:(...args:A)=>Promise<R>)=>async(...args:A)=>{this.assertEntry();const value=await work(...args);this.assertEntry();return value;};
+    if(native?.financialApplication){
+      const port=native.financialApplication;
+      // Fixed internal composition grants no installed facade or financial
+      // authority. Unconfigured cores keep their existing refusals.
+      for(const [name,write] of [
+        ['issueSessionGrantConsent',true],['consumeSessionGrantConsent',true],['getSessionGrantConsent',false],
+        ['browserSignerRetainedSpendMicro',false],['sessionFundingAccounting',false],['browserSignerConfirmedSpendMicro',false],
+        ['admitHostedTreasuryPolicy',true],['hostedTreasuryAccounting',false],['admitHostedAuthorization',true],
+        ['submitHostedAuthorization',true],['confirmHostedAuthorization',true],
+        ['sessionWithdrawalAccounting',false],['reserveSessionWithdrawal',true],['getSessionWithdrawal',false],
+        ['pendingSessionWithdrawal',false],['getSessionWithdrawalSigningPhase',false],['authorizeSessionWithdrawal',true],
+        ['cancelSessionWithdrawal',true],['getSessionWithdrawalAbort',false],['abortSessionWithdrawal',true],
+        ['getSessionWithdrawalCompletion',false],['completeSessionWithdrawal',true],
+        ['creatorOwnerWithdrawalAccounting',false],['admitCreatorOwnerWithdrawal',true],
+        ['getCreatorOwnerWithdrawalCompletion',false],['completeCreatorOwnerWithdrawal',true],
+        ['reserveCreatorWithdrawal',true],['getCreatorWithdrawal',false],['listCreatorWithdrawalHistory',false],
+        ['claimCreatorWithdrawalTransfer',true],['getCreatorWithdrawalTransferClaim',false],
+        ['saveCreatorWithdrawalAttestation',true],['getCreatorWithdrawalAttestation',false],
+      ] as const){
+        const method=port[name];if(typeof method!=='function')refuseStorage('adapter_not_initialized');
+        Object.defineProperty(this,name,{value:async(...args:unknown[])=>{
+          this.assertEntry();
+          // Invoke before awaiting so the fixed port captures caller inputs now.
+          const result=await Reflect.apply(method,port,args);
+          try{this.assertEntry();}catch(error){if(write)throw new PostgresDomainWriteOutcomeUnknown();throw error;}
+          return result;
+        },configurable:true});
+      }
+    }
     if(native?.sourceClaimWrites){const writes=native.sourceClaimWrites;Object.defineProperties(this,{
       issueSourceClaimChallenge:{value:guardedMutation(writes.issueSourceClaimChallenge.bind(writes)),configurable:true},
       reserveSourceClaimVerification:{value:guardedMutation(writes.reserveSourceClaimVerification.bind(writes)),configurable:true},
