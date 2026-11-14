@@ -6,12 +6,20 @@ import { createServer, connect, type Socket } from "node:net";
 
 export async function startCommitAckLossProxy(upstreamPort: number) {
   if (!Number.isSafeInteger(upstreamPort) || upstreamPort < 1 || upstreamPort > 65535) throw new Error("Invalid owned fixture port");
-  let armed = false, dropped = false, commands = 0, skipped = 0;
+  let armed = false, dropped = false, commands = 0, skipped = 0, closing = false;
+  let closed: Promise<void> | undefined;
   const sockets = new Set<Socket>();
-  const own = (socket: Socket) => { sockets.add(socket); socket.once("close", () => sockets.delete(socket)); return socket; };
+  const closures = new Map<Socket, Promise<void>>();
+  const own = (socket: Socket) => {
+    sockets.add(socket);
+    closures.set(socket, new Promise<void>(resolve => socket.once("close", () => {
+      sockets.delete(socket); closures.delete(socket); resolve();
+    })));
+    return socket;
+  };
   const server = createServer(client => {
     own(client);
-    if (sockets.size > 4) { client.destroy(); return; }
+    if (closing || sockets.size > 4) { client.destroy(); return; }
     const upstream = own(connect({ host: "127.0.0.1", port: upstreamPort }));
     let buffer: Buffer = Buffer.alloc(0); let completed = false;
     const stop = () => { client.destroy(); upstream.destroy(); };
@@ -46,17 +54,22 @@ export async function startCommitAckLossProxy(upstreamPort: number) {
   return Object.freeze({
     port: address.port,
     arm(skipCompleted = 0) {
-      if (armed || dropped || !Number.isSafeInteger(skipCompleted) || skipCompleted < 0 || skipCompleted > 4) throw new Error("Owned acknowledgement loss already armed or invalid");
+      if (closing || armed || dropped || !Number.isSafeInteger(skipCompleted) || skipCompleted < 0 || skipCompleted > 4) throw new Error("Owned acknowledgement loss already armed or invalid");
       skipped = skipCompleted; armed = true;
     },
     observation: () => ({ dropped, commands }),
-    async close() {
-      const closing = [...sockets].map(socket => new Promise<void>(resolve => {
-        if (socket.closed) resolve(); else socket.once("close", resolve);
-        socket.destroy();
-      }));
-      await Promise.all([...closing, new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))]);
-      if (sockets.size) throw new Error("Owned fixture proxy sockets remain");
+    close() {
+      closing = true;
+      return closed ??= Promise.resolve().then(async () => {
+        const stopped = new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+        for (const socket of sockets) socket.destroy();
+        await stopped;
+        // server.close fences late accepts, but does not own upstream sockets.
+        // Every tracked socket must reach OUR close listener, even if native
+        // socket.closed already became true before that event was dispatched.
+        await Promise.all([...closures.values()]);
+        if (sockets.size) throw new Error("Owned fixture proxy sockets remain");
+      });
     },
   });
 }
