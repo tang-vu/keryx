@@ -10,6 +10,8 @@ import { canonicalJson } from '../../lib/canonical-json';
 import { validateStorageIdentity,type StorageIdentity } from '../../lib/db/storage-identity';
 import { createPostgresDomainChannel } from '../../lib/db/postgres/domain-channel';
 import { composePostgresPendingJobOwners } from '../../lib/db/postgres/pending-owner-transport';
+import { composePostgresA2aOriginals } from '../../lib/db/postgres/a2a-originals-transport';
+import { retainedRecoveryMatches } from '../../lib/a2a/overdue-escalation-queue';
 import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection';
 import type { PostgresPendingOwnerSessionPacket } from '../../lib/a2a/pending-owner-association';
 import { nativePendingOwnerFixture,nativePendingOwnerFixturePaths } from './native-pending-owner-fixture.mts';
@@ -44,6 +46,25 @@ export async function qualifyPendingOwner(input:{options:PostgresConnectionOptio
   const next=await list(source.packet(),cursor);assert.equal(next.rows.length,3);assert.equal(new Set([...first.rows.slice(0,25),...next.rows].map(row=>row.id)).size,28);
   for(const i of [0,28,29,30]){const selected=await list(source.packet(),undefined,source.orders[i].id);assert.equal(selected.rows.length,i===0?1:0);if(i===0)assert.equal(selected.recovery,source.recovery);}
   for(const i of [26,27]){const selected=await list(source.packet(),undefined,source.orders[i].id);assert.equal(selected.rows.length,1);assert.equal(selected.rows[0].created_at,source.orders[i].createdAt);vectors++;}
+  // Retained Source clocks must survive a disposable body-projection deletion.
+  // PostgreSQL timestamptz stores the instant, not the original offset/precision.
+  const clockId=source.orders[0].id,started=new Date(Date.parse(source.orders[0].createdAt)+100).toISOString().replace(/\.[0-9]{3}/,value=>value+'4').replace('Z','+00:00');
+  const updated=new Date(Date.parse(source.orders[0].createdAt)+200+7*3600000).toISOString().replace('Z','+07:00');
+  const payment=new Date(Date.parse(source.orders[0].createdAt)+150).toISOString().replace(/\.[0-9]{3}/,value=>value+'56');
+  source.owner(db=>db.prepare('UPDATE a2a_orders SET started_at=?,updated_at=?,payment_started_at=?,result_saving_at=? WHERE id=?').run(started,updated,payment,updated,clockId));
+  pg(`UPDATE public.a2a_orders SET started_at=${q(started)},updated_at=${q(updated)},payment_started_at=${q(payment)},result_saving_at=${q(updated)} WHERE id=${q(clockId)};UPDATE keryx_storage.a2a_original_time_projection SET started_at=${q(started)},updated_at=${q(updated)},payment_started_at=${q(payment)},result_saving_at=${q(updated)} WHERE order_id=${q(clockId)};`);
+  assert.equal(input.ownerSql(`SELECT count(*) FROM keryx_storage.acceptance_original_projection WHERE order_id=${q(clockId)};`),'0');
+  const clocks=await list(source.packet(),undefined,clockId);assert.equal(clocks.rows[0].started_at,started);assert.equal(clocks.rows[0].updated_at,updated);assert.equal(clocks.rows[0].payment_started_at,payment);assert.equal(clocks.rows[0].result_saving_at,updated);
+  const nativeOriginal=await composePostgresA2aOriginals(channel,false).getA2aOrder(clockId),sourceOriginal=await source.core.getA2aOrder(clockId);assert.deepEqual(nativeOriginal,sourceOriginal);assert(nativeOriginal);
+  assert.equal(retainedRecoveryMatches(nativeOriginal,JSON.parse(source.recovery),{network:input.identity.network,payee:nativeOriginal.payee},Date.now()),false);vectors++;
+  // The held owner cannot change immutable creation text even to an equivalent
+  // instant; a current-native inconsistency cannot become an owner observation.
+  assert.throws(()=>pg(`UPDATE keryx_storage.a2a_original_time_projection SET created_at=replace(created_at,'Z','+00:00') WHERE order_id=${q(clockId)};`));vectors++;
+  assert.throws(()=>pg(`UPDATE keryx_storage.a2a_original_time_projection SET started_at='2026-01-01T00:00:00.000Z' WHERE order_id=${q(clockId)};`));vectors++;
+  pg(`UPDATE public.a2a_orders SET started_at='2026-01-01T00:00:00.000Z' WHERE id=${q(clockId)};`);
+  await assert.rejects(list(source.packet(),undefined,clockId));await assert.rejects(composePostgresA2aOriginals(channel,false).getA2aOrder(clockId));vectors++;
+  pg(`UPDATE public.a2a_orders SET started_at=${q(started)} WHERE id=${q(clockId)};`);await list(source.packet(),undefined,clockId);
+  await assert.rejects(input.contentionClient.query('SELECT * FROM keryx_storage.a2a_original_time_projection'));vectors++;
   for(const field of ['hash','wallet','issuedAt','expiresAt'] as const){const packet=source.packet(true);const session={...packet.session,[field]:field==='hash'?'ff'.repeat(32):field==='wallet'?'0x'+'ff'.repeat(20):packet.session[field]+1};const changed={...packet,session};assert.throws(()=>source!.current(changed));await assert.rejects(admission(changed));vectors++;}
   for(const field of Object.keys(input.identity) as (keyof StorageIdentity)[]){const packet=source.packet(true);const changed={...packet,identity:{...packet.identity,[field]:'changed'}} as unknown as PostgresPendingOwnerSessionPacket;await assert.rejects(admission(changed));vectors++;}
   for(const packet of [{...source.packet(true),proofExpiresAt:Date.now()-1},{...source.packet(true),proofExpiresAt:Date.now()+600001},{...source.packet(true),binding:null}]){await assert.rejects(admission(packet));vectors++;}
@@ -74,7 +95,7 @@ export async function qualifyPendingOwner(input:{options:PostgresConnectionOptio
   await assert.rejects(reader.call('pendingOwnerList',[JSON.stringify(source.packet()),null,null]));vectors++;
   await channel.close();await assert.rejects(admission(source.packet(true)));vectors++;
   assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
-  return {vectors,actualPostgres:true,actualVerifiedSqliteCore:true,actualSourceSessionHelper:true,sourceMetadataJoinAndPagingCompared:true,exactOffsetOriginalDateText:true,escapedNulAndSurrogateResponseRetained:true,exactOriginalJoinExclusions:true,currentSessionAfterNativeLock:true,proofExpiryAfterNativeLock:true,readerObservationOnly:true,allNineIdentityFieldsCompared:true,rawNativePacketsSynthetic:true,ownerAssociationsImportedSynthetic:true,installedNativeProofQualified:false,atomicOwnedProducerQualified:false,fullWriterQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
+  return {vectors,actualPostgres:true,actualVerifiedSqliteCore:true,actualSourceSessionHelper:true,sourceMetadataJoinAndPagingCompared:true,exactOffsetOriginalDateText:true,allFiveSourceTimeWiresRetained:true,subMillisecondRecoveryRemainsFalse:true,bodyProjectionDeletionDoesNotEraseTimes:true,immutableCreationAndCurrentNativeTimesFenced:true,privateTimeMetadataDeniedToApp:true,escapedNulAndSurrogateResponseRetained:true,exactOriginalJoinExclusions:true,currentSessionAfterNativeLock:true,proofExpiryAfterNativeLock:true,readerObservationOnly:true,allNineIdentityFieldsCompared:true,rawNativePacketsSynthetic:true,ownerAssociationsImportedSynthetic:true,installedNativeProofQualified:false,atomicOwnedProducerQualified:false,fullWriterQualified:false,productionData:false,paymentActions:0,jobExecutions:0};
  }finally{
   try{
   await Promise.allSettled([admin?.end(),wrong?.close(),reader?.close(),channel.close()]);source?.selected.close();

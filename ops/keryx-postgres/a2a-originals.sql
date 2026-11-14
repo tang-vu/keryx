@@ -11,8 +11,10 @@ INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VA
  ('a2a_result_saving',ARRAY['a2a_orders','acceptance_original_projection'],true,false),
  ('a2a_fail',ARRAY['a2a_orders','acceptance_original_projection'],true,false),
  ('a2a_original_claim',ARRAY['a2a_orders','research_purchase_authorizations','payment_events','research_monthly_redemptions','query_runs','acceptance_original_projection'],true,false);
+UPDATE keryx_storage.operations SET relations=array_append(relations,'a2a_original_time_projection')
+ WHERE 'a2a_orders'=ANY(relations) AND NOT 'a2a_original_time_projection'=ANY(relations);
 CREATE FUNCTION public.storage_a2a_original_observe(expected jsonb,digest text,observation text,selector text) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE b jsonb;o public.a2a_orders;wire text;store text;take integer;rows json:='[]'::json;item json;bytes bigint:=64;
+DECLARE b jsonb;o public.a2a_orders;wire text;store text;take integer;rows json:='[]'::json;item json;bytes bigint:=64;current_row json;field text;
 BEGIN
  IF current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION 'native original readonly transaction required';END IF;
  IF observation IS NULL OR observation NOT IN('settled','snapshot','store','queue') THEN RAISE EXCEPTION 'native original observation refused';END IF;
@@ -38,8 +40,14 @@ BEGIN
   SELECT * INTO o FROM public.a2a_orders WHERE id=selector;IF NOT FOUND THEN RETURN NULL;END IF;
   IF (SELECT count(*) FROM public.deliverable_acceptance_store)<>1 THEN RAISE EXCEPTION 'native acceptance store unavailable';END IF;
   SELECT id INTO store FROM public.deliverable_acceptance_store;
+  -- Validate protected current metadata even if a disposable body projection
+  -- remains present. Its deletion must never normalize the retained time wires.
+  current_row:=keryx_storage.a2a_original_row(o,true);
   SELECT source_order_wire INTO wire FROM keryx_storage.acceptance_original_projection WHERE order_id=selector;
-  IF wire IS NULL THEN wire:=keryx_storage.a2a_original_row(o,true)::text;END IF;
+  IF wire IS NULL THEN wire:=current_row::text;END IF;
+  FOREACH field IN ARRAY ARRAY['created_at','updated_at','started_at','payment_started_at','result_saving_at'] LOOP
+   IF (wire::json->>field) IS DISTINCT FROM (current_row->>field) THEN RAISE EXCEPTION 'native original Source time mismatch';END IF;
+  END LOOP;
   IF NOT keryx_storage.acceptance_original_matches(wire,o) THEN RAISE EXCEPTION 'native original snapshot mismatch';END IF;
   RETURN jsonb_build_object('orderWire',wire,'storeId',store);
  END IF;
@@ -118,6 +126,8 @@ BEGIN
   SELECT id INTO store FROM public.deliverable_acceptance_store;IF p->>'storeId' IS DISTINCT FROM store THEN RAISE EXCEPTION 'native acceptance store mismatch';END IF;
   INSERT INTO public.a2a_orders SELECT (o).* ON CONFLICT DO NOTHING;GET DIAGNOSTICS changed=ROW_COUNT;
   IF changed<>1 THEN RAISE EXCEPTION 'native original conflict could not be read';END IF;
+  INSERT INTO keryx_storage.a2a_original_time_projection(order_id,identity_digest,query_id,request_hash,created_at,updated_at,started_at,payment_started_at,result_saving_at)
+   VALUES(selector,keryx_storage.identity_digest(expected),o.query_id,o.request_hash,r->>'created_at',r->>'updated_at',r->>'started_at',r->>'payment_started_at',r->>'result_saving_at');
   INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta)
    VALUES(selector,store,p->>'orderWire',p->>'orderSha256',p->>'deliveryToken',p->>'owner',p->>'network',nullif(p->'binding','null'::jsonb),p->'health');
   IF owned THEN
@@ -151,6 +161,10 @@ BEGIN
   IF NOT FOUND OR o.status<>'running' OR NOT keryx_storage.acceptance_original_matches(packet->>'beforeWire',o) THEN
    PERFORM keryx_storage.leave_operation();RETURN 'false'::json;
   END IF;
+  r:=keryx_storage.a2a_original_row(o,true)::jsonb;
+  FOREACH field IN ARRAY ARRAY['created_at','updated_at','started_at','payment_started_at','result_saving_at'] LOOP
+   IF ((packet->>'beforeWire')::json->>field) IS DISTINCT FROM (r->>field) THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+  END LOOP;
   IF execution IN('repair','close') THEN
    IF (jsonb_typeof(packet->'resolutionWire')='string' AND octet_length(packet->>'resolutionWire')<=32768) IS NOT TRUE THEN RAISE EXCEPTION 'native recovery resolution bound';END IF;
    resolution:=(packet->>'resolutionWire')::jsonb;e:=resolution->'evidence';
@@ -208,6 +222,8 @@ BEGIN
    response_data=CASE execution WHEN 'close' THEN NULL ELSE (packet->>'responseWire')::json END,
    error_code=CASE execution WHEN 'close' THEN packet->>'errorCode' ELSE NULL END,
    resolution_data=CASE execution WHEN 'complete' THEN o.resolution_data::json ELSE (packet->>'resolutionWire')::json END,updated_at=started::timestamptz WHERE id=selector;
+  UPDATE keryx_storage.a2a_original_time_projection SET updated_at=started WHERE order_id=selector;
+  GET DIAGNOSTICS changed=ROW_COUNT;IF changed<>1 THEN RAISE EXCEPTION 'native original Source time unavailable';END IF;
   INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta)
    VALUES(selector,store,p->>'orderWire',p->>'orderSha256',p->>'deliveryToken',p->>'owner',p->>'network',nullif(p->'binding','null'::jsonb),p->'health');
   PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
@@ -225,7 +241,15 @@ BEGIN
   ELSE
    UPDATE public.a2a_orders SET status='failed',error_code=detail,updated_at=started::timestamptz WHERE id=selector AND status='running';
   END IF;
-  GET DIAGNOSTICS changed=ROW_COUNT;PERFORM keryx_storage.leave_operation();RETURN to_json(changed=1);
+  GET DIAGNOSTICS changed=ROW_COUNT;
+  IF changed=1 THEN
+   UPDATE keryx_storage.a2a_original_time_projection SET updated_at=started,
+    payment_started_at=CASE WHEN execution='payment-start' THEN coalesce(payment_started_at,started) ELSE payment_started_at END,
+    result_saving_at=CASE WHEN execution='result-saving' THEN coalesce(result_saving_at,started) ELSE result_saving_at END
+    WHERE order_id=selector;
+   GET DIAGNOSTICS changed=ROW_COUNT;IF changed<>1 THEN RAISE EXCEPTION 'native original Source time unavailable';END IF;
+  END IF;
+  PERFORM keryx_storage.leave_operation();RETURN to_json(changed=1);
  END IF;
  IF selector IS NULL OR octet_length(selector)>8192 OR detail IS NULL OR keryx_storage.a2a_trim(detail)='' OR keryx_storage.a2a_utf16_length(detail)>200 THEN RAISE EXCEPTION 'native original claim selector refused';END IF;
  b:=selector::jsonb;IF NOT keryx_storage.a2a_original_binding_valid(b) THEN RAISE EXCEPTION 'native original binding refused';END IF;
@@ -238,7 +262,11 @@ BEGIN
   AND NOT EXISTS(SELECT 1 FROM public.payment_events WHERE query_id=b->>'queryId' AND kind IS DISTINCT FROM 'inbound') THEN
   UPDATE public.a2a_orders SET started_at=started::timestamptz,worker_id=detail,updated_at=started::timestamptz
    WHERE id=b->>'id' AND status='running' AND started_at IS NULL AND worker_id IS NULL RETURNING * INTO o;
-  IF FOUND THEN result:=keryx_storage.a2a_original_row(o);END IF;
+  IF FOUND THEN
+   UPDATE keryx_storage.a2a_original_time_projection SET started_at=started,updated_at=started WHERE order_id=o.id;
+   GET DIAGNOSTICS changed=ROW_COUNT;IF changed<>1 THEN RAISE EXCEPTION 'native original Source time unavailable';END IF;
+   result:=keryx_storage.a2a_original_row(o);
+  END IF;
  END IF;
  PERFORM keryx_storage.leave_operation();RETURN result;
 END;$$;

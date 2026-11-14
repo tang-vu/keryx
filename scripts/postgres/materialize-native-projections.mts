@@ -17,7 +17,8 @@ import { sqliteOwnershipHistoryProjection } from './ownership-history-projection
 import { sqlitePrivacyProjection } from './privacy-projection.mts';
 import { sqliteWatchProjection } from './watch-projection.mts';
 import { sqliteAcceptanceProjection } from './acceptance-projection.mts';
-const tables=['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','acceptance_original_projection'] as const;
+import { sqliteA2aTimeProjection } from './a2a-time-projection.mts';
+const tables=['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','a2a_original_time_projection','acceptance_original_projection'] as const;
 type Table=typeof tables[number];
 type Kind='json'|'json-null'|'hex';
 type Field={name:string;kind?:Kind};
@@ -42,7 +43,9 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
    const values=columns.map(c=>{const v=row[c.name];return c.kind==='json-null'?JSON.stringify(v):c.kind==='json'&&v!==null?JSON.stringify(v):v;});
    const expressions=columns.map((c,i)=>c.kind==='hex'?`decode($${i+1},'hex')`:c.kind==='json'||c.kind==='json-null'?`$${i+1}::jsonb`:`$${i+1}`);
    assert.equal((await pg.query(`INSERT INTO keryx_storage.${quote(name)}(${columns.map(c=>quote(c.name)).join(',')}) VALUES(${expressions.join(',')})`,values)).rowCount,1);
-   stage='projection-re-read';const selected=await pg.query(`SELECT to_jsonb(t)::text wire,jsonb_build_array(${columns.map(c=>`t.${quote(c.name)} IS NULL`).join(',')})::text nulls FROM keryx_storage.${quote(name)} t WHERE ${keys.map((k,i)=>`t.${quote(k)}=$${i+1}`).join(' AND ')}`,keys.map(k=>row[k]));assert.equal(selected.rowCount,1);
+   // Only captured Source columns enter equality. A native/generated derivative
+   // must not change the Source row shape or become an implicit input cell.
+   stage='projection-re-read';const selected=await pg.query(`SELECT to_jsonb(t)::text wire,jsonb_build_array(${columns.map(c=>`t.${quote(c.name)} IS NULL`).join(',')})::text nulls FROM (SELECT ${columns.map(c=>quote(c.name)).join(',')} FROM keryx_storage.${quote(name)} WHERE ${keys.map((k,i)=>`${quote(k)}=$${i+1}`).join(' AND ')}) t`,keys.map(k=>row[k]));assert.equal(selected.rowCount,1);
    const actual=JSON.parse(selected.rows[0].wire) as Record<string,unknown>,nulls=JSON.parse(selected.rows[0].nulls);
    for(const c of columns)if(c.kind==='hex'&&actual[c.name]!==null){const hex=actual[c.name];assert(typeof hex==='string'&&/^\\x[a-f0-9]*$/.test(hex));actual[c.name]=hex.slice(2);}
    assert.deepEqual(nulls,columns.map(c=>row[c.name]===null&&c.kind!=='json-null'));assert.equal(canonicalJson(actual),wire);
@@ -65,7 +68,9 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
    assert(++watches<=10000&&typeof r.wallet==='string'&&typeof r.id==='string');const p=sqliteWatchProjection(db,r.wallet,r.id);await insert('topic_watch_projection',['wallet','id'],[field('wallet'),field('id'),field('original_sha256'),field('metadata','json')],{wallet:p.owner,id:p.id,original_sha256:p.originalSha256,metadata:p});
   }
   let orders=0;for(const r of db.prepare('SELECT id FROM a2a_orders ORDER BY id COLLATE BINARY').iterate()){
-   assert(++orders<=10000&&typeof r.id==='string');const p=sqliteAcceptanceProjection(db,r.id);await insert('acceptance_original_projection',['order_id'],[field('order_id'),field('store_id'),field('source_order_wire'),field('source_order_sha256'),field('delivery_token'),field('owner'),field('network'),field('binding','json'),field('health_meta','json')],{order_id:p.orderId,store_id:p.storeId,source_order_wire:p.orderWire,source_order_sha256:p.orderSha256,delivery_token:p.deliveryToken,owner:p.owner,network:p.network,binding:p.binding,health_meta:p.health});
+   assert(++orders<=10000&&typeof r.id==='string');
+   const time=sqliteA2aTimeProjection(db,r.id,identity);await insert('a2a_original_time_projection',['order_id'],Object.keys(time).map(name=>field(name)),time);
+   const p=sqliteAcceptanceProjection(db,r.id);await insert('acceptance_original_projection',['order_id'],[field('order_id'),field('store_id'),field('source_order_wire'),field('source_order_sha256'),field('delivery_token'),field('owner'),field('network'),field('binding','json'),field('health_meta','json')],{order_id:p.orderId,store_id:p.storeId,source_order_wire:p.orderWire,source_order_sha256:p.orderSha256,delivery_token:p.deliveryToken,owner:p.owner,network:p.network,binding:p.binding,health_meta:p.health});
   }
   stage='projection-final';await verify();for(const name of tables)assert.equal((await pg.query(`SELECT count(*)::text n FROM keryx_storage.${quote(name)}`)).rows[0].n,String(counts[name]));
   commit=true;await pg.query('COMMIT');started=false;

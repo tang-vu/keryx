@@ -26,6 +26,7 @@ import { startCommitAckLossProxy } from './commit-ack-loss.mts';
 import { sqliteAcceptanceProjection,heldAcceptanceProjectionSql } from './acceptance-projection.mts';
 import { acceptanceOriginalMetadata } from '../../lib/db/postgres/acceptance-metadata';
 import { composePostgresHealth } from '../../lib/db/postgres/health-transport';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql } from './a2a-time-projection.mts';
 import type { Client } from 'pg';
 type Case={label:string;withoutPurchaseProof?:boolean;fixture?:(value:ReturnType<typeof syntheticA2aOriginal>)=>void;change?:(db:DatabaseSync,id:string)=>void;settled:boolean;claimable:boolean};
 export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string;rawResponses?:boolean;recovery?:boolean}){
@@ -34,7 +35,7 @@ export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptio
  const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",pg=(sql:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+sql+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
  const channel=createPostgresDomainChannel(input.options,input.identity,input.digest),native=composePostgresA2aOriginals(channel,false),fixtures:ReturnType<typeof syntheticA2aOriginal>[]=[],ids:string[]=[];
  let vectors=0,monthlyId:string|undefined,source:ReturnType<typeof openVerifiedSqliteStorage>|undefined,loss:ReturnType<typeof createPostgresDomainChannel>|undefined,proxy:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined;
- const cases:Case[]=[{label:'valid',settled:true,claimable:true},
+ const cases:Case[]=[{label:'valid',fixture:value=>{value.order.createdAt='2026-10-06T10:23:02.000+07:00';value.order.updatedAt='2026-10-06T03:23:02.0000+00:00';},settled:true,claimable:true},
   {label:'binary micro round trip',fixture:value=>{value.order.amountUsdc=0.0157;value.order.creatorBudgetUsdc=0.0057;value.order.serviceFeeUsdc=0.01;value.binding.amountMicroUsdc='15700';value.binding.creatorBudgetMicroUsdc='5700';value.binding.serviceFeeMicroUsdc='10000';},settled:true,claimable:true},
   {label:'deep package absent model',fixture:value=>{value.order.researchMode='deep';value.order.researchPackage=a2aResearchPackage('deep');delete value.order.request!.model;},settled:true,claimable:true},
   {label:'Unicode hash preimage',fixture:value=>{value.order.request!.question='\ufeff Unicode \u2028\u2029 \ud83c\udf0d\n\b\f\r\t\\" / quote\' ';},settled:true,claimable:true},
@@ -67,7 +68,7 @@ export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptio
   },settled:false,claimable:false},
   {label:'lock wait',settled:true,claimable:true},{label:'race',settled:true,claimable:true},{label:'lost ack',settled:true,claimable:true}];
  const recoveries:{label:string;status:'completed'|'failed';expected:boolean;setup?:(db:DatabaseSync,id:string)=>void;edit?:(update:A2aOrderResolutionUpdate)=>void}[]=[
-  {label:'repair saved real run',status:'completed',expected:true},
+  {label:'repair saved real run',status:'completed',expected:true,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET created_at=?,started_at=?,updated_at=? WHERE id=?').run('2026-10-06T10:23:02.000+07:00','2026-11-14T07:00:00.123456789+07:00','2026-11-14T00:00:00.123456789+00:00',id);}},
   {label:'repair missing run',status:'completed',expected:false,setup:(db,id)=>{db.prepare('DELETE FROM query_runs WHERE id=?').run(id);}},
   {label:'repair offline run',status:'completed',expected:false,setup:(db,id)=>{db.prepare("UPDATE query_runs SET payment_mode='offline' WHERE id=?").run(id);}},
   {label:'repair unstarted',status:'completed',expected:false,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET started_at=NULL WHERE id=?').run(id);}},
@@ -81,7 +82,7 @@ export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptio
   {label:'repair over creator budget',status:'completed',expected:false,setup:(db,id)=>{db.prepare("INSERT INTO payment_events(id,query_id,kind,source_id,payer,payee,amount_usdc,network,created_at,settled,settlement_status) SELECT id||'_over',id,'citation','synthetic',payer,payee,1,'eip155:5042',created_at,1,'settled' FROM a2a_orders WHERE id=?").run(id);},edit:u=>{Object.assign(u.resolution.evidence,{creatorAttempts:1,settledCreatorMicros:1000000});}},
   {label:'repair SQL half micro round',status:'completed',expected:true,setup:(db,id)=>{db.prepare("INSERT INTO payment_events(id,query_id,kind,source_id,payer,payee,amount_usdc,network,created_at,settled,settlement_status) SELECT id||'_half',id,'citation','synthetic',payer,payee,0.0000005,'eip155:5042',created_at,1,'settled' FROM a2a_orders WHERE id=?").run(id);},edit:u=>{Object.assign(u.resolution.evidence,{creatorAttempts:1,settledCreatorMicros:1});}},
   {label:'close creator attempt',status:'failed',expected:false,setup:(db,id)=>{db.prepare("INSERT INTO payment_events(id,query_id,kind,source_id,payer,payee,amount_usdc,network,created_at,settled,settlement_status) SELECT id||'_pending',id,'citation','synthetic',payer,payee,0.001,'eip155:5042',created_at,0,'pending' FROM a2a_orders WHERE id=?").run(id);}},
-  {label:'close no execution boundary',status:'failed',expected:true},
+  {label:'close no execution boundary',status:'failed',expected:true,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET created_at=?,started_at=?,updated_at=? WHERE id=?').run('2026-10-06T10:23:02.000+07:00','2026-11-14T00:00:00.0000+00:00','2026-11-14T00:00:00.0000+00:00',id);}},
   {label:'close too recent',status:'failed',expected:false,edit:u=>{if(u.status==='failed')u.startedBefore='2026-11-13T23:59:59.999Z';}},
   {label:'close saved run',status:'failed',expected:false,setup:(db,id)=>{db.prepare("INSERT INTO query_runs(id,created_at,question,budget,total_spent,total_to_creators,data,payment_mode) SELECT id,created_at,'Synthetic',0,0,0,'{}','offline' FROM a2a_orders WHERE id=?").run(id);}},
   {label:'close payment boundary',status:'failed',expected:false,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET payment_started_at=started_at WHERE id=?').run(id);}},
@@ -114,7 +115,7 @@ export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptio
     cases[i].change?.(db,o.id);
    }
    insertStorageIdentity(db,input.identity);installStorageFences(db,input.identity);db.exec('COMMIT');
-   let sql=input.rawResponses?`INSERT INTO public.deliverable_acceptance_store(singleton,id) VALUES(1,${q(String(db.prepare('SELECT id FROM deliverable_acceptance_store').get()!.id))});`:'';for(const table of ['research_purchase_authorizations','research_monthly','a2a_orders','payment_events','query_runs','research_monthly_redemptions'])for(const row of db.prepare('SELECT * FROM '+table).all())sql+=copy(table,row);if(input.rawResponses)for(const id of ids)sql+=heldAcceptanceProjectionSql(sqliteAcceptanceProjection(db,id));pg(sql);
+   let sql=input.rawResponses?`INSERT INTO public.deliverable_acceptance_store(singleton,id) VALUES(1,${q(String(db.prepare('SELECT id FROM deliverable_acceptance_store').get()!.id))});`:'';for(const table of ['research_purchase_authorizations','research_monthly','a2a_orders','payment_events','query_runs','research_monthly_redemptions'])for(const row of db.prepare('SELECT * FROM '+table).all())sql+=copy(table,row);for(const id of ids)sql+=heldA2aTimeProjectionSql(sqliteA2aTimeProjection(db,id,input.identity));if(input.rawResponses)for(const id of ids)sql+=heldAcceptanceProjectionSql(sqliteAcceptanceProjection(db,id));pg(sql);
   }finally{db.close();}
   writeFileSync(manifestPath,manifest,{mode:0o600});source=openVerifiedSqliteStorage(file,input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(readFileSync(manifestPath,'utf8'),manifest)});
   const core=SqliteAdapter.assembleConnectionCore(source.db,input.identity,()=>{assert.equal(canonicalJson(assertVerifiedSqliteConnection(source!.db)),canonicalJson(input.identity));});
