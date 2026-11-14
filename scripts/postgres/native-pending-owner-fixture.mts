@@ -42,7 +42,7 @@ export async function nativePendingOwnerFixture(folder:string,rawIdentity:Storag
   const q=(value:string)=>"'"+value.replaceAll("'","''")+"'";
   const storeId=String(selected.db.prepare('SELECT id FROM deliverable_acceptance_store').get()!.id);
   const tables=['deliverable_acceptance_store','web_sessions','a2a_orders','pending_job_owners','sync_state'] as const;
-  let sql='';for(const table of tables)for(const row of selected.db.prepare('SELECT * FROM '+table).all()){
+  let sql='';for(const table of tables)for(const row of selected.db.prepare('SELECT * FROM '+table+(table==='sync_state'?" WHERE key='a2aWorker'":'')).all()){
    const keys=Object.keys(row);assert(keys.every(key=>/^[a-z][a-z0-9_]*$/.test(key)));
    sql+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(key=>{const value=row[key];return value===null?'NULL':typeof value==='number'||typeof value==='bigint'?String(value):q(String(value));}).join(',')})${table==='sync_state'?' ON CONFLICT(key) DO UPDATE SET value=excluded.value':''};`;
   }
