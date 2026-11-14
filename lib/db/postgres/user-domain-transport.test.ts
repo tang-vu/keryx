@@ -38,6 +38,7 @@ describe('native user profile protocol composition',()=>{
  });
  it('does not retry uncertain writes or turn an invalid response into success',async()=>{
   const f=fixture();f.call.mockRejectedValue(new PostgresDomainWriteOutcomeUnknown());await expect(f.transport.privateProfiles.update(wallet,input())).rejects.toThrow(PostgresDomainWriteOutcomeUnknown);expect(f.call).toHaveBeenCalledTimes(1);
-  f.call.mockResolvedValue({status:'updated',profile:record(other)});await expect(f.transport.privateProfiles.update(wallet,input())).rejects.toThrow(PostgresDomainWriteOutcomeUnknown);
+  await expect(f.transport.privateProfiles.update(wallet,input())).rejects.toThrow(PrivateProfileError);expect(f.call).toHaveBeenCalledTimes(1);
+  const fresh=fixture();fresh.call.mockResolvedValue({status:'updated',profile:record(other)});await expect(fresh.transport.privateProfiles.update(wallet,input())).rejects.toThrow(PostgresDomainWriteOutcomeUnknown);expect(fresh.channel.closed).toBe(true);
  });
 });
