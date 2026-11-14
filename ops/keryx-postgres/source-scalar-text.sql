@@ -3,7 +3,7 @@
 SET ROLE keryx_owner;
 CREATE FUNCTION keryx_storage.source_scalar_text(wire text,mode text) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,pg_temp AS $$
-DECLARE raw bytea;size integer;pos integer;start_at integer;end_at integer;key_wire text;value_wire text;
+DECLARE raw bytea;scan bytea;scan_size integer;quote_at integer;slashes integer;interior text;size integer;pos integer;start_at integer;end_at integer;key_wire text;value_wire text;
  key_hex text;root_key_parts text[]:=ARRAY[]::text[];root_key_chunk text:='';root_key_count integer:=0;
  depth integer;code integer;unit integer;next_unit integer;source_unit integer;json_unit integer;escape_code integer;
  result jsonb:='{}'::jsonb;source_bytes bytea:=''::bytea;json_bytes bytea:=''::bytea;
@@ -24,7 +24,12 @@ BEGIN
    IF pos>=size OR get_byte(raw,pos)<>34 THEN RAISE EXCEPTION 'Source scalar key unavailable';END IF;
    start_at:=pos;pos:=pos+1;
    WHILE pos<size LOOP
-    code:=get_byte(raw,pos);IF code=92 THEN pos:=pos+2;ELSIF code=34 THEN EXIT;ELSE pos:=pos+1;END IF;
+    scan:=substring(raw FROM pos+1 FOR 4096);scan_size:=octet_length(scan);quote_at:=position(decode('22','hex') IN scan);
+    IF quote_at>0 THEN scan:=substring(scan FROM 1 FOR quote_at-1);END IF;
+    slashes:=CASE WHEN octet_length(scan)>0 AND get_byte(scan,octet_length(scan)-1)=92 THEN (octet_length(scan)*2-length(regexp_replace(encode(scan,'hex'),'(5c)+$','')))/2 ELSE 0 END;
+    IF quote_at>0 AND slashes%2=0 THEN pos:=pos+quote_at-1;EXIT;
+    ELSIF quote_at>0 THEN pos:=pos+quote_at;
+    ELSE pos:=pos+scan_size-slashes%2;IF scan_size=1 AND slashes%2=1 THEN pos:=pos+2;END IF;END IF;
    END LOOP;
    IF pos>=size THEN RAISE EXCEPTION 'Source scalar key unavailable';END IF;
    key_wire:=convert_from(substring(raw FROM start_at+1 FOR pos-start_at+1),'UTF8');pos:=pos+1;
@@ -36,7 +41,14 @@ BEGIN
     code:=get_byte(raw,pos);
     IF code=34 THEN
      pos:=pos+1;
-     WHILE pos<size LOOP code:=get_byte(raw,pos);IF code=92 THEN pos:=pos+2;ELSIF code=34 THEN EXIT;ELSE pos:=pos+1;END IF;END LOOP;
+     WHILE pos<size LOOP
+      scan:=substring(raw FROM pos+1 FOR 4096);scan_size:=octet_length(scan);quote_at:=position(decode('22','hex') IN scan);
+      IF quote_at>0 THEN scan:=substring(scan FROM 1 FOR quote_at-1);END IF;
+      slashes:=CASE WHEN octet_length(scan)>0 AND get_byte(scan,octet_length(scan)-1)=92 THEN (octet_length(scan)*2-length(regexp_replace(encode(scan,'hex'),'(5c)+$','')))/2 ELSE 0 END;
+      IF quote_at>0 AND slashes%2=0 THEN pos:=pos+quote_at-1;EXIT;
+      ELSIF quote_at>0 THEN pos:=pos+quote_at;
+      ELSE pos:=pos+scan_size-slashes%2;IF scan_size=1 AND slashes%2=1 THEN pos:=pos+2;END IF;END IF;
+     END LOOP;
      IF pos>=size THEN RAISE EXCEPTION 'Source scalar value unavailable';END IF;
     ELSIF code IN(123,91) THEN depth:=depth+1;
     ELSIF code IN(125,93) THEN IF depth=0 THEN EXIT;END IF;depth:=depth-1;
@@ -177,6 +189,16 @@ BEGIN
  END IF;
  IF json_typeof(wire::json) IS DISTINCT FROM 'string' OR size<2 OR get_byte(raw,0)<>34 OR get_byte(raw,size-1)<>34
  THEN RAISE EXCEPTION 'Source scalar string unavailable';END IF;
+ -- Literal and NUL-only strings use bounded C byte operations rather than
+ -- one PL/pgSQL iteration per character. The prior JSON syntax check forbids
+ -- raw NUL/control bytes; decode escape introduces only validated zero bytes.
+ interior:=convert_from(substring(raw FROM 2 FOR size-2),'UTF8');
+ IF position(decode('5c','hex') IN raw)=0 THEN
+  source_bytes:=convert_to(interior,'UTF8');RETURN jsonb_build_object('sourceHex',encode(source_bytes,'hex'),'jsonHex',encode(source_bytes,'hex'),'shadow',interior);
+ ELSIF position(decode('5c','hex') IN convert_to(replace(interior,$nul$\u0000$nul$,''),'UTF8'))=0 THEN
+  source_bytes:=decode(replace(interior,$nul$\u0000$nul$,$zero$\000$zero$),'escape');
+  RETURN jsonb_build_object('sourceHex',encode(source_bytes,'hex'),'jsonHex',encode(source_bytes,'hex'),'shadow',wire);
+ END IF;
  pos:=1;start_at:=pos;
  WHILE pos<size-1 LOOP
   code:=get_byte(raw,pos);
