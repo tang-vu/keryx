@@ -9701,3 +9701,19 @@ catalog function slots without changing metadata acceptance limits. The native
 readonly facade exposes current Source observations and rejects fabricated owner
 proofs. The complete application writer and production migration remain closed
 until their separate domain, import, startup, load and cutover requirements pass.
+
+## Recheck Source claim and upkeep plans under the native writer lock (2026-11-15)
+
+Compose the current five Source claim producers and two upkeep producers through
+one fixed native router. Interpret bounded snapshots with the Source schemas and
+registry, then recheck raw state and policy under the existing writer lock before
+committing. Preserve reservation rates, Source URL comparisons, cursor timing,
+replay results, stale-finish behavior and unknown-commit reporting without retries.
+
+Retain Source claim-history JSON as raw TEXT and extract bounded raw member
+tokens privately. PostgreSQL JSON getters can reject escaped NUL or unpaired
+UTF-16 in an unrelated member, so storing JSON instead of JSONB alone cannot
+establish compatibility. Preserve duplicate-member and Source scalar semantics;
+never sanitize retained originals or turn a parse failure into absent authority.
+Keep installed readonly mutation composition and the complete writer closed until
+their remaining application, intake and deployment gates are qualified.

@@ -1,4 +1,6 @@
 import type { PostgresSourceClaimsPort } from './postgres/source-claims-transport';
+import type { composePostgresSourceClaimWrites } from './postgres/source-claims-write-transport';
+import type { composePostgresSourceUpkeep } from './postgres/source-upkeep-transport';
 import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { matchesA2aOriginalBinding, validateA2aOriginalClaim, validateA2aClaimWorker, type A2aOriginalClaim } from "../a2a/original-claim";
 import { storagePaymentProfile } from "./storage-identity";
@@ -158,6 +160,8 @@ export interface NativePostgresBusinessCoreOptions {
   readonly assertEntry:()=>void;
   readonly verify:()=>Promise<void>;
   readonly sourceClaims?:PostgresSourceClaimsPort;
+  readonly sourceClaimWrites?:ReturnType<typeof composePostgresSourceClaimWrites>;
+  readonly sourceUpkeep?:ReturnType<typeof composePostgresSourceUpkeep>;
   readonly sourceUpsert?:(source:Source)=>Promise<void>;
 }
 const nativeConstructions = new WeakMap<object,Readonly<NativePostgresBusinessCoreOptions>>();
@@ -186,6 +190,13 @@ export function assembleNativePostgresBusinessCore(options:NativePostgresBusines
 }
 
 export class SupabaseAdapter implements KeryxDB {
+  declare readonly issueSourceClaimChallenge?:NonNullable<KeryxDB['issueSourceClaimChallenge']>;
+  declare readonly reserveSourceClaimVerification?:NonNullable<KeryxDB['reserveSourceClaimVerification']>;
+  declare readonly verifySourceClaim?:NonNullable<KeryxDB['verifySourceClaim']>;
+  declare readonly bindSourceClaim?:NonNullable<KeryxDB['bindSourceClaim']>;
+  declare readonly updateSourceClaimPolicy?:NonNullable<KeryxDB['updateSourceClaimPolicy']>;
+  declare readonly claimSourceUpkeep?:NonNullable<KeryxDB['claimSourceUpkeep']>;
+  declare readonly finishSourceUpkeep?:NonNullable<KeryxDB['finishSourceUpkeep']>;
   declare readonly getSourceClaim?:NonNullable<KeryxDB['getSourceClaim']>;
   declare readonly getSourceClaimForSource?:NonNullable<KeryxDB['getSourceClaimForSource']>;
   declare readonly getSourceClaimChallenge?:NonNullable<KeryxDB['getSourceClaimChallenge']>;
@@ -250,6 +261,18 @@ export class SupabaseAdapter implements KeryxDB {
         data.sourceContractDigest !== SUPABASE_RUNTIME_CONTRACT.afterDigest) refuseStorage("identity_unavailable");
       this.assertEntry();
     }, close: () => { this.#enrolled!.ready = false; } });
+    const guardedMutation=<A extends unknown[],R>(work:(...args:A)=>Promise<R>)=>async(...args:A)=>{this.assertEntry();const value=await work(...args);this.assertEntry();return value;};
+    if(native?.sourceClaimWrites){const writes=native.sourceClaimWrites;Object.defineProperties(this,{
+      issueSourceClaimChallenge:{value:guardedMutation(writes.issueSourceClaimChallenge.bind(writes)),configurable:true},
+      reserveSourceClaimVerification:{value:guardedMutation(writes.reserveSourceClaimVerification.bind(writes)),configurable:true},
+      verifySourceClaim:{value:guardedMutation(writes.verifySourceClaim.bind(writes)),configurable:true},
+      bindSourceClaim:{value:guardedMutation(writes.bindSourceClaim.bind(writes)),configurable:true},
+      updateSourceClaimPolicy:{value:guardedMutation(writes.updateSourceClaimPolicy.bind(writes)),configurable:true},
+    });}
+    if(native?.sourceUpkeep){const upkeep=native.sourceUpkeep;Object.defineProperties(this,{
+      claimSourceUpkeep:{value:guardedMutation(upkeep.claimSourceUpkeep.bind(upkeep)),configurable:true},
+      finishSourceUpkeep:{value:guardedMutation(upkeep.finishSourceUpkeep.bind(upkeep)),configurable:true},
+    });}
     if(native?.sourceClaims){
       const claims=native.sourceClaims;
       const read=async<T>(work:()=>Promise<T>)=>{this.assertEntry();const value=await work();this.assertEntry();return value;};

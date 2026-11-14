@@ -21,6 +21,8 @@ import { OWNER_ASSIGNMENT_CALLS } from './owner-assignments-calls';
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
+  sourceProducerSnapshot:{sql:"SELECT public.storage_source_producer($1::jsonb,$2::text,'snapshot',$3::text) AS result",args:1,write:false,transaction:true,bytes:16777216,inputBytes:131072},
+  sourceProducerWrite:{sql:"SELECT public.storage_source_producer($1::jsonb,$2::text,'write',$3::text) AS result",args:1,write:true,bytes:32768,inputBytes:1064960},
   hostedSourcePolicySnapshot:{sql:"SELECT public.storage_hosted_admit_authorization($1::jsonb,$2::text,'source-policy-snapshot',NULL,$3::text,NULL,NULL,NULL) AS result",args:1,write:false,transaction:true,bytes:16777216,inputBytes:8192},
   sourceClaimsRead:{sql:"SELECT public.storage_hosted_admit_authorization($1::jsonb,$2::text,'source-claims-read',NULL,$3::text,NULL,NULL,NULL) AS result",args:1,write:false,transaction:true,bytes:16777216,inputBytes:8192},
   pendingOwnerAdmission:{sql:"SELECT public.storage_pending_owner_observe($1::jsonb,$2::text,'admission',$3::text,NULL,NULL) AS result",args:1,write:false,transaction:true,bytes:128},

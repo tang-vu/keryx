@@ -1319,3 +1319,24 @@ same pinned full SOURCE/catalog. `--native-runtime` still runs both sequentially
 The partitions preserve the existing assertions, statement/lock timeouts, memory
 limits and role restrictions. Splitting CI does not qualify the full application
 writer or authorize production cutover.
+
+## Current Source claim and upkeep producers
+
+The prepared native runtime composes five Source claim mutations (issue, reserve
+verification, verify, bind and policy update) and two upkeep mutations (claim and
+finish). A bounded readonly snapshot is interpreted with the current Source
+schemas and registry rules. The single fixed write router rechecks the captured
+state under the existing writer lock before applying a plan. Failed checks roll
+back; a lost acknowledgement reports an unknown outcome without an automatic
+write retry. Upkeep reserves its cursor before external work, and a stale finish
+does not alter a newer claim.
+
+Claim-history fields remain raw JSON TEXT. PostgreSQL JSON field access may
+decode escaped NUL or unpaired UTF-16 even when selecting another member, so the
+private bounded token lexer preserves raw member tokens and Source last-member
+semantics before validating the small claim-history schema. This helper does
+not enable publication capture or grant application roles arbitrary execution.
+
+The readonly installed factory does not receive these mutation ports. Actual
+Source/native protocol qualification and full SOURCE/catalog pins are required;
+the complete application writer, production intake and cutover remain gated.

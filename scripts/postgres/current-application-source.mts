@@ -22,6 +22,7 @@ export function nativeCurrentApplicationSource(){
   for(const index of indexes){const row=source.prepare("SELECT sql FROM sqlite_schema WHERE type='index' AND name=?").get(index[1]);
    if(!row||typeof row.sql!=='string'||createHash('sha256').update(row.sql).digest('hex')!==index[2])throw new Error('Current index SOURCE changed; review native declaration');}
  }finally{source.close();}
- const sql=domain.sql+'\n'+additions.join('\n');
+ const scalar=readFileSync(new URL('../../ops/keryx-postgres/source-scalar-text.sql',import.meta.url),'utf8').replaceAll('\r\n','\n');if(Buffer.byteLength(scalar)>32768)throw Error('Source scalar helper part bound');
+ const sql=domain.sql+'\n'+additions.join('\n')+'\n'+scalar;
  return Object.freeze({sql,sha256:createHash('sha256').update(sql).digest('hex'),limitations:'Current table structure only. Ephemeral SQLite writer IDs map to empty native transaction context; materialization, domain coverage and production cutover are unqualified.'});
 }

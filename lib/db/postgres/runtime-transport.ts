@@ -21,13 +21,15 @@ import { composePostgresA2aOriginals,type PostgresA2aOriginalsPort } from './a2a
 import { composePostgresHostedAdmission,type PostgresHostedAdmissionPort } from './hosted-admission-transport';
 import { composePostgresResearchPurchases,type PostgresResearchPurchasesPort } from './research-purchases-transport';
 import { composePostgresSourceClaims,type PostgresSourceClaimsPort } from './source-claims-transport';
+import { composePostgresSourceClaimWrites } from './source-claims-write-transport';
+import { composePostgresSourceUpkeep } from './source-upkeep-transport';
 import { composePostgresSourceUpsert } from './source-upsert-policy';
 import { composePostgresPendingJobOwners } from './pending-owner-transport';
 import type { PendingJobOwnersStore } from '../pending-job-owners-sqlite';
 import type { AsyncOwnerRunAssignmentsPort } from '../../owner-run-assignments/contracts';
 const cacheRow=z.object({sourceId:z.string().min(1).max(256),text:z.string().max(2097152)}).strict();
 export interface NativeColdCacheSnapshot {readonly cacheRows:readonly Readonly<{sourceId:string;text:string}>[];readonly cacheRowCount:number;readonly cacheWireBytes:number;}
-export interface PostgresRuntimeTransport extends PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport,PostgresA2aOriginalsPort,PostgresHostedAdmissionPort,PostgresResearchPurchasesPort {readonly sourceClaims:PostgresSourceClaimsPort;readonly sourceUpsert:ReturnType<typeof composePostgresSourceUpsert>;readonly pendingJobOwners:PendingJobOwnersStore;readonly deliverableAcceptance:DeliverableAcceptanceStore;readonly accountMembership:AccountMembershipStore;readonly chatAccountLinks:ChatAccountLinksStore;readonly publicProfiles:PublicProfilesStore;readonly ownerRunAssignments:AsyncOwnerRunAssignmentsPort;verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
+export interface PostgresRuntimeTransport extends PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport,PostgresA2aOriginalsPort,PostgresHostedAdmissionPort,PostgresResearchPurchasesPort {readonly sourceClaimWrites:ReturnType<typeof composePostgresSourceClaimWrites>;readonly sourceUpkeep:ReturnType<typeof composePostgresSourceUpkeep>;readonly sourceClaims:PostgresSourceClaimsPort;readonly sourceUpsert:ReturnType<typeof composePostgresSourceUpsert>;readonly pendingJobOwners:PendingJobOwnersStore;readonly deliverableAcceptance:DeliverableAcceptanceStore;readonly accountMembership:AccountMembershipStore;readonly chatAccountLinks:ChatAccountLinksStore;readonly publicProfiles:PublicProfilesStore;readonly ownerRunAssignments:AsyncOwnerRunAssignmentsPort;verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
 /** Actual fixed reads on one native pool. This transport cannot enroll a facade. */
 export function createPostgresRuntimeTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,claimsEnabled=false,privacyActive=false):PostgresRuntimeTransport {
  const expected=validateStorageIdentity(identity);return composePostgresRuntimeTransport(createPostgresDomainChannel(options,expected,digest),expected,digest,options.role!=='keryx_app',claimsEnabled,privacyActive);
@@ -43,6 +45,8 @@ export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,id
   ...composePostgresHostedAdmission(channel,expected,readOnly),
   ...composePostgresResearchPurchases(channel,readOnly),
   sourceClaims:composePostgresSourceClaims(channel),
+  sourceClaimWrites:composePostgresSourceClaimWrites(channel,readOnly),
+  sourceUpkeep:composePostgresSourceUpkeep(channel,readOnly),
   sourceUpsert:composePostgresSourceUpsert(channel,readOnly),
   pendingJobOwners:composePostgresPendingJobOwners(channel,expected,readOnly),
   ...composePostgresHealth(channel),
