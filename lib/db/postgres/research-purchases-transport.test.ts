@@ -28,6 +28,6 @@ it('uses the actual retained redemption hash for a historical package replay',as
 });
 it('marks a changed policy runtime after commit as unknown without retry',async()=>{
  const c=channel(),port=composePostgresResearchPurchases(c.port,false),f=fixture(),origin=config.baseUrl;
- c.call.mockImplementation(async(op,args)=>{if(op==='hostedSourcePolicySnapshot')return snapshot(args[0]);config.baseUrl='https://changed.example';return true;});
- try{await expect(port.claimResearchPurchase(f.claim)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(v=>v[0]==='researchPurchaseClaim')).toHaveLength(1);}finally{config.baseUrl=origin;}
+ c.call.mockImplementation(async(op,args)=>{if(op==='hostedSourcePolicySnapshot')return snapshot(args[0]);Object.assign(config,{baseUrl:'https://changed.example'});return true;});
+ try{await expect(port.claimResearchPurchase(f.claim)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(v=>v[0]==='researchPurchaseClaim')).toHaveLength(1);}finally{Object.assign(config,{baseUrl:origin});}
 });
