@@ -12,7 +12,7 @@ const queryScalarColumns=new Set(['question','answer','engine','parent_id','aske
 export function nativeMaterializationQueryCell(cell:SnapshotValue,type:NativeMaterializationType,column:string):string|null{
  if(type!=='text'||!queryScalarColumns.has(column)||cell[0]==='null')return nativeMaterializationCell(cell,type);
  if(cell[0]!=='text'||cell[1].length>8388608||cell[1].length%2||/[^a-f0-9]/.test(cell[1]))return refuse();
- let value:string;try{value=new TextDecoder('utf8',{fatal:true}).decode(Buffer.from(cell[1],'hex'));}catch{return refuse();}
+ let value:string;try{value=new TextDecoder('utf8',{fatal:true,ignoreBOM:true}).decode(Buffer.from(cell[1],'hex'));}catch{return refuse();}
  const scalar=publicationScalarText(value);return scalar.postgres.kind==='text'?scalar.postgres.value:scalar.sourceJsonWire;
 }
 export function nativeMaterializationType(raw:unknown):NativeMaterializationType{
@@ -20,7 +20,7 @@ export function nativeMaterializationType(raw:unknown):NativeMaterializationType
 }
 function text(cell:SnapshotValue):string{
  if(cell[0]!=='text'||cell[1].length>8388608||cell[1].length%2||/[^a-f0-9]/.test(cell[1]))return refuse();
- let value:string;try{value=new TextDecoder('utf8',{fatal:true}).decode(Buffer.from(cell[1],'hex'));}catch{return refuse();}
+ let value:string;try{value=new TextDecoder('utf8',{fatal:true,ignoreBOM:true}).decode(Buffer.from(cell[1],'hex'));}catch{return refuse();}
  if(value.includes('\0'))return refuse();return value;
 }
 function number(cell:SnapshotValue):string{
