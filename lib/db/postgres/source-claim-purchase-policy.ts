@@ -70,6 +70,9 @@ function currentClaim(snapshot:Snapshot,sourceId:string):SourceClaim|null{
  if(claim.linkedSourceId!==sourceId)throw Error('Orphaned source claim binding');
  return claim;
 }
+/** Metadata refresh uses the same retained identity/history reader without
+ * adding the separate paid-mode or fresh-proof admission requirements. */
+export function sourceClaimForSourceSnapshot(snapshot:Snapshot,sourceId:string):SourceClaim|null{return currentClaim(snapshot,sourceId);}
 export function assertSourceClaimPaymentPolicy(snapshot:Snapshot,input:{sourceId:string;expected?:SourceClaimReceipt|null;kind:'fetch'|'citation';network:string;now?:number},runtime:SourceClaimPolicyRuntime):SourceClaim|null{
  const claim=currentClaim(snapshot,input.sourceId),source=snapshot.source;
  if(!claim){if(input.expected||source?.source_claim_id)throw Error('Managed source claim binding is unavailable');return null;}

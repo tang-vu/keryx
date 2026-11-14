@@ -1,14 +1,20 @@
 /** Current SQLite/native ordinary-content differential; synthetic protocol only. */
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { randomBytes } from 'node:crypto';
+import { randomBytes,createHash } from 'node:crypto';
 import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
 import { installNativeUserDomainSchema } from '../../lib/db/native-user-domain-schema';
 import { SqliteAdapter } from '../../lib/db/sqlite-adapter';
 import { assembleNativePostgresBusinessCore } from '../../lib/db/supabase-adapter';
 import { createPostgresApplicationDomainAuthority } from '../../lib/db/postgres/application-domain-authority';
 import { createPostgresApplicationDomainTransport,type PostgresApplicationDomainTransport } from '../../lib/db/postgres/application-domain-transport';
-import { PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-channel';
+import { createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-channel';
+import { composePostgresSourceUpsert,captureSourceUpsertInput,captureSourceUpsertPolicy } from '../../lib/db/postgres/source-upsert-policy';
+import { sourceClaimPolicyRuntime } from '../../lib/db/postgres/source-claim-purchase-policy';
+import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy } from '../../lib/db/public-source-claims';
+import { config } from '../../lib/config';
+import { canonicalJson } from '../../lib/canonical-json';
+import { sourceRegistryAuthoritySchema } from '../../lib/registry/source-registry-authority-schema';
 import { openEnrolledCacheText,sealEnrolledCacheText } from '../../lib/sources/enrolled-content-cache';
 import type { Source,SourceItem } from '../../lib/types';
 import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection';
@@ -16,9 +22,12 @@ import type { StorageIdentity } from '../../lib/db/storage-identity';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
 export async function qualifyContentWrites(input:{transport:PostgresApplicationDomainTransport;options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  const db=new DatabaseSync(':memory:'),stamp='2026-01-02T03:04:05.006Z',wallet='0x'+'ac'.repeat(20),id='synthetic-native-content',originalKey=process.env.CONTENT_MASTER_KEY;let vectors=0,ownedFixtureRows=false;
- const native=assembleNativePostgresBusinessCore({identity:input.identity,authority:createPostgresApplicationDomainAuthority(input.transport),assertEntry:()=>{},verify:async()=>{await input.transport.applicationRead('get_sync_state',{p_key:'synthetic-content-authority'});}});
- const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",pg=(s:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+s+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
+ const sourceChannel=createPostgresDomainChannel(input.options,input.identity,input.digest),sourceUpsert=composePostgresSourceUpsert(sourceChannel,false);
+ const native=assembleNativePostgresBusinessCore({identity:input.identity,authority:createPostgresApplicationDomainAuthority(input.transport),assertEntry:()=>{},sourceUpsert:sourceUpsert.upsertSource,verify:async()=>{await input.transport.applicationRead('get_sync_state',{p_key:'synthetic-content-authority'});}});
+ const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",pg=(s:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+s+"UPDATE keryx_storage.control SET mode='active';COMMIT;"),hash=(value:string)=>createHash('sha256').update(value).digest('hex');
  const normalized=(v:unknown)=>JSON.parse(JSON.stringify(v)),equal=(a:unknown,b:unknown)=>assert.deepEqual(normalized(a),normalized(b));
+ const managedFixtures:{id:string;owner:string;keys:string[];claimId?:string;onchainId:string}[]=[];
+ const previousSourceConfig={baseUrl:config.baseUrl,networkId:config.networkId,registryReadAddress:config.registryReadAddress,registryOrigins:config.registryOrigins},previousOrigins={server:process.env.KERYX_REGISTRY_ORIGINS,public:process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS};
  try{
   process.env.CONTENT_MASTER_KEY=randomBytes(32).toString('hex');
   db.exec('BEGIN');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);db.exec('COMMIT');
@@ -62,6 +71,50 @@ export async function qualifyContentWrites(input:{transport:PostgresApplicationD
   const ng2=await n.createGapIntent({...gap,gapId:gap.gapId+'-expire'}),sg2=await sqlite.createGapIntent({...gap,gapId:gap.gapId+'-expire'});
   const claims=await Promise.all([n.claimGapIntent(now,lease),n.claimGapIntent(now,lease)]);assert.equal(claims.filter(Boolean).length,1);assert.equal(claims.find(Boolean)?.id,ng2.id);assert.equal((await sqlite.claimGapIntent(now,lease))?.id,sg2.id);vectors++;
   for(const [store,g] of [[n,ng2],[sqlite,sg2]] as const)await store.expireGapIntent(g.id,'Synthetic expiry');equal(stableGap((await n.listGapIntents()).find(g=>g.id===ng2.id)!),stableGap((await sqlite.listGapIntents()).find(g=>g.id===sg2.id)!));assert.equal(await n.claimGapIntent(now+lease+1,lease),null);vectors++;
+  const beforeSourceUpsert=vectors;
+  const rawParity=(sourceId:string)=>{
+   const s=db.prepare('SELECT * FROM sources WHERE id=?').get(sourceId)!,p=JSON.parse(input.ownerSql(`SELECT to_jsonb(s)::text FROM public.sources s WHERE id=${q(sourceId)};`));
+   for(const field of ['id','name','url','description','rss_url','wallet_address','fetch_price','tags','authors','created_at','ipfs_cid','active','onchain_id','register_tx','verified','preview_depth','evidence_provenance'])assert.deepEqual(p[field],field==='tags'||field==='authors'?JSON.parse(String(s[field])):field==='active'||field==='verified'?Boolean(s[field]):s[field]);
+  };
+  const managed=async(mode?:'paid'|'citation-only'|'free',stale=false)=>{
+   const owner='0x'+randomBytes(20).toString('hex'),sourceId='synthetic-managed-upsert-'+randomBytes(12).toString('hex'),onchainId='0x'+randomBytes(32).toString('hex'),s:Source={...source,id:sourceId,name:'Synthetic managed source',url:'https://publisher.invalid/'+sourceId,rssUrl:'https://publisher.invalid/'+sourceId+'/rss',walletAddress:owner,onchainId,authors:[{name:'Synthetic owner',walletAddress:owner,splitWeight:1}],evidenceProvenance:undefined};
+   const fixture={id:sourceId,owner,keys:[] as string[],claimId:undefined as string|undefined,onchainId};managedFixtures.push(fixture);
+   for(const store of [n,sqlite])await store.upsertSource(s);
+   if(mode){const created=Date.now()-(stale?25*3600000:3000),challenge=issueSqliteSourceClaimChallenge(db,{wallet:owner,canonicalUrl:s.url,rssUrl:s.rssUrl,deploymentOrigin:'https://keryx.cc',network:input.identity.network,now:created}),verified=verifySqliteSourceClaim(db,{challengeId:challenge.id,wallet:owner,proofDigest:'de'.repeat(32),now:created+1}),linked=bindSqliteSourceClaim(db,{claimId:verified.id,wallet:owner,expectedRevision:1,sourceId,onchainId,registryAddress:config.registryReadAddress.toLowerCase(),now:created+2});updateSqliteSourceClaimPolicy(db,{claimId:linked.id,wallet:owner,expectedRevision:2,mode,distributionPermission:mode!=='free',now:created+3});fixture.claimId=linked.id;s.sourceClaimId=linked.id;
+    fixture.keys=['rate:'+owner,'challenge:'+challenge.id,'claim:'+linked.id,'source:'+hash(sourceId),'marker:'+hash(sourceId),...[1,2,3].map(revision=>'history:'+linked.id+':'+String(revision).padStart(16,'0'))].map(key=>'keryx:source-claims:v1:'+key);
+    for(const key of fixture.keys){const value=String(db.prepare('SELECT value FROM sync_state WHERE key=?').get(key)!.value);pg(`INSERT INTO public.sync_state(key,value,updated_at) VALUES(${q(key)},${q(value)},${q(stamp)});`);}
+   }
+   return {fixture,source:s};
+  };
+  const compareUpsert=async(f:Awaited<ReturnType<typeof managed>>,s:Source,allowed:boolean)=>{
+   const before=db.prepare('SELECT key,value FROM sync_state WHERE key LIKE ? ORDER BY key').all('keryx:source-claims:v1:%');
+   if(allowed){for(const store of [n,sqlite])await store.upsertSource(s);rawParity(f.source.id);}
+   else{for(const store of [n,sqlite])await assert.rejects(store.upsertSource(s));rawParity(f.source.id);}
+   assert.deepEqual(db.prepare('SELECT key,value FROM sync_state WHERE key LIKE ? ORDER BY key').all('keryx:source-claims:v1:%'),before);vectors++;
+  };
+  Object.assign(config,{baseUrl:'https://keryx.cc',registryOrigins:'',registryReadAddress:'0x'+'88'.repeat(20)});
+  // Real Source producer APIs create isolated ownership/history fixtures. These
+  // local records never authenticate a registry event or a provider settlement.
+  for(const mode of ['paid','citation-only','free'] as const){const f=await managed(mode);await compareUpsert(f,{...f.source,name:'Refreshed '+mode,walletAddress:wallet,fetchPrice:0.000003,active:false,verified:false},true);}
+  const stale=await managed('paid',true);await compareUpsert(stale,{...stale.source,name:'Historical proof metadata refresh'},true);
+  for(const fault of ['claim-id','onchain','missing-onchain','url','rss','binding','marker','current','history'] as const){const f=await managed('paid'),s={...f.source};
+   if(fault==='claim-id')s.sourceClaimId='ff'.repeat(32);if(fault==='onchain')s.onchainId='0x'+randomBytes(32).toString('hex');if(fault==='missing-onchain')s.onchainId=undefined;if(fault==='url')s.url='https://other.invalid/';if(fault==='rss')s.rssUrl=undefined;
+   const key=fault==='binding'?'keryx:source-claims:v1:source:'+hash(s.id):fault==='marker'?'keryx:source-claims:v1:marker:'+hash(s.id):fault==='current'?'keryx:source-claims:v1:claim:'+f.fixture.claimId:fault==='history'?'keryx:source-claims:v1:history:'+f.fixture.claimId+':0000000000000003':null;
+   if(key){if(fault==='marker'){db.prepare('UPDATE sync_state SET value=? WHERE key=?').run('{}',key);pg(`UPDATE public.sync_state SET value='{}' WHERE key=${q(key)};`);}else{db.prepare('DELETE FROM sync_state WHERE key=?').run(key);pg(`DELETE FROM public.sync_state WHERE key=${q(key)};`);}}
+   await compareUpsert(f,s,false);
+  }
+  for(const text of ['\0','\ud800','\udc00']){const f=await managed('free'),key='keryx:source-claims:v1:history:'+f.fixture.claimId+':0000000000000003',history=JSON.parse(String(db.prepare('SELECT value FROM sync_state WHERE key=?').get(key)!.value));history.evidence={retained:text};const wire=JSON.stringify(history);db.prepare('UPDATE sync_state SET value=? WHERE key=?').run(wire,key);pg(`UPDATE public.sync_state SET value=${q(wire)} WHERE key=${q(key)};`);await compareUpsert(f,{...f.source,name:'Raw history retained'},true);assert.equal(input.ownerSql(`SELECT value FROM public.sync_state WHERE key=${q(key)};`),wire);}
+  const bound=await managed(),authority=sourceRegistryAuthoritySchema.parse({network:input.identity.network,address:config.registryReadAddress.toLowerCase(),version:3,codeHash:'0x'+randomBytes(32).toString('hex'),deployBlock:'123'}),origins=canonicalJson([authority]);Object.assign(config,{networkId:input.identity.network,registryOrigins:origins});process.env.KERYX_REGISTRY_ORIGINS=origins;process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS=origins;
+  const boundInput={...bound.source,registryAuthority:authority};await compareUpsert(bound,boundInput,true);const originKey='keryx:source-registry-origin:v1:'+bound.source.onchainId!.toLowerCase();assert.equal(input.ownerSql(`SELECT value FROM public.sync_state WHERE key=${q(originKey)};`),String(db.prepare('SELECT value FROM sync_state WHERE key=?').get(originKey)!.value));
+  await compareUpsert(bound,{...boundInput,name:'Same retained origin'},true);await compareUpsert(bound,{...boundInput,onchainId:'0x'+randomBytes(32).toString('hex')},false);await compareUpsert(bound,{...boundInput,registryAuthority:sourceRegistryAuthoritySchema.parse({...authority,codeHash:'0x'+randomBytes(32).toString('hex')})},false);
+  for(const s of [{...bound.source,id:'public:reserved-upsert'},{...bound.source,scholarlyEnrolled:true}])await compareUpsert(bound,s,false);
+  const captured=captureSourceUpsertInput({...boundInput,name:'Stale original refused'}),snapshot=await sourceChannel.call('content_source_upsert_snapshot',[captured.selector]),sourceUpsertCapture=captureSourceUpsertPolicy(snapshot,captured,sourceClaimPolicyRuntime()),beforeChange=input.ownerSql(`SELECT name FROM public.sources WHERE id=${q(bound.source.id)};`),changedOrigin=canonicalJson({format:'keryx-source-registry-origin-v1',onchainId:bound.source.onchainId,authority:{...authority,deployBlock:'124'}});
+  pg(`UPDATE public.sync_state SET value=${q(changedOrigin)} WHERE key=${q(originKey)};`);await assert.rejects(sourceChannel.call('content_upsert_source',[canonicalJson({p_row:{rowWire:captured.rowWire,sourceUpsertCapture}})]));assert.equal(input.ownerSql(`SELECT name FROM public.sources WHERE id=${q(bound.source.id)};`),beforeChange);pg(`UPDATE public.sync_state SET value=${q(String(db.prepare('SELECT value FROM sync_state WHERE key=?').get(originKey)!.value))} WHERE key=${q(originKey)};`);vectors++;
+  const concurrent={...boundInput,name:'Concurrent same identity'},results=await Promise.allSettled([n.upsertSource(concurrent),n.upsertSource(concurrent)]);assert(results.every(result=>result.status==='fulfilled'));await sqlite.upsertSource(concurrent);rawParity(bound.source.id);vectors++;
+  assert(input.options.endpoint.kind==='loopback');const upsertProxy=await startCommitAckLossProxy(input.options.endpoint.port),lostChannel=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:upsertProxy.port}},input.identity,input.digest),lostInput={...boundInput,name:'Captured source write lost acknowledgement'};
+  try{const hooked={get closed(){return lostChannel.closed;},close:()=>lostChannel.close(),async call(operation:Parameters<typeof lostChannel.call>[0],args:Parameters<typeof lostChannel.call>[1]){if(operation==='content_upsert_source')upsertProxy.arm();return lostChannel.call(operation,args);}};await assert.rejects(composePostgresSourceUpsert(hooked,false).upsertSource(lostInput),PostgresDomainWriteOutcomeUnknown);assert(upsertProxy.observation().dropped);assert.equal(input.ownerSql(`SELECT name FROM public.sources WHERE id=${q(bound.source.id)};`),lostInput.name);await sqlite.upsertSource(lostInput);rawParity(bound.source.id);vectors++;}finally{await lostChannel.close();await upsertProxy.close();}
+  const sourceReader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(composePostgresSourceUpsert(sourceReader,true).upsertSource(boundInput));await assert.rejects(sourceReader.call('content_upsert_source',[canonicalJson({p_row:{rowWire:captured.rowWire,sourceUpsertCapture}})]));vectors++;}finally{await sourceReader.close();}
+  const sourceUpsertVectors=vectors-beforeSourceUpsert;Object.assign(config,previousSourceConfig);for(const [key,value] of [['KERYX_REGISTRY_ORIGINS',previousOrigins.server],['NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS',previousOrigins.public]] as const){if(value===undefined)delete process.env[key];else process.env[key]=value;}
   assert.equal(input.options.endpoint.kind,'loopback');const proxy=await startCommitAckLossProxy(input.options.endpoint.port),broken=createPostgresApplicationDomainTransport({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);
   try{proxy.arm();await assert.rejects(broken.applicationWrite('set_sync_state',{p_row:{key:'synthetic-content-ack',value:'committed',updated_at:stamp}}),PostgresDomainWriteOutcomeUnknown);assert.deepEqual(proxy.observation(),{dropped:true,commands:1});assert.equal(await n.getSyncState('synthetic-content-ack'),'committed');vectors++;}finally{await broken.close();await proxy.close();}
   const reader=createPostgresApplicationDomainTransport({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(reader.applicationWrite('set_source_preview_depth',{p_id:id,p_row:{preview_depth:'full'}}));vectors++;}finally{await reader.close();}
@@ -71,9 +124,9 @@ export async function qualifyContentWrites(input:{transport:PostgresApplicationD
   pg(`DELETE FROM public.cache_items WHERE source_id LIKE 'synthetic-limit-%';INSERT INTO public.cache_items(source_id,text,updated_at) SELECT 'synthetic-byte-limit-'||g,'enc:v3:'||repeat('x',2097145),${q(stamp)} FROM generate_series(1,4) g;`);
   await assert.rejects(n.setCached('synthetic-over-byte-limit','body'));assert.equal(input.ownerSql('SELECT sum(octet_length(text)) FROM public.cache_items;'),'8388608');vectors++;
   pg("DELETE FROM public.cache_items WHERE source_id LIKE 'synthetic-byte-limit-%';");const sealed=sealEnrolledCacheText('after failure',id,input.identity);await input.transport.applicationWrite('set_cached',{p_row:{source_id:id,text:sealed,updated_at:stamp}});assert.equal(await n.getCached(id),'after failure');assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');vectors++;
-  return {vectors,ordinarySourceAndItemParity:true,historicalOrphanItemPreservedWithoutSourceOrPayout:true,stickyEvidenceAndOnchainMetadata:true,exactTextTimestamps:true,authenticatedIdentityBoundCache:true,finiteCacheRowsAndBytes:true,leasedGapTransitions:true,knownDuplicateMemoryRefused:true,actualLostCommitAck:true,noAutomaticRetry:true,readonlyRoleRefused:true,productionData:false,paidOperations:0,fullWriterQualified:false};
+  return {vectors,sourceUpsertVectors,managedSourceIdentityAndHistoryPreserved:true,freeAndStaleMetadataRefresh:true,immutableSourceRegistryBinding:true,sourceGuardComparedAfterWriterLock:true,scholarlyImportRefused:true,ordinarySourceAndItemParity:true,historicalOrphanItemPreservedWithoutSourceOrPayout:true,stickyEvidenceAndOnchainMetadata:true,exactTextTimestamps:true,authenticatedIdentityBoundCache:true,finiteCacheRowsAndBytes:true,leasedGapTransitions:true,knownDuplicateMemoryRefused:true,actualLostCommitAck:true,noAutomaticRetry:true,readonlyRoleRefused:true,productionData:false,paidOperations:0,fullWriterQualified:false};
  }finally{
   try{if(ownedFixtureRows)pg(`DELETE FROM public.gap_intents WHERE source_id=${q(id)};DELETE FROM public.query_memories WHERE id='synthetic-content-memory';DELETE FROM public.source_items WHERE source_id IN(${q(id)},${q(id+'-missing-parent')});DELETE FROM public.source_meta WHERE id=${q(id)};DELETE FROM public.source_notify WHERE source_id=${q(id)};DELETE FROM public.source_notify_email WHERE source_id=${q(id)};DELETE FROM public.sources WHERE id=${q(id)};DELETE FROM public.cache_items WHERE source_id=${q(id)} OR source_id LIKE 'synthetic-limit-%' OR source_id LIKE 'synthetic-byte-limit-%';DELETE FROM public.sync_state WHERE key IN('synthetic-content-wire','synthetic-content-ack');`);}
-  finally{if(originalKey===undefined)delete process.env.CONTENT_MASTER_KEY;else process.env.CONTENT_MASTER_KEY=originalKey;native.hooks.close();db.close();}
+  finally{for(const fixture of managedFixtures){const keys=[...fixture.keys,'keryx:source-registry-origin:v1:'+fixture.onchainId.toLowerCase()];pg(`DELETE FROM public.sources WHERE id=${q(fixture.id)};DELETE FROM public.sync_state WHERE key IN(${keys.map(q).join(',')});`);}Object.assign(config,previousSourceConfig);for(const [key,value] of [['KERYX_REGISTRY_ORIGINS',previousOrigins.server],['NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS',previousOrigins.public]] as const){if(value===undefined)delete process.env[key];else process.env[key]=value;}if(originalKey===undefined)delete process.env.CONTENT_MASTER_KEY;else process.env.CONTENT_MASTER_KEY=originalKey;await sourceChannel.close();native.hooks.close();db.close();}
  }
 }
