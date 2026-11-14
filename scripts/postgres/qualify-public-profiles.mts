@@ -24,6 +24,7 @@ import { createPostgresRuntimeTransport } from '../../lib/db/postgres/runtime-tr
 import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection';
 import { capturePostgresPublication } from '../../lib/db/postgres/publication-packet';
 import { heldHistoryProjectionSql,sqliteOriginalHistoryProjection } from './run-history-projection.mts';
+import { heldQueryRunFixture } from './held-query-run-fixture.mts';
 import { heldOwnershipHistoryProjectionSql,sqliteOwnershipHistoryProjection } from './ownership-history-projection.mts';
 import { heldPrivacyProjectionSql,sqlitePrivacyProjection } from './privacy-projection.mts';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
@@ -46,10 +47,10 @@ export async function qualifyPublicProfiles(input:{options:PostgresConnectionOpt
  const save=(run:QueryRun,visibility='public')=>owner(db=>{
   if(db.prepare('SELECT 1 FROM query_runs WHERE id=?').get(run.id))db.prepare('UPDATE query_runs SET data=?,question=? WHERE id=?').run(JSON.stringify(run),run.question,run.id);else writeSqliteQueryRun(db,run,false);
   db.prepare('UPDATE run_privacy SET visibility=? WHERE run_id=?').run(visibility,run.id);
-  const row=db.prepare('SELECT data,asker FROM query_runs WHERE id=?').get(run.id)!,packet=JSON.parse(capturePostgresPublication(run).wire);
-  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker,engine,total_spent,total_to_creators,answer) VALUES(${q(run.id)},${q(date)},${q(run.question)},1,${q(String(row.data))}::json,${row.asker===null?'NULL':q(String(row.asker))},'heuristic',0,0,'Private answer') ON CONFLICT(id) DO UPDATE SET data=excluded.data,question=excluded.question,asker=excluded.asker;
+  const fixture=heldQueryRunFixture(db,run.id,'replace'),packet=JSON.parse(capturePostgresPublication(run).wire);
+  pg(fixture.physicalSql+`
    DELETE FROM keryx_storage.run_history_projection WHERE run_id=${q(run.id)};DELETE FROM keryx_storage.run_ownership_projection WHERE run_id=${q(run.id)};DELETE FROM keryx_storage.run_privacy_projection WHERE run_id=${q(run.id)};DELETE FROM keryx_storage.usage_projection WHERE run_id=${q(run.id)};DELETE FROM keryx_storage.public_ledger_projection WHERE run_id=${q(run.id)};`+
-   heldHistoryProjectionSql(run.id,sqliteOriginalHistoryProjection(db,run.id))+heldOwnershipHistoryProjectionSql(run.id,sqliteOwnershipHistoryProjection(db,run.id))+heldPrivacyProjectionSql(run.id,sqlitePrivacyProjection(db,run.id))+
+   heldHistoryProjectionSql(run.id,sqliteOriginalHistoryProjection(db,run.id))+heldOwnershipHistoryProjectionSql(run.id,sqliteOwnershipHistoryProjection(db,run.id))+heldPrivacyProjectionSql(run.id,sqlitePrivacyProjection(db,run.id))+fixture.scalarSql+
    `INSERT INTO public.run_privacy(run_id,visibility,updated_at) VALUES(${q(run.id)},${q(visibility)},${q(date)}) ON CONFLICT(run_id) DO UPDATE SET visibility=excluded.visibility;`);
   assert.equal(packet.privacy.publicProfile.profileFields,sqlitePrivacyProjection(db,run.id).publicProfile.profileFields);
  });
