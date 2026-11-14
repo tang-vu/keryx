@@ -22,7 +22,7 @@ INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VA
  ('payment_event_terminal',ARRAY['payment_events','payment_event_originals','hosted_treasury_authorizations','browser_authorization_intents','browser_journal_bindings','browser_journal_control','browser_journal_writer','browser_retained_grants','browser_signer_capacity','session_grants'],true,false);
 CREATE FUNCTION public.storage_payment_events(expected jsonb,digest text,action text,packet_wire text) RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE packet jsonb;selected jsonb;snapshot jsonb;captured jsonb;payload jsonb;projection jsonb;before_json json;after_json json;original_json json;private_job json;
+DECLARE packet jsonb;selected jsonb;snapshot jsonb;captured jsonb;payload jsonb;projection jsonb;before_json json;after_json json;original_json json;private_job json;before_tokens jsonb;after_tokens jsonb;original_tokens jsonb;context_tokens jsonb;scalar jsonb;raw_token text;
  current_row public.payment_events;after_row public.payment_events;raw_row keryx_storage.payment_event_originals;
  has_payment boolean;active boolean;failed boolean;is_private boolean;hosted jsonb;browser jsonb;operation text;dispatch text;
  before_wire text;wire text;wire_sha text;field text;fields text[]:=ARRAY['id','created_at','kind','query_id','source_id','source_name','payer','payee','amount_usdc','weight','rationale','tx_hash','network','settled','settlement_status','authorization_id','authorization_expires_at','grant_epoch','origin','item_id','item_title','item_url','content_version','item_published_at','offer_id','list_price_usdc','authorization_phase'];
@@ -45,12 +45,8 @@ BEGIN
   SELECT * INTO current_row FROM public.payment_events WHERE id=selected->>'id';has_payment:=FOUND;
   IF has_payment THEN
    SELECT * INTO raw_row FROM keryx_storage.payment_event_originals WHERE payment_id=current_row.id;
-   IF FOUND AND cardinality(raw_row.unprojected_fields)>0 THEN
-    IF raw_row.native_projection IS DISTINCT FROM to_jsonb(current_row) THEN RAISE EXCEPTION 'unprojected payment original changed';END IF;
-    before_wire:=raw_row.current_wire::text;
-   ELSE
-    SELECT row_to_json(r)::text INTO before_wire FROM(SELECT current_row.id,to_char(current_row.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') created_at,current_row.kind,current_row.query_id,current_row.source_id,current_row.source_name,current_row.payer,current_row.payee,current_row.amount_usdc,current_row.weight,current_row.rationale,current_row.tx_hash,current_row.network,CASE WHEN current_row.settled THEN 1 ELSE 0 END settled,current_row.settlement_status,current_row.authorization_id,to_char(current_row.authorization_expires_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') authorization_expires_at,current_row.grant_epoch,current_row.origin,current_row.item_id,current_row.item_title,current_row.item_url,current_row.content_version,current_row.item_published_at,current_row.offer_id,current_row.list_price_usdc,current_row.authorization_phase)r;
-   END IF;
+   IF NOT FOUND OR raw_row.native_projection IS DISTINCT FROM to_jsonb(current_row) THEN RAISE EXCEPTION 'native payment raw original unavailable or projection changed';END IF;
+   before_wire:=raw_row.current_wire::text;
    IF octet_length(before_wire)>1048576 THEN RAISE EXCEPTION 'native payment original bound';END IF;
   END IF;
   SELECT jsonb_build_object('signer',signer,'submitted',submitted,'original',original) INTO hosted FROM public.hosted_treasury_authorizations WHERE nonce=selected->>'authorizationId';
@@ -62,18 +58,18 @@ BEGIN
   IF snapshot-'beforeWire' IS DISTINCT FROM captured-'beforeWire' THEN RAISE EXCEPTION 'native payment dispatch original changed';END IF;
   IF (before_wire IS NULL) IS DISTINCT FROM (captured->>'beforeWire' IS NULL) THEN RAISE EXCEPTION 'native payment original presence changed';END IF;
   IF before_wire IS NOT NULL THEN
-   before_json:=(captured->>'beforeWire')::json;after_json:=before_wire::json;
+   before_json:=(captured->>'beforeWire')::json;after_json:=before_wire::json;before_tokens:=keryx_storage.source_scalar_text(captured->>'beforeWire','tokens');after_tokens:=keryx_storage.source_scalar_text(before_wire,'tokens');
    FOREACH field IN ARRAY fields LOOP
     IF field=ANY(ARRAY['amount_usdc','weight','list_price_usdc']) THEN
-     IF (before_json->>field)::double precision IS DISTINCT FROM (after_json->>field)::double precision THEN RAISE EXCEPTION 'native payment immutable amount changed';END IF;
-    ELSIF field<>ALL(ARRAY['settled','settlement_status','authorization_phase','tx_hash']) AND (before_json->field)::text IS DISTINCT FROM (after_json->field)::text THEN RAISE EXCEPTION 'native payment immutable original changed';END IF;
+     IF (CASE WHEN before_tokens->>field='null' THEN NULL ELSE (before_tokens->>field)::double precision END) IS DISTINCT FROM (CASE WHEN after_tokens->>field='null' THEN NULL ELSE (after_tokens->>field)::double precision END) THEN RAISE EXCEPTION 'native payment immutable amount changed';END IF;
+    ELSIF field<>ALL(ARRAY['settled','settlement_status','authorization_phase','tx_hash']) AND before_tokens->>field IS DISTINCT FROM after_tokens->>field THEN RAISE EXCEPTION 'native payment immutable original changed';END IF;
    END LOOP;
   END IF;
   is_private:=false;
   IF hosted IS NOT NULL AND selected->>'id'='x402:'||(selected->>'authorizationId') THEN
-   original_json:=(hosted->>'original')::json;private_job:=original_json->'context'->'privateJob';
-   IF json_typeof(original_json->'context') IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'native hosted context unavailable';END IF;
-   is_private:=CASE json_typeof(private_job) WHEN 'object' THEN true WHEN 'array' THEN true WHEN 'boolean' THEN private_job::text='true' WHEN 'string' THEN private_job::text<>'""' WHEN 'number' THEN private_job::text::numeric<>0 ELSE false END;
+   original_tokens:=keryx_storage.source_scalar_text(hosted->>'original','tokens');IF json_typeof((original_tokens->>'context')::json) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'native hosted context unavailable';END IF;
+   context_tokens:=keryx_storage.source_scalar_text(original_tokens->>'context','tokens');raw_token:=context_tokens->>'privateJob';
+   is_private:=CASE json_typeof(raw_token::json) WHEN 'object' THEN true WHEN 'array' THEN true WHEN 'boolean' THEN raw_token='true' WHEN 'string' THEN (keryx_storage.source_scalar_text(raw_token,'scalar')->>'jsonHex')<>'' WHEN 'number' THEN raw_token::numeric<>0 ELSE false END;
    IF NOT is_private THEN dispatch:='hosted';END IF;
   END IF;
   IF dispatch IS NULL THEN dispatch:=CASE WHEN active AND browser IS NOT NULL THEN 'browser' WHEN active THEN 'journal-legacy' ELSE 'legacy' END;END IF;
@@ -90,13 +86,13 @@ BEGIN
     transaction_value:=regexp_replace(transaction_raw::text,chr(92)||chr(92)||'(u[0-9a-fA-F]{4}|["'||chr(92)||chr(92)||'/bfnrt])','x','g');
     IF hosted->>'signer' !~ '^0x[a-f0-9]{40}$' OR selected->>'authorizationId' !~ '^0x[a-f0-9]{64}$' OR transaction_raw::text='""' OR keryx_storage.a2a_utf16_length(transaction_value)-2>256 THEN RAISE EXCEPTION 'native hosted settlement input refused';END IF;
     IF NOT has_payment OR current_row.settlement_status IS DISTINCT FROM 'pending' THEN
-     IF has_payment AND current_row.settled AND (after_json->'tx_hash')::text=transaction_raw::text THEN PERFORM keryx_storage.leave_operation();RETURN '{"resolved":true,"reservationReleased":false}'::json;END IF;
+     IF has_payment AND current_row.settled AND after_tokens->>'tx_hash'=transaction_raw::text THEN PERFORM keryx_storage.leave_operation();RETURN '{"resolved":true,"reservationReleased":false}'::json;END IF;
      RAISE EXCEPTION 'native original hosted settlement conflict';
     END IF;resolved:=true;
    END IF;
   ELSIF dispatch='browser' THEN
    IF NOT has_payment OR current_row.authorization_phase IS NULL OR current_row.authorization_phase NOT IN('exposed','signed','submission_attempted') OR current_row.settlement_status IS DISTINCT FROM 'pending' THEN PERFORM keryx_storage.leave_operation();RETURN '{"resolved":false,"reservationReleased":false}'::json;END IF;
-   resolved:=true;IF failed THEN release_kind:='retained';release_signer:=lower(browser->>'signer');release_epoch:=browser->>'grantEpoch';original_json:=(browser->>'paymentMetadata')::json;IF json_typeof(original_json->'amountUsdc') IS DISTINCT FROM 'number' THEN RAISE EXCEPTION 'native browser amount unavailable';END IF;amount:=(original_json->>'amountUsdc')::double precision;END IF;
+   resolved:=true;IF failed THEN release_kind:='retained';release_signer:=lower(browser->>'signer');release_epoch:=browser->>'grantEpoch';original_tokens:=keryx_storage.source_scalar_text(browser->>'paymentMetadata','tokens');IF json_typeof((original_tokens->>'amountUsdc')::json) IS DISTINCT FROM 'number' THEN RAISE EXCEPTION 'native browser amount unavailable';END IF;amount:=(original_tokens->>'amountUsdc')::double precision;END IF;
   ELSIF dispatch='journal-legacy' THEN
    IF NOT has_payment OR current_row.authorization_id IS DISTINCT FROM selected->>'authorizationId' OR current_row.authorization_phase IS NOT NULL OR current_row.settlement_status IS DISTINCT FROM 'pending' THEN PERFORM keryx_storage.leave_operation();RETURN '{"resolved":false,"reservationReleased":false}'::json;END IF;
    resolved:=true;IF failed AND coalesce(current_row.grant_epoch,'')<>'' THEN release_kind:='retained';release_signer:=lower(current_row.payer);release_epoch:=current_row.grant_epoch;amount:=current_row.amount_usdc::double precision;END IF;
@@ -107,30 +103,27 @@ BEGIN
   payload:=packet->'after';IF payload IS NULL OR payload='null'::jsonb THEN RAISE EXCEPTION 'native payment source state advanced';END IF;
  ELSE payload:=packet;
  END IF;
+ -- Existing private source_scalar_text tokens only: raw JSON getters reject
+ -- NUL/unpaired Unicode even when selecting an unrelated safe field.
  -- Validate only safe projections as JSONB. Never cast the raw original to
  -- JSONB: retained scalar NUL bytes must remain JSON escape text. Lone UTF-16
  -- already became U+FFFD at Source scalar binding; serialized JSON is separate.
  IF (jsonb_typeof(payload)='object' AND payload-'rowWire'-'sha256'-'projection'-'unprojectedFields'='{}'::jsonb AND jsonb_typeof(payload->'rowWire')='string' AND octet_length(payload->>'rowWire')<=1048576 AND payload->>'sha256'=encode(sha256(convert_to(payload->>'rowWire','UTF8')),'hex') AND jsonb_typeof(payload->'projection')='object' AND jsonb_typeof(payload->'unprojectedFields')='array' AND jsonb_array_length(payload->'unprojectedFields')<=15) IS NOT TRUE THEN RAISE EXCEPTION 'native payment original capture refused';END IF;
- original_json:=(payload->>'rowWire')::json;projection:=payload->'projection';SELECT count(*),count(DISTINCT key) INTO key_count,distinct_count FROM json_each(original_json);
+ original_json:=(payload->>'rowWire')::json;original_tokens:=keryx_storage.source_scalar_text(payload->>'rowWire','tokens');projection:=payload->'projection';SELECT count(*),count(DISTINCT value) INTO key_count,distinct_count FROM jsonb_array_elements_text(original_tokens->'_rootKeys');
  IF key_count<>27 OR distinct_count<>27 OR (SELECT count(*) FROM jsonb_object_keys(projection))<>27 THEN RAISE EXCEPTION 'native payment original field inventory';END IF;
  SELECT coalesce(array_agg(value ORDER BY value),'{}'::text[]) INTO unprojected FROM jsonb_array_elements_text(payload->'unprojectedFields');
  IF cardinality(unprojected)<>(SELECT count(DISTINCT value) FROM unnest(unprojected) value) OR NOT unprojected<@ARRAY['created_at','source_name','rationale','tx_hash','authorization_expires_at','origin','item_id','item_title','item_url','content_version','item_published_at','offer_id'] THEN RAISE EXCEPTION 'native payment projection fields refused';END IF;
  FOREACH field IN ARRAY fields LOOP
-  IF NOT projection?field OR original_json->field IS NULL THEN RAISE EXCEPTION 'native payment original missing field';END IF;
-  -- JSON.stringify of a Source scalar column never emits surrogate escapes:
-  -- Node SQLite replaces lone UTF-16 at TEXT binding and emits pairs as UTF-8.
-  -- Tokenize JSON escapes so a literal backslash followed by ud800 is retained.
-  IF json_typeof(original_json->field)='string' AND EXISTS(
-   SELECT 1 FROM regexp_matches((original_json->field)::text,$source_escape$\\(["\\/bfnrt]|u[0-9a-fA-F]{4})$source_escape$,'g') AS escapes(value)
-   WHERE value[1] ~ '^u[dD][89a-fA-F][0-9a-fA-F]{2}$') THEN RAISE EXCEPTION 'native payment scalar Source binding mismatch';END IF;
+  raw_token:=original_tokens->>field;IF NOT projection?field OR raw_token IS NULL THEN RAISE EXCEPTION 'native payment original missing field';END IF;
+  IF json_typeof(raw_token::json)='string' THEN scalar:=keryx_storage.source_scalar_text(raw_token,'scalar');IF scalar->>'sourceHex' IS DISTINCT FROM scalar->>'jsonHex' THEN RAISE EXCEPTION 'native payment scalar Source binding mismatch';END IF;END IF;
   IF field=ANY(unprojected) THEN
-   IF projection->field IS DISTINCT FROM 'null'::jsonb OR json_typeof(original_json->field) NOT IN('string','null') THEN RAISE EXCEPTION 'native payment unprojected field refused';END IF;
+   IF projection->field IS DISTINCT FROM 'null'::jsonb OR json_typeof(raw_token::json) NOT IN('string','null') THEN RAISE EXCEPTION 'native payment unprojected field refused';END IF;
   ELSIF field=ANY(ARRAY['amount_usdc','weight','list_price_usdc','settled']) THEN
-   IF json_typeof(original_json->field)='null' THEN IF projection->field IS DISTINCT FROM 'null'::jsonb THEN RAISE EXCEPTION 'native payment numeric null mismatch';END IF;
-   ELSIF json_typeof(original_json->field)<>'number' OR (original_json->>field)::numeric IS DISTINCT FROM (projection->>field)::numeric OR abs((projection->>field)::numeric)>9007199254740991 THEN RAISE EXCEPTION 'native payment numeric mismatch';END IF;
+   IF raw_token='null' THEN IF projection->field IS DISTINCT FROM 'null'::jsonb THEN RAISE EXCEPTION 'native payment numeric null mismatch';END IF;
+   ELSIF json_typeof(raw_token::json)<>'number' OR raw_token::numeric IS DISTINCT FROM (projection->>field)::numeric OR abs((projection->>field)::numeric)>9007199254740991 THEN RAISE EXCEPTION 'native payment numeric mismatch';END IF;
   ELSE
-   IF json_typeof(original_json->field)='null' THEN IF projection->field IS DISTINCT FROM 'null'::jsonb THEN RAISE EXCEPTION 'native payment text null mismatch';END IF;
-   ELSIF json_typeof(original_json->field)<>'string' OR original_json->>field IS DISTINCT FROM projection->>field THEN RAISE EXCEPTION 'native payment text mismatch';END IF;
+   IF raw_token='null' THEN IF projection->field IS DISTINCT FROM 'null'::jsonb THEN RAISE EXCEPTION 'native payment text null mismatch';END IF;
+   ELSIF json_typeof(raw_token::json)<>'string' OR scalar->>'sourceHex' IS DISTINCT FROM encode(convert_to(projection->>field,'UTF8'),'hex') THEN RAISE EXCEPTION 'native payment scalar projection mismatch';END IF;
   END IF;
  END LOOP;
  IF (projection->'settled' IN('0'::jsonb,'1'::jsonb) AND (projection->>'settled'='1')=(projection->>'settlement_status'='settled') AND jsonb_typeof(projection->'id')='string' AND octet_length(projection->>'id')<=1024) IS NOT TRUE THEN RAISE EXCEPTION 'native payment settled flag mismatch';END IF;
@@ -150,13 +143,13 @@ BEGIN
   END IF;
   PERFORM keryx_storage.leave_operation();RETURN to_json(changed=1);
  END IF;
- before_json:=before_wire::json;
+ before_json:=before_wire::json;before_tokens:=keryx_storage.source_scalar_text(before_wire,'tokens');
  FOREACH field IN ARRAY fields LOOP
   IF field=ANY(ARRAY['amount_usdc','weight','list_price_usdc']) THEN
-   IF (before_json->>field)::double precision IS DISTINCT FROM (original_json->>field)::double precision THEN RAISE EXCEPTION 'native payment immutable numeric capture changed';END IF;
-  ELSIF field<>ALL(ARRAY['settled','settlement_status','authorization_phase','tx_hash']) AND (before_json->field)::text IS DISTINCT FROM (original_json->field)::text THEN RAISE EXCEPTION 'native payment immutable capture changed';END IF;
+   IF (CASE WHEN before_tokens->>field='null' THEN NULL ELSE (before_tokens->>field)::double precision END) IS DISTINCT FROM (CASE WHEN original_tokens->>field='null' THEN NULL ELSE (original_tokens->>field)::double precision END) THEN RAISE EXCEPTION 'native payment immutable numeric capture changed';END IF;
+  ELSIF field<>ALL(ARRAY['settled','settlement_status','authorization_phase','tx_hash']) AND before_tokens->>field IS DISTINCT FROM original_tokens->>field THEN RAISE EXCEPTION 'native payment immutable capture changed';END IF;
  END LOOP;
- IF (original_json->'tx_hash')::text IS DISTINCT FROM transaction_raw::text OR after_row.settlement_status IS DISTINCT FROM CASE WHEN failed THEN 'failed' ELSE 'settled' END OR after_row.settled IS DISTINCT FROM (NOT failed)
+ IF original_tokens->>'tx_hash' IS DISTINCT FROM transaction_raw::text OR after_row.settlement_status IS DISTINCT FROM CASE WHEN failed THEN 'failed' ELSE 'settled' END OR after_row.settled IS DISTINCT FROM (NOT failed)
   OR after_row.authorization_phase IS DISTINCT FROM CASE WHEN dispatch IN('hosted','browser') THEN CASE WHEN failed THEN 'failed' ELSE 'settled' END ELSE current_row.authorization_phase END THEN RAISE EXCEPTION 'native payment terminal capture mismatch';END IF;
  INSERT INTO public.browser_journal_writer VALUES(txid_current()) ON CONFLICT DO NOTHING;
  UPDATE public.payment_events SET settled=after_row.settled,settlement_status=after_row.settlement_status,tx_hash=after_row.tx_hash,authorization_phase=after_row.authorization_phase WHERE id=current_row.id;

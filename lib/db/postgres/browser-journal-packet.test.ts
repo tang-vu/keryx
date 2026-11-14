@@ -18,7 +18,7 @@ import { STORAGE_MAINNET_PROFILE_DIGEST,validateStorageIdentity } from '../stora
 import { SqliteAdapter } from '../sqlite-adapter';
 import { sqliteJournalTransaction } from '../sqlite-browser-journal';
 import { canonicalJson } from '../../canonical-json';
-import { captureBrowserJournalAdmission,captureBrowserJournalSelector,decodeBrowserJournal,browserSigningSnapshot,type BrowserJournalStoredRow } from './browser-journal-packet';
+import { captureBrowserJournalAdmission,captureBrowserJournalSelector,captureBrowserAuthorizationIntent,captureBrowserJournalGrant,decodeBrowserJournal,browserSigningSnapshot,type BrowserJournalStoredRow } from './browser-journal-packet';
 
 // Public, unfunded test-only keys sign only the Source historical query policy.
 // No configured key, live wallet, RPC, transaction, provider or payment is used.
@@ -50,6 +50,9 @@ async function fixture(run:(core:SqliteAdapter,db:DatabaseSync)=>Promise<void>,v
 function stored(db:DatabaseSync,input:BrowserJournalAdmission):BrowserJournalStoredRow|null{return db.prepare(`SELECT i.nonce,i.created_at,i.grant_epoch,i.signer,b.requirements,b.payment_metadata,b.payment_context,b.valid_after,b.valid_before,b.header_hash,p.authorization_phase,p.settlement_status,p.tx_hash,p.authorization_expires_at FROM browser_authorization_intents i JOIN browser_journal_bindings b USING(nonce) JOIN payment_events p ON p.id='x402:'||i.nonce WHERE i.session_id=? AND i.request_id=?`).get(input.sessionId,input.requestId) as unknown as BrowserJournalStoredRow|null;}
 it('captures one mainnet nonce before awaits and preserves serialized metadata separately from scalar Source columns',()=>{
  const input=admission(),packet=captureBrowserJournalAdmission(input);input.payment.rationale='mutated';expect(packet.journal.nonce).toMatch(/^0x[0-9a-f]{64}$/);expect(packet.intent.network).toBe(mainnet.networkId);expect(JSON.parse(packet.paymentMetadataWire).rationale).toBe('raw\0metadata\udfff');expect(packet.payment.row.rationale).toBe('raw\0metadata\ufffd');expect(packet.payment.row.source_name).toBe('retained\ufffdsource');expect(packet.payment.unprojectedFields).toEqual(['rationale']);expect(packet.payment.projection.rationale).toBeNull();expect(packet.payment.row.origin).toBe('web');
+});
+it('keeps legacy intent return originals distinct from Source-bound scalar projection',()=>{
+ const input={...admission(),sessionId:'session\ud800'},captured=captureBrowserAuthorizationIntent(input);expect(captured.intent.sessionId).toBe('session\ud800');expect(captured.projection.sessionId).toBe('session\ufffd');expect(captured.projection).not.toHaveProperty('payment');const grant=captureBrowserJournalGrant({sessionId:'session\ud800',sessAddr:signer.address,ownerAddr:owner.address,cap:.1,expiry:Date.now()+60000,txHash:'receipt\ud800',grantEpoch:epoch});expect(grant.grant.sessionId).toBe('session\ufffd');expect(grant.grant.txHash).toBe('receipt\ufffd');
 });
 it('reproduces genuine selected mainnet plain journal reads with NUL and escaped lone UTF-16 originals',async()=>{
  await fixture(async(core,db)=>{const input=admission(),result=await core.admitBrowserJournal(input);expect(result.status).toBe('admitted');const actual=await core.getBrowserJournal(input.sessionId,input.requestId);expect(decodeBrowserJournal(stored(db,input),captureBrowserJournalSelector(input.sessionId,input.requestId))).toEqual(actual);expect(actual!.payment.rationale).toBe('raw\0metadata\udfff');expect(db.prepare('SELECT rationale FROM payment_events').get()!.rationale).toBe('raw\0metadata\ufffd');expect(JSON.parse(String(db.prepare('SELECT payment_context FROM browser_journal_bindings').get()!.payment_context)).note).toBe('raw\0context\ud800');});

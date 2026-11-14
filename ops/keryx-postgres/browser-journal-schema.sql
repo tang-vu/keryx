@@ -59,22 +59,25 @@ BEGIN
  RETURN NEW;
 END;$$;
 CREATE OR REPLACE FUNCTION public.browser_signing_validity_gate() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE original json;BEGIN
- SELECT o.original::json INTO original FROM public.browser_signing_originals o WHERE o.nonce=NEW.nonce;
+DECLARE original jsonb;authorization_tokens jsonb;BEGIN
+ SELECT keryx_storage.source_scalar_text(o.original,'tokens') INTO original FROM public.browser_signing_originals o WHERE o.nonce=NEW.nonce;
+ IF original IS NULL THEN RETURN NEW;END IF;authorization_tokens:=keryx_storage.source_scalar_text(original->>'authorization','tokens');
  IF original IS NOT NULL AND NEW.header_hash IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.browser_signing_v2_writer WHERE transaction_id=txid_current()) THEN RAISE EXCEPTION 'browser signing canonical callback required';END IF;
- IF original IS NOT NULL AND(NEW.valid_after IS NOT NULL AND NEW.valid_after IS DISTINCT FROM original#>>'{authorization,validAfter}' OR NEW.valid_before IS NOT NULL AND NEW.valid_before IS DISTINCT FROM original#>>'{authorization,validBefore}') THEN RAISE EXCEPTION 'browser signing original validity differs';END IF;
+ IF original IS NOT NULL AND(NEW.valid_after IS NOT NULL AND (keryx_storage.source_scalar_text(authorization_tokens->>'validAfter','scalar')->>'jsonHex') IS DISTINCT FROM encode(convert_to(NEW.valid_after,'UTF8'),'hex') OR NEW.valid_before IS NOT NULL AND (keryx_storage.source_scalar_text(authorization_tokens->>'validBefore','scalar')->>'jsonHex') IS DISTINCT FROM encode(convert_to(NEW.valid_before,'UTF8'),'hex')) THEN RAISE EXCEPTION 'browser signing original validity differs';END IF;
  RETURN NEW;
 END;$$;
 CREATE OR REPLACE FUNCTION public.browser_signing_source_original_gate() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE original json:=NEW.original::json;BEGIN
- IF (SELECT min_original_version FROM public.browser_signing_v2_barrier WHERE id=1)=3 AND(NOT EXISTS(SELECT 1 FROM public.browser_signing_v3_writer WHERE transaction_id=txid_current()) OR original->>'protocol' IS DISTINCT FROM 'durable-v3' OR original#>>'{sourceContext,version}' IS DISTINCT FROM 'source-context-v1' OR json_typeof(original->'sourceContextDigest') IS DISTINCT FROM 'string') THEN RAISE EXCEPTION 'browser source original required';END IF;
- IF original->>'protocol'='durable-v3' AND((SELECT active FROM public.browser_journal_control WHERE id=1) IS DISTINCT FROM true OR (SELECT active FROM public.browser_signing_v2_control WHERE id=1) IS DISTINCT FROM true OR (SELECT min_original_version FROM public.browser_signing_v2_control WHERE id=1) IS DISTINCT FROM 3 OR NOT EXISTS(SELECT 1 FROM public.browser_signing_v3_writer WHERE transaction_id=txid_current())) THEN RAISE EXCEPTION 'browser source writer required';END IF;
+DECLARE original jsonb:=keryx_storage.source_scalar_text(NEW.original,'tokens');context_tokens jsonb;protocol text;context_version text;BEGIN
+ protocol:=keryx_storage.source_scalar_text(original->>'protocol','scalar')->>'shadow';
+ IF original->>'sourceContext' IS NOT NULL THEN context_tokens:=keryx_storage.source_scalar_text(original->>'sourceContext','tokens');IF context_tokens->>'version' IS NOT NULL THEN context_version:=keryx_storage.source_scalar_text(context_tokens->>'version','scalar')->>'shadow';END IF;END IF;
+ IF (SELECT min_original_version FROM public.browser_signing_v2_barrier WHERE id=1)=3 AND(NOT EXISTS(SELECT 1 FROM public.browser_signing_v3_writer WHERE transaction_id=txid_current()) OR protocol IS DISTINCT FROM 'durable-v3' OR context_version IS DISTINCT FROM 'source-context-v1' OR json_typeof((original->>'sourceContextDigest')::json) IS DISTINCT FROM 'string') THEN RAISE EXCEPTION 'browser source original required';END IF;
+ IF protocol='durable-v3' AND((SELECT active FROM public.browser_journal_control WHERE id=1) IS DISTINCT FROM true OR (SELECT active FROM public.browser_signing_v2_control WHERE id=1) IS DISTINCT FROM true OR (SELECT min_original_version FROM public.browser_signing_v2_control WHERE id=1) IS DISTINCT FROM 3 OR NOT EXISTS(SELECT 1 FROM public.browser_signing_v3_writer WHERE transaction_id=txid_current())) THEN RAISE EXCEPTION 'browser source writer required';END IF;
  RETURN NEW;
 END;$$;
 CREATE OR REPLACE FUNCTION public.browser_signing_source_exposure_gate() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE v3 boolean;BEGIN
  IF OLD.authorization_phase='prepared' THEN
-  SELECT EXISTS(SELECT 1 FROM public.browser_signing_originals WHERE nonce=OLD.authorization_id AND original::json->>'protocol'='durable-v3') INTO v3;
+  SELECT EXISTS(SELECT 1 FROM public.browser_signing_originals o WHERE o.nonce=OLD.authorization_id AND (keryx_storage.source_scalar_text(keryx_storage.source_scalar_text(o.original,'tokens')->>'protocol','scalar')->>'shadow')='durable-v3') INTO v3;
   IF NEW.authorization_phase IN('exposed','signed','submission_attempted','settled','failed') AND (SELECT min_original_version FROM public.browser_signing_v2_barrier WHERE id=1)=3 AND NOT v3 THEN RAISE EXCEPTION 'browser source context required before exposure';END IF;
   IF NEW.authorization_phase='exposed' AND v3 AND((SELECT active FROM public.browser_journal_control WHERE id=1) IS DISTINCT FROM true OR (SELECT active FROM public.browser_signing_v2_control WHERE id=1) IS DISTINCT FROM true OR (SELECT min_original_version FROM public.browser_signing_v2_control WHERE id=1) IS DISTINCT FROM 3) THEN RAISE EXCEPTION 'browser source exposure inactive';END IF;
  END IF;

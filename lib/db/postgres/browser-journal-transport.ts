@@ -52,7 +52,7 @@ export function composePostgresBrowserJournal(channel:PostgresDomainChannel,read
   async browserJournalActive(){live();const value=await call('browserJournalControl',[]);live();if(typeof value!=='boolean')throw unavailable();return value;},
   async activateBrowserJournal(){writer();if(await changed('activate',{})!==true)throw new PostgresDomainWriteOutcomeUnknown();},
   async upsertSessionGrant(raw){writer();const captured=captureBrowserJournalGrant(raw);if(await changed('grant',captured)!==true)throw new PostgresDomainWriteOutcomeUnknown();},
-  async admitBrowserAuthorization(raw){writer();const captured=captureBrowserAuthorizationIntent(raw),result=await changed('intent',captured);if(result==='admitted')return {status:'admitted',intent:captured.intent};if(result==='grant_or_cap_refused')return {status:result};throw new PostgresDomainWriteOutcomeUnknown();},
+  async admitBrowserAuthorization(raw){writer();const captured=captureBrowserAuthorizationIntent(raw),result=await changed('intent',{intent:captured.projection});if(result==='admitted')return {status:'admitted',intent:captured.intent};if(result==='grant_or_cap_refused')return {status:result};throw new PostgresDomainWriteOutcomeUnknown();},
   async admitBrowserJournal(raw){
    writer();const captured=captureBrowserJournalAdmission(raw),active=await call('browserJournalControl',[]);live();if(active===false)return {status:'inactive'};if(active!==true)throw unavailable();if(captured.contextConflict)throw Error('Browser journal source claim differs from original payment context');
    const runtime=sourceClaimPolicyRuntime(),runtimeWire=canonicalJson(runtime),selector=sourceClaimPolicySelector({sourceId:captured.input.sourceId,identity:null});

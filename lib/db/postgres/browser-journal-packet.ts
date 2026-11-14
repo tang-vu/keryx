@@ -38,11 +38,10 @@ export function captureBrowserJournalAdmission(raw:BrowserJournalAdmission){
 }
 export function captureBrowserAuthorizationIntent(raw:BrowserAuthorizationIntent){
  const input=browserJournalCopy(raw),intent=prepareBrowserAuthorizationIntent(input,ARC_MAINNET_PROFILE);
- for(const key of ['sessionId','requestId','queryId','grantEpoch','sourceId','signer','payee'] as const)browserJournalText(intent[key]);
- if(intent.offerId!==null)browserJournalText(intent.offerId);return Object.freeze({input,intent});
+ const projection={nonce:intent.nonce,createdAt:intent.createdAt,sessionId:browserJournalText(intent.sessionId),requestId:browserJournalText(intent.requestId),queryId:browserJournalText(intent.queryId),grantEpoch:browserJournalText(intent.grantEpoch),sourceId:browserJournalText(intent.sourceId),signer:browserJournalText(intent.signer),payee:browserJournalText(intent.payee),offerId:intent.offerId===null?null:browserJournalText(intent.offerId),network:intent.network,token:intent.token,gatewayContract:intent.gatewayContract,kind:intent.kind,amountMicroUsdc:intent.amountMicroUsdc};return Object.freeze({intent,projection});
 }
 export function captureBrowserJournalGrant(raw:Omit<SessionGrantRecord,'spent'>){
- const grant=browserJournalCopy(raw);for(const key of ['sessionId','sessAddr','ownerAddr','grantEpoch','txHash'] as const)browserJournalText(grant[key]);
+ const grant=browserJournalCopy(raw);for(const key of ['sessionId','sessAddr','ownerAddr','grantEpoch','txHash'] as const)grant[key]=browserJournalText(grant[key]);
  const capMicros=browserJournalMicros(grant.cap);if(!Number.isSafeInteger(grant.expiry))throw Error('Native browser grant expiry unsupported');return Object.freeze({grant,capMicros:String(capMicros)});
 }
 export function browserJournalMicros(value:number){const scaled=value*1e6,amount=Math.round(scaled);if(!Number.isSafeInteger(amount)||amount<0||Math.abs(scaled-amount)>=0.000001)throw Error('Retained browser capacity mismatch');return amount;}
