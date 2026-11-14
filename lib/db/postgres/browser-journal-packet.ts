@@ -17,9 +17,9 @@ export function browserJournalCopy<T>(raw:T):T{
 }
 /** Closed native selectors cannot encode NUL. Source scalar binding replaces
  * lone UTF-16 before lookup; serialized JSON originals retain their escapes. */
-export function browserJournalText(raw:unknown,limit=1024):string{
+export function browserJournalText(raw:unknown,limit=1024,allowEmpty=false):string{
  if(typeof raw!=='string')throw Error('Native browser selector unsupported');const value=sqlitePaymentScalarText(raw);
- if(!value||value.includes('\0')||Buffer.byteLength(value)>limit)throw Error('Native browser selector unsupported');return value;
+ if(!allowEmpty&&!value||value.includes('\0')||Buffer.byteLength(value)>limit)throw Error('Native browser selector unsupported');return value;
 }
 export function captureBrowserJournalSelector(sessionId:string,requestId:string){return Object.freeze({sessionId:browserJournalText(sessionId),requestId:browserJournalText(requestId),sourceSessionWire:JSON.stringify(sessionId),sourceRequestWire:JSON.stringify(requestId)});}
 function wire(value:unknown){const text=JSON.stringify(value);if(typeof text!=='string'||Buffer.byteLength(text)>BROWSER_JOURNAL_CELL_BYTES)throw Error('Native browser original bound');return text;}
@@ -85,11 +85,29 @@ export function decodeBrowserSourceEnvelope(raw:unknown,selector:ReturnType<type
  if(!snapshot||Array.isArray(snapshot)||Object.keys(snapshot).sort().join(',')!=='binding,controls,epochSpent,grant,intent,namespace,original,paymentWire,query,selector,signerSpent'||canonicalJson(snapshot.selector)!==canonicalJson(selector)||!snapshot.controls||typeof snapshot.controls.journalActive!=='boolean'||typeof snapshot.controls.signingActive!=='boolean'||![2,3].includes(snapshot.controls.floor)||![0,1].includes(snapshot.controls.ever))throw Error('Native browser snapshot unavailable');
  return {snapshot,wire,sha256};
 }
-export function browserJournalFromSnapshot(snapshot:BrowserSourceSnapshot){
+export function browserJournalFromSnapshot(snapshot:Pick<BrowserSourceSnapshot,'intent'|'binding'|'paymentWire'|'selector'>){
  const {intent:i,binding:b,paymentWire}=snapshot;if(!i||!b||paymentWire===null)return null;
  if(typeof paymentWire!=='string'||Buffer.byteLength(paymentWire)>BROWSER_JOURNAL_CELL_BYTES)throw Error('Native browser payment original bound');const p=JSON.parse(paymentWire);
  if(!p||Array.isArray(p)||p.id!=='x402:'+i.nonce)throw Error('Native browser payment original unavailable');
  return decodeBrowserJournal({nonce:i.nonce,created_at:i.created_at,grant_epoch:i.grant_epoch,signer:i.signer,requirements:b.requirements,payment_metadata:b.payment_metadata,payment_context:b.payment_context,valid_after:b.valid_after,valid_before:b.valid_before,header_hash:b.header_hash,authorization_phase:p.authorization_phase,settlement_status:p.settlement_status,tx_hash:p.tx_hash,authorization_expires_at:p.authorization_expires_at} as BrowserJournalStoredRow,snapshot.selector);
+}
+export function decodeBrowserGrant(raw:unknown):SessionGrantRecord|null{
+ if(raw===null)return null;if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Native browser grant unavailable');const g=raw as Record<string,unknown>;
+ if(Object.keys(g).sort().join(',')!=='cap,expiry,grant_epoch,owner_addr,sess_addr,session_id,spent,tx_hash'||['session_id','sess_addr','owner_addr','tx_hash','grant_epoch'].some(k=>typeof g[k]!=='string')||typeof g.cap!=='number'||!Number.isFinite(g.cap)||typeof g.spent!=='number'||!Number.isFinite(g.spent)||typeof g.expiry!=='number'||!Number.isSafeInteger(g.expiry))throw Error('Native browser grant unavailable');
+ return {sessionId:g.session_id as string,sessAddr:g.sess_addr as string,ownerAddr:g.owner_addr as string,cap:g.cap,spent:g.spent,expiry:g.expiry,txHash:g.tx_hash as string,grantEpoch:g.grant_epoch as string};
+}
+export function captureBrowserWithdrawalHistory(signer:string,afterNonce='',limit=64){
+ if(typeof signer!=='string'||!/^0x[0-9a-f]{40}$/.test(signer)||typeof afterNonce!=='string'||afterNonce!==''&&!/^0x[0-9a-f]{64}$/.test(afterNonce)||!Number.isSafeInteger(limit)||limit<1||limit>64)throw Error('Withdrawal payment history unavailable');
+ return Object.freeze({signer,afterNonce,limit});
+}
+export function decodeBrowserWithdrawalHistory(raw:unknown,selector:ReturnType<typeof captureBrowserWithdrawalHistory>){
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).sort().join(',')!=='sha256,wire')throw Error('Native browser history unavailable');const {wire,sha256}=raw as Record<string,unknown>;
+ if(typeof wire!=='string'||Buffer.byteLength(wire)>BROWSER_JOURNAL_SNAPSHOT_BYTES||typeof sha256!=='string'||browserJournalSha256(wire)!==sha256)throw Error('Native browser history unavailable');
+ const value=JSON.parse(wire);if(!value||Array.isArray(value)||Object.keys(value).sort().join(',')!=='hasMore,rows,selector'||canonicalJson(value.selector)!==canonicalJson(selector)||typeof value.hasMore!=='boolean'||!Array.isArray(value.rows)||value.rows.length>selector.limit||value.hasMore&&value.rows.length!==selector.limit)throw Error('Native browser history unavailable');
+ let previous=selector.afterNonce;const payments:BrowserAuthorizationJournal[]=value.rows.map((r:Pick<BrowserSourceSnapshot,'intent'|'binding'|'paymentWire'|'selector'>)=>{
+  if(!r||Array.isArray(r)||Object.keys(r).sort().join(',')!=='binding,intent,paymentWire,selector'||!r.selector||canonicalJson(r.selector)!==canonicalJson(captureBrowserJournalSelector(r.selector.sessionId,r.selector.requestId)))throw Error('Native browser history unavailable');
+  const j=browserJournalFromSnapshot(r);if(!j||r.intent?.session_id!==r.selector.sessionId||r.intent?.request_id!==r.selector.requestId||j.signer.toLowerCase()!==selector.signer||j.nonce!==r.intent?.nonce||j.nonce<=previous)throw Error('Original liability unavailable');previous=j.nonce;return j;
+ });return {payments,nextCursor:value.hasMore?payments.at(-1)!.nonce:null};
 }
 export async function browserSigningSnapshot(snapshot:BrowserSourceSnapshot,identity:{owner:string}|{signer:string}):Promise<BrowserSigningSnapshot|null>{
  const journal=browserJournalFromSnapshot(snapshot);if(!journal)return null;

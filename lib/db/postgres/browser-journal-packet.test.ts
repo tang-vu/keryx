@@ -20,7 +20,7 @@ import { sqliteJournalTransaction } from '../sqlite-browser-journal';
 import { canonicalJson } from '../../canonical-json';
 import { config } from '../../config';
 import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy } from '../public-source-claims';
-import { captureBrowserJournalAdmission,captureBrowserJournalSelector,captureBrowserAuthorizationIntent,captureBrowserJournalGrant,decodeBrowserJournal,browserSigningSnapshot,type BrowserJournalStoredRow } from './browser-journal-packet';
+import { captureBrowserJournalAdmission,captureBrowserJournalSelector,captureBrowserAuthorizationIntent,captureBrowserJournalGrant,decodeBrowserJournal,browserSigningSnapshot,captureBrowserWithdrawalHistory,decodeBrowserWithdrawalHistory,browserJournalSha256,type BrowserJournalStoredRow } from './browser-journal-packet';
 
 // Public, unfunded test-only keys sign only the Source historical query policy.
 // No configured key, live wallet, RPC, transaction, provider or payment is used.
@@ -31,7 +31,7 @@ function admission(profile=mainnet,requestId=randomUUID()):BrowserJournalAdmissi
  requirements:{scheme:'exact',network:profile.networkId,asset:profile.usdcAddress,payTo:payee,amount:'15700',maxTimeoutSeconds:604900,extra:{name:'GatewayWalletBatched',version:'1',verifyingContract:profile.gatewayWallet}},
  payment:{kind:'fetch',queryId,sourceId:'synthetic-browser-source',sourceName:'retained\ud800source',payer:signer.address,payee,amountUsdc:0.0157,network:profile.networkId,grantEpoch:epoch,rationale:'raw\0metadata\udfff'},paymentContext:{note:'raw\0context\ud800'} as never};
 }
-async function fixture(run:(core:SqliteAdapter,db:DatabaseSync)=>Promise<void>,v2=false,seed?:(db:DatabaseSync)=>void){
+async function fixture(run:(core:SqliteAdapter,db:DatabaseSync)=>Promise<void>,v2=false,seed?:(db:DatabaseSync)=>void,active=true){
  const folder=mkdtempSync(join(tmpdir(),'keryx-browser-source-')),file=join(folder,'source.sqlite'),identity=validateStorageIdentity({format:'keryx-mainnet-storage-identity-v1',authorityMode:'mainnet-real',network:mainnet.networkId,profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:new Date().toISOString(),provenanceDigest:'12'.repeat(32)});
  let selected:ReturnType<typeof openVerifiedSqliteStorage>|undefined;
  try{const db=new DatabaseSync(file);try{
@@ -42,7 +42,7 @@ async function fixture(run:(core:SqliteAdapter,db:DatabaseSync)=>Promise<void>,v
   db.prepare('INSERT INTO browser_retained_grants(grant_epoch,session_id,signer,spent_micro) VALUES(?,?,?,0)').run(epoch,'synthetic-browser-session',signer.address.toLowerCase());
   db.prepare('INSERT INTO session_grants(session_id,sess_addr,owner_addr,cap,spent,expiry,tx_hash,grant_epoch) VALUES(?,?,?,0.1,0,?,?,?)').run('synthetic-browser-session',signer.address,owner.address,Date.now()+3600000,'synthetic-unfunded-original',epoch);
   if(seed){db.exec('INSERT INTO browser_journal_writer VALUES(1)');try{seed(db);}finally{db.exec('DELETE FROM browser_journal_writer');}}
-  db.prepare('UPDATE browser_journal_control SET active=1 WHERE id=1').run();if(v2)db.prepare('UPDATE browser_signing_v2_control SET active=1 WHERE id=1').run();
+  db.prepare('UPDATE browser_journal_control SET active=? WHERE id=1').run(Number(active));if(v2)db.prepare('UPDATE browser_signing_v2_control SET active=1 WHERE id=1').run();
   insertStorageIdentity(db,identity);installStorageFences(db,identity);db.exec('COMMIT');
  }finally{db.close();}
  selected=openVerifiedSqliteStorage(file,identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>{}});
@@ -81,6 +81,47 @@ it('retains original epochs and alias signer consumption, and only prepared canc
   expect(await core.submitBrowserJournal(input.sessionId,input.requestId)).toBe(false);
  });
  await fixture(async(core,db)=>{const input=admission();await core.admitBrowserJournal(input);expect(await core.cancelPreparedBrowserJournal(input.sessionId,input.requestId)).toBe(true);expect(await core.cancelPreparedBrowserJournal(input.sessionId,input.requestId)).toBe(false);expect(db.prepare('SELECT spent_micro FROM browser_signer_capacity').get()!.spent_micro).toBe(0);expect(db.prepare('SELECT spent_micro FROM browser_retained_grants').get()!.spent_micro).toBe(0);});
+});
+it('preserves Source active grant update refusals, retained expiry-zero revocation and expired cleanup no-op',async()=>{
+ await fixture(async(core,db)=>{
+  const id='synthetic-browser-session',before=await core.getSessionGrant(id);expect(before!.spent).toBe(0);
+  expect(await core.addSessionGrantSpend('missing',epoch,signer.address,.01)).toBe(false);await core.releaseSessionGrantSpend('missing',epoch,signer.address,.01);
+  await expect(core.addSessionGrantSpend(id,epoch,signer.address,.01)).rejects.toThrow('browser journal writer required');await expect(core.releaseSessionGrantSpend(id,epoch,signer.address,.01)).rejects.toThrow('browser journal writer required');
+  await core.deleteExpiredSessionGrants(Number.POSITIVE_INFINITY);expect(await core.getSessionGrant(id)).toEqual(before);
+  expect(await core.revokeSessionGrant(id,'wrong',signer.address)).toBe(false);expect(await core.revokeSessionGrant(id,epoch,signer.address)).toBe(true);expect(await core.revokeSessionGrant(id,epoch,signer.address)).toBe(true);
+  expect((await core.getSessionGrant(id))!.expiry).toBe(0);await core.deleteSessionGrant(id);expect((await core.getSessionGrant(id))!.expiry).toBe(0);
+  expect(db.prepare('SELECT count(*) n FROM browser_retained_grants').get()!.n).toBe(1);expect(db.prepare('SELECT spent_micro FROM browser_signer_capacity').get()!.spent_micro).toBe(0);
+ });
+});
+it('uses Source inactive binary64 ROUND(x,6), exact cap predicate and actual row deletion',async()=>{
+ await fixture(async(core,db)=>{
+  const id='synthetic-browser-session',fresh=()=>core.getSessionGrant(id);
+  for(const [amount,spent] of [[.0000005,0],[.0000015,.000002],[.01,.010002],[-.000002,.01]] as const){expect(await core.addSessionGrantSpend(id,epoch,signer.address,amount)).toBe(true);expect((await fresh())!.spent).toBe(spent);}
+  expect(await core.addSessionGrantSpend(id,epoch,signer.address,.1)).toBe(false);await core.releaseSessionGrantSpend(id,epoch,signer.address,.05);expect((await fresh())!.spent).toBe(0);
+  expect(db.prepare('SELECT round(?,6) r').get(123456789.1234565)!.r).toBe(123456789.123456);
+  await core.deleteExpiredSessionGrants(Date.now()-1);expect(await fresh()).not.toBeNull();expect(await core.revokeSessionGrant(id,epoch,signer.address)).toBe(true);expect(await fresh()).toBeNull();
+ },false,undefined,false);
+});
+it('matches genuine Source bounded withdrawal history, raw payment overlays and strict signer/cursor inputs',async()=>{
+ await fixture(async(core,db)=>{
+  for(let n=0;n<3;n++)expect((await core.admitBrowserJournal(admission())).status).toBe('admitted');
+  const selector=captureBrowserWithdrawalHistory(signer.address.toLowerCase(),'',2),expected=await core.listSessionWithdrawalPayments(selector.signer,'',2);
+  const rows=db.prepare('SELECT * FROM browser_authorization_intents WHERE lower(signer)=? ORDER BY nonce LIMIT 2').all(selector.signer).map(i=>({selector:captureBrowserJournalSelector(String(i.session_id),String(i.request_id)),intent:i,binding:db.prepare('SELECT * FROM browser_journal_bindings WHERE nonce=?').get(i.nonce),paymentWire:JSON.stringify(db.prepare("SELECT * FROM payment_events WHERE id='x402:'||?").get(i.nonce))}));
+  const wire=JSON.stringify({selector,rows,hasMore:true}),decoded=decodeBrowserWithdrawalHistory({wire,sha256:browserJournalSha256(wire)},selector);expect(decoded).toEqual(expected);expect(decoded.payments[0].payment.rationale).toBe('raw\0metadata\udfff');
+  expect((await core.listSessionWithdrawalPayments(selector.signer,expected.nextCursor!,2)).payments).toHaveLength(1);await expect(core.listSessionWithdrawalPayments(signer.address,'',2)).rejects.toThrow('Withdrawal payment history unavailable');
+  expect(()=>decodeBrowserWithdrawalHistory({wire,sha256:'00'.repeat(32)},selector)).toThrow('history unavailable');
+ });
+});
+it('derives duplicate-epoch activation from actual Source full-table rowid scan order, not key order',async()=>{
+ for(const ids of [['z-first','a-last'],['a-first','z-last']])await fixture(async(core,db)=>{
+  const plan=db.prepare('EXPLAIN QUERY PLAN SELECT * FROM session_grants').all();expect(plan.some(p=>String(p.detail)==='SCAN session_grants')).toBe(true);
+  const rows=db.prepare('SELECT rowid,session_id,spent FROM session_grants').all();expect(rows.map(r=>r.session_id)).toEqual(ids);
+  expect(db.prepare('PRAGMA table_info(session_grants)').all().map(c=>c.name)).toEqual(['session_id','sess_addr','owner_addr','cap','spent','expiry','tx_hash','grant_epoch']);
+  await core.activateBrowserJournal();expect(db.prepare('SELECT session_id,spent_micro FROM browser_retained_grants WHERE grant_epoch=?').get(epoch)).toEqual({session_id:ids[1],spent_micro:30000});
+ },false,db=>{
+  db.exec('DELETE FROM session_grants;DELETE FROM browser_retained_grants;DELETE FROM browser_signer_capacity');
+  for(const [n,id] of ids.entries())db.prepare('INSERT INTO session_grants VALUES(?,?,?,?,?,?,?,?)').run(id,signer.address,owner.address,.1,n===0?.02:.03,Date.now()+3600000,'synthetic-row-order',epoch);
+ },false);
 });
 it('proves Source signed metadata replay uses caller strings before SQLite scalar binding',async()=>{
  await fixture(async(core,db)=>{const input=admission();await core.admitBrowserJournal(input);await core.exposeBrowserJournal(input.sessionId,input.requestId);

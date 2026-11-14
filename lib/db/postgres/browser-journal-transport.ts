@@ -9,11 +9,16 @@ import type { SessionGrantRecord } from '../keryx-db';
 import { PostgresStorageUnavailable } from './connection';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
 import { sourceClaimPolicyRuntime,sourceClaimPolicySelector,captureHostedSourceClaimPolicy } from './source-claim-purchase-policy';
-import { BROWSER_JOURNAL_PACKET_BYTES,browserJournalSha256,browserJournalText,captureBrowserJournalSelector,captureBrowserJournalAdmission,captureBrowserAuthorizationIntent,captureBrowserJournalGrant,captureBrowserJournalMetadata,captureBrowserQueryPolicy,captureBrowserDurableInput,decodeBrowserSourceEnvelope,browserJournalFromSnapshot,browserSigningSnapshot,type BrowserSourceSnapshot } from './browser-journal-packet';
+import { BROWSER_JOURNAL_PACKET_BYTES,browserJournalSha256,browserJournalText,captureBrowserJournalSelector,captureBrowserJournalAdmission,captureBrowserAuthorizationIntent,captureBrowserJournalGrant,captureBrowserJournalMetadata,captureBrowserQueryPolicy,captureBrowserDurableInput,decodeBrowserSourceEnvelope,browserJournalFromSnapshot,browserSigningSnapshot,decodeBrowserGrant,captureBrowserWithdrawalHistory,decodeBrowserWithdrawalHistory,type BrowserSourceSnapshot } from './browser-journal-packet';
 
 export interface PostgresBrowserJournalPort {
  browserJournalActive():Promise<boolean>;activateBrowserJournal():Promise<void>;
  upsertSessionGrant(grant:Omit<SessionGrantRecord,'spent'>):Promise<void>;
+ getSessionGrant(sessionId:string):Promise<SessionGrantRecord|null>;
+ addSessionGrantSpend(sessionId:string,grantEpoch:string,sessAddr:string,amount:number):Promise<boolean>;
+ releaseSessionGrantSpend(sessionId:string,grantEpoch:string,sessAddr:string,amount:number):Promise<void>;
+ deleteSessionGrant(sessionId:string):Promise<void>;revokeSessionGrant(sessionId:string,grantEpoch:string,sessAddr:string):Promise<boolean>;deleteExpiredSessionGrants(now:number):Promise<void>;
+ listSessionWithdrawalPayments(signer:string,afterNonce?:string,limit?:number):Promise<{payments:BrowserAuthorizationJournal[];nextCursor:string|null}>;
  admitBrowserAuthorization(input:BrowserAuthorizationIntent):Promise<BrowserAdmissionResult>;
  admitBrowserJournal(input:BrowserJournalAdmission):Promise<BrowserJournalAdmissionResult>;
  getBrowserJournal(sessionId:string,requestId:string):Promise<BrowserAuthorizationJournal|null>;
@@ -37,6 +42,8 @@ export function composePostgresBrowserJournal(channel:PostgresDomainChannel,read
  const changed=async(action:string,packet:unknown)=>{writer();const result=await call('browserJournalAction',[action,encoded(packet)]);if(channel.closed)throw new PostgresDomainWriteOutcomeUnknown();return result;};
  const bool=(value:unknown)=>{if(typeof value!=='boolean')throw new PostgresDomainWriteOutcomeUnknown();return value;};
  const transition=async(action:'expose'|'submit'|'cancel',sessionId:string,requestId:string)=>{writer();return bool(await changed(action,{selector:captureBrowserJournalSelector(sessionId,requestId)}));};
+ const grantSelector=(sessionId:string,grantEpoch?:string,sessAddr?:string)=>({sessionId:browserJournalText(sessionId,1024,true),...(grantEpoch===undefined?{}:{grantEpoch:browserJournalText(grantEpoch,1024,true)}),...(sessAddr===undefined?{}:{sessAddr:browserJournalText(sessAddr,1024,true)})});
+ const grantSpend=async(action:'grant-add'|'grant-release',sessionId:string,grantEpoch:string,sessAddr:string,amount:number)=>{writer();const selector=grantSelector(sessionId,grantEpoch,sessAddr);if(typeof amount!=='number'||!Number.isFinite(amount))throw unavailable();const result=bool(await changed(action,{...selector,amount}));if(action==='grant-release'&&!result)throw new PostgresDomainWriteOutcomeUnknown();return result;};
  const retainedResult=(raw:unknown,selector:ReturnType<typeof captureBrowserJournalSelector>):{status:'admitted';snapshot:BrowserSourceSnapshot}|{status:'inactive'|'refused'|'missing'}=>{
   if(!raw||typeof raw!=='object'||Array.isArray(raw))throw unavailable();const value=raw as Record<string,unknown>;
   if(value.status==='admitted'&&Object.keys(value).sort().join(',')==='snapshot,status')return {status:'admitted',snapshot:decodeBrowserSourceEnvelope(value.snapshot,selector).snapshot};
@@ -52,6 +59,13 @@ export function composePostgresBrowserJournal(channel:PostgresDomainChannel,read
   async browserJournalActive(){live();const value=await call('browserJournalControl',[]);live();if(typeof value!=='boolean')throw unavailable();return value;},
   async activateBrowserJournal(){writer();if(await changed('activate',{})!==true)throw new PostgresDomainWriteOutcomeUnknown();},
   async upsertSessionGrant(raw){writer();const captured=captureBrowserJournalGrant(raw);if(await changed('grant',captured)!==true)throw new PostgresDomainWriteOutcomeUnknown();},
+  async getSessionGrant(sessionId){live();const packet=grantSelector(sessionId),result=await call('browserJournalReplay',['grant-get',encoded(packet)]);live();const grant=decodeBrowserGrant(result);if(grant&&grant.sessionId!==packet.sessionId)throw unavailable();return grant;},
+  addSessionGrantSpend:(sessionId,grantEpoch,sessAddr,amount)=>grantSpend('grant-add',sessionId,grantEpoch,sessAddr,amount),
+  async releaseSessionGrantSpend(sessionId,grantEpoch,sessAddr,amount){await grantSpend('grant-release',sessionId,grantEpoch,sessAddr,amount);},
+  async deleteSessionGrant(sessionId){writer();if(await changed('grant-delete',grantSelector(sessionId))!==true)throw new PostgresDomainWriteOutcomeUnknown();},
+  async revokeSessionGrant(sessionId,grantEpoch,sessAddr){writer();return bool(await changed('grant-revoke',grantSelector(sessionId,grantEpoch,sessAddr)));},
+  async deleteExpiredSessionGrants(now){writer();if(await changed('grant-expired',{now})!==true)throw new PostgresDomainWriteOutcomeUnknown();},
+  async listSessionWithdrawalPayments(signer,afterNonce,limit){live();const selector=captureBrowserWithdrawalHistory(signer,afterNonce,limit),result=await call('browserJournalReplay',['history',encoded(selector)]);live();return decodeBrowserWithdrawalHistory(result,selector);},
   async admitBrowserAuthorization(raw){writer();const captured=captureBrowserAuthorizationIntent(raw),result=await changed('intent',{intent:captured.projection});if(result==='admitted')return {status:'admitted',intent:captured.intent};if(result==='grant_or_cap_refused')return {status:result};throw new PostgresDomainWriteOutcomeUnknown();},
   async admitBrowserJournal(raw){
    writer();const captured=captureBrowserJournalAdmission(raw),active=await call('browserJournalControl',[]);live();if(active===false)return {status:'inactive'};if(active!==true)throw unavailable();if(captured.contextConflict)throw Error('Browser journal source claim differs from original payment context');

@@ -25,15 +25,76 @@ DECLARE operation text;packet jsonb;selected jsonb;snapshot jsonb;controls jsonb
  unprojected text[];scaled double precision;rounded double precision;before_number double precision;milliseconds bigint;stamp text;
  day_number bigint;era bigint;doe bigint;yoe bigint;year_number bigint;doy bigint;mp bigint;month_number bigint;day_month bigint;day_ms bigint;
  base integer;digit integer;position integer;digits text;number_text text;release_capacity boolean:=false;update_expiry boolean:=false;projection_expiry timestamptz;
+ history_rows jsonb;page_limit integer;has_more boolean;numeric_amount double precision;rounded_grant double precision;
+ float_bits bit(64);binary_exponent integer;mantissa numeric;numerator numeric;denominator numeric;quotient numeric;
 BEGIN
- IF action NOT IN('control','state','finish','v2','v3','v3-finish','query','grant','activate') OR action NOT IN('query','grant','activate') AND current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION 'native browser readonly action refused';END IF;
+ IF action NOT IN('control','state','finish','v2','v3','v3-finish','query','grant','activate','grant-get','grant-add','grant-release','grant-delete','grant-revoke','grant-expired','history') OR action NOT IN('query','grant','activate','grant-add','grant-release','grant-delete','grant-revoke','grant-expired') AND current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION 'native browser readonly action refused';END IF;
  IF action IN('v2','v3','v3-finish') AND session_user<>'keryx_app' THEN RAISE EXCEPTION 'native browser replay writer role required';END IF;
- operation:=CASE action WHEN 'query' THEN 'browser_source_query' WHEN 'grant' THEN 'browser_source_grant' WHEN 'activate' THEN 'browser_source_activate' ELSE 'browser_source_read' END;
+ operation:=CASE WHEN action='query' THEN 'browser_source_query' WHEN action IN('grant','grant-add','grant-release','grant-delete','grant-revoke','grant-expired') THEN 'browser_source_grant' WHEN action='activate' THEN 'browser_source_activate' ELSE 'browser_source_read' END;
  PERFORM keryx_storage.require_operation(expected,digest,operation);
  IF packet_wire IS NULL OR octet_length(packet_wire)>8388608 THEN RAISE EXCEPTION 'native browser packet bound';END IF;packet:=packet_wire::jsonb;
  IF jsonb_typeof(packet) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'native browser packet refused';END IF;
  SELECT coalesce((SELECT active FROM public.browser_journal_control WHERE id=1),false),coalesce((SELECT active FROM public.browser_signing_v2_control WHERE id=1),false) INTO active,signing_active;
  IF action='control' THEN RETURN to_json(active);END IF;
+ IF action='grant-expired' AND active THEN PERFORM keryx_storage.leave_operation();RETURN 'true'::json;END IF;
+ IF action IN('grant-get','grant-add','grant-release','grant-delete','grant-revoke','grant-expired') THEN
+  IF action='grant-expired' THEN
+   IF (packet-'now'='{}'::jsonb AND jsonb_typeof(packet->'now')='number') IS NOT TRUE THEN RAISE EXCEPTION 'native grant expiry input refused';END IF;
+   DELETE FROM public.session_grants WHERE expiry<=(packet->>'now')::double precision;
+  ELSE
+   IF (jsonb_typeof(packet->'sessionId')='string' AND octet_length(packet->>'sessionId')<=1024 AND packet-ARRAY['sessionId','grantEpoch','sessAddr','amount']='{}'::jsonb) IS NOT TRUE THEN RAISE EXCEPTION 'native grant selector refused';END IF;
+   SELECT * INTO g FROM public.session_grants WHERE session_id=packet->>'sessionId';
+   IF action='grant-get' THEN RETURN CASE WHEN FOUND THEN to_json(g) ELSE NULL::json END;END IF;
+   IF action='grant-delete' THEN
+    IF active THEN INSERT INTO public.browser_journal_writer VALUES(txid_current()) ON CONFLICT DO NOTHING;UPDATE public.session_grants SET expiry=0 WHERE session_id=packet->>'sessionId';
+    ELSE DELETE FROM public.session_grants WHERE session_id=packet->>'sessionId';END IF;
+   ELSE
+    IF (jsonb_typeof(packet->'grantEpoch')='string' AND jsonb_typeof(packet->'sessAddr')='string') IS NOT TRUE THEN RAISE EXCEPTION 'native grant original selector refused';END IF;
+    IF g.session_id IS NULL OR g.grant_epoch IS DISTINCT FROM packet->>'grantEpoch' OR translate(g.sess_addr,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz') IS DISTINCT FROM translate(packet->>'sessAddr','ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz') THEN
+     PERFORM keryx_storage.leave_operation();RETURN CASE WHEN action='grant-release' THEN 'true'::json ELSE 'false'::json END;
+    END IF;
+    IF action='grant-revoke' THEN
+     IF active THEN INSERT INTO public.browser_journal_writer VALUES(txid_current()) ON CONFLICT DO NOTHING;UPDATE public.session_grants SET expiry=0 WHERE session_id=g.session_id;
+     ELSE DELETE FROM public.session_grants WHERE session_id=g.session_id;END IF;
+     PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
+    END IF;
+    IF action='grant-add' AND g.expiry<=floor(extract(epoch FROM clock_timestamp())*1000) THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+    IF jsonb_typeof(packet->'amount') IS DISTINCT FROM 'number' THEN RAISE EXCEPTION 'native grant amount refused';END IF;numeric_amount:=(packet->>'amount')::double precision;
+    before_number:=CASE WHEN action='grant-add' THEN g.spent+numeric_amount ELSE g.spent-numeric_amount END;
+    -- SQLite ROUND(x,6) rounds the actual IEEE binary value, not a shortest
+    -- decimal rendering. Decode binary64 and round the exact rational with
+    -- ties away from zero; e.g. binary 0.0000005 rounds to zero, not 0.000001.
+    float_bits:=('x'||encode(float8send(before_number),'hex'))::bit(64);binary_exponent:=substring(float_bits FROM 2 FOR 11)::integer;
+    IF binary_exponent=2047 THEN RAISE EXCEPTION 'native grant nonfinite arithmetic unsupported';END IF;
+    mantissa:=substring(float_bits FROM 13 FOR 52)::bigint;IF binary_exponent<>0 THEN mantissa:=mantissa+4503599627370496;END IF;
+    binary_exponent:=CASE WHEN binary_exponent=0 THEN -1074 ELSE binary_exponent-1075 END;
+    numerator:=mantissa*1000000*power(2::numeric,greatest(binary_exponent,0));denominator:=power(2::numeric,greatest(-binary_exponent,0));
+    quotient:=div(numerator,denominator);IF mod(numerator,denominator)*2>=denominator THEN quotient:=quotient+1;END IF;
+    rounded_grant:=(CASE WHEN get_bit(float_bits,0)=1 THEN -quotient ELSE quotient END/1000000)::double precision;
+    IF action='grant-add' AND rounded_grant>g.cap THEN PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+    -- These two legacy Source methods never acquire a browser writer. Preserve
+    -- their real matched-row refusal while active, including zero-row results.
+    IF active THEN RAISE EXCEPTION 'browser journal writer required';END IF;
+    UPDATE public.session_grants SET spent=CASE WHEN action='grant-add' THEN rounded_grant ELSE greatest(0::double precision,rounded_grant) END WHERE session_id=g.session_id;
+   END IF;
+  END IF;
+  PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
+ END IF;
+ IF action='history' THEN
+  IF (packet-ARRAY['signer','afterNonce','limit']='{}'::jsonb AND packet->>'signer' ~ '^0x[0-9a-f]{40}$' AND(packet->>'afterNonce'='' OR packet->>'afterNonce' ~ '^0x[0-9a-f]{64}$') AND jsonb_typeof(packet->'limit')='number' AND packet->>'limit' ~ '^[1-9][0-9]?$') IS NOT TRUE THEN RAISE EXCEPTION 'Withdrawal payment history unavailable';END IF;
+  page_limit:=(packet->>'limit')::integer;IF page_limit>64 THEN RAISE EXCEPTION 'Withdrawal payment history unavailable';END IF;history_rows:='[]'::jsonb;has_more:=false;
+  FOR i IN SELECT t.* FROM public.browser_authorization_intents t WHERE lower(t.signer)=packet->>'signer' AND t.network='eip155:5042' AND t.nonce COLLATE "C">(packet->>'afterNonce') COLLATE "C" ORDER BY t.nonce COLLATE "C" LIMIT page_limit+1 LOOP
+   IF jsonb_array_length(history_rows)=page_limit THEN has_more:=true;EXIT;END IF;
+   SELECT * INTO b FROM public.browser_journal_bindings WHERE nonce=i.nonce;IF NOT FOUND THEN RAISE EXCEPTION 'Original liability unavailable';END IF;
+   SELECT * INTO e FROM public.payment_events WHERE id='x402:'||i.nonce;IF NOT FOUND THEN RAISE EXCEPTION 'Original liability unavailable';END IF;
+   SELECT * INTO raw_payment FROM keryx_storage.payment_event_originals WHERE payment_id=e.id;
+   IF NOT FOUND OR raw_payment.native_projection IS DISTINCT FROM to_jsonb(e) THEN RAISE EXCEPTION 'native browser payment original unavailable or changed';END IF;
+   history_rows:=history_rows||jsonb_build_array(jsonb_build_object('selector',jsonb_build_object('sessionId',i.session_id,'requestId',i.request_id,'sourceSessionWire',to_json(i.session_id)::text,'sourceRequestWire',to_json(i.request_id)::text),'intent',to_jsonb(i),'binding',to_jsonb(b),'paymentWire',raw_payment.current_wire::text));
+   IF octet_length(history_rows::text)>4190000 THEN RAISE EXCEPTION 'native browser history frame bound';END IF;
+  END LOOP;
+  wire:=jsonb_build_object('selector',packet,'rows',history_rows,'hasMore',has_more)::text;IF octet_length(wire)>4194304 THEN RAISE EXCEPTION 'native browser history frame bound';END IF;
+  RETURN json_build_object('wire',wire,'sha256',encode(sha256(convert_to(wire,'UTF8')),'hex'));
+ END IF;
  controls:=jsonb_build_object('journalActive',active,'signingActive',signing_active,'floor',coalesce((SELECT min_original_version FROM public.browser_signing_v2_control WHERE id=1),2),'ever',coalesce((SELECT ever_active FROM public.browser_signing_v2_barrier WHERE id=1),0));
  IF action='v2' AND NOT(active AND signing_active) THEN RETURN '{"status":"inactive"}'::json;END IF;
 
@@ -178,7 +239,7 @@ DECLARE operation text;packet jsonb;selected jsonb;snapshot jsonb;controls jsonb
  day_number bigint;era bigint;doe bigint;yoe bigint;year_number bigint;doy bigint;mp bigint;month_number bigint;day_month bigint;day_ms bigint;
  base integer;digit integer;position integer;digits text;number_text text;release_capacity boolean:=false;update_expiry boolean:=false;projection_expiry timestamptz;
 BEGIN
- IF action IN('query','grant','activate') THEN RETURN public.storage_browser_journal_evidence(expected,digest,action,packet_wire);END IF;
+ IF action IN('query','grant','activate','grant-add','grant-release','grant-delete','grant-revoke','grant-expired') THEN RETURN public.storage_browser_journal_evidence(expected,digest,action,packet_wire);END IF;
  operation:=CASE action WHEN 'activate' THEN 'browser_source_activate' WHEN 'grant' THEN 'browser_source_grant' WHEN 'intent' THEN 'browser_source_intent' WHEN 'admit' THEN 'browser_source_admit' WHEN 'query' THEN 'browser_source_query' WHEN 'expose' THEN 'browser_source_transition' WHEN 'submit' THEN 'browser_source_transition' WHEN 'cancel' THEN 'browser_source_transition' WHEN 'sign' THEN 'browser_source_transition' END;
  IF operation IS NULL THEN RAISE EXCEPTION 'native browser action refused';END IF;
  PERFORM keryx_storage.require_operation(expected,digest,operation);

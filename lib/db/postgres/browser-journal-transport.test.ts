@@ -4,7 +4,7 @@ import { ARC_MAINNET_PROFILE as profile } from '../../arc-network-profile';
 import type { BrowserJournalAdmission } from '../browser-authorization-journal';
 import type { PostgresDomainChannel } from './domain-channel';
 import { PostgresDomainWriteOutcomeUnknown } from './domain-channel';
-import { browserJournalSha256,captureBrowserJournalSelector,type BrowserSourceSnapshot } from './browser-journal-packet';
+import { browserJournalSha256,captureBrowserJournalSelector,captureBrowserJournalAdmission,type BrowserSourceSnapshot } from './browser-journal-packet';
 import { composePostgresBrowserJournal } from './browser-journal-transport';
 
 // These channel doubles test capture, routing and failure handling only. They
@@ -42,4 +42,28 @@ it('validates raw snapshots and finishes even a null signing observation after i
 });
 it('preserves the historical preparer refusal before a durable-v2 native call',async()=>{
  const call=vi.fn(async()=>true),raw=input();await expect(composePostgresBrowserJournal(channel(call),false).admitBrowserSigningOriginal({journal:raw,queryId:raw.queryId,queryNamespace:'0x'+'33'.repeat(32)})).rejects.toThrow('Invalid browser authorization intent');expect(call).not.toHaveBeenCalled();
+});
+it('maps grant reads and all six Source grant methods through the existing grouped protocols',async()=>{
+ const calls:{op:string;args:readonly(string|null)[]}[]=[],grant={session_id:'session',sess_addr:'0x'+'31'.repeat(20),owner_addr:'0x'+'32'.repeat(20),cap:.1,spent:.01,expiry:2000000000000,tx_hash:'synthetic',grant_epoch:'epoch'};
+ const port=composePostgresBrowserJournal(channel(async(op,args)=>{calls.push({op,args});return args[0]==='grant-get'?grant:true;}),false);
+ expect(await port.getSessionGrant('session')).toEqual({sessionId:'session',sessAddr:grant.sess_addr,ownerAddr:grant.owner_addr,cap:.1,spent:.01,expiry:grant.expiry,txHash:'synthetic',grantEpoch:'epoch'});
+ expect(await port.addSessionGrantSpend('session','epoch',grant.sess_addr,.0000005)).toBe(true);await port.releaseSessionGrantSpend('session','epoch',grant.sess_addr,.01);await port.deleteSessionGrant('session');expect(await port.revokeSessionGrant('session','epoch',grant.sess_addr)).toBe(true);await port.deleteExpiredSessionGrants(Number.POSITIVE_INFINITY);
+ expect(calls.map(c=>[c.op,c.args[0]])).toEqual([['browserJournalReplay','grant-get'],...['grant-add','grant-release','grant-delete','grant-revoke','grant-expired'].map(a=>['browserJournalAction',a])]);
+ expect(JSON.parse(calls[1].args[1]!)).toEqual({sessionId:'session',grantEpoch:'epoch',sessAddr:grant.sess_addr,amount:.0000005});expect(JSON.parse(calls.at(-1)!.args[1]!)).toEqual({now:null});
+});
+it.each(['addSessionGrantSpend','releaseSessionGrantSpend','deleteSessionGrant','revokeSessionGrant','deleteExpiredSessionGrants'] as const)('refuses readonly %s before caller serialization',async name=>{
+ const touched=vi.fn(()=>{throw Error('getter');}),raw=new Proxy({},{get:touched,ownKeys:touched}),call=vi.fn(async()=>true),port=composePostgresBrowserJournal(channel(call),true);
+ await expect((port[name] as (...args:unknown[])=>Promise<unknown>)(raw,raw,raw,raw)).rejects.toThrow();expect(call).not.toHaveBeenCalled();expect(touched).not.toHaveBeenCalled();
+});
+it('returns checked raw Source history and refuses cursor, row-identity or digest substitutions',async()=>{
+ const captured=captureBrowserJournalAdmission(input()),selector={signer:captured.journal.signer.toLowerCase(),afterNonce:'',limit:1},selected=captureBrowserJournalSelector('session','request'),row={selector:selected,intent:captured.intent,binding:{nonce:captured.journal.nonce,requirements:captured.requirementsWire,payment_metadata:captured.paymentMetadataWire,payment_context:captured.paymentContextWire,valid_after:null,valid_before:null,header_hash:null},paymentWire:captured.payment.rowWire};
+ const frame=(r:unknown)=>{const wire=JSON.stringify({selector,rows:[r],hasMore:false});return {wire,sha256:browserJournalSha256(wire)};},call=vi.fn(async()=>frame(row)),port=composePostgresBrowserJournal(channel(call),true);
+ const result=await port.listSessionWithdrawalPayments(selector.signer,'',1);expect(result.payments[0].payment.rationale).toBe('wire\0\udfff');expect(result.nextCursor).toBeNull();expect(call.mock.calls[0]).toEqual(['browserJournalReplay',['history',JSON.stringify(selector)]]);
+ await expect(port.listSessionWithdrawalPayments(selector.signer.toUpperCase(),'',1)).rejects.toThrow('history unavailable');expect(call).toHaveBeenCalledTimes(1);
+ call.mockResolvedValueOnce(frame({...row,selector:captureBrowserJournalSelector('another-session','request')}));await expect(port.listSessionWithdrawalPayments(selector.signer,'',1)).rejects.toThrow('Original liability unavailable');
+});
+it('does not retry an unknown grant write or return a forged missing grant',async()=>{
+ const call=vi.fn(async()=>{throw new PostgresDomainWriteOutcomeUnknown();}),port=composePostgresBrowserJournal(channel(call),false);await expect(port.revokeSessionGrant('session','epoch','signer')).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(call).toHaveBeenCalledTimes(1);
+ await expect(composePostgresBrowserJournal(channel(async()=>({session_id:'other'})),true).getSessionGrant('session')).rejects.toThrow('grant unavailable');
+ await expect(composePostgresBrowserJournal(channel(async()=>false),false).releaseSessionGrantSpend('session','epoch','signer',.01)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);
 });
