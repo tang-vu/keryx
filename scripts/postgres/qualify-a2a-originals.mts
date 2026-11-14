@@ -71,6 +71,7 @@ export async function qualifyA2aOriginals(input:{options:PostgresConnectionOptio
   {label:'repair missing run',status:'completed',expected:false,setup:(db,id)=>{db.prepare('DELETE FROM query_runs WHERE id=?').run(id);}},
   {label:'repair offline run',status:'completed',expected:false,setup:(db,id)=>{db.prepare("UPDATE query_runs SET payment_mode='offline' WHERE id=?").run(id);}},
   {label:'repair unstarted',status:'completed',expected:false,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET started_at=NULL WHERE id=?').run(id);}},
+  {label:'repair retained legacy journal',status:'completed',expected:true,setup:(db,id)=>{db.prepare('UPDATE a2a_orders SET execution_journal_version=NULL WHERE id=?').run(id);},edit:u=>{u.resolution.evidence.executionJournalVersion=null;}},
   {label:'repair wrong journal',status:'completed',expected:false,edit:u=>{u.resolution.evidence.executionJournalVersion=null;}},
   {label:'repair changed payment boundary',status:'completed',expected:false,edit:u=>{u.resolution.evidence.paymentBoundaryCrossed=true;}},
   {label:'repair changed saving boundary',status:'completed',expected:false,edit:u=>{u.resolution.evidence.resultSaveBoundaryCrossed=true;}},

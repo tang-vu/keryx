@@ -126,7 +126,7 @@ BEGIN
   UPDATE public.a2a_orders SET status=CASE execution WHEN 'close' THEN 'failed' ELSE 'completed' END,
    response_data=CASE execution WHEN 'close' THEN NULL ELSE (packet->>'responseWire')::json END,
    error_code=CASE execution WHEN 'close' THEN packet->>'errorCode' ELSE NULL END,
-   resolution_data=CASE execution WHEN 'complete' THEN o.resolution_data ELSE (packet->>'resolutionWire')::json END,updated_at=started::timestamptz WHERE id=selector;
+   resolution_data=CASE execution WHEN 'complete' THEN o.resolution_data::json ELSE (packet->>'resolutionWire')::json END,updated_at=started::timestamptz WHERE id=selector;
   INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta)
    VALUES(selector,store,p->>'orderWire',p->>'orderSha256',p->>'deliveryToken',p->>'owner',p->>'network',nullif(p->'binding','null'::jsonb),p->'health');
   PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
