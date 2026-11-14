@@ -157,6 +157,9 @@ BEGIN
     WHEN '71756572794e616d657370616365' THEN 'queryNamespace'
     WHEN '7061796d656e745f636f6e74657874' THEN 'payment_context'
     WHEN '71756572795f6e616d657370616365' THEN 'query_namespace'
+    WHEN '636f6e74657874' THEN 'context'
+    WHEN '707269766174654a6f62' THEN 'privateJob'
+    WHEN '707269766174655f6a6f62' THEN 'private_job'
    END;
    IF key_wire IS NOT NULL THEN
     value_wire:=btrim(convert_from(substring(raw FROM start_at+1 FOR pos-start_at),'UTF8'),E' \t\r\n');
