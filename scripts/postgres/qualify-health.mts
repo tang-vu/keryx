@@ -2,6 +2,7 @@
  * rows only; no job execution, settlement, provider IO or production data. */
 import assert from 'node:assert/strict';
 import { sqliteAcceptanceProjection,heldAcceptanceProjectionSql } from './acceptance-projection.mts';
+import { heldQueryRunFixture } from './held-query-run-fixture.mts';
 import { DatabaseSync } from 'node:sqlite';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { Client } from 'pg';
@@ -30,7 +31,7 @@ export async function qualifyHealth(input:{options:PostgresConnectionOptions;ide
   for(const key of [...publicHealthSyncKeys(true),'synthetic-health-🌍','\ufeffsynthetic-health']){const value='\ufeffSynthetic health 🌍 '+key;db.prepare('INSERT INTO sync_state(key,value) VALUES(?,?)').run(key,value);pg(`INSERT INTO public.sync_state(key,value) VALUES(${q(key)},${q(value)});`);}
   const keys=['synthetic-health-🌍','missing','synthetic-health-🌍','nul\0','\ufeffsynthetic-health'];assert.deepEqual([...(await native.getSyncStates(keys))],Array.from(new Set(keys),key=>[key,(db.prepare('SELECT value FROM sync_state WHERE key=?').get(key)?.value as string|undefined)??null]));vectors++;
   assert.deepEqual([...(await native.getSyncStates([]))],[]);vectors++;await compare();
-  const metric="INSERT INTO query_runs(id,created_at,question,budget,data,origin) VALUES('synthetic-health-run','2026-10-09T10:00:00.000Z','Synthetic',0,'{}','web');";db.exec(metric);pg(metric);await compare();
+  const metric="INSERT INTO query_runs(id,created_at,question,budget,data,origin) VALUES('synthetic-health-run','2026-10-09T10:00:00.000Z','Synthetic',0,'{}','web');";db.exec(metric);const metricRow=heldQueryRunFixture(db,'synthetic-health-run');pg(metricRow.physicalSql+metricRow.scalarSql);await compare();
   job('synthetic-health-queued','running',now-600000,now-600000,null);await compare();
   job('synthetic-health-processing','running',now-10000,now-1000,now-5000);await compare();
   job('synthetic-health-review','running',now-7200000,now-3600000,now-7200000);await compare();
@@ -62,6 +63,6 @@ export async function qualifyHealth(input:{options:PostgresConnectionOptions;ide
   pg("DELETE FROM public.a2a_orders WHERE id LIKE 'synthetic-health-bulk-%';");
   input.ownerSql("UPDATE keryx_storage.control SET mode='held';");try{await assert.rejects(native.getSyncStates([]));await assert.rejects(native.readPublicHealthSnapshot(now,true));vectors++;}finally{input.ownerSql("UPDATE keryx_storage.control SET mode='active';");}
   await channel.close();await assert.rejects(native.getSyncStates([]));await assert.rejects(native.currentA2aOperationsSnapshot(now));vectors++;
-  return {vectors,actualPostgres:true,currentSqliteSnapshotParity:true,registrySelection:true,completeCompletionMarkers:true,ordinaryRecoveredUnknownCohorts:true,singleProtectedObservation:true,actualWriterContention:true,eventLoopResponsiveWhileWaiting:true,completeReadBoundsRefuse:true,readonlyRole:true,freshHeldAuthorityRefused:true,terminalDisposal:true,productionData:false,paidOperations:0,fullWriterQualified:false};
+  return {vectors,actualPostgres:true,currentSqliteSnapshotParity:true,partialLegacyOriginalAndObservedScalarPreserved:true,registrySelection:true,completeCompletionMarkers:true,ordinaryRecoveredUnknownCohorts:true,singleProtectedObservation:true,actualWriterContention:true,eventLoopResponsiveWhileWaiting:true,completeReadBoundsRefuse:true,readonlyRole:true,freshHeldAuthorityRefused:true,terminalDisposal:true,productionData:false,paidOperations:0,fullWriterQualified:false};
  }finally{try{pg("DELETE FROM public.a2a_orders WHERE id LIKE 'synthetic-health-%';DELETE FROM public.query_runs WHERE id='synthetic-health-run';DELETE FROM public.sync_state WHERE key IN ('lastSyncedBlock','registryParity','dispatchHealth','settlementParity','pendingPaymentReconciliation','a2aWorker','synthetic-health-🌍','synthetic-health-large',"+q('\ufeffsynthetic-health')+");");}finally{await channel.close();db.close();}}
 }
