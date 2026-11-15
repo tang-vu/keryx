@@ -54,7 +54,7 @@ try{
   sql(database,`GRANT CREATE ON DATABASE ${database} TO keryx_owner;CREATE PUBLICATION supabase_realtime;ALTER PUBLICATION supabase_realtime OWNER TO keryx_owner;GRANT CREATE ON SCHEMA public TO keryx_owner;SET statement_timeout='30s';BEGIN;`+source.sql+'\nCOMMIT;');
  }
  const describe="SET statement_timeout='5s';SELECT keryx_storage.catalog_contract();",referenceWire=sql('native_source',describe),reference=exportNativePostgresSchemaContract(referenceWire),actual=exportNativePostgresSchemaContract(sql('native_materialized',describe));
- assert.equal(reference.sha256,profile.catalogSha256);assert.equal(actual.sha256,reference.sha256);if(currentDataOnly){assert(Array.isArray(reference.metadata.sections.functions));assert.equal(reference.metadata.sections.functions.length,510);}
+ assert.equal(reference.sha256,profile.catalogSha256);assert.equal(actual.sha256,reference.sha256);if(currentDataOnly){const sections=reference.metadata.sections;assert(sections&&typeof sections==='object'&&!Array.isArray(sections));const functions=Reflect.get(sections,'functions');assert(Array.isArray(functions));assert.equal(functions.length,510);}
  if(sourcePlanOnly){
  const tables=JSON.parse(sql('native_source',`SELECT jsonb_agg(t ORDER BY t.name) FROM(SELECT c.relname name,
  (SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'nullable',NOT a.attnotnull) ORDER BY a.attnum) FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped) columns,
