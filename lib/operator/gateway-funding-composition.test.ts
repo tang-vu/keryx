@@ -141,6 +141,8 @@ describe("dormant Operator funding release", () => {
           || importer === "scripts/postgres/qualify-owner-assignments.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-a2a-originals.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-a2a-create.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "scripts/postgres/qualify-a2a-fulfillment.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "scripts/postgres/qualify-publication.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-research-purchases.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-chat-links.mts" && target === "lib/db/chat-accounts-sqlite.ts"
           || importer === "scripts/postgres/native-account-fixture.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
@@ -153,6 +155,8 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("scripts/postgres/qualify-usage.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-a2a-originals.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-a2a-create.mts")).toBe(false);
+    expect(visited.has("scripts/postgres/qualify-a2a-fulfillment.mts")).toBe(false);
+    expect(visited.has("scripts/postgres/qualify-publication.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-research-purchases.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-ledger.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-acceptance.mts")).toBe(false);
