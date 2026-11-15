@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { canonicalJson } from '../../canonical-json';
 import { validateStorageIdentity,type StorageIdentity } from '../storage-identity';
-import { PostgresStorageUnavailable,type PostgresConnectionOptions } from './connection';
+import { PostgresStorageUnavailable,postgresPoolConfiguration,type PostgresConnectionOptions } from './connection';
 import { createPostgresDomainChannel,type PostgresDomainChannel } from './domain-channel';
 import { composePostgresUserDomainTransport,type PostgresUserDomainTransport } from './user-domain-transport';
 import { composePostgresHealth,type PostgresHealthTransport } from './health-transport';
@@ -74,9 +74,20 @@ export interface PostgresRuntimeTransport extends PostgresA2aFulfillmentPort,Pos
  verifyRuntimeAuthority():Promise<void>;
  readColdCache():Promise<NativeColdCacheSnapshot>;
 }
+// Actual role capture belongs only to this channel construction, not to a
+// caller's readOnly flag. It registers no facade or funding/storage provenance.
+const connectionRoles=new WeakMap<PostgresDomainChannel,PostgresConnectionOptions['role']>();
 /** Actual fixed reads on one native pool. This transport cannot enroll a facade. */
 export function createPostgresRuntimeTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,claimsEnabled=false,privacyActive=false,assertCurrentContext?:()=>void):PostgresRuntimeTransport {
- const expected=validateStorageIdentity(identity);return composePostgresRuntimeTransport(createPostgresDomainChannel(options,expected,digest,assertCurrentContext),expected,digest,options.role!=='keryx_app',claimsEnabled,privacyActive);
+ const expected=validateStorageIdentity(identity),configured=postgresPoolConfiguration(options);
+ // Copy the validated connection values into a fixed record. A caller getter or
+ // later mutation cannot make the scope differ from the actual pool's role.
+ const host=configured.host,port=configured.port,role=configured.user,database=configured.database,password=configured.password;
+ if(typeof host!=='string'||typeof port!=='number'||typeof role!=='string'||typeof database!=='string'||typeof password!=='string')throw new PostgresStorageUnavailable();
+ const endpoint=Object.freeze(host==='127.0.0.1'?{kind:'loopback' as const,port}:{kind:'unix' as const,directory:host,port});
+ const captured=Object.freeze({endpoint,database,role,password});
+ const channel=createPostgresDomainChannel(captured,expected,digest,assertCurrentContext);connectionRoles.set(channel,role);
+ return composePostgresRuntimeTransport(channel,expected,digest,role!=='keryx_app',claimsEnabled,privacyActive);
 }
 export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,identity:StorageIdentity,digest:string,readOnly:boolean,claimsEnabled=false,privacyActive=false):PostgresRuntimeTransport {
  const expected=validateStorageIdentity(identity),wire=canonicalJson(expected),unavailable=()=>new PostgresStorageUnavailable(),live=()=>{if(channel.closed)throw unavailable();};
@@ -131,7 +142,7 @@ export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,id
   ...composePostgresA2aOriginals(channel,readOnly,expected),
   ...composePostgresA2aFulfillment(channel,readOnly),
   ...hosted,
-  ...composePostgresResearchPurchases(channel,readOnly),
+  ...composePostgresResearchPurchases(channel,readOnly,connectionRoles.has(channel)?{identity:expected,role:connectionRoles.get(channel)!}:undefined),
   sourceClaims,
   sourceClaimWrites:composePostgresSourceClaimWrites(channel,readOnly),
   sourceUpkeep:composePostgresSourceUpkeep(channel,readOnly),

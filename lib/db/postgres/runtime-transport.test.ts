@@ -1,12 +1,16 @@
 import { describe,it,expect,vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import {EventEmitter} from 'node:events';
 import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from '../storage-identity';
-import { composePostgresRuntimeTransport } from './runtime-transport';
+import { composePostgresRuntimeTransport,createPostgresRuntimeTransport } from './runtime-transport';
 import type { PostgresDomainChannel } from './domain-channel';
 import {PostgresStorageBusy} from './connection';
 import {NATIVE_CURRENT_DATA_INTAKE_PROFILE,NATIVE_READONLY_RUNTIME_PROFILE} from './runtime-profile';
 import {HOSTED_PAYMENT_SOURCE_RECEIPT_PREFIX} from './hosted-ledger-transport';
 import {ARC_MAINNET_PROFILE} from '../../arc-network-profile';
+// Driver recordings exercise captured-role wiring only, never installed proof.
+const driver=vi.hoisted(()=>({config:vi.fn(),query:vi.fn(),release:vi.fn(),end:vi.fn()}));
+vi.mock('pg',()=>({Pool:class{constructor(config:unknown){driver.config(config);}connect(){return Promise.resolve(Object.assign(new EventEmitter(),{query:driver.query,release:driver.release}));}end(){return driver.end();}on(){}},types:{getTypeParser:()=>(value:string)=>value}}));
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',network:'eip155:5042',authorityMode:'mainnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-12T00:00:00.000Z',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,provenanceDigest:'11'.repeat(32)},digest='ab'.repeat(32);
 const authority=()=>({identity,sourceDigest:digest}),cold=()=>({...authority(),format:'keryx-native-storage-cold-read-v1',cacheRows:[{sourceId:'source',text:'synthetic-envelope'}],cacheRowCount:1,cacheWireBytes:18});
 function fixture(){let closed=false;const call=vi.fn<PostgresDomainChannel['call']>(),channel:PostgresDomainChannel={get closed(){return closed;},call,async close(){closed=true;}};return {call,channel,transport:composePostgresRuntimeTransport(channel,identity,digest,true)};}
@@ -63,5 +67,34 @@ describe('finite prepared hosted protocol selection',()=>{
   await transport.confirmHostedAuthorization(signer,submission.authorizationId,'synthetic\0receipt');
   expect(call.mock.lastCall).toEqual(['hostedConfirm',[signer,submission.authorizationId,HOSTED_PAYMENT_SOURCE_RECEIPT_PREFIX+JSON.stringify('synthetic\0receipt')]]);
   expect(NATIVE_CURRENT_DATA_INTAKE_PROFILE.applicationFactoryApproved).toBe(false);expect(NATIVE_CURRENT_DATA_INTAKE_PROFILE.fullWriterQualified).toBe(false);
+ });
+});
+
+describe('private actual connection-role research scope',()=>{
+ it('keeps a bare composer closed even when its caller supplies readOnly false',async()=>{
+  const call=vi.fn<PostgresDomainChannel['call']>();const channel:PostgresDomainChannel={closed:false,call,async close(){}};
+  const transport=composePostgresRuntimeTransport(channel,identity,digest,false);let getters=0;
+  const hostile=new Proxy({},{get(){getters++;throw Error('Missing scope must precede argument access');}}) as never;
+  await expect(transport.assertResearchPurchaseAuthority!(hostile)).rejects.toThrow();expect(getters).toBe(0);expect(call).not.toHaveBeenCalled();expect(transport.closed).toBe(false);
+ });
+ it('captures the real reader role independently of later caller mutation and refuses before SQL',async()=>{
+  driver.config.mockClear();driver.query.mockClear();driver.end.mockClear();
+  const options={endpoint:{kind:'loopback' as const,port:5432},database:'synthetic',role:'keryx_reader',password:'synthetic-not-a-secret'};
+  const transport=createPostgresRuntimeTransport(options,identity,digest);options.role='keryx_app';
+  let getters=0;const hostile=new Proxy({},{get(){getters++;throw Error('Readonly scope must precede argument access');}}) as never;
+  await expect(transport.assertResearchPurchaseAuthority!(hostile)).rejects.toThrow();expect(getters).toBe(0);expect(driver.query).not.toHaveBeenCalled();expect(driver.config.mock.lastCall?.[0]).toMatchObject({user:'keryx_reader'});await transport.close();
+ });
+ it('uses the exact captured app role and existing strict all9/catalog observation without registering provenance',async()=>{
+  driver.config.mockClear();driver.query.mockClear();driver.release.mockClear();
+  driver.query.mockResolvedValue({rows:[[JSON.stringify(authority())]],fields:[{name:'result',dataTypeID:3802}]});
+  const options={endpoint:{kind:'loopback' as const,port:5432},database:'synthetic',role:'keryx_app',password:'synthetic-not-a-secret'};
+  const transport=createPostgresRuntimeTransport(options,identity,digest);options.role='keryx_reader';
+  try{
+   await expect(transport.assertResearchPurchaseAuthority!(identity.network)).resolves.toBeUndefined();
+   expect(driver.config.mock.lastCall?.[0]).toMatchObject({user:'keryx_app'});expect(driver.query).toHaveBeenCalledTimes(3);expect(driver.query.mock.calls[0]).toEqual(['BEGIN READ ONLY']);expect(driver.query.mock.calls[2]).toEqual(['COMMIT']);
+   expect(driver.query.mock.calls[1][0]).toMatchObject({text:expect.stringContaining('storage_native_runtime_authority'),rowMode:'array'});
+   expect(driver.release).toHaveBeenCalledExactlyOnceWith(false);
+   const actual=await import('./runtime-adapter');await expect(actual.assertPostgresRuntimeIdentity(transport)).rejects.toThrow('adapter_not_initialized');
+  }finally{await transport.close();}
  });
 });

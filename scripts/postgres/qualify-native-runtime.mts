@@ -11,6 +11,7 @@ import { buildSync } from 'esbuild';
 import { sealEnrolledCacheText } from '../../lib/sources/enrolled-content-cache';
 import { validateStorageIdentity,type StorageIdentity } from '../../lib/db/storage-identity';
 import {heldQueryRunFixture} from './held-query-run-fixture.mts';
+import {privateProfileActivitySchema} from '../../lib/profiles/private-profile';
 import type {NativeRuntimeMode} from './native-runtime-child.mts';
 import { heldHistoryProjectionSql,sqliteOriginalHistoryProjection } from './run-history-projection.mts';
 import { heldOwnershipHistoryProjectionSql,sqliteOwnershipHistoryProjection } from './ownership-history-projection.mts';
@@ -206,7 +207,8 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   const beforeCrypto=run('held-before-cache-crypto');assert.equal(beforeCrypto.asyncAuthorityBeforeCacheCrypto,true);assert(beforeCrypto.positiveControlDecryptionCalls>0);assert.equal(beforeCrypto.decipherCalls,0);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   // This one fresh, free synthetic Source original is introduced only after
   // the ordinary positive modes. Never derive its physical/scalar cells from PG.
-  const terminalId='synthetic-runtime-profile-terminal',terminalOrigin='web-terminal-invalid';
+  const terminalId='synthetic-runtime-profile-terminal',terminalOrigin='web_terminal_invalid';
+  assert.equal(privateProfileActivitySchema.shape.surfacesUsed.safeParse([terminalOrigin]).success,false,'Fixture origin must violate the actual Source surface contract');
   assert.equal(input.ownerSql(`SELECT count(*) FROM public.query_runs WHERE id=${q(terminalId)};`),'0');
   const terminalSource=openVerifiedSqliteStorage(acceptanceFile,input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(canonicalJson(inspectStorageDeploymentManifest({KERYX_STORAGE_MANIFEST:acceptanceManifestPath})),acceptanceManifest)});
   let terminalFixture:ReturnType<typeof heldQueryRunFixture>;
