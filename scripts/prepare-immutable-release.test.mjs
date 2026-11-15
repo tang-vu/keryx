@@ -322,7 +322,7 @@ test('all three fixed test shards succeed under the original shared stage deadli
     return { status: 0, stdout: args[1] === '--version' ? '11.19.0\n' : '', stderr: '' };
   } });
   assert.deepEqual(calls.filter(x => x.args[0] === 'test').map(x => x.args),
-    [1, 2, 3].map(i => ['test', '--', `--shard=${i}/3`, '--maxWorkers=3']));
+    [1, 2, 3].map(i => ['test', '--', `--shard=${i}/3`, `--maxWorkers=${process.platform === 'win32' ? 1 : 8}`]));
   assert.deepEqual(checks.results.map(x => x.name), ['typecheck', 'tests', 'build']);
   assert.equal(checks.results[1].commands.length, 3);
   assert.equal(checks.results[1].command[3], '--');
@@ -336,7 +336,7 @@ test('each failed test shard retains its phase and prevents every later command'
         stdout: args[1] === '--version' ? '11.19.0\n' : '', stderr: '' };
     } }));
     assert.deepEqual(calls.filter(x => x[0] === 'test'),
-      Array.from({ length: failed }, (_, i) => ['test', '--', `--shard=${i+1}/3`, '--maxWorkers=3']));
+      Array.from({ length: failed }, (_, i) => ['test', '--', `--shard=${i+1}/3`, `--maxWorkers=${process.platform === 'win32' ? 1 : 8}`]));
     const receipt = JSON.parse(fs.readFileSync(path.join(f.root, 'tests.json')));
     assert.equal(receipt.exitCode, 7); assert.equal(receipt.commands.length, failed);
     assert.equal(fs.existsSync(path.join(f.root, 'build.json')), false);
