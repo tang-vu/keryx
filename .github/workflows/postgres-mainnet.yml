@@ -122,6 +122,15 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=512
         run: node --import tsx --no-warnings scripts/postgres/qualify-native-materialization.mts --synthetic
+      - name: Held current Source data and explicit factory refusal
+        env:
+          NODE_OPTIONS: --max-old-space-size=512
+          KERYX_NETWORK: arc
+          NEXT_PUBLIC_KERYX_NETWORK: arc
+          KERYX_FORCE_OFFLINE: "0"
+          KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
+          NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
+        run: node --import ./scripts/postgres/current-data-source-bootstrap.mjs --import tsx --no-warnings scripts/postgres/qualify-native-materialization.mts --development-current-data-synthetic
 
   publication-contained:
     runs-on: ubuntu-latest
