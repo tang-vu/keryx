@@ -10,7 +10,7 @@ import { qualifyFunding } from "./qualify-funding.mts";
 import { nativePostgres17DescriptorBody } from './native-catalog-body.mts';
 import { exportNativePostgresSchemaContract } from "./native-contract.mts";
 import { postgresPoolConfiguration } from "../../lib/db/postgres/connection";
-import { STORAGE_MAINNET_PROFILE_DIGEST, storageIdentityDigest, type StorageIdentity } from "../../lib/db/storage-identity";
+import { STORAGE_MAINNET_PROFILE_DIGEST, storageIdentityDigest, validateStorageIdentity, type StorageIdentity } from "../../lib/db/storage-identity";
 import { canonicalJson } from "../../lib/canonical-json";
 import { parseSessionGrantConsent, type SessionGrantConsent } from "../../lib/payments/session-grant-consent";
 import { ARC_MAINNET_PROFILE } from "../../lib/arc-network-profile";
@@ -40,6 +40,25 @@ import { qualifyProfileIdentities } from "./qualify-profile-identities.mts";
 import { nativePersonalHistorySource } from "./personal-history-source.mts";
 import { qualifyPersonalHistory } from "./qualify-personal-history.mts";
 import { nativeRuntimeSource } from "./native-runtime-source.mts";
+import { nativePaymentBrowserSource } from "./payment-browser-source.mts";
+import { nativeSourceObservationsOffersSource } from "./source-observations-offers-source.mts";
+import { qualifySourceObservation } from "./qualify-source-observation.mts";
+import { qualifyArticleOffers } from "./qualify-article-offers.mts";
+import {nativeOperatorWithdrawalSource} from "./operator-withdrawal-source.mts";
+import {qualifyOperatorWithdrawal} from "./qualify-operator-withdrawal.mts";
+import {nativeReferenceArchiveSource} from "./reference-archive-source.mts";
+import {qualifyReferenceArchive} from "./qualify-reference-archive.mts";
+import {nativeCurrentProducersSource} from "./current-producers-source.mts";
+import {qualifyPrivateResearch} from "./qualify-private-research.mts";
+import {qualifyRegistrationSponsor} from "./qualify-registration-sponsor.mts";
+import {qualifyScholarly} from "./qualify-scholarly.mts";
+import {qualifyOnramp} from "./qualify-onramp.mts";
+import {qualifyPaymentObservers} from "./qualify-payment-observers.mts";
+import {qualifyPaymentConsumedFields} from "./qualify-payment-consumed-fields.mts";
+import { qualifyPaymentEvents } from "./qualify-payment-events.mts";
+import {qualifyPaymentObserverWait} from "./qualify-payment-observer-wait.mts";
+import {capturePaymentEvent} from "../../lib/db/postgres/payment-events-packet";
+import { qualifyBrowserJournal } from "./qualify-browser-journal.mts";
 import { qualifyNativeRuntime } from "./qualify-native-runtime.mts";
 import { qualifyOriginalJson } from "./qualify-original-json.mts";
 import { nativePrivacySource } from './privacy-source.mts';
@@ -103,9 +122,9 @@ const docker = (args: string[], input?: string, timeout = 30_000) => execFileSyn
 const sql = (database: "postgres" | "native_source" | "native_target", query: string) => docker(
   ["exec", "-i", name, "psql", "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", database], query).trim();
 const literal = (value: unknown) => `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
-const identity: StorageIdentity = { format: "keryx-mainnet-storage-identity-v1", authorityMode: "mainnet-real", network: "eip155:5042",
+const identity: StorageIdentity = validateStorageIdentity({ format: "keryx-mainnet-storage-identity-v1", authorityMode: "mainnet-real", network: "eip155:5042",
   profileDigest: STORAGE_MAINNET_PROFILE_DIGEST, deploymentId: randomUUID(), storageId: randomUUID(), enrollmentId: randomUUID(),
-  enrolledAt: new Date().toISOString(), provenanceDigest: "11".repeat(32) };
+  enrolledAt: new Date().toISOString(), provenanceDigest: "11".repeat(32) });
 const owner = `0x${"11".repeat(20)}`, signer = `0x${"22".repeat(20)}`;
 const sig = `0x${"33".repeat(65)}`, sessionSig = `0x${"44".repeat(65)}`;
 const consent = (overrides: Record<string, unknown> = {}): SessionGrantConsent => parseSessionGrantConsent({ format: "keryx-session-grant-consent-v1",
@@ -116,7 +135,7 @@ const clients: Client[] = [];
 const transports: PostgresConsentTransport[] = [];
 let ackProxy: Awaited<ReturnType<typeof startCommitAckLossProxy>> | undefined;
 process.once("exit", () => { if (owned) try { docker(["rm", "-f", name]); } catch {} });
-async function qualify(){
+async function qualify(paymentPart?:'payment'|'browser'){
 try {
   const image = docker(["image", "inspect", "postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065", "--format", "{{.Id}}"] ).trim();
   owned = true;
@@ -135,6 +154,21 @@ try {
     CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';
     CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
     CREATE DATABASE native_target WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;`);
+  const sourceObservationsOffersOnly=process.argv.includes("--source-observations-offers-only");
+  const paymentObserverWaitOnly=process.argv.includes("--payment-observer-wait-only");
+  const privateResearchOnly=process.argv.includes("--private-research-only");
+  const registrationSponsorOnly=process.argv.includes("--registration-sponsor-only");
+  const scholarlyOnly=process.argv.includes("--scholarly-only");
+  const onrampOnly=process.argv.includes("--onramp-only");
+  const paymentObserversOnly=process.argv.includes("--payment-observers-only");
+  const paymentConsumedFieldsOnly=process.argv.includes("--payment-consumed-fields-only");
+  const currentProducersOnly=privateResearchOnly||registrationSponsorOnly||scholarlyOnly||onrampOnly||paymentObserversOnly||paymentConsumedFieldsOnly;
+  const referenceArchiveOnly=process.argv.includes("--reference-archive-only")||currentProducersOnly;
+  const operatorWithdrawalOnly=process.argv.includes("--operator-withdrawal-only")||referenceArchiveOnly;
+  const hostedSourcePaymentsOnly=process.argv.includes("--hosted-source-payments-only");
+  const paymentEventsOnly=process.argv.includes("--payment-events-only")||paymentPart==='payment';
+  const browserJournalOnly=process.argv.includes("--browser-journal-only")||paymentPart==='browser';
+  const paymentBrowserOnly=process.argv.includes("--payment-browser-only")||paymentEventsOnly||browserJournalOnly||paymentObserverWaitOnly||hostedSourcePaymentsOnly;
   const privateProfilesOnly=process.argv.includes("--private-profiles-only");
   const profileIdentitiesOnly=process.argv.includes("--profile-identities-only");
   const personalHistoryOnly=process.argv.includes("--personal-history-only");
@@ -173,7 +207,7 @@ try {
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
   const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeRuntimeTailOnly||nativeFactoryOnly||a2aFulfillmentOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly||readGroupsOnly||accountHistoryOnly;
   const qualifyNativeCore=withNativeRuntime&&!nativeRuntimeTailOnly;
-  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly||workspacesOnly||contentWritesOnly||reviewsOnly||healthOnly||usageOnly||ledgerOnly||acceptanceOnly||accountsSourceReferenceOnly||accountsOnly||chatLinksOnly||chatLinksSourceReferenceOnly||publicProfilesOnly||publicProfilesSourceReferenceOnly||ownerAssignmentsSourceReferenceOnly||ownerAssignmentsOnly||a2aOriginalsOnly||a2aOriginalsSourceReferenceOnly||hostedAdmissionOnly||hostedAdmissionSourceReferenceOnly||responseWireOnly||currentSourceOwnerOnly;
+  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly||workspacesOnly||contentWritesOnly||reviewsOnly||healthOnly||usageOnly||ledgerOnly||acceptanceOnly||accountsSourceReferenceOnly||accountsOnly||chatLinksOnly||chatLinksSourceReferenceOnly||publicProfilesOnly||publicProfilesSourceReferenceOnly||ownerAssignmentsSourceReferenceOnly||ownerAssignmentsOnly||operatorWithdrawalOnly||sourceObservationsOffersOnly||paymentBrowserOnly||a2aOriginalsOnly||a2aOriginalsSourceReferenceOnly||hostedAdmissionOnly||hostedAdmissionSourceReferenceOnly||responseWireOnly||currentSourceOwnerOnly;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
   const boundedReadsOnly=process.argv.includes("--bounded-reads-only");
@@ -193,7 +227,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = publicationOnly ? nativeA2aFulfillmentSource() : a2aFulfillmentOnly ? nativeRuntimeSource() : sourceProducersOnly ? nativeSourceProducersSource() : currentSourceOwnerOnly ? nativeA2aResponseWireSource() : responseWireOnly ? nativeA2aResponseWireSource() : hostedAdmissionOnly||hostedAdmissionSourceReferenceOnly ? nativeHostedAdmissionSource() : a2aOriginalsOnly||a2aOriginalsSourceReferenceOnly ? nativeA2aOriginalsSource() : ownerAssignmentsSourceReferenceOnly||ownerAssignmentsOnly ? nativeOwnerAssignmentsSource() : publicProfilesOnly||publicProfilesSourceReferenceOnly ? nativePublicProfilesSource() : chatLinksOnly||chatLinksSourceReferenceOnly ? nativeChatLinksSource() : accountsSourceReferenceOnly||accountsOnly ? nativeAccountsSource() : acceptanceOnly ? nativeAcceptanceSource() : ledgerOnly ? nativeLedgerSource() : usageOnly ? nativeUsageSource() : healthOnly ? nativeHealthSource() : reviewsOnly ? nativeReviewsSource() : contentWritesOnly ? nativeContentWriteSource() : workspacesOnly ? nativeWorkspacesSource() : privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = currentProducersOnly ? nativeCurrentProducersSource() : referenceArchiveOnly ? nativeReferenceArchiveSource() : operatorWithdrawalOnly ? nativeOperatorWithdrawalSource() : sourceObservationsOffersOnly ? nativeSourceObservationsOffersSource() : paymentBrowserOnly ? nativePaymentBrowserSource(hostedSourcePaymentsOnly) : publicationOnly ? nativeA2aFulfillmentSource() : a2aFulfillmentOnly ? nativeRuntimeSource() : sourceProducersOnly ? nativeSourceProducersSource() : currentSourceOwnerOnly ? nativeA2aResponseWireSource() : responseWireOnly ? nativeA2aResponseWireSource() : hostedAdmissionOnly||hostedAdmissionSourceReferenceOnly ? nativeHostedAdmissionSource() : a2aOriginalsOnly||a2aOriginalsSourceReferenceOnly ? nativeA2aOriginalsSource() : ownerAssignmentsSourceReferenceOnly||ownerAssignmentsOnly ? nativeOwnerAssignmentsSource() : publicProfilesOnly||publicProfilesSourceReferenceOnly ? nativePublicProfilesSource() : chatLinksOnly||chatLinksSourceReferenceOnly ? nativeChatLinksSource() : accountsSourceReferenceOnly||accountsOnly ? nativeAccountsSource() : acceptanceOnly ? nativeAcceptanceSource() : ledgerOnly ? nativeLedgerSource() : usageOnly ? nativeUsageSource() : healthOnly ? nativeHealthSource() : reviewsOnly ? nativeReviewsSource() : contentWritesOnly ? nativeCurrentProducersSource() : workspacesOnly ? nativeWorkspacesSource() : privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   if(sourceProducersOnly){
     const raw=JSON.stringify({id:'synthetic',x:String.fromCharCode(0),y:String.fromCharCode(0xd800)}),j="'"+raw.replaceAll("'","''")+"'::json",probe:Record<string,unknown>={};
@@ -280,7 +314,7 @@ try {
 
   sql("native_target", `INSERT INTO keryx_storage.identity VALUES(true,${literal(identity)},'${storageIdentityDigest(identity)}');
     INSERT INTO keryx_storage.source_contract VALUES(true,${literal(JSON.parse(reference.canonicalJson))},'${reference.sha256}');
-    INSERT INTO public.browser_signer_capacity VALUES('${signer}',7);
+    ${paymentConsumedFieldsOnly?'':`INSERT INTO public.browser_signer_capacity VALUES('${signer}',7);`}
     UPDATE keryx_storage.control SET mode='active';`);
   const port = Number(docker(["port", name, "5432/tcp"]).trim().split(":")[1]);
   const connect = async (role: string) => {
@@ -291,6 +325,50 @@ try {
   const createTransport = withNativeRuntime ? createPostgresRuntimeTransport : withPrivateProfiles ? createPostgresUserDomainTransport : withAuth ? createPostgresApplicationDomainTransport : withApplicationDomains ? createPostgresApplicationReadTransport : withOwner ? createPostgresOwnerWithdrawalTransport : withHosted ? createPostgresHostedLedgerTransport : withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
   const nativeTransport = createTransport({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
   transports.push(nativeTransport);
+  if(currentProducersOnly){
+    const input={options:{endpoint:{kind:'loopback' as const,port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:(statement:string)=>sql('native_target',statement)};
+    const privateResearch=privateResearchOnly?await qualifyPrivateResearch(input):undefined;
+    const registrationSponsor=registrationSponsorOnly?await qualifyRegistrationSponsor(input):undefined;
+    const scholarlyRuntime=scholarlyOnly?createPostgresRuntimeTransport(input.options,identity,reference.sha256):undefined;
+    if(scholarlyRuntime)transports.push(scholarlyRuntime);
+    const scholarly=scholarlyRuntime?await qualifyScholarly({...input,sourceClaims:scholarlyRuntime.sourceClaims}):undefined;
+    const onramp=onrampOnly?await qualifyOnramp(input):undefined;
+    const paymentObservers=paymentObserversOnly?await qualifyPaymentObservers(input):undefined;
+    const paymentConsumedFields=paymentConsumedFieldsOnly?await qualifyPaymentConsumedFields(input):undefined;
+    const nativeFunctionCount=JSON.parse(reference.canonicalJson).sections.functions.length;assert(nativeFunctionCount<=512);
+    console.log(JSON.stringify({passed:true,currentProducersOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,nativeFunctionCount,privateResearch,registrationSponsor,scholarly,onramp,paymentObservers,paymentConsumedFields,fullWriterQualified:false,applicationBackendSwitched:false}));return;
+  }
+  if(referenceArchiveOnly){
+    const referenceArchive=await qualifyReferenceArchive({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:(statement:string)=>sql('native_target',statement)});
+    console.log(JSON.stringify({passed:true,referenceArchiveOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,referenceArchive,fullWriterQualified:false,applicationBackendSwitched:false}));return;
+  }
+  if(operatorWithdrawalOnly){
+    const operatorWithdrawal=await qualifyOperatorWithdrawal({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:(statement:string)=>sql('native_target',statement)});
+    console.log(JSON.stringify({passed:true,operatorWithdrawalOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,operatorWithdrawal,fullWriterQualified:false,applicationBackendSwitched:false}));return;
+  }
+  if(sourceObservationsOffersOnly){
+    const input={options:{endpoint:{kind:'loopback' as const,port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:(statement:string)=>sql('native_target',statement)};
+    const sourceObservations=await qualifySourceObservation(input),articleOffers=await qualifyArticleOffers(input);
+    console.log(JSON.stringify({passed:true,sourceObservationsOffersOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,sourceObservations,articleOffers,fullWriterQualified:false,applicationBackendSwitched:false}));return;
+  }
+  if(hostedSourcePaymentsOnly){
+    const input={options:{endpoint:{kind:'loopback' as const,port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:(statement:string)=>sql('native_target',statement),protocol:'source-payment-originals-v1' as const};
+    const transport=createPostgresHostedLedgerTransport(input.options,identity,reference.sha256,input.protocol);transports.push(transport);
+    const hostedLedger=await qualifyHostedLedger({...input,transport,applicationTableReference:true});
+    const hostedAdmission=await qualifyHostedAdmission(input);
+    console.log(JSON.stringify({passed:true,hostedSourcePaymentsOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,hostedLedger,hostedAdmission,fullWriterQualified:false,applicationBackendSwitched:false}));return;
+  }
+  if(paymentObserverWaitOnly){
+    const packet=capturePaymentEvent({id:'synthetic-wait-'+randomUUID(),createdAt:new Date().toISOString(),kind:'citation',queryId:'synthetic-wait',sourceId:'synthetic-wait',sourceName:'synthetic\0name',txHash:'synthetic-observer\0receipt',payer:owner,payee:signer,amountUsdc:0.01,network:identity.network,settled:false,settlementStatus:'pending'});
+    const observation=await qualifyPaymentObserverWait({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,holder:app},packet);
+    console.log(JSON.stringify({passed:true,paymentObserverWaitOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,observation,fullWriterQualified:false,applicationBackendSwitched:false}));return;
+  }
+  if(paymentBrowserOnly){
+    const input={options:{endpoint:{kind:'loopback' as const,port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:(statement:string)=>sql('native_target',statement)};
+    const paymentEvents=browserJournalOnly?undefined:await qualifyPaymentEvents(input);
+    const browserJournal=paymentEventsOnly?undefined:await qualifyBrowserJournal(input);
+    const report={passed:true,paymentEventsOnly,browserJournalOnly,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,paymentEvents,browserJournal,fullWriterQualified:false,applicationBackendSwitched:false};console.log(JSON.stringify(report));return report;
+  }
   if(publicationContainedOnly){
     // Close every host socket while the fixture bridge is still reachable.
     // The contained protocol then permanently removes that bridge; retaining
@@ -580,4 +658,8 @@ try {
 }
 
 }
-await qualify();
+if(process.argv.includes('--payment-browser-only')){
+ const payment=await qualify('payment'),browser=await qualify('browser');
+ assert(payment?.passed&&browser?.passed);assert.equal(payment.sourceSqlSha256,browser.sourceSqlSha256);assert.equal(payment.referenceCatalogSha256,browser.referenceCatalogSha256);
+ console.log(JSON.stringify({passed:true,paymentBrowserOnly:true,independentFreshTargets:true,sourceSqlSha256:payment.sourceSqlSha256,referenceCatalogSha256:payment.referenceCatalogSha256,paymentEvents:payment.paymentEvents,browserJournal:browser.browserJournal,fullWriterQualified:false,applicationBackendSwitched:false}));
+}else await qualify();

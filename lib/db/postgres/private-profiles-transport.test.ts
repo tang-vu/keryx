@@ -1,9 +1,10 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
+import {EventEmitter} from 'node:events';
 import {STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity} from '../storage-identity';
 import {PrivateProfileError} from '../../profiles/private-profile';
 const state=vi.hoisted(()=>({query:vi.fn(),clientQuery:vi.fn(),release:vi.fn(),end:vi.fn()}));
-vi.mock('pg',()=>({Pool:class{query(...args:unknown[]){return state.query(...args);}connect(){return Promise.resolve({query:state.clientQuery,release:state.release});}end(){return state.end();}on(){}},types:{getTypeParser:()=>(s:string)=>s}}));
+vi.mock('pg',()=>({Pool:class{query(...args:unknown[]){return state.query(...args);}connect(){return Promise.resolve(Object.assign(new EventEmitter(),{query:state.clientQuery,release:state.release}));}end(){return state.end();}on(){}},types:{getTypeParser:()=>(s:string)=>s}}));
 import {composePostgresPrivateProfiles} from './private-profiles-transport';
 import {createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel} from './domain-channel';
 import {PostgresStorageBusy,PostgresStorageUnavailable} from './connection';
@@ -25,7 +26,7 @@ describe('native private-profile Source terminal retirement',()=>{
  it('closes the genuine shared channel so sibling privacy reads also refuse',async()=>{
   state.clientQuery.mockImplementation(async(query:unknown)=>typeof query==='string'?{}:response({...snapshot(),activity:{...snapshot().activity,surfacesUsed:['web\0tail']}}));
   const channel=createPostgresDomainChannel({endpoint:{kind:'loopback',port:5432},database:'synthetic',role:'keryx_app',password:'synthetic-not-a-secret'},identity,'ab'.repeat(32)),port=composePostgresPrivateProfiles(channel,identity,false),privacy=composePostgresPrivacy(channel,identity.network,false,true);
-  await expect(port.get(wallet,identity.network)).rejects.toThrow('profile_unavailable');expect(channel.closed).toBe(true);expect(state.end).toHaveBeenCalledTimes(1);const queries=state.clientQuery.mock.calls.length;
+  await expect(port.get(wallet,identity.network)).rejects.toThrow('profile_unavailable');expect(channel.closed).toBe(true);expect(state.end).toHaveBeenCalledTimes(1);expect(state.clientQuery).toHaveBeenCalledTimes(3);expect(state.clientQuery.mock.calls[0]).toEqual(['BEGIN READ ONLY']);expect(state.clientQuery.mock.calls[2]).toEqual(['COMMIT']);const queries=state.clientQuery.mock.calls.length;
   await expect(privacy.sourceHistory!()).rejects.toThrow('privacy_unavailable');expect(state.clientQuery).toHaveBeenCalledTimes(queries);
  });
  it('retires unclassified SQL/read failures while recognized contention stays usable',async()=>{
@@ -50,9 +51,9 @@ describe('native private-profile Source terminal retirement',()=>{
   const malformed=f.port.get(wallet,identity.network),pending=f.port.get(wallet,identity.network),rejected=expect(pending).rejects.toThrow('profile_unavailable');await expect(malformed).rejects.toThrow('profile_unavailable');expect(f.channel.closed).toBe(true);finish(snapshot());await rejected;expect(f.call).toHaveBeenCalledTimes(2);
  });
  it('retires the genuine shared channel after an unclassified SQL transaction failure',async()=>{
-  state.clientQuery.mockImplementation(async(query:unknown)=>{if(typeof query!=='string')throw Object.assign(new Error('native profile surface unavailable'),{code:'P0001'});return {};});
+  const sqlFailure=Object.assign(new Error('native profile surface unavailable'),{code:'P0001'});state.clientQuery.mockImplementation(async(query:unknown)=>{if(typeof query!=='string')throw sqlFailure;return {};});
   const channel=createPostgresDomainChannel({endpoint:{kind:'loopback',port:5432},database:'synthetic',role:'keryx_app',password:'synthetic-not-a-secret'},identity,'ab'.repeat(32)),port=composePostgresPrivateProfiles(channel,identity,false);
-  await expect(port.get(wallet,identity.network)).rejects.toThrow('profile_unavailable');expect(channel.closed).toBe(true);expect(state.release).toHaveBeenCalledWith(true);expect(state.end).toHaveBeenCalledTimes(1);await expect(port.get(wallet,identity.network)).rejects.toThrow('profile_unavailable');
+  await expect(port.get(wallet,identity.network)).rejects.toThrow('profile_unavailable');expect(channel.closed).toBe(true);expect(state.clientQuery).toHaveBeenCalledTimes(2);expect(state.clientQuery.mock.calls[0]).toEqual(['BEGIN READ ONLY']);expect(state.clientQuery.mock.calls[1][0]).toEqual(expect.objectContaining({text:expect.stringContaining('private_profile'),rowMode:'array'}));expect(state.release).toHaveBeenCalledExactlyOnceWith(true);expect((state.release.mock.contexts[0] as EventEmitter).listenerCount('error')).toBe(0);expect(state.end).toHaveBeenCalledTimes(1);await expect(port.get(wallet,identity.network)).rejects.toThrow('profile_unavailable');expect(state.clientQuery).toHaveBeenCalledTimes(2);
  });
  it('does not revive a retired capability when cleanup fails',async()=>{
   const f=fixture();f.close.mockRejectedValueOnce(new Error('cleanup failed'));f.call.mockResolvedValueOnce({...snapshot(),activity:{...snapshot().activity,topics:['bad\0topic']}});await expect(f.port.get(wallet,identity.network)).rejects.toThrow('profile_unavailable');await expect(f.port.get(wallet,identity.network)).rejects.toThrow('profile_unavailable');expect(f.call).toHaveBeenCalledTimes(1);

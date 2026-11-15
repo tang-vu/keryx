@@ -1,0 +1,6 @@
+-- Selected mainnet enrolled SQLite Source deliberately closes scholarly rights:
+-- writes refuse before parsing signatures, catalog/provider work or custody;
+-- admission returns null after the existing native runtime-authority guard;
+-- state uses the actual Source-aware catalog reader and rejects an enrolled
+-- scholarly marker. See scholarly-transport.ts. No SQL function, new issuer,
+-- legacy grant, historical-profile activation or function-budget slot is needed.

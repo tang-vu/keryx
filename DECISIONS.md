@@ -9769,3 +9769,31 @@ alone, proxy wrapping and core construction are never provenance. Its genuine
 native readonly positive belongs to the compiled Linux qualification, with write,
 forged, changed-credential and close-during-await refusals. Custody, funding,
 signing, provider actions and production cutover remain separate authority gates.
+
+## Preserve Source originals in prepared native domains (2026-11-15)
+
+Keep payment originals and current wires separately, with independent hashes,
+selected storage identity and an exact native projection. A deferred constraint
+checks public/private coherence at commit, after transient writer tokens leave.
+Check raw observation eligibility after the data lock. Legacy observers refuse
+unsupported projections; explicit Source readers decode the retained cells.
+Source SQL leaves equal-date payment ties unspecified; native identifier ordering
+refines those ties without adopting a SQLite rowid. Raw scans do not qualify
+financial aggregates or their floating-point visitation order.
+
+Use separate, bounded lexer modes for JavaScript string canonicalization and
+SQLite JSON1 first-key selection. Preserve NUL, UTF-16 distinctions, BOMs, raw
+dates and original JSON bytes. Private result metadata comes from all fourteen
+observed Source cells plus genuine Source codecs, with public-row equality
+checked before an atomic held intake. Existing native rows cannot supply their
+own missing originals. Browser namespace/query/original intake likewise preserves
+the actual permanent Source layout and its signing-floor controls.
+
+Shared Core composition and protocol qualification grant no installed writer,
+funding, custody, registry transaction or retry authority. Genuine readonly query
+and privacy projections resolve current Source evidence flags; owner/export
+originals remain exact. Unsupported representations remain explicit whole-operation
+holds. Keep the complete writer closed until producer/observer coverage, actual
+intake and memory/load acceptance, genuine consumers, required CI and operational
+cutover requirements pass. Source merges do not authorize deployment or policy
+renewal.

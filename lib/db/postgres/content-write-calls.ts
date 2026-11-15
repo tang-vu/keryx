@@ -1,6 +1,7 @@
 /** Fixed native content/ingestion calls. No query/table selector escapes. */
 export const CONTENT_WRITE_CALLS=Object.freeze({
  content_source_upsert_snapshot:{sql:"SELECT public.storage_source_item_by_link($1::jsonb,$2::text,NULL,$3::text) AS result",args:1,write:false,bytes:16777216,inputBytes:8192,transaction:true},
+ content_source_meta_origin_snapshot:{sql:"SELECT public.storage_source_item_by_link($1::jsonb,$2::text,NULL,$3::text) AS result",args:1,write:false,bytes:32768,inputBytes:8192,transaction:true},
  content_add_items:{sql:"SELECT public.storage_application_add_items($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304,inputBytes:16785408},
  content_claim_gap_intent:{sql:"SELECT public.storage_application_claim_gap_intent($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304},
  content_create_gap_intent:{sql:"SELECT public.storage_application_create_gap_intent($1::jsonb,$2::text,$3::jsonb) AS result",args:1,write:true,bytes:4194304},

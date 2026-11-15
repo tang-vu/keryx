@@ -51,9 +51,9 @@ export function formatPublicationOwnerResults(raw:unknown,maxBytes=PUBLICATION_D
  }
  return lines.join('\n');
 }
-export function publicationSqlFailure(raw:unknown):{code:string;semantic:'claim_unavailable'|null}{
+export function publicationSqlFailure(raw:unknown):{code:string;semantic:'claim_unavailable'|'source_js_string_unavailable'|null}{
  const code=raw&&typeof raw==='object'?Reflect.get(raw,'code'):undefined,message=raw&&typeof raw==='object'?Reflect.get(raw,'message'):undefined;
- return {code:typeof code==='string'&&/^[A-Z0-9]{5}$/.test(code)?code:'XXXXX',semantic:message==='claim_unavailable'?'claim_unavailable':null};
+ return {code:typeof code==='string'&&/^[A-Z0-9]{5}$/.test(code)?code:'XXXXX',semantic:message==='claim_unavailable'?'claim_unavailable':code==='P0001'&&message==='Source JS string token unavailable'?'source_js_string_unavailable':null};
 }
 export const PUBLICATION_FACTORY_BLOCKER='native-private-profile-terminal-retirement' as const;
 export type PublicationObservation=Record<string,boolean|number|readonly [typeof PUBLICATION_FACTORY_BLOCKER]>;

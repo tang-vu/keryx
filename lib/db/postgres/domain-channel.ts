@@ -17,10 +17,33 @@ import { ACCOUNT_CALLS } from './accounts-calls';
 import { CHAT_LINK_CALLS } from './chat-links-calls';
 import { PUBLIC_PROFILE_CALLS } from './public-profiles-calls';
 import { OWNER_ASSIGNMENT_CALLS } from './owner-assignments-calls';
+import { SOURCE_OBSERVATION_CALLS } from './source-observation-calls';
+import { ARTICLE_OFFER_CALLS } from './article-offer-transport';
+import { OPERATOR_WITHDRAWAL_CALLS } from './operator-withdrawal-calls';
+import { PRIVATE_RESEARCH_CALLS } from './private-research-calls';
 
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
+  paymentObserve:{sql:"SELECT public.storage_application_read_group_8($1::jsonb,$2::text,'source_payment_observe',$3::jsonb) AS result",args:1,write:false,transaction:true,bytes:4194304,inputBytes:139264},
+  onrampFrame:{sql:"SELECT public.storage_application_operational_write($1::jsonb,$2::text,'onramp_frame',$3::jsonb) AS result",args:1,write:false,transaction:true,bytes:4194304,inputBytes:139264},
+  onrampApply:{sql:"SELECT public.storage_application_operational_write($1::jsonb,$2::text,'onramp_apply',$3::jsonb) AS result",args:1,write:true,bytes:4194304,inputBytes:139264},
+  ...PRIVATE_RESEARCH_CALLS,
+  registrationSponsorSnapshot:{sql:"SELECT public.storage_registration_sponsor($1::jsonb,$2::text,'snapshot',$3::text) AS result",args:1,write:false,transaction:true,bytes:33562624,inputBytes:532480},
+  registrationSponsorRead:{sql:"SELECT public.storage_registration_sponsor($1::jsonb,$2::text,'read',$3::text) AS result",args:1,write:false,transaction:true,bytes:270336,inputBytes:33562624},
+  registrationSponsorCommit:{sql:"SELECT public.storage_registration_sponsor($1::jsonb,$2::text,'commit',$3::text) AS result",args:1,write:true,bytes:270336,inputBytes:33562624},
+  referenceArchiveFrame:{sql:"SELECT public.storage_reference_archive($1::jsonb,$2::text,'frame',$3::text) AS result",args:1,write:false,bytes:134225920,inputBytes:1048576,transaction:true},
+  referenceArchiveApply:{sql:"SELECT public.storage_reference_archive($1::jsonb,$2::text,'apply',$3::text) AS result",args:1,write:true,bytes:256,inputBytes:268443648},
+  referenceArchiveRead:{sql:"SELECT public.storage_reference_archive($1::jsonb,$2::text,$3::text,$4::text) AS result",args:2,write:false,bytes:67117056,inputBytes:262144,transaction:true},
+  paymentEventRecord:{sql:"SELECT public.storage_payment_events($1::jsonb,$2::text,'record',$3::text) AS result",args:1,write:true,bytes:64,inputBytes:16785408},
+  paymentEventRecordOnce:{sql:"SELECT public.storage_payment_events($1::jsonb,$2::text,'record-once',$3::text) AS result",args:1,write:true,bytes:64,inputBytes:16785408},
+  paymentEventSnapshot:{sql:"SELECT public.storage_payment_events($1::jsonb,$2::text,'snapshot',$3::text) AS result",args:1,write:false,bytes:6299648,inputBytes:32768,transaction:true},
+  paymentEventTerminal:{sql:"SELECT public.storage_payment_events($1::jsonb,$2::text,'terminal',$3::text) AS result",args:1,write:true,bytes:256,inputBytes:16785408},
+  browserJournalState:{sql:"SELECT public.storage_browser_journal_evidence($1::jsonb,$2::text,'state',$3::text) AS result",args:1,write:false,bytes:8396800,inputBytes:131072,transaction:true},
+  browserJournalFinish:{sql:"SELECT public.storage_browser_journal_evidence($1::jsonb,$2::text,'finish',$3::text) AS result",args:1,write:false,bytes:8396800,inputBytes:131072,transaction:true},
+  browserJournalControl:{sql:"SELECT public.storage_browser_journal_evidence($1::jsonb,$2::text,'control','{}') AS result",args:0,write:false,bytes:128,transaction:true},
+  browserJournalAction:{sql:"SELECT public.storage_browser_journal($1::jsonb,$2::text,$3::text,$4::text) AS result",args:2,write:true,bytes:8396800,inputBytes:16785408},
+  browserJournalReplay:{sql:"SELECT public.storage_browser_journal_evidence($1::jsonb,$2::text,$3::text,$4::text) AS result",args:2,write:false,bytes:8396800,inputBytes:16785408,transaction:true},
   a2aFulfillmentGet:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'get',$3::text,NULL) AS result",args:1,write:false,transaction:true,bytes:33562624,inputBytes:512},
   a2aFulfillmentSnapshot:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'snapshot',$3::text,NULL) AS result",args:1,write:false,transaction:true,bytes:67108864,inputBytes:512},
   a2aFulfillmentVerify:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'verify',$3::text,$4::text) AS result",args:2,write:false,transaction:true,bytes:128,inputBytes:4096},
@@ -64,6 +87,9 @@ const CALLS = Object.freeze({
   ...CHAT_LINK_CALLS,
   ...PUBLIC_PROFILE_CALLS,
   ...OWNER_ASSIGNMENT_CALLS,
+  ...SOURCE_OBSERVATION_CALLS,
+  ...ARTICLE_OFFER_CALLS,
+  ...OPERATOR_WITHDRAWAL_CALLS,
   sourceItemByLink:{sql:'SELECT public.storage_source_item_by_link($1::jsonb,$2::text,$3::text,$4::text) AS result',args:2,write:false,bytes:4194304,transaction:true},
   ownershipHistoryList:{sql:"SELECT public.storage_ownership_history_list($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::jsonb,$7::integer,$8::jsonb,$9::jsonb) AS result",args:7,write:false,bytes:4198400,transaction:true},
   ownershipHistoryRead:{sql:"SELECT public.storage_ownership_history_read($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result",args:4,write:false,bytes:8008192,transaction:true},
@@ -121,13 +147,27 @@ export interface PostgresDomainChannel {
 function unavailable(): never { throw new PostgresStorageUnavailable(); }
 
 /** A single bounded pool for composed native domain ports. Not application
- * enrollment/provenance, target discovery, funding, custody or retry authority. */
-export function createPostgresDomainChannel(options: PostgresConnectionOptions, expected: StorageIdentity, sourceDigest: string): PostgresDomainChannel {
+ * enrollment/provenance, target discovery, funding, custody or retry authority.
+ * Current-selection checks narrow admission only. They cannot enroll a facade or
+ * issue runtime identity; SQL independently validates its current all-nine identity. */
+export function createPostgresDomainChannel(options: PostgresConnectionOptions, expected: StorageIdentity, sourceDigest: string, assertCurrentContext?: () => void): PostgresDomainChannel {
   const identity = validateStorageIdentity(expected);
   if (identity.authorityMode !== "mainnet-real" || typeof sourceDigest !== "string" || !/^[0-9a-f]{64}$/.test(sourceDigest)) unavailable();
+  if (assertCurrentContext !== undefined && typeof assertCurrentContext !== "function") unavailable();
   const expectedWire = canonicalJson(identity), pool = new Pool(postgresPoolConfiguration(options));
   let closed = false, pending = 0, closing: Promise<void> | undefined;
   const inFlight = new Set<Promise<unknown>>();
+  const current = () => {
+    if (closed) unavailable();
+    // Synchronous checks run at the actual dispatch boundary, never as a DTO or proof issuer.
+    let result: unknown;
+    try { result = assertCurrentContext?.(); } catch { unavailable(); }
+    if (result !== undefined) {
+      if (result instanceof Promise) void result.catch(() => {});
+      unavailable();
+    }
+    if (closed) unavailable();
+  };
   pool.on("error", () => {});
   return Object.freeze({
     get closed() { return closed; },
@@ -137,28 +177,46 @@ export function createPostgresDomainChannel(options: PostgresConnectionOptions, 
       if (!Array.isArray(args) || args.length !== selected.args || args.some(value => value !== null && typeof value !== "string")
         || Buffer.byteLength(JSON.stringify(args)) > ('inputBytes' in selected?selected.inputBytes:65536)) unavailable();
       if (pending >= 10) throw new PostgresStorageBusy();
+      current();
       let submitted = false, request: Promise<unknown> | undefined;
       pending++;
       try {
-        submitted = true;
         const statement = { text: selected.sql, rowMode: "array" as const, values: [expectedWire, sourceDigest, ...args] };
-        // These read adapters may traverse existing private domain helpers. A
-        // real read-only transaction enforces their nonmutation transitively.
-        // Only these fixed statements run here; no transaction callback escapes.
-        const query = "transaction" in selected && selected.transaction ? (async () => {
+        // Acquiring the client explicitly keeps queued writes behind the current
+        // context check. Pool.query would dispatch after an unchecked acquisition.
+        const query = (async () => {
           const client = await pool.connect();
-          let complete = false;
+          // Pool.query normally listens while a client is checked out. Explicit
+          // checkout must retain its own listener: pg can emit `error` BEFORE
+          // rejecting the active query, and an unhandled event would terminate
+          // the process instead of reporting an unknown submitted write.
+          let complete = false, failed = false;
+          const onClientError = () => { failed = true; };
+          client.on('error', onClientError);
+          const usable = () => { if (failed) unavailable(); current(); if (failed) unavailable(); };
           try {
-            if (closed) unavailable();
-            await client.query("BEGIN READ ONLY");
+            usable();
+            const transaction = "transaction" in selected && selected.transaction;
+            if (transaction) { await client.query("BEGIN READ ONLY"); usable(); }
+            // No await or caller code occurs between the current check and SQL.
+            submitted = selected.write;
             const result = await client.query(statement);
-            await client.query("COMMIT");
+            usable();
+            if (transaction) { await client.query("COMMIT"); usable(); }
             complete = true;
             return result;
-          } finally { client.release(!complete); }
-        })() : pool.query(statement);
+          } finally {
+            try {
+              // Keep the listener through synchronous pool handoff/destruction;
+              // pg reinstalls its idle listener on an ordinary healthy release.
+              client.release(!complete || failed);
+              if (failed) unavailable();
+            } finally { client.removeListener('error', onClientError); }
+          }
+        })();
         request = query; inFlight.add(query);
         const result = await query;
+        current();
         if (closed || result.rows.length !== 1 || result.fields.length !== 1 || result.fields[0].name !== "result"
           || ![114, 3802].includes(result.fields[0].dataTypeID)) unavailable();
         const row = result.rows[0] as unknown[];

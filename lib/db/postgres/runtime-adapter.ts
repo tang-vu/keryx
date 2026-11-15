@@ -8,8 +8,9 @@ import type { PrivateProfilesStore } from '../../profiles/private-profile';
 import type { ProfileIdentitiesStore } from '../../profiles/verified-identities';
 import type { PersonalHistoryStore } from '../../history/personal-history';
 import type { RunOwnershipHistoryStore } from '../../run-claims/history';
-import { runClaimsEnabled } from '../../run-claims/contracts';
-import type { RunPrivacyStore } from '../../run-privacy/contracts';
+import { runClaimsEnabled,runClaimBindingSchema } from '../../run-claims/contracts';
+import { privacyId,privacyWallet,type PrivacyActor,type RunPrivacyStore } from '../../run-privacy/contracts';
+import { projectRecordedEvidenceProvenance,type EvidenceProvenanceLookup } from '../../research/evidence-provenance';
 import type { PrivateBibliographiesStore } from '../../bibliographies/private-bibliography';
 import type { DecisionReviewsStore } from '../../research/decision-review-types';
 import type { TopicWatchesPort,PrivateTopicWatchStore } from '../topic-watches-sqlite';
@@ -51,7 +52,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  if(deployment.backend.sourceDigest!==NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256)refuseStorage('adapter_not_initialized');
  const selected=deployment.backend,expectedWire=canonicalJson(deployment),credential=readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader'),key=keyFingerprint();
  const claimsEnabled=runClaimsEnabled(process.env),privacyActive=process.env.KERYX_RUN_PRIVACY_ENABLED==='true',publicProfilesActive=publicProfilesEnabled(process.env);
- const transport=createPostgresRuntimeTransport({endpoint:selected.endpoint,database:selected.database,role:'keryx_reader',password:credential.password},deployment.identity,selected.sourceDigest,claimsEnabled,privacyActive);
+ const transport=createPostgresRuntimeTransport({endpoint:selected.endpoint,database:selected.database,role:'keryx_reader',password:credential.password},deployment.identity,selected.sourceDigest,claimsEnabled,privacyActive,()=>entry());
  let closed=false,closing:Promise<void>|undefined;
  const entry=()=>{
   if(closed)refuseStorage('adapter_not_initialized');
@@ -59,12 +60,26 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
    ||readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader').fingerprint!==credential.fingerprint)refuseStorage('identity_mismatch');
  };
  const guard=async()=>{entry();await transport.verifyRuntimeAuthority();entry();};
- const core=assembleNativePostgresBusinessCore({identity:deployment.identity,authority:createPostgresApplicationDomainAuthority(transport),assertEntry:entry,verify:guard,sourceClaims:transport.sourceClaims,sourceUpsert:transport.sourceUpsert.upsertSource});
+ const core=assembleNativePostgresBusinessCore({identity:deployment.identity,authority:createPostgresApplicationDomainAuthority(transport),assertEntry:entry,verify:guard,sourceClaims:transport.sourceClaims,sourceUpsert:transport.sourceUpsert.upsertSource,sourceMetaSetter:transport.sourceUpsert.setSourceMeta,sourceObservations:transport.sourceObservations});
  const close=()=>{closed=true;core.hooks.close();return closing??=transport.close();};
  // Each closed work closure below performs its own fresh guarded native SQL.
  // Invoke it before awaiting so its typed port captures the caller's arguments.
  // A separate fresh guard still checks authority before publishing the result.
  const read=async<T>(work:()=>Promise<T>)=>{entry();const value=await work();await guard();return value;};
+ const guardedRead=async<T>(work:()=>Promise<T>)=>{
+  await guard();
+  let value:T;try{value=await work();}catch(error){await guard();throw error;}
+  await guard();return value;
+ };
+ const evidence=async(lookup:EvidenceProvenanceLookup)=>{
+  entry();const sources=[...lookup.sourceIds],items=[...lookup.itemIds],flags=new Set<string>();
+  for(let offset=0;offset<Math.max(sources.length,items.length);offset+=500){
+   const batch={sourceIds:sources.slice(offset,offset+500),itemIds:items.slice(offset,offset+500)};
+   const values=await guardedRead(()=>transport.sourceObservations.readEvidenceProvenanceBatch(batch));
+   for(const flag of values)flags.add(flag);
+  }
+  return flags;
+ };
  const sourceNames=['getSource','getSourceByOnchainId','listSources','listAllSources','getSourceMeta','getSourceClaim','getSourceClaimForSource','getSourceClaimChallenge','listSourceClaims'] as const;
  const sourceReads=Object.freeze(Object.fromEntries(sourceNames.map(name=>[name,(...args:unknown[])=>read(()=>Reflect.apply(transport.sourceClaims[name],transport.sourceClaims,args))])));
  const ownerCursor=z.object({createdAt:z.string().max(64).datetime({offset:true}),id:z.string().regex(/^a2a_[a-f0-9]{64}$/)}).strict();
@@ -132,13 +147,37 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  const history:PersonalHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.personalHistory.list(owner,query)),receipts:(id,take)=>read(()=>transport.personalHistory.receipts!(id,take))} satisfies PersonalHistoryStore);
  const ownership:RunOwnershipHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.runOwnershipHistory.list(owner,query)),read:(owner,binding,id)=>read(()=>transport.runOwnershipHistory.read(owner,binding,id))} satisfies RunOwnershipHistoryStore);
  const privacy:RunPrivacyStore=Object.freeze({
-  creationReady:readonly,read:(id,actor)=>read(()=>transport.runPrivacy.read(id,actor)),owner:(id,actor)=>read(()=>transport.runPrivacy.owner(id,actor)),
+  creationReady:readonly,
+  async read(rawId,rawActor){
+   entry();const id=privacyId.parse(rawId),actor:PrivacyActor|undefined=rawActor?{wallet:privacyWallet.parse(rawActor.wallet),binding:runClaimBindingSchema.parse(rawActor.binding)}:undefined;
+   return guardedRead(async()=>{const value=await transport.runPrivacy.read(id,actor);entry();return value.item?{...value,item:{...value.item,run:await projectRecordedEvidenceProvenance(evidence,value.item.run)}}:value;});
+  },owner:(id,actor)=>read(()=>transport.runPrivacy.owner(id,actor)),
   list:query=>read(()=>transport.runPrivacy.list(query)),defaults:actor=>read(()=>transport.runPrivacy.defaults(actor)),
   questions:ids=>read(()=>transport.runPrivacy.questions!(ids)),sourceHistory:()=>read(()=>transport.runPrivacy.sourceHistory!()),
   learningPage:query=>read(()=>transport.runPrivacy.learningPage!(query)),archivePage:query=>read(()=>transport.runPrivacy.archivePage!(query)),
   memories:take=>read(()=>transport.runPrivacy.memories(take)),offers:take=>read(()=>transport.runPrivacy.offers(take)),
   settlement:id=>read(()=>transport.runPrivacy.settlement(id)),pending:id=>read(()=>transport.runPrivacy.pending(id)),setDefault:readonly,change:readonly,erase:readonly,export:readonly,
  } satisfies RunPrivacyStore);
+ // The Core's public-only list/stream branches consult its own privacy store.
+ // Keep owner/export originals exact; only Source's public read is demoted.
+ if(privacyActive)Object.defineProperty(core.adapter,'runPrivacy',{value:privacy,enumerable:false,writable:false,configurable:true});
+ const queryNames=['getQueryRun','listRecentQueries','listQueryRunsByAsker','listFollowUps','iterateRecentQueries'] as const;
+ const text=(value:string)=>{entry();if(typeof value!=='string')refuseStorage('invalid_operation');return value;};
+ const count=(value:number)=>{entry();if(typeof value!=='number')refuseStorage('invalid_operation');return value;};
+ const queries=Object.freeze({
+  async getQueryRun(raw:string){const id=text(raw);return guardedRead(()=>core.adapter.getQueryRun(id));},
+  async listRecentQueries(raw:number){const limit=count(raw);return guardedRead(()=>core.adapter.listRecentQueries(limit));},
+  async listQueryRunsByAsker(raw:string,take:number){const wallet=text(raw),limit=count(take);return guardedRead(()=>core.adapter.listQueryRunsByAsker(wallet,limit));},
+  async listFollowUps(raw:string){const id=text(raw);return guardedRead(()=>core.adapter.listFollowUps(id));},
+  iterateRecentQueries(raw:number){
+   const limit=count(raw);
+   return(async function*(){
+    await guard();const iterator=core.adapter.iterateRecentQueries(limit)[Symbol.asyncIterator]();
+    try{for(;;){await guard();const item=await iterator.next();await guard();if(item.done)return;yield item.value;}}
+    finally{await iterator.return?.();}
+   })();
+  },
+ } satisfies Pick<KeryxDB,typeof queryNames[number]>);
  const bibliographies:PrivateBibliographiesStore=Object.freeze({list:owner=>read(()=>transport.privateBibliographies.list(owner)),read:token=>read(()=>transport.privateBibliographies.read(token)),create:readonly,replace:readonly,revoke:readonly} satisfies PrivateBibliographiesStore);
  const reviews:DecisionReviewsStore=Object.freeze({ready:()=>read(()=>transport.decisionReviews.ready()),read:(owner,id)=>read(()=>transport.decisionReviews.read(owner,id)),list:(owner,run)=>read(()=>transport.decisionReviews.list(owner,run)),metrics:(network,since,until)=>read(()=>transport.decisionReviews.metrics(network,since,until)),capture:readonly,begin:readonly,verdict:readonly,consume:readonly,cancel:readonly,expire:readonly,observe:readonly} satisfies DecisionReviewsStore);
  const watches:TopicWatchesPort=Object.freeze({bindSession(session){entry();const bound=transport.topicWatches.bindSession(session);return Object.freeze({list:()=>read(()=>bound.list()),read:key=>read(()=>bound.read(key)),compareAndSwap:readonly} satisfies PrivateTopicWatchStore);}} satisfies TopicWatchesPort);
@@ -167,6 +206,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='ownerRunAssignments')return assignments;
     if(property==='pendingJobOwners')return pending;
     if(typeof property==='string'&&Object.hasOwn(sourceReads,property))return sourceReads[property];
+    if(typeof property==='string'&&Object.hasOwn(queries,property))return Reflect.get(queries,property);
     if(property==='getWebSession')return async(raw:string)=>{
      entry();const hash=accountDigestSchema.parse(raw);await guard();const value=await transport.applicationRead('get_web_session',{p_hash:hash});entry();if(value===null)return null;
      const row=sessionRow.parse(value);if(row.hash!==hash)refuseStorage('invalid_operation');return {hash:row.hash,wallet:row.wallet,issuedAt:row.issued_at,expiresAt:row.expires_at};
@@ -187,7 +227,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;
     return (...args:unknown[])=>read(()=>Reflect.apply(method,target,args));
    },
-   ownKeys:()=>[...sourceNames,'pendingJobOwners',...(privacyActive?['publicLedgerRuns']:[]),'accountMembership','chatAccountLinks','ownerRunAssignments',...(publicProfilesActive?['publicProfiles']:[])],getOwnPropertyDescriptor(_target,property){entry();if(property==='pendingJobOwners')return {value:pending,enumerable:false,writable:false,configurable:true};if(typeof property==='string'&&Object.hasOwn(sourceReads,property))return {value:sourceReads[property],enumerable:false,writable:false,configurable:true};if(property==='ownerRunAssignments')return {value:assignments,enumerable:false,writable:false,configurable:true};if(publicProfilesActive&&property==='publicProfiles')return {value:publicProfiles,enumerable:false,writable:false,configurable:true};if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
+   ownKeys:()=>[...sourceNames,...queryNames,'pendingJobOwners',...(privacyActive?['publicLedgerRuns']:[]),'accountMembership','chatAccountLinks','ownerRunAssignments',...(publicProfilesActive?['publicProfiles']:[])],getOwnPropertyDescriptor(_target,property){entry();if(property==='pendingJobOwners')return {value:pending,enumerable:false,writable:false,configurable:true};if(typeof property==='string'&&Object.hasOwn(sourceReads,property))return {value:sourceReads[property],enumerable:false,writable:false,configurable:true};if(typeof property==='string'&&Object.hasOwn(queries,property))return {value:Reflect.get(queries,property),enumerable:false,writable:false,configurable:true};if(property==='ownerRunAssignments')return {value:assignments,enumerable:false,writable:false,configurable:true};if(publicProfilesActive&&property==='publicProfiles')return {value:publicProfiles,enumerable:false,writable:false,configurable:true};if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
    setPrototypeOf:()=>false,set:()=>false,defineProperty:()=>false,deleteProperty:()=>false,preventExtensions:()=>false,
   });
   facades.set(facade,{identity:deployment.identity,guard,close,closed:()=>closed});

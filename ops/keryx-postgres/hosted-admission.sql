@@ -118,6 +118,7 @@ BEGIN
  RETURN NULL;
 END;$$;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
+ ('source_evidence_provenance_read',ARRAY['sources','source_items'],false,true),
  ('source_claims_read',ARRAY['sources','sync_state','source_meta'],true,true),
  ('source_policy_snapshot',ARRAY['sync_state','sources','browser_authorization_intents','browser_journal_bindings','hosted_treasury_authorizations','hosted_treasury_policies','research_purchase_authorizations'],true,true),
  ('hosted_admit_authorization',ARRAY['hosted_treasury_policies','hosted_treasury_authorizations','payment_events','sync_state','sources','private_research_executions','private_research_intents','private_research_results','private_research_interruptions','browser_journal_writer','browser_authorization_intents','browser_journal_bindings','research_purchase_authorizations'],true,false);
@@ -125,7 +126,43 @@ CREATE FUNCTION public.storage_hosted_admit_authorization(expected jsonb,digest 
 DECLARE p jsonb;c jsonb;payload jsonb;m jsonb;types jsonb;domain jsonb;totals jsonb;supplied jsonb;fee jsonb;fee_context jsonb;admitted record;job record;
  chosen_nonce text;amount numeric;query_amount numeric;first_budget text;before numeric;after numeric;now_seconds bigint:=floor(extract(epoch FROM clock_timestamp()));
  field text;integer_value numeric;parsed_uint numeric[]:=ARRAY[]::numeric[];url text;claim_id text;fee_key text;retained_fee text;role_name text;
+ e_request jsonb;e_entry jsonb;e_result jsonb;e_sources jsonb;e_items jsonb;e_field text;e_hex text;e_bytes bytea;e_units integer;e_offset integer;e_lead integer;e_width integer;e_index integer;e_next integer;
 BEGIN
+ IF policy_wire='source-evidence-provenance' THEN
+  IF session_user NOT IN('keryx_app','keryx_reader') OR current_setting('transaction_read_only')<>'on' OR policy_digest IS NOT NULL OR accounting_wire IS NOT NULL OR available_wire IS NOT NULL OR fee_wire IS NOT NULL OR original_wire IS NULL OR octet_length(original_wire)>1540096 THEN RAISE EXCEPTION 'Source evidence read-only request refused';END IF;
+  PERFORM keryx_storage.require_operation(expected,digest,'source_evidence_provenance_read');e_request:=original_wire::jsonb;
+  IF jsonb_typeof(e_request) IS DISTINCT FROM 'object' OR e_request-ARRAY['sourceIdsHex','itemIdsHex']<>'{}'::jsonb THEN RAISE EXCEPTION 'Source evidence tuple refused';END IF;
+  FOREACH e_field IN ARRAY ARRAY['sourceIdsHex','itemIdsHex'] LOOP
+   IF jsonb_typeof(e_request->e_field) IS DISTINCT FROM 'array' OR jsonb_array_length(e_request->e_field)>500 THEN RAISE EXCEPTION 'Source evidence batch refused';END IF;
+   FOR e_entry IN SELECT value FROM jsonb_array_elements(e_request->e_field) LOOP
+    e_hex:=e_entry#>>'{}';IF jsonb_typeof(e_entry) IS DISTINCT FROM 'string' OR length(e_hex)>1536 OR e_hex !~ '^([a-f0-9]{2})*$' THEN RAISE EXCEPTION 'Source evidence HEX refused';END IF;e_bytes:=decode(e_hex,'hex');
+ e_units:=0;e_offset:=0;
+ WHILE e_offset<octet_length(e_bytes) LOOP
+  e_lead:=get_byte(e_bytes,e_offset);
+  IF e_lead<128 THEN e_width:=1;
+  ELSIF e_lead BETWEEN 194 AND 223 THEN e_width:=2;
+  ELSIF e_lead BETWEEN 224 AND 239 THEN e_width:=3;
+  ELSIF e_lead BETWEEN 240 AND 244 THEN e_width:=4;
+  ELSE RAISE EXCEPTION 'Source observation UTF8 refused';END IF;
+  IF e_offset+e_width>octet_length(e_bytes) THEN RAISE EXCEPTION 'Source observation UTF8 refused';END IF;
+  IF e_width>1 THEN
+   FOR e_index IN 1..e_width-1 LOOP
+    IF get_byte(e_bytes,e_offset+e_index) NOT BETWEEN 128 AND 191 THEN RAISE EXCEPTION 'Source observation UTF8 refused';END IF;
+   END LOOP;
+   e_next:=get_byte(e_bytes,e_offset+1);
+   IF e_lead=224 AND e_next<160 OR e_lead=237 AND e_next>=160 OR e_lead=240 AND e_next<144 OR e_lead=244 AND e_next>143 THEN RAISE EXCEPTION 'Source observation UTF8 refused';END IF;
+  END IF;
+  e_units:=e_units+CASE WHEN e_width=4 THEN 2 ELSE 1 END;e_offset:=e_offset+e_width;
+ END LOOP;
+    IF e_units>256 THEN RAISE EXCEPTION 'Source evidence identity refused';END IF;
+   END LOOP;
+  END LOOP;
+  SELECT coalesce(jsonb_agg(encode(convert_to(s.id,'UTF8'),'hex') ORDER BY s.id COLLATE "C"),'[]') INTO e_sources FROM public.sources s WHERE s.evidence_provenance='synthetic-demo' AND encode(convert_to(s.id,'UTF8'),'hex') IN(SELECT value FROM jsonb_array_elements_text(e_request->'sourceIdsHex'));
+  IF EXISTS(SELECT 1 FROM public.source_items i WHERE i.evidence_provenance='synthetic-demo' AND encode(convert_to(i.id,'UTF8'),'hex') IN(SELECT value FROM jsonb_array_elements_text(e_request->'itemIdsHex')) AND keryx_storage.a2a_utf16_length(i.source_id)>256) THEN RAISE EXCEPTION 'Source evidence result identity bound';END IF;
+  SELECT coalesce(jsonb_agg(jsonb_build_object('idHex',encode(convert_to(i.id,'UTF8'),'hex'),'sourceIdHex',encode(convert_to(i.source_id,'UTF8'),'hex')) ORDER BY i.id COLLATE "C"),'[]') INTO e_items FROM public.source_items i WHERE i.evidence_provenance='synthetic-demo' AND encode(convert_to(i.id,'UTF8'),'hex') IN(SELECT value FROM jsonb_array_elements_text(e_request->'itemIdsHex'));
+  e_result:=jsonb_build_object('format','keryx-native-source-evidence-v1','sourceIdsHex',e_sources,'items',e_items);
+  IF jsonb_array_length(e_sources)+jsonb_array_length(e_items)>1000 OR octet_length(e_result::text)>2359296 THEN RAISE EXCEPTION 'Source evidence complete result bound';END IF;RETURN e_result;
+ END IF;
  IF policy_wire='source-claims-read' THEN
   IF current_setting('transaction_read_only')<>'on' OR policy_digest IS NOT NULL OR accounting_wire IS NOT NULL OR available_wire IS NOT NULL OR fee_wire IS NOT NULL THEN RAISE EXCEPTION 'source claims read-only snapshot required';END IF;
   PERFORM keryx_storage.require_operation(expected,digest,'source_claims_read');

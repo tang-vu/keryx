@@ -1389,3 +1389,50 @@ guard failure. The compiled Linux reader qualification checks the helper's
 readonly positive, write/forged/proxy refusals, changed credentials and terminal
 closure. Those checks require the scheduled actual fixture; unit composition
 tests do not establish an installed native positive.
+
+## Current Source protocol preparation
+
+`scripts/postgres/current-producers-source.mts` independently assembles the fresh
+payment/browser, offer, Operator, archive, private research, registration sponsor
+and onramp protocols. Its catalog is separate from an installed application
+profile. Protocol success cannot select a datastore or open the complete writer.
+
+Payment originals/current wires retain all27 Source cells and independent hashes.
+Commit checks bind them to the exact public projection. Explicit payment readers
+use those retained cells; raw scans do not enable metrics or financial aggregates.
+Five fixed financial operations check only their audited consumed payment fields.
+Unknown flags, receipt gaps and the unqualified receipt-whitespace class remain
+held; unrelated presentation fields do not grant a financial exemption.
+Private result intake adds fourteen Source-derived identity fields only for the
+exact pinned schema, after comparing all four public Source rows. It shares the
+same all-empty preflight and transaction as the other private projections.
+
+Prepared Core options bind named ports explicitly and retain the ordinary
+unconfigured refusals. The readonly candidate adds five QueryRun readers and
+current evidence provenance to privacy reads, keeping owner/export bytes exact.
+Its real Linux factory, changed-authority, delayed-result and iterator checks
+remain required, alongside actual PostgreSQL/data/memory acceptance and CI.
+
+Run individual disposable protocol fixtures with
+`scripts/postgres/test-session-consents.mts` and the matching flag:
+
+```text
+--payment-browser-only
+--hosted-source-payments-only
+--source-observations-offers-only
+--operator-withdrawal-only
+--reference-archive-only
+--private-research-only
+--registration-sponsor-only
+--onramp-only
+--scholarly-only
+--payment-observers-only
+--payment-consumed-fields-only
+```
+
+Private protocol fixtures require explicit synthetic mainnet schema/profile
+configuration before imports, fake reviewed registry pins and blank spending
+keys. Their local test-key data signatures and synthetic success metadata are
+not production payments. Keep unsupported representation classes explicit;
+qualifying one protocol does not resolve full writer, funding/custody consumer,
+live-data delta, startup policy or production cutover requirements.

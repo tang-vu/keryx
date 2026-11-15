@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { canonicalJson } from '../../canonical-json';
 import { canonicalSourceUrl } from '../../sources/public-source-claim';
 import { sourceRegistryAuthoritySchema,sameRegistryAuthority } from '../../registry/source-registry-authority-schema';
+import { configuredRegistryAuthorities,assertConfiguredRegistryAuthority } from '../../registry/source-registry-authority';
+import { config } from '../../config';
 import type { Source } from '../../types';
+import type { SourceMeta } from '../keryx-db';
 import { decodeSourceClaimPolicySnapshot,sourceClaimForSourceSnapshot,sourceClaimPolicySelector,sourceClaimPolicyRuntime,type SourceClaimPolicyRuntime } from './source-claim-purchase-policy';
 import { PostgresStorageUnavailable } from './connection';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
@@ -29,6 +32,30 @@ export function captureSourceUpsertInput(raw:Source){
  return {source,rowWire,selector};
 }
 export interface SourceUpsertCapture {sourceSelector:string;sourceSnapshotSha256:string;candidateOriginWire:string|null;bindOrigin:boolean;registryBinding:{key:string;value:string}|null;rowSha256:string;}
+/** SourceMeta is independent of catalog/claim state. These are observed SQLite
+ * scalar bindings, not sanitized originals. NUL requires a separate qualified
+ * raw-scalar storage/read protocol and remains a whole-packet refusal here. */
+export function captureSourceMetaInput(id:string,raw:SourceMeta){
+ if(typeof id!=='string'||id.length<1||id.length>256||id.includes('\0')||Buffer.from(id).toString('utf8')!==id)throw Error('Native metadata identity unsupported');
+ const scalar=(value:unknown)=>{if(typeof value!=='string')throw Error('Source metadata scalar unavailable');if(value.length>262144)throw Error('Source metadata packet bound');const bound=Buffer.from(value).toString('utf8');if(bound.includes('\0'))throw Error('Native metadata NUL surface unsupported');return bound;};
+ const name=raw.name,description=raw.description,url=raw.url,rss=raw.rssUrl,proposed=raw.registryAuthority;
+ const row={id,name:scalar(name),description:scalar(description),url:scalar(url),rss_url:rss==null?null:scalar(rss)};
+ const authority=proposed?assertConfiguredRegistryAuthority(proposed):null;
+ const selector=authority?canonicalJson({operation:'source-meta-origin',onchainId:idSchema.parse(id)}):null;
+ const value={row,authority,selector};if(Buffer.byteLength(canonicalJson({p_row:{row,origin:null}}))>262144)throw Error('Source metadata packet bound');return value;
+}
+const metaOriginSelector=z.object({operation:z.literal('source-meta-origin'),onchainId:idSchema}).strict();
+function metadataOriginRuntime(){return canonicalJson({network:config.networkId??config.profile.networkId,authorities:configuredRegistryAuthorities()});}
+/** Local raw-origin CAS only; never a claim, registry-event or funding proof. */
+export function captureSourceMetaOrigin(raw:unknown,input:ReturnType<typeof captureSourceMetaInput>){
+ if(input.authority===null||input.selector===null)throw Error('Metadata origin was not requested');
+ const envelope=z.object({wire:z.string().max(32768),sha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict().parse(raw);
+ if(Buffer.byteLength(envelope.wire)>32768||sha(envelope.wire)!==envelope.sha256)throw Error('Metadata origin snapshot digest unavailable');
+ const snapshot=z.object({selector:metaOriginSelector,originWire:z.string().nullable()}).strict().parse(JSON.parse(envelope.wire));
+ if(canonicalJson(snapshot.selector)!==input.selector||snapshot.originWire!==null&&Buffer.byteLength(snapshot.originWire)>8192)throw Error('Metadata origin snapshot differs');
+ const retained=retainedOrigin(snapshot.selector.onchainId,snapshot.originWire);if(retained&&!sameRegistryAuthority(retained,input.authority))throw Error('Source ID already belongs to another immutable registry origin');
+ return {authority:input.authority,beforeWire:snapshot.originWire,snapshotSha256:envelope.sha256};
+}
 /** Pure current SqliteAdapter.upsertSource guard. This does not authenticate
  * registry events, alter payout authority, refresh proof or change claim mode. */
 export function captureSourceUpsertPolicy(raw:unknown,input:ReturnType<typeof captureSourceUpsertInput>,runtime:SourceClaimPolicyRuntime):SourceUpsertCapture{
@@ -52,7 +79,7 @@ export function captureSourceUpsertPolicy(raw:unknown,input:ReturnType<typeof ca
 }
 /** Fixed port; Source is captured before awaits. A changed locked predecessor
  * refuses, and an uncertain write is never retried or reported as committed. */
-export function composePostgresSourceUpsert(channel:PostgresDomainChannel,readOnly:boolean):{upsertSource(source:Source):Promise<void>}{
+export function composePostgresSourceUpsert(channel:PostgresDomainChannel,readOnly:boolean):{upsertSource(source:Source):Promise<void>;setSourceMeta(id:string,meta:SourceMeta):Promise<void>}{
  if(typeof readOnly!=='boolean')throw new PostgresStorageUnavailable();
  return Object.freeze({async upsertSource(raw:Source){
   if(channel.closed||readOnly)throw new PostgresStorageUnavailable();
@@ -63,5 +90,18 @@ export function composePostgresSourceUpsert(channel:PostgresDomainChannel,readOn
   if(Buffer.byteLength(wire)>524288)throw new PostgresStorageUnavailable();
   const result=await channel.call('content_upsert_source',[wire]);
   if(channel.closed||result!==null||configWire!==null&&canonicalJson(sourceClaimPolicyRuntime())!==configWire)throw new PostgresDomainWriteOutcomeUnknown();
+ },async setSourceMeta(id:string,raw:SourceMeta){
+  if(channel.closed||readOnly)throw new PostgresStorageUnavailable();
+  const input=captureSourceMetaInput(id,raw),runtime=input.authority===null?null:metadataOriginRuntime();
+  let origin:ReturnType<typeof captureSourceMetaOrigin>|null=null;
+  if(input.selector!==null){
+   const snapshot=await channel.call('content_source_meta_origin_snapshot' as Parameters<PostgresDomainChannel['call']>[0],[input.selector]);
+   let current:string;try{current=metadataOriginRuntime();}catch{throw new PostgresStorageUnavailable();}
+   if(channel.closed||current!==runtime)throw new PostgresStorageUnavailable();origin=captureSourceMetaOrigin(snapshot,input);
+  }
+  const packet=canonicalJson({p_row:{row:input.row,origin}});if(Buffer.byteLength(packet)>262144)throw new PostgresStorageUnavailable();
+  const result=await channel.call('content_set_source_meta',[packet]);
+  let stable=true;if(runtime!==null){try{stable=metadataOriginRuntime()===runtime;}catch{stable=false;}}
+  if(channel.closed||result!==null||!stable)throw new PostgresDomainWriteOutcomeUnknown();
  }});
 }

@@ -108,7 +108,7 @@ try {
         if (fragment) {
           // The unavailable-fee link is conditional on the visible creator
           // section's metrics response, not part of the dashboard's section nav.
-          if (fragment === "#payment-proof-title") await page.locator("#current-creators").scrollIntoViewIfNeeded();
+          if (fragment === "#payment-proof-title") await page.locator("#current-creators:visible").scrollIntoViewIfNeeded();
           // Streaming can retain hidden page content. Exercise the user's
           // visible control while still rejecting two visible matching links.
           const sectionLink = page.locator(`main a[href="${fragment}"]:visible`);

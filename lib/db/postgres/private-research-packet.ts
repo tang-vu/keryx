@@ -1,0 +1,153 @@
+/** Pure capture and genuine SOURCE validation. No signer, payment transport,
+ * publication callback, SQL selector or installed adapter proof is supplied. */
+import { createHash } from 'node:crypto';
+import { z } from 'zod';
+import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
+import { addressSchema,authorizationSchema,requirementSchema,BUYER_NETWORK } from '../../buyer/protocol';
+import { privateRequestSchema } from '../../buyer/private-request-commitment';
+import { privateMerchantPolicySchema } from '../../buyer/private-merchant-policy';
+import { privateResearchIdSchema,validatePrivateResearchIntent,type PrivateResearchIntent } from '../../a2a/private-research-intent';
+import { privatePaymentConfirmation,privatePaymentState,type PrivatePaymentConfirmation } from '../../a2a/private-payment-state';
+import { privateCreatorSubmissionSchema,type PrivateCreatorSubmissionRecord } from '../private-creator-submissions';
+import { capturePrivateCreatorConfirmation,readPrivateCreatorConfirmation } from '../private-creator-confirmations';
+import { capturePrivateResearchResult,readPrivateResearchResult,validatePrivateResearchResultSnapshot } from '../private-research-results';
+import type { QueryRun } from '../../types';
+import { privateHistoryCursorSchema } from '../../a2a/private-research-identifiers';
+import type { PrivateTreasurySummary } from '../private-treasury-summary';
+
+export const privateResearchActions=Object.freeze(['reserve-intent','reserve-treasury','claim-payment','confirm-payment','claim-execution','admit-creator','confirm-creator','save-result','interrupt','release'] as const);
+export type PrivateResearchAction=typeof privateResearchActions[number];
+const date=z.string().datetime({offset:true}),uuid=z.string().uuid();
+const refuse=()=>new Error('Native private research refused');
+export const privateResearchSha=(wire:string)=>createHash('sha256').update(wire).digest('hex');
+export const privateCreatorLegId=(data:z.infer<typeof privateCreatorSubmissionSchema>)=>privateResearchSha(JSON.stringify([data.kind,data.sourceId,data.itemId,data.submission.payee]));
+const freeze=<T>(value:T):T=>{if(value&&typeof value==='object'){for(const child of Object.values(value))freeze(child);Object.freeze(value);}return value;};
+const bound=(value:string,bytes:number)=>{if(typeof value!=='string'||Buffer.byteLength(value)>bytes)throw refuse();return value;};
+const copy=(value:unknown,bytes:number)=>JSON.parse(bound(JSON.stringify(value),bytes)) as unknown;
+// Synchronous structural capture uses the actual Source field schemas. All
+// caller objects/prototypes are discarded before bounded JSON serialization.
+// Genuine signature/commitment and current-intent payment checks still happen
+// through the Source validators after capture; this is never evidence issuance.
+const intentCaptureSchema=z.object({id:privateResearchIdSchema,submission:z.object({request:privateRequestSchema,salt:z.string().regex(/^0x[a-f0-9]{64}$/),payment:z.object({authorization:authorizationSchema,signature:z.string().regex(/^0x[a-fA-F0-9]{130}$/)}).strict()}).strict(),requirement:requirementSchema,merchants:privateMerchantPolicySchema}).strict();
+const confirmationFields={transaction:z.string().min(1).max(256).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),network:z.literal(BUYER_NETWORK),payer:addressSchema,payee:addressSchema,amountMicros:z.string().regex(/^[1-9]\d{0,6}$/),authorizationId:z.string().regex(/^0x[a-f0-9]{64}$/)};
+const paymentCaptureSchema=z.discriminatedUnion('source',[z.object({source:z.literal('circle-facilitator-success'),...confirmationFields}).strict(),z.object({source:z.literal('circle-transfer-search'),...confirmationFields,transferStatus:z.enum(['confirmed','completed'])}).strict()]);
+export function privateResearchLookup(id:string,payer:string){return freeze({id:privateResearchIdSchema.parse(id),payer:addressSchema.parse(payer).toLowerCase()});}
+export function capturePrivateResearchValue(action:PrivateResearchAction,value:unknown){
+ if(!privateResearchActions.includes(action))throw refuse();
+ switch(action){
+  case 'reserve-intent':try{return freeze(copy(intentCaptureSchema.parse(value),524288));}catch{throw Error('Invalid stored private research intent');}
+  case 'reserve-treasury':{const p=z.object({signer:addressSchema,capacityMicros:z.string().regex(/^[1-9]\d{0,11}$/)}).strict().parse(value);return freeze({...p,signer:p.signer.toLowerCase()});}
+  case 'confirm-payment':try{return freeze(copy(paymentCaptureSchema.parse(value),8192));}catch{throw Error('Private payment confirmation mismatch');}
+  case 'admit-creator':return freeze(privateCreatorSubmissionSchema.parse(value));
+  case 'confirm-creator':return freeze(capturePrivateCreatorConfirmation(value));
+  case 'save-result':return capturePrivateResearchResult(value as QueryRun);
+  case 'release':return addressSchema.parse(value).toLowerCase();
+  case 'claim-execution':return uuid.parse(value);
+  default:if(value!==undefined)throw refuse();return null;
+ }
+}
+const snapshotSchema=z.object({intentRowWire:z.string().nullable(),paymentRowWire:z.string().nullable(),executionRowWire:z.string().nullable(),resultRowWire:z.string().nullable(),interruptionRowWire:z.string().nullable(),reservationRowWire:z.string().nullable(),releaseRowWire:z.string().nullable(),submissionsWire:z.string(),confirmationsWire:z.string()}).strict();
+// Attests only genuine SOURCE codec/signature validation of these exact bytes.
+// It does not attest installed Native provenance, session or payment authority.
+const checkedSourceStates=new WeakMap<object,{intent:PrivateResearchIntent|null;intentRowWire:string|null;paymentRowWire:string|null;executionRowWire:string|null;resultRowWire:string|null;id:string;payer:string}>();
+const parsed=(wire:string|null,bytes:number)=>wire===null?null:JSON.parse(bound(wire,bytes)) as Record<string,unknown>;
+export async function readPrivateResearchSnapshot(raw:unknown,key:ReturnType<typeof privateResearchLookup>){
+ const wire=snapshotSchema.parse(raw),intentRow=parsed(wire.intentRowWire,2097152);
+ let intent:PrivateResearchIntent|null=null;
+ if(intentRow){intent=await validatePrivateResearchIntent(JSON.parse(bound(String(intentRow.data),524288)));
+  if(intent.id!==key.id||intent.submission.payment.authorization.from!==key.payer||intentRow.id!==key.id||intentRow.payer!==key.payer||intent.requirement.network!==ARC_MAINNET_PROFILE.networkId)throw refuse();}
+ else if([wire.paymentRowWire,wire.executionRowWire,wire.resultRowWire,wire.interruptionRowWire,wire.reservationRowWire,wire.releaseRowWire].some(v=>v!==null)||wire.submissionsWire!=='[]'||wire.confirmationsWire!=='[]')throw refuse();
+ const state={wire,key,intent,paymentRow:parsed(wire.paymentRowWire,32768),executionRow:parsed(wire.executionRowWire,2048),resultRow:parsed(wire.resultRowWire,33554432),interruptionRow:parsed(wire.interruptionRowWire,2048),reservationRow:parsed(wire.reservationRowWire,2048),releaseRow:parsed(wire.releaseRowWire,2048),
+  submissionRows:JSON.parse(bound(wire.submissionsWire,33554432)) as Record<string,unknown>[],confirmationRows:JSON.parse(bound(wire.confirmationsWire,33554432)) as Record<string,unknown>[]};
+ checkedSourceStates.set(state,{intent:intent===null?null:freeze(JSON.parse(JSON.stringify(intent)) as PrivateResearchIntent),intentRowWire:wire.intentRowWire,paymentRowWire:wire.paymentRowWire,executionRowWire:wire.executionRowWire,resultRowWire:wire.resultRowWire,id:key.id,payer:key.payer});return state;
+}
+export type PrivateResearchSnapshot=Awaited<ReturnType<typeof readPrivateResearchSnapshot>>;
+export function privateSnapshotPayment(state:PrivateResearchSnapshot){
+ if(!state.intent||!state.paymentRow)return null;const r=state.paymentRow;if(r.id!==state.key.id)throw refuse();
+ return privatePaymentState({started_at:r.started_at,settled_at:r.settled_at,confirmation:r.confirmation===null?null:JSON.parse(String(r.confirmation))},state.intent);
+}
+export function privateSnapshotExecution(state:PrivateResearchSnapshot){
+ if(privateSnapshotPayment(state)?.status!=='settled'||!state.executionRow)return null;const r=state.executionRow;if(r.id!==state.key.id)throw refuse();
+ return {id:state.key.id,workerId:uuid.parse(r.worker_id),startedAt:date.parse(r.started_at)};
+}
+export function privateSnapshotResult(state:PrivateResearchSnapshot){
+ if(!privateSnapshotExecution(state)||!state.resultRow)return null;const r=state.resultRow;if(r.id!==state.key.id)throw refuse();
+ return readPrivateResearchResult({serialized_run:r.serialized_run,saved_at:r.saved_at},state.intent!);
+}
+export function privateSnapshotInterruption(state:PrivateResearchSnapshot){
+ const claim=privateSnapshotExecution(state);if(!claim||!state.interruptionRow)return null;const r=state.interruptionRow;
+ if(r.id!==state.key.id||r.worker_id!==claim.workerId||r.reason!=='worker-interrupted')throw refuse();return {reason:'worker-interrupted' as const,recordedAt:date.parse(r.recorded_at)};
+}
+export function privateSnapshotSubmissions(state:PrivateResearchSnapshot):PrivateCreatorSubmissionRecord[]{
+ const claim=privateSnapshotExecution(state);if(!claim)return [];if(!Array.isArray(state.submissionRows))throw refuse();
+ return state.submissionRows.map(r=>{const data=privateCreatorSubmissionSchema.parse(JSON.parse(String(r.data))),legId=privateCreatorLegId(data);
+  if(r.job_id!==state.key.id||r.leg_id!==legId||r.worker_id!==claim.workerId||r.authorization_id!==data.submission.authorizationId||Number(r.amount_micros)!==Number(data.submission.amountMicros))throw refuse();
+  return {jobId:state.key.id,workerId:claim.workerId,legId,startedAt:date.parse(r.started_at),data};});
+}
+export function privateSnapshotConfirmation(state:PrivateResearchSnapshot,authorizationId:string){
+ const attempt=privateSnapshotSubmissions(state).find(r=>r.data.submission.authorizationId===authorizationId);if(!attempt)return null;
+ if(!Array.isArray(state.confirmationRows))throw refuse();const row=state.confirmationRows.find(r=>r.authorization_id===authorizationId);
+ return row?readPrivateCreatorConfirmation({data:row.data,settled_at:row.settled_at},attempt):null;
+}
+export function privateSnapshotReservation(state:PrivateResearchSnapshot){
+ if(!state.intent||!state.reservationRow)return null;const r=state.reservationRow,amount=Math.round(state.intent.submission.request.budget*1e6),signer=addressSchema.parse(r.signer).toLowerCase();
+ if(r.job_id!==state.key.id||r.signer!==signer||Number(r.amount_micros)!==amount)throw refuse();return {signer,amountMicros:String(amount)};
+}
+export function privateResearchExpected(state:PrivateResearchSnapshot){
+ const hash=(v:string|null)=>v===null?null:privateResearchSha(v);return {intent:hash(state.wire.intentRowWire),payment:hash(state.wire.paymentRowWire),execution:hash(state.wire.executionRowWire)};
+}
+/** SOURCE codecs validate the actual copied raw result before this body-less
+ * capture. JSON-token hashing preserves NUL/unpaired-scalar distinctions. This
+ * is identity data, never installed writer, settlement or execution authority. */
+export function privateResearchResultIdentity(serializedRun:string,state:PrivateResearchSnapshot){
+ const entry=checkedSourceStates.get(state);
+ if(!entry?.intent||!entry.intentRowWire||state.wire.intentRowWire!==entry.intentRowWire||state.key.id!==entry.id||state.key.payer!==entry.payer)throw refuse();
+ validatePrivateResearchResultSnapshot(serializedRun,entry.intent);
+ const original={...state,intent:entry.intent,key:privateResearchLookup(entry.id,entry.payer),paymentRow:parsed(entry.paymentRowWire,32768),executionRow:parsed(entry.executionRowWire,2048),resultRow:parsed(entry.resultRowWire,33554432)};
+ const claim=privateSnapshotExecution(original),payment=privateSnapshotPayment(original);if(!claim||payment?.status!=='settled')throw refuse();
+ const saved=privateSnapshotResult(original);if(saved&&saved.serializedRun!==serializedRun)throw Error('Private research result conflict');
+ const run=JSON.parse(serializedRun) as {question:string;budget:number;researchMode:string},row=JSON.parse(entry.intentRowWire) as {data:string};
+ return freeze({id:entry.id,runSha256:privateResearchSha(serializedRun),intentSha256:privateResearchSha(row.data),owner:entry.payer,questionSha256:privateResearchSha(JSON.stringify(run.question)),budgetMicros:String(Math.round(run.budget*1e6)),researchMode:run.researchMode,
+  workerId:claim.workerId,executionStartedAt:claim.startedAt,paymentStartedAt:payment.startedAt,paymentSettledAt:payment.settledAt,paymentConfirmationSha256:privateResearchSha(String(original.paymentRow!.confirmation)),sourceSavedAt:saved?.savedAt??null});
+}
+export function checkedPrivatePayment(value:unknown,state:PrivateResearchSnapshot){if(!state.intent)throw refuse();return privatePaymentConfirmation(value as PrivatePaymentConfirmation,state.intent);}
+export function privateResearchPacket(value:unknown){return bound(JSON.stringify(value),67108864);}
+export function privateHistorySelection(payer:string,before?:z.infer<typeof privateHistoryCursorSchema>){return freeze({payer:addressSchema.parse(payer).toLowerCase(),before:before===undefined?null:privateHistoryCursorSchema.parse(before)});}
+export function privateCandidateSelection(signer:string,after?:string){return freeze({signer:addressSchema.parse(signer).toLowerCase(),after:after===undefined?null:privateResearchIdSchema.parse(after)});}
+export async function readPrivateHistory(raw:unknown,payer:string){
+ const rows=z.array(z.object({id:privateResearchIdSchema,data:z.string(),created_at:date}).strict()).max(26).parse(raw);
+ return Promise.all(rows.map(async row=>{const intent=await validatePrivateResearchIntent(JSON.parse(bound(row.data,524288)));if(intent.id!==row.id||intent.submission.payment.authorization.from!==payer||intent.requirement.network!==ARC_MAINNET_PROFILE.networkId)throw refuse();return {intent,createdAt:row.created_at};}));
+}
+export function readPrivateCandidates(raw:unknown,maximum:1|25){return z.array(z.object({id:privateResearchIdSchema,payer:addressSchema}).strict()).max(maximum).parse(raw);}
+type JsonNode={sql:string|number|bigint|null;compact:string;fields?:Array<[string,JsonNode]>};
+/** SQLite json_extract selects the FIRST duplicate key. Object/array results
+ * are compact original JSON TEXT, whose key/escape order still participates in
+ * SQL IS comparisons. JSON.parse alone would silently select the last key. */
+function sourceJson(wire:string):JsonNode{
+ JSON.parse(wire);let at=0;const ws=()=>{while(/[\t\n\r ]/.test(wire[at]??'!'))at++;};
+ const quoted=()=>{const start=at++;while(at<wire.length){if(wire[at++]==='"')return wire.slice(start,at);if(wire[at-1]==='\\')at++;}throw refuse();};
+ const parse=(depth:number):JsonNode=>{
+  if(depth>1000)throw refuse();ws();const start=at,ch=wire[at];
+  if(ch==='"'){const token=quoted();return {sql:JSON.parse(token) as string,compact:token};}
+  if(ch==='{'||ch==='['){const object=ch==='{',end=object?'}':']',fields:Array<[string,JsonNode]>=[],parts:string[]=[];at++;ws();
+   while(wire[at]!==end){let key='',token='';if(object){token=quoted();key=JSON.parse(token) as string;ws();if(wire[at++]!==':')throw refuse();}const child=parse(depth+1);parts.push(object?token+':'+child.compact:child.compact);if(object)fields.push([key,child]);ws();if(wire[at]!==',')break;at++;ws();}
+   if(wire[at++]!==end)throw refuse();const compact=ch+parts.join(',')+end;return {sql:compact,compact,...(object?{fields}:{})};
+  }
+  while(at<wire.length&&!/[\t\n\r ,}\]]/.test(wire[at]))at++;const token=wire.slice(start,at);
+  const value=JSON.parse(token) as number|boolean|null;return {sql:value===null?null:typeof value==='boolean'?(value?BigInt('1'):BigInt('0')):/^-?(?:0|[1-9]\d*)$/.test(token)&&BigInt(token)>=BigInt('-9223372036854775808')&&BigInt(token)<=BigInt('9223372036854775807')?BigInt(token):value,compact:token};
+ };const value=parse(0);ws();if(at!==wire.length)throw refuse();return value;
+}
+const extracted=(node:JsonNode|null,...path:string[])=>{let value:JsonNode|undefined=node??undefined;for(const key of path)value=value?.fields?.find(([name])=>name===key)?.[1];return value?.sql??null;};
+export function readPrivateTreasurySummary(raw:unknown):PrivateTreasurySummary|null{
+ const frame=z.object({capacity:z.string().nullable(),reservations:z.array(z.object({amount:z.string(),released:z.string().nullable()}).strict()),legs:z.array(z.object({amount:z.string(),signer:z.string(),data:z.string(),confirmation_id:z.string().nullable(),confirmation_data:z.string().nullable()}).strict())}).strict().parse(raw);
+ if(frame.capacity===null)return null;
+ const integer=(value:string)=>{if(!/^(0|[1-9]\d*)$/.test(value))throw refuse();return BigInt(value);};
+ const capacity=integer(frame.capacity);let allocated=BigInt('0'),committed=BigInt('0'),confirmed=BigInt('0'),invalid=BigInt('0');
+ for(const row of frame.reservations)allocated+=integer(row.amount)-integer(row.released??'0');
+ for(const row of frame.legs){const amount=integer(row.amount),leg=sourceJson(row.data),confirmation=row.confirmation_data===null?null:sourceJson(row.confirmation_data),source=extracted(confirmation,'source'),stage=extracted(confirmation,'transferStatus');
+  if(extracted(leg,'submission','amountMicros')!==row.amount||extracted(leg,'submission','payer')!==row.signer||row.confirmation_id!==null&&(extracted(confirmation,'submission')!==extracted(leg,'submission')||!(source==='circle-facilitator-success'||source==='circle-transfer-search'&&['received','batched','confirmed','completed'].includes(String(stage)))))invalid++;
+  committed+=amount;if(source==='circle-facilitator-success'||source==='circle-transfer-search'&&(stage==='confirmed'||stage==='completed'))confirmed+=amount;
+ }
+ if([capacity,allocated,committed,confirmed,invalid].some(value=>value<BigInt('0')||value>BigInt('999999999999'))||invalid!==BigInt('0')||capacity===BigInt('0')||confirmed>committed||committed>allocated||allocated>capacity)throw Error('Private treasury accounting mismatch');
+ return {capacityMicros:String(capacity),allocatedMicros:String(allocated),unallocatedMicros:String(capacity-allocated),committedMicros:String(committed),confirmedMicros:String(confirmed),unresolvedOrProcessingMicros:String(committed-confirmed),conservativeBackingMicros:String(capacity-confirmed),observation:'database-recorded',chainFinalityVerified:false};
+}

@@ -1,0 +1,34 @@
+import { expect,it,vi } from 'vitest';
+import { createHash } from 'node:crypto';
+import { publicReferenceItemId,type PublicReference } from '../../public-references/catalog-contract';
+import type { PostgresDomainChannel } from './domain-channel';
+import { PostgresDomainWriteOutcomeUnknown } from './domain-channel';
+import { archiveWireSha256 } from './reference-archive-packet';
+import { composePostgresReferenceArchive } from './reference-archive-transport';
+// Fixed-channel boundary tests only; no installed native adapter is assembled.
+const publisher=():PublicReference=>{const id='public:transport',link='https://transport.example/a';return {id,name:'Synthetic',url:'https://transport.example/',rssUrl:'https://transport.example/feed',description:'Public',active:true,tags:[],refreshedAt:'2026-11-14T00:00:00.000Z',items:[{id:publicReferenceItemId(id,link),link,title:'Alpha',summary:'alpha beta',content:'raw\0body\ud800',deliveryKind:'excerpt'}]};};
+function channel(call:(op:string,args:readonly(string|null)[])=>Promise<unknown>,closed=false):PostgresDomainChannel{return {closed,close:async()=>{},call:call as PostgresDomainChannel['call']};}
+it('refuses readonly writes before input access or database work',async()=>{const call=vi.fn(async()=>null),raw=new Proxy({},{get(){throw Error('input inspected');}}) as never;await expect(composePostgresReferenceArchive(channel(call),true).upsertPublicReference(raw)).rejects.toThrow();expect(call).not.toHaveBeenCalled();});
+it('captures public raw originals before awaits, then sends one immutable frame-bound mutation',async()=>{
+ let release!:()=>void;const wait=new Promise<void>(resolve=>{release=resolve;}),calls:{op:string;args:readonly(string|null)[]}[]=[],raw=publisher(),port=composePostgresReferenceArchive(channel(async(op,args)=>{calls.push({op,args});if(op==='referenceArchiveFrame'){const selector=JSON.parse(args[0]!);await wait;const wire=JSON.stringify({selector,publisher:null,articles:[]});return {wire,sha256:archiveWireSha256(wire)};}return {added:1,updated:0};}),false),pending=port.upsertPublicReference(raw);raw.items[0].content='mutated';release();expect(await pending).toEqual({added:1,updated:0});expect(calls.map(c=>c.op)).toEqual(['referenceArchiveFrame','referenceArchiveApply']);const packet=JSON.parse(calls[1].args[0]!);expect(JSON.parse(packet.versions[0].original_snapshot).content).toBe('raw\0body\ud800');expect(packet.versions[0].snapshot).toContain('\\ud800');expect(packet.snapshotSha256).toMatch(/^[a-f0-9]{64}$/);expect(packet.deadlineAt).toBeGreaterThan(Date.now());
+});
+it('never retries a write after unknown acknowledgement and holds malformed output',async()=>{
+ let writes=0;const make=(unknown:boolean)=>composePostgresReferenceArchive(channel(async(op,args)=>{if(op==='referenceArchiveFrame'){const wire=JSON.stringify({selector:JSON.parse(args[0]!),publisher:null,articles:[]});return {wire,sha256:archiveWireSha256(wire)};}writes++;if(unknown)throw new PostgresDomainWriteOutcomeUnknown();return {added:0,updated:0};}),false);await expect(make(true).upsertPublicReference(publisher())).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(writes).toBe(1);await expect(make(false).upsertPublicReference(publisher())).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(writes).toBe(2);
+});
+it('reframes once for normalized legacy publisher item IDs before the fixed apply',async()=>{
+ const raw=publisher(),oldLink='https://transport.example/legacy?utm_source=retained#old',old={...raw.items[0],link:oldLink,id:'public-item:'+createHash('sha256').update(raw.id+'\n'+oldLink).digest('hex')},prior={...raw,items:[old]},selectors:{itemIds:string[]}[]=[],calls:string[]=[],port=composePostgresReferenceArchive(channel(async(op,args)=>{calls.push(op);if(op==='referenceArchiveFrame'){const selector=JSON.parse(args[0]!);selectors.push(selector);const wire=JSON.stringify({selector,publisher:{id:prior.id,active:1,rss_url:prior.rssUrl,snapshot:JSON.stringify(prior)},articles:[]});return {wire,sha256:archiveWireSha256(wire)};}return {added:1,updated:0};}),false);expect(await port.upsertPublicReference(raw)).toEqual({added:1,updated:0});expect(calls).toEqual(['referenceArchiveFrame','referenceArchiveFrame','referenceArchiveApply']);expect(selectors[0].itemIds).toHaveLength(1);expect(selectors[1].itemIds).toHaveLength(2);expect(selectors[1].itemIds).toContain(publicReferenceItemId(raw.id,oldLink));expect(selectors[1].itemIds).not.toContain(old.id);
+});
+it('keeps reads independent of the write-capacity gate and rejects publisher provenance loss',async()=>{
+ const reference=publisher(),row={id:reference.id,active:1,rss_url:reference.rssUrl,snapshot:JSON.stringify(reference),archived_item_count:15},port=composePostgresReferenceArchive(channel(async(op,args)=>{if(op==='referenceArchiveRead'){if(args[0]==='list')return [row];if(args[0]==='get')return row;return {articles:15,publishers:1};}throw Error('native allocation budget refused');}),false);expect((await port.listPublicReferences())[0].archivedItemCount).toBe(15);expect((await port.getPublicReference(reference.id))!.id).toBe(reference.id);expect(await port.publicReferenceArchiveStats()).toEqual({articles:15,publishers:1});await expect(port.upsertPublicReference(reference)).rejects.toThrow('native allocation budget refused');const bad=composePostgresReferenceArchive(channel(async()=>[{...row,rss_url:'https://other.example/feed'}]),true);await expect(bad.listPublicReferences()).rejects.toThrow('identity differs');
+});
+
+it('carries Source scalar selectors as raw JSON wire, including NUL and lone UTF-16',async()=>{
+ const seen:string[]=[],port=composePostgresReferenceArchive(channel(async(op,args)=>{expect(op).toBe('referenceArchiveRead');expect(args[0]).toBe('get');seen.push(JSON.parse(args[1]!).idWire);return null;}),true);
+ for(const id of ['public:missing\0','public:missing\ud800','public:missing\ud83d\ude00'])expect(await port.getPublicReference(id)).toBeNull();
+ expect(seen).toEqual(['public:missing\0','public:missing\ud800','public:missing\ud83d\ude00'].map(id=>JSON.stringify(id)));
+});
+it('refuses a caller JSON hook before any fixed-channel operation',async()=>{
+ const call=vi.fn(async()=>null),port=composePostgresReferenceArchive(channel(call),false),raw=publisher();
+ const hooked={...raw,toJSON(){return raw;}};await expect(port.upsertPublicReference(hooked)).rejects.toThrow();expect(call).not.toHaveBeenCalled();
+ await expect(port.queryPublicReferenceItems({query:'alpha',toJSON(){return {query:'beta'};}} as never)).rejects.toThrow('Invalid public archive query');expect(call).not.toHaveBeenCalled();
+});

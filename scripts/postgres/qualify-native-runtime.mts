@@ -40,6 +40,9 @@ import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourc
 import type { Source } from '../../lib/types';
 import type { SourceMeta } from '../../lib/db/keryx-db';
 import type { SourceClaim,SourceClaimChallenge } from '../../lib/sources/public-source-claim';
+import { projectRecordedEvidenceProvenance } from '../../lib/research/evidence-provenance';
+import { captureObservedPaymentSource } from './payment-original-source.mts';
+import { storageIdentityDigest } from '../../lib/db/storage-identity';
 export async function qualifyNativeRuntime(input:{postgresContainer:string;password:string;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  input={...input,identity:validateStorageIdentity(input.identity)};
  assert.match(input.postgresContainer,/^keryx-postgres-consents-[a-f0-9-]{36}$/);
@@ -62,17 +65,20 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
  let chat:Awaited<ReturnType<typeof nativeChatFixture>>['observation']|undefined,chatTokenHashes:string[]=[];
  let publicProfile:Awaited<ReturnType<typeof nativePublicProfileFixture>>['observation']|undefined;
  let sourceClaims:{source:Source;meta:SourceMeta;claim:SourceClaim;challenge:SourceClaimChallenge}|undefined;const sourceClaimKeys:string[]=[];
+ let queryReads:{projected:QueryRun;sourceHistory:unknown}|undefined;
+ const paymentOriginals=input.ownerSql("SELECT (to_regclass('keryx_storage.payment_event_originals') IS NOT NULL)::integer;")==='1';
  const created=await createTopicWatch({store:{async read(){return null;},async compareAndSwap(_key,_revision,next){watch=next;return true;}},now:()=>now,isOwnerCurrent:wallet=>wallet===owner,metadata:{async read(){throw new Error('Synthetic native factory does not run metadata checks');}}},owner,{watchId:'synthetic-runtime-watch',question:'Synthetic metadata',keywords:['term'],authors:[],venues:[],cadenceMs:60000,periodMs:86400000,maximumChecksPerPeriod:4,maximumRowsPerCheck:32,maximumDigestItems:16,expiresAtMs:now+86400000,requestedCaps:{perCheckMicroUsdc:0,perPeriodMicroUsdc:0},consent:{manualMetadata:true,emptyHeartbeat:false}});
  assert.equal(created.status,'created');assert(watch);const watchWire=canonicalJson(watch);
  const run=(mode:string)=>{
   const name='keryx-postgres-runtime-'+randomUUID();containers.add(name);
   const startedAt=performance.now();process.stderr.write(JSON.stringify({fixtureMode:mode,event:'started'})+'\n');
   try{
+   const wire=JSON.stringify({mode,identity:input.identity,digest:input.digest,password:input.password,key,owner,session,acceptance,account,chat,publicProfile,sourceClaims,queryReads});assert(Buffer.byteLength(wire)<=16384,'Native fixture input bound');
    const result=JSON.parse(docker(['run','-i','--rm','--name',name,'--user','0:0','--read-only','--memory','512m','--memory-swap','512m','--cpus','1','--pids-limit','64','--cap-drop','ALL','--security-opt','no-new-privileges',
     '--network','container:'+input.postgresContainer,'--tmpfs','/run/keryx-runtime:rw,nosuid,noexec,mode=0700,size=16m',
     '-e','KERYX_NETWORK=arc','-e','NEXT_PUBLIC_KERYX_NETWORK=arc','-e','KERYX_FORCE_OFFLINE=0','-e','BASE_URL=https://keryx.cc',
     '-e','KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555',
-    candidateImage!,'node','--max-old-space-size=256','/child.cjs'],JSON.stringify({mode,identity:input.identity,digest:input.digest,password:input.password,key,owner,session,acceptance,account,chat,publicProfile,sourceClaims})));
+    candidateImage!,'node','--max-old-space-size=256','/child.cjs'],wire));
    assert.equal(result.passed,true);assert.equal(result.outbound,0);assert.equal(result.selectedApplicationWriter,false);vectors+=result.checks;process.stderr.write(JSON.stringify({fixtureMode:mode,event:'passed',checks:result.checks,elapsedMs:Math.round(performance.now()-startedAt)})+'\n');return result;
   }finally{
    const remaining=docker(['ps','-aq','--filter',`name=^/${name}$`]);if(remaining)docker(['rm','-f',name]);assert.equal(docker(['ps','-aq','--filter',`name=^/${name}$`]),'');containers.delete(name);
@@ -105,7 +111,17 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
    for(const table of ['a2a_orders','payment_events','research_purchase_authorizations','deliverable_acceptance_entries','sources','source_meta','sync_state'])for(const row of selected.db.prepare('SELECT * FROM '+table).all()){
     const keys=Object.keys(row);assert(keys.every(k=>/^[a-z][a-z0-9_]*$/.test(k)));
     seed+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(k=>{const v=row[k];if(v===null)return 'NULL';if(['settled','active','verified'].includes(k))return v===1?'true':'false';if(table==='sync_state'&&k==='key')sourceClaimKeys.push(String(v));if(typeof v==='number'||typeof v==='bigint')return String(v);assert(typeof v==='string');return q(v)+(table==='a2a_orders'&&['request_data','response_data','package_data','resolution_data'].includes(k)||table==='sources'&&['tags','authors'].includes(k)?'::jsonb':'');}).join(',')});`;
-   }pg(seed+heldA2aTimeProjectionSql(sqliteA2aTimeProjection(selected.db,order.id,input.identity))+heldA2aOriginalCellProjectionSql(sqliteA2aOriginalCellProjection(selected.db,order.id,input.identity))+heldAcceptanceProjectionSql(projection));
+   }
+   if(paymentOriginals)for(const row of selected.db.prepare('SELECT id FROM payment_events').all()){
+    assert.equal(typeof row.id,'string');const captured=captureObservedPaymentSource(selected.db,row.id as string);assert(captured);
+    const native=JSON.stringify({...captured.projection,settled:captured.projection.settled===1}),id=q(row.id as string);
+    // The SOURCE capture, never a Native row, supplies all raw bytes/nullness.
+    // Compare using the real Native row type so timestamp/boolean JSON is exact.
+    seed+=`DO $payment_fixture$ BEGIN IF NOT EXISTS(SELECT 1 FROM public.payment_events p CROSS JOIN jsonb_populate_record(NULL::public.payment_events,${q(native)}::jsonb) expected WHERE p.id=${id} AND to_jsonb(p) IS NOT DISTINCT FROM to_jsonb(expected)) THEN RAISE EXCEPTION 'native runtime Source payment projection differs';END IF;END;$payment_fixture$;
+     INSERT INTO keryx_storage.payment_event_originals(payment_id,identity_digest,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields)
+     SELECT p.id,${q(storageIdentityDigest(input.identity))},${q(captured.rowWire)}::json,${q(captured.sha256)},${q(captured.rowWire)}::json,${q(captured.sha256)},to_jsonb(expected),ARRAY[${captured.unprojectedFields.map(q).join(',')}]::text[] FROM public.payment_events p CROSS JOIN jsonb_populate_record(NULL::public.payment_events,${q(native)}::jsonb) expected WHERE p.id=${id};`;
+   }
+   pg(seed+heldA2aTimeProjectionSql(sqliteA2aTimeProjection(selected.db,order.id,input.identity))+heldA2aOriginalCellProjectionSql(sqliteA2aOriginalCellProjection(selected.db,order.id,input.identity))+heldAcceptanceProjectionSql(projection));
   }finally{selected.close();}
   for(const table of nativeAccountFixtureTables)assert.equal(input.ownerSql(`SELECT count(*) FROM public.${table};`),'0');
   const accountSeed=await nativeAccountFixture(folder,input.identity,session,{freshLogin:true});account=accountSeed.observation;accountId=accountSeed.accountId;pg(accountSeed.sql);
@@ -123,12 +139,14 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   candidateImage=docker(['commit','--change','LABEL keryx.native-runtime-fixture='+staging,staging]);
   assert.match(candidateImage,/^sha256:[a-f0-9]{64}$/);
   docker(['rm',staging]);containers.delete(staging);
-  const original=JSON.stringify({id:'synthetic-runtime-run',createdAt:'2026-01-02T03:04:05.000Z',question:'Original',answer:'Original answer',budget:0,engine:'heuristic',subClaims:[],decisions:[],citations:[],trace:[],asker:owner,totalSpent:0,totalToCreators:0,paymentMode:'offline',origin:'web',provenance:{version:1,surface:'web',ownershipMethod:'session'},usage:{version:1,network:'eip155:5042',cohort:'unknown',payment:'unknown',actorEvidenceSha256:null,fundingEvidenceSha256:null},uninterpreted:'\0\ud800'});
-  const oracle=new DatabaseSync(':memory:');let historyProjection:string,ownershipProjection:string,privacyProjection:string,runInsert:string;
+  const original=JSON.stringify({id:'synthetic-runtime-run',parentId:'synthetic-runtime-parent',createdAt:'2026-01-02T03:04:05.000Z',question:'Original',answer:'Original answer',budget:0,engine:'heuristic',subClaims:[],decisions:[],citations:[{marker:'S1',sourceId:'synthetic-runtime-source',sourceName:'Fixture source A',weight:.5,reward:0,rationale:'Synthetic protocol only'},{marker:'S2',sourceId:'synthetic-runtime-item-source',sourceName:'Fixture source B',itemId:'synthetic-runtime-flagged-item',weight:.5,reward:0,rationale:'Synthetic protocol only'}],trace:[],asker:owner,totalSpent:0,totalToCreators:0,paymentMode:'offline',origin:'web',provenance:{version:1,surface:'web',ownershipMethod:'session'},usage:{version:1,network:'eip155:5042',cohort:'unknown',payment:'unknown',actorEvidenceSha256:null,fundingEvidenceSha256:null},uninterpreted:'\0\ud800'});
+  const oracleConnection=openVerifiedSqliteStorage(acceptanceFile,input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(canonicalJson(inspectStorageDeploymentManifest({KERYX_STORAGE_MANIFEST:acceptanceManifestPath})),acceptanceManifest)}),oracle=oracleConnection.db;let historyProjection:string,ownershipProjection:string,privacyProjection:string,runInsert:string;
   try{
    // A genuine SOURCE writer supplies every observed scalar independently of
    // PostgreSQL. Partial hand-made tables cannot attest missing/null cells.
-   oracle.exec('BEGIN IMMEDIATE');installMainnetApplicationSchema(oracle,{publicReferenceArchive:true});installNativeUserDomainSchema(oracle);
+   oracle.exec('BEGIN IMMEDIATE');
+   oracle.prepare('INSERT INTO sources(id,name,url,description,wallet_address,fetch_price,tags,authors,created_at) VALUES(?,?,?,?,?,?,?,?,?)').run('synthetic-runtime-item-source','Fixture source B','https://fixture-item.invalid/','Metadata only',owner,0,'[]','[]','2026-01-02T03:04:05.000Z');
+   oracle.prepare('INSERT INTO source_items(id,source_id,title,link,published_at,summary,evidence_provenance) VALUES(?,?,?,?,?,?,?)').run('synthetic-runtime-flagged-item','synthetic-runtime-item-source','Fixture item','https://fixture-item.invalid/item','2026-01-02T03:04:05.000Z','Metadata only','synthetic-demo');
    writeSqliteQueryRun(oracle,JSON.parse(original) as QueryRun,false);
    oracle.prepare('UPDATE run_privacy SET visibility=? WHERE run_id=?').run('public','synthetic-runtime-run');
    const row=oracle.prepare('SELECT * FROM query_runs WHERE id=?').get('synthetic-runtime-run');assert(row);assert.equal(row.data,original);
@@ -144,7 +162,22 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
    historyProjection=heldHistoryProjectionSql('synthetic-runtime-run',sqliteOriginalHistoryProjection(oracle,'synthetic-runtime-run'));
    ownershipProjection=heldOwnershipHistoryProjectionSql('synthetic-runtime-run',sqliteOwnershipHistoryProjection(oracle,'synthetic-runtime-run'));
    privacyProjection=heldPrivacyProjectionSql('synthetic-runtime-run',sqlitePrivacyProjection(oracle,'synthetic-runtime-run'));oracle.exec('COMMIT');
-  }finally{oracle.close();}
+  }finally{oracleConnection.close();}
+  const sourceInput=JSON.stringify({format:'keryx-native-runtime-source-oracle-v1',manifestPath:acceptanceManifestPath,key,owner,original,identity:input.identity});assert(Buffer.byteLength(sourceInput)<=16384,'Synthetic Source oracle input bound');
+  const sourceOutput=execFileSync(process.execPath,['--max-old-space-size=256','--import',new URL('../../node_modules/tsx/dist/loader.mjs',import.meta.url).href,fileURLToPath(new URL('./native-runtime-source-oracle.mts',import.meta.url))],{
+   input:sourceInput,encoding:'utf8',windowsHide:true,timeout:60000,maxBuffer:16384,stdio:['pipe','pipe','pipe'],env:{...process.env,TSX_DISABLE_CACHE:'1',TEMP:fixtureRoot,TMP:fixtureRoot,TMPDIR:fixtureRoot},
+  });
+  const observation=JSON.parse(sourceOutput);assert.equal(Object.keys(observation).sort().join(','),'format,identity,outbound,queryReads');assert.equal(observation.format,'keryx-native-runtime-source-oracle-v1');assert.equal(canonicalJson(validateStorageIdentity(observation.identity)),canonicalJson(input.identity));assert.equal(observation.outbound,0);
+  assert.equal(Object.keys(observation.queryReads).sort().join(','),'projected,sourceHistory');queryReads=observation.queryReads;assert(queryReads);assert.equal(queryReads.projected.id,'synthetic-runtime-run');assert.notEqual(queryReads.projected.answer,'Original answer');assert(Array.isArray(queryReads.sourceHistory));assert.deepEqual(queryReads.sourceHistory.map(row=>row.id),['synthetic-runtime-run']);
+  const sourceCopy=new DatabaseSync(acceptanceFile,{readOnly:true});try{sourceCopy.exec('PRAGMA query_only=ON');assert.equal(sourceCopy.prepare('SELECT data FROM query_runs WHERE id=?').get('synthetic-runtime-run')!.data,original);
+   const expected=await projectRecordedEvidenceProvenance(async lookup=>{
+    const flags=new Set<string>();for(const [table,ids]of [['sources',lookup.sourceIds],['source_items',lookup.itemIds]] as const)for(let offset=0;offset<ids.length;offset+=500){
+     const batch=ids.slice(offset,offset+500);assert(batch.every(id=>id.length<=256));
+     for(const row of sourceCopy.prepare(`SELECT id${table==='source_items'?',source_id':''} FROM ${table} WHERE evidence_provenance='synthetic-demo' AND id IN (${batch.map(()=>'?').join(',')})`).all(...batch))flags.add(table==='sources'?`source:${row.id}`:`item:${row.source_id}:${row.id}`);
+    }return flags;
+   },JSON.parse(original));assert.equal(canonicalJson(queryReads.projected),canonicalJson(expected));
+   for(const table of ['sources','source_items'])for(const row of sourceCopy.prepare('SELECT * FROM '+table+(table==='sources'?" WHERE id='synthetic-runtime-item-source'":" WHERE id='synthetic-runtime-flagged-item'")).all()){const keys=Object.keys(row);runInsert+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(k=>{const v=row[k];if(v===null)return 'NULL';if(['active','verified'].includes(k))return v===1?'true':'false';if(typeof v==='number'||typeof v==='bigint')return String(v);assert(typeof v==='string');return q(v)+(table==='sources'&&['tags','authors'].includes(k)?'::jsonb':'');}).join(',')});`;}
+  }finally{sourceCopy.close();}
   pg(runInsert+
    historyProjection+ownershipProjection+privacyProjection+`INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});
    INSERT INTO public.private_bibliographies(id,wallet,token_hash,title,content,reference_count,revision,created_at,updated_at) VALUES(${q(bibliographyId)},${q(owner)},${q(createHash('sha256').update('keryx-private-bib-v1:'+bibliographyToken).digest('hex'))},'Synthetic bibliography','Synthetic bibliography content',0,1,'2026-01-02T03:04:05.000Z','2026-01-02T03:04:05.000Z');
@@ -154,6 +187,8 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   const publicProfilesPositive=run('public-profiles');assert.equal(publicProfilesPositive.publicProfilesPositiveProtocol,true);
   const ownerAssignmentsPositive=run('owner-assignments');assert.equal(ownerAssignmentsPositive.ownerAssignmentsPositiveProtocol,true);
   const remainingPositive=run('remaining-ports');assert.equal(remainingPositive.remainingPositiveProtocolsAndTerminalDrain,true);
+  const queryPositive=run('query-readers');assert.equal(queryPositive.genuineFiveQueryReadersAndPrivacyProjection,true);
+  for(const mode of ['held-during-provenance','credential-during-provenance','close-during-provenance','query-iterator-guards']){const observed=run(mode);assert.equal(mode==='query-iterator-guards'?observed.perYieldHeldCredentialAndCloseGuards:observed.committedProvenanceThenAuthorityChangeRefused,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);}
   assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   for(const mode of ['wrong-identity','wrong-source','wrong-key','missing-key','wrong-credential-role']){run(mode);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);}
   const withdrawnUsage=run('withdrawn-before-usage-body');assert.equal(withdrawnUsage.finalNativeBodyReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
@@ -180,11 +215,11 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   for(const name of containers){try{docker(['rm','-f',name]);}catch{}}
   if(candidateImage){assert.equal(docker(['image','inspect',candidateImage,'--format','{{index .Config.Labels "keryx.native-runtime-fixture"}}']),staging);docker(['image','rm',candidateImage]);assert.equal(docker(['image','ls','-q','--filter','label=keryx.native-runtime-fixture='+staging]),'');}
   pg(`DELETE FROM public.cache_items WHERE source_id=${q(cacheId)};DELETE FROM public.query_runs WHERE id='synthetic-runtime-run';DELETE FROM keryx_storage.topic_watch_projection WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.topic_watches WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.private_bibliographies WHERE id=${q(bibliographyId)};DELETE FROM public.web_sessions WHERE wallet=${q(owner)};`);
-  pg(`DELETE FROM public.sources WHERE id='synthetic-runtime-source';DELETE FROM public.source_meta WHERE id='0x${'a1'.repeat(32)}';DELETE FROM public.sync_state WHERE key IN(${sourceClaimKeys.length?sourceClaimKeys.map(q).join(','):"''"});`);
+  pg(`DELETE FROM public.source_items WHERE id='synthetic-runtime-flagged-item';DELETE FROM public.sources WHERE id IN('synthetic-runtime-source','synthetic-runtime-item-source');DELETE FROM public.source_meta WHERE id='0x${'a1'.repeat(32)}';DELETE FROM public.sync_state WHERE key IN(${sourceClaimKeys.length?sourceClaimKeys.map(q).join(','):"''"});`);
   // Only this fixture's one generated bundle, then its empty unique directory.
   assert.equal(realpathSync(folder).toLowerCase(),resolve(folder).toLowerCase());assert.equal(dirname(folder).toLowerCase(),resolve(fixtureRoot).toLowerCase());
   pg(`DELETE FROM keryx_storage.a2a_original_time_projection WHERE order_id=${q(acceptanceFixture.order.id)};`);
-  pg(`DELETE FROM public.deliverable_acceptance_entries WHERE original_id=${q(acceptanceFixture.order.id)};DELETE FROM public.payment_events WHERE query_id=${q(acceptanceFixture.order.id)};DELETE FROM public.research_purchase_authorizations WHERE purchase_id=${q(acceptanceFixture.order.id)};DELETE FROM public.a2a_orders WHERE id=${q(acceptanceFixture.order.id)};`+(acceptanceStoreId?`DELETE FROM public.deliverable_acceptance_store WHERE id=${q(acceptanceStoreId)};`:''));
+  pg(`DELETE FROM public.deliverable_acceptance_entries WHERE original_id=${q(acceptanceFixture.order.id)};DELETE FROM public.payment_events WHERE query_id=${q(acceptanceFixture.order.id)};`+(paymentOriginals?`DELETE FROM keryx_storage.payment_event_originals WHERE payment_id=${q('inbound_'+acceptanceFixture.order.id)};`:'')+`DELETE FROM public.research_purchase_authorizations WHERE purchase_id=${q(acceptanceFixture.order.id)};DELETE FROM public.a2a_orders WHERE id=${q(acceptanceFixture.order.id)};`+(acceptanceStoreId?`DELETE FROM public.deliverable_acceptance_store WHERE id=${q(acceptanceStoreId)};`:''));
   if(accountId)pg(nativeAccountFixtureTables.map(table=>table==='account267_challenges'?`DELETE FROM public.${table} WHERE session_hash=${q(session.hash)};`:`DELETE FROM public.${table} WHERE account_id=${q(accountId!)};`).join(''));
   pg(`DELETE FROM public.public_researcher_profiles WHERE wallet=${q(owner)};DELETE FROM public.private_profiles WHERE wallet=${q(owner)};DELETE FROM public.chat263_links WHERE wallet=${q(owner)};DELETE FROM public.chat263_tokens WHERE token_hash IN(${chatTokenHashes.length?chatTokenHashes.map(q).join(','):"''"});`);
   for(const path of [bundle,acceptanceFile,acceptanceFile+'-wal',acceptanceFile+'-shm',acceptanceFile+'-journal',acceptanceManifestPath,...nativeAccountFixturePaths(folder)])try{unlinkSync(path);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}rmdirSync(folder);

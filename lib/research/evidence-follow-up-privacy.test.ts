@@ -126,7 +126,12 @@ for (const path of ["/saved", "/live"] as const) for (const visibility of ["priv
       const storage = await page.evaluate(() => [localStorage, sessionStorage].flatMap(store => Object.keys(store).map(key => store.getItem(key))).join(" "));
       expect(storage).not.toContain(run.question); expect(storage).not.toContain(run.subClaims[0]);
       await input.fill("Explicitly edited follow-up.");
-      await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+      // The optimistic turn can render before the intercepted POST is handled.
+      // Its response proves the request recorder ran before checking its body.
+      await Promise.all([
+        page.waitForResponse(response => new URL(response.url()).pathname === "/api/ask" && response.request().method() === "POST"),
+        page.getByRole("button", { name: "Ask Keryx", exact: true }).click(),
+      ]);
       await page.waitForFunction(count => document.querySelectorAll('[data-testid="research-turn"]').length >= count, path === "/live" ? 2 : 1);
       expect(asks).toHaveLength(initialAsks + 1);
       expect(asks.at(-1)?.body).toMatchObject({ question: "Explicitly edited follow-up.", parentId: run.id, visibility });

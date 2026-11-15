@@ -22,6 +22,18 @@ import { composePostgresHostedAdmission,type PostgresHostedAdmissionPort } from 
 import { composePostgresResearchPurchases,type PostgresResearchPurchasesPort } from './research-purchases-transport';
 import { composePostgresSourceClaims,type PostgresSourceClaimsPort } from './source-claims-transport';
 import { composePostgresA2aFulfillment,type PostgresA2aFulfillmentPort } from './a2a-fulfillment-transport';
+import { composePostgresPaymentEvents,type PostgresPaymentEventsPort } from './payment-events-transport';
+import { composePostgresBrowserJournal,type PostgresBrowserJournalPort } from './browser-journal-transport';
+import { composePostgresSourceObservations,type PostgresSourceObservationPort } from './source-observation-transport';
+import { composePostgresArticleOffers,type PostgresArticleOfferPort } from './article-offer-transport';
+import {composePostgresOperatorWithdrawal,type PostgresOperatorWithdrawalPort} from './operator-withdrawal-transport';
+import {composePostgresReferenceArchive,type PostgresReferenceArchivePort} from './reference-archive-transport';
+import {composePostgresPaymentObservations,type PostgresPaymentObservationPort} from './payment-observation-transport';
+import {composePostgresPrivateResearch,type PostgresPrivateResearchPort} from './private-research-transport';
+import {composePostgresOnramp,type PostgresOnrampPort} from './onramp-transport';
+import {composePostgresScholarly,type PostgresScholarlyPort} from './scholarly-transport';
+import {composePostgresRegistrationSponsor,type PostgresRegistrationSponsorPort} from './registration-sponsor-transport';
+import type { KeryxDB } from '../keryx-db';
 
 import { composeNativeFinancialApplicationPort,type NativeFinancialApplicationPort } from './native-financial-application-port';
 import { composePostgresSourceClaimWrites } from './source-claims-write-transport';
@@ -32,25 +44,84 @@ import type { PendingJobOwnersStore } from '../pending-job-owners-sqlite';
 import type { AsyncOwnerRunAssignmentsPort } from '../../owner-run-assignments/contracts';
 const cacheRow=z.object({sourceId:z.string().min(1).max(256),text:z.string().max(2097152)}).strict();
 export interface NativeColdCacheSnapshot {readonly cacheRows:readonly Readonly<{sourceId:string;text:string}>[];readonly cacheRowCount:number;readonly cacheWireBytes:number;}
-export interface PostgresRuntimeTransport extends PostgresA2aFulfillmentPort,PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport,PostgresA2aOriginalsPort,PostgresHostedAdmissionPort,PostgresResearchPurchasesPort {readonly financialApplication:NativeFinancialApplicationPort;readonly sourceClaimWrites:ReturnType<typeof composePostgresSourceClaimWrites>;readonly sourceUpkeep:ReturnType<typeof composePostgresSourceUpkeep>;readonly sourceClaims:PostgresSourceClaimsPort;readonly sourceUpsert:ReturnType<typeof composePostgresSourceUpsert>;readonly pendingJobOwners:PendingJobOwnersStore;readonly deliverableAcceptance:DeliverableAcceptanceStore;readonly accountMembership:AccountMembershipStore;readonly chatAccountLinks:ChatAccountLinksStore;readonly publicProfiles:PublicProfilesStore;readonly ownerRunAssignments:AsyncOwnerRunAssignmentsPort;verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
+export interface PostgresRuntimeTransport extends PostgresA2aFulfillmentPort,PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport,PostgresA2aOriginalsPort,PostgresHostedAdmissionPort,PostgresResearchPurchasesPort {
+ readonly privateResearch:PostgresPrivateResearchPort;
+ readonly onramp:PostgresOnrampPort;
+ readonly scholarly:PostgresScholarlyPort;
+ readonly registrationSponsor:PostgresRegistrationSponsorPort;
+ bindRegistrationSponsor(facade:KeryxDB):Promise<void>;
+ readonly paymentObservations:PostgresPaymentObservationPort;
+ readonly referenceArchive:PostgresReferenceArchivePort;
+ readonly operatorWithdrawal:PostgresOperatorWithdrawalPort;
+ readonly sourceObservations:PostgresSourceObservationPort;
+ readonly articleOffers:PostgresArticleOfferPort;
+ readonly paymentEvents:PostgresPaymentEventsPort;
+ readonly browserJournal:PostgresBrowserJournalPort;
+ readonly financialApplication:NativeFinancialApplicationPort;
+ readonly sourceClaimWrites:ReturnType<typeof composePostgresSourceClaimWrites>;
+ readonly sourceUpkeep:ReturnType<typeof composePostgresSourceUpkeep>;
+ readonly sourceClaims:PostgresSourceClaimsPort;
+ readonly sourceUpsert:ReturnType<typeof composePostgresSourceUpsert>;
+ readonly pendingJobOwners:PendingJobOwnersStore;
+ readonly deliverableAcceptance:DeliverableAcceptanceStore;
+ readonly accountMembership:AccountMembershipStore;
+ readonly chatAccountLinks:ChatAccountLinksStore;
+ readonly publicProfiles:PublicProfilesStore;
+ readonly ownerRunAssignments:AsyncOwnerRunAssignmentsPort;
+ verifyRuntimeAuthority():Promise<void>;
+ readColdCache():Promise<NativeColdCacheSnapshot>;
+}
 /** Actual fixed reads on one native pool. This transport cannot enroll a facade. */
-export function createPostgresRuntimeTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,claimsEnabled=false,privacyActive=false):PostgresRuntimeTransport {
- const expected=validateStorageIdentity(identity);return composePostgresRuntimeTransport(createPostgresDomainChannel(options,expected,digest),expected,digest,options.role!=='keryx_app',claimsEnabled,privacyActive);
+export function createPostgresRuntimeTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,claimsEnabled=false,privacyActive=false,assertCurrentContext?:()=>void):PostgresRuntimeTransport {
+ const expected=validateStorageIdentity(identity);return composePostgresRuntimeTransport(createPostgresDomainChannel(options,expected,digest,assertCurrentContext),expected,digest,options.role!=='keryx_app',claimsEnabled,privacyActive);
 }
 export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,identity:StorageIdentity,digest:string,readOnly:boolean,claimsEnabled=false,privacyActive=false):PostgresRuntimeTransport {
  const expected=validateStorageIdentity(identity),wire=canonicalJson(expected),unavailable=()=>new PostgresStorageUnavailable(),live=()=>{if(channel.closed)throw unavailable();};
  if(typeof digest!=='string'||!/^[a-f0-9]{64}$/.test(digest)||typeof readOnly!=='boolean')throw unavailable();
  const authority=z.object({identity:z.unknown(),sourceDigest:z.literal(digest)}).strict();
  const domain=composePostgresUserDomainTransport(channel,expected,readOnly,claimsEnabled),hosted=composePostgresHostedAdmission(channel,expected,readOnly);
+ const sourceClaims=composePostgresSourceClaims(channel);
+ let sponsor:PostgresRegistrationSponsorPort|undefined,sponsorFacade:KeryxDB|undefined,bindingSponsor=false;
+ const sponsorMethod=<N extends keyof PostgresRegistrationSponsorPort>(name:N,write:boolean)=>(async(...args:Parameters<PostgresRegistrationSponsorPort[N]>)=>{
+  live();if(write&&readOnly||!sponsor)throw unavailable();
+  return Reflect.apply(sponsor[name],sponsor,args);
+ }) as PostgresRegistrationSponsorPort[N];
+ const registrationSponsor=Object.freeze({
+  admitRegistrationSponsor:sponsorMethod('admitRegistrationSponsor',true),getRegistrationSponsor:sponsorMethod('getRegistrationSponsor',false),
+  getRegistrationSponsorExecution:sponsorMethod('getRegistrationSponsorExecution',false),inspectRegistrationSponsorFunding:sponsorMethod('inspectRegistrationSponsorFunding',false),
+  transitionRegistrationSponsor:sponsorMethod('transitionRegistrationSponsor',true),
+ });
  const cold=authority.extend({format:z.literal('keryx-native-storage-cold-read-v1'),cacheRows:z.array(cacheRow).max(512),cacheRowCount:z.number().int().min(0).max(512),cacheWireBytes:z.number().int().min(0).max(8388608)}).strict();
  return Object.freeze({
   ...domain,
+  privateResearch:composePostgresPrivateResearch(channel,readOnly),
+  onramp:composePostgresOnramp(channel,readOnly),
+  scholarly:composePostgresScholarly(channel,expected,digest,sourceClaims),
+  registrationSponsor,
+  async bindRegistrationSponsor(facade:KeryxDB){
+   live();if(bindingSponsor||sponsorFacade!==undefined&&sponsorFacade!==facade)throw unavailable();bindingSponsor=true;
+   try{
+    // Only the existing factory-owned WeakMap can qualify this exact facade.
+    // This slot does not register a facade or issue funding observations.
+    const {assertPostgresRuntimeIdentity}=await import('./runtime-adapter');live();
+    const actual=await assertPostgresRuntimeIdentity(facade,readOnly?'read':'write');live();
+    if(canonicalJson(actual)!==wire)throw unavailable();
+    sponsor=composePostgresRegistrationSponsor(channel,facade,readOnly);sponsorFacade=facade;
+   }catch{throw unavailable();}finally{bindingSponsor=false;}
+  },
+  paymentEvents:composePostgresPaymentEvents(channel,readOnly),
+  browserJournal:composePostgresBrowserJournal(channel,readOnly),
+  sourceObservations:composePostgresSourceObservations(channel,readOnly),
+  articleOffers:composePostgresArticleOffers(channel,readOnly),
+  operatorWithdrawal:composePostgresOperatorWithdrawal(channel,expected,readOnly),
+  referenceArchive:composePostgresReferenceArchive(channel,readOnly),
+  paymentObservations:composePostgresPaymentObservations(channel),
   financialApplication:composeNativeFinancialApplicationPort({...domain,...hosted},readOnly,()=>channel.closed),
   ...composePostgresA2aOriginals(channel,readOnly,expected),
   ...composePostgresA2aFulfillment(channel,readOnly),
   ...hosted,
   ...composePostgresResearchPurchases(channel,readOnly),
-  sourceClaims:composePostgresSourceClaims(channel),
+  sourceClaims,
   sourceClaimWrites:composePostgresSourceClaimWrites(channel,readOnly),
   sourceUpkeep:composePostgresSourceUpkeep(channel,readOnly),
   sourceUpsert:composePostgresSourceUpsert(channel,readOnly),

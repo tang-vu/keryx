@@ -18,13 +18,15 @@ import type { KeryxDB } from '../../lib/db/keryx-db';
 import { createAssignmentRoutes } from '../../lib/owner-run-assignments/http';
 import { syntheticA2aOriginal } from '../../lib/db/a2a-original-fixture';
 import { ARC_MAINNET_PROFILE } from '../../lib/arc-network-profile';
-import type { Source } from '../../lib/types';
+import type { Source,QueryRun } from '../../lib/types';
 import type { SourceMeta } from '../../lib/db/keryx-db';
 import type { SourceClaim,SourceClaimChallenge } from '../../lib/sources/public-source-claim';
+import { APPLICATION_READ_OPERATIONS } from '../../lib/db/postgres/application-read-calls';
 async function main(){
  const sourceMethods=['getSource','getSourceByOnchainId','listSources','listAllSources','getSourceMeta','getSourceClaim','getSourceClaimForSource','getSourceClaimChallenge','listSourceClaims'];
+ const queryMethods=['getQueryRun','listRecentQueries','listQueryRunsByAsker','listFollowUps','iterateRecentQueries'];
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
- const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient};sourceClaims:{source:Source;meta:SourceMeta;claim:SourceClaim;challenge:SourceClaimChallenge};publicProfile:{actor:PublicProfileActor;handle:string;snapshot:PublicProfileSnapshot;settings:PublicProfileSettings;sitemap:Array<{handle:string;updatedAt:string}>}};
+ const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient};sourceClaims:{source:Source;meta:SourceMeta;claim:SourceClaim;challenge:SourceClaimChallenge};queryReads:{projected:QueryRun;sourceHistory:unknown};publicProfile:{actor:PublicProfileActor;handle:string;snapshot:PublicProfileSnapshot;settings:PublicProfileSettings;sitemap:Array<{handle:string;updatedAt:string}>}};
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid!(),0);
  const cgroup=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:cgroup('memory.max'),swapMax:cgroup('memory.swap.max'),cpuMax:cgroup('cpu.max'),pidsMax:cgroup('pids.max')};
@@ -103,7 +105,7 @@ async function main(){
   const privacy=reader.runPrivacy!,id='synthetic-runtime-run',binding={network:'eip155:5042' as const,origin:'https://keryx.cc'},actor={wallet:input.owner,binding};let parsed=0;
   progress('remaining-ports');
   assert.equal((await privacy.list({take:1}))[0].id,id);assert.deepEqual(await privacy.questions!([id]),[{id,question:'Original'}]);checks++;
-  assert.deepEqual(await privacy.sourceHistory!(),[{id,createdAt:'2026-01-02T03:04:05.000Z',hasAnswer:true,citations:[]}]);assert.equal((await privacy.learningPage!({take:1}))[0].id,id);assert.equal((await privacy.archivePage!({take:1}))[0].id,id);checks++;
+  assert.deepEqual(await privacy.sourceHistory!(),input.queryReads.sourceHistory);assert.equal((await privacy.learningPage!({take:1}))[0].id,id);assert.equal((await privacy.archivePage!({take:1}))[0].id,id);checks++;
   assert.deepEqual(await privacy.memories(1),[]);assert.deepEqual(await privacy.offers(1),[]);assert.equal(await privacy.pending('missing'),null);assert.equal((await privacy.settlement(id))?.question,'');checks++;
   await assert.rejects(privacy.creationReady(),/readonly_operation/);await assert.rejects(privacy.export(id,actor,'12345678-1234-4234-8234-123456789abc'),/readonly_operation/);checks++;
   process.env.KERYX_RUN_PRIVACY_ENABLED='false';assert.throws(()=>reader.runPrivacy);process.env.KERYX_RUN_PRIVACY_ENABLED='true';checks++;
@@ -164,7 +166,7 @@ async function main(){
  if(input.mode==='public-profiles-off'){
   const reader=await application.createReadonlyApplicationStorage();assert(reader);
   try{
-   assert.equal(reader.publicProfiles,undefined);assert.equal(Object.getOwnPropertyDescriptor(reader,'publicProfiles'),undefined);assert.throws(()=>requirePublicProfiles(reader));assert.deepEqual(Reflect.ownKeys(reader),[...sourceMethods,'pendingJobOwners','publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments']);
+   assert.equal(reader.publicProfiles,undefined);assert.equal(Object.getOwnPropertyDescriptor(reader,'publicProfiles'),undefined);assert.throws(()=>requirePublicProfiles(reader));assert.deepEqual(Reflect.ownKeys(reader),[...sourceMethods,...queryMethods,'pendingJobOwners','publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments']);
    process.env.KERYX_PUBLIC_PROFILES_ENABLED='true';assert.throws(()=>Reflect.get(reader,'publicProfiles'));assert.equal(outbound,0);
    console.log(JSON.stringify({passed:true,mode:input.mode,checks:7,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,publicProfilesDisabledAbsent:true,changedPublicationFlagRefused:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
   }finally{await native.closePostgresRuntimeAdapter(reader);}
@@ -207,6 +209,47 @@ async function main(){
    assert.deepEqual(await port.publicState(input.acceptance.network,input.acceptance.id),input.acceptance.publicState);checks++;barrier.arm();assert.equal((await port.publicState(input.acceptance.network,input.acceptance.id)).state,'not_shared');checks++;assert.deepEqual(barrier.observation(),{intercepted:true,completed:true,failed:false});checks++;
    console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,actualCommittedAuthorityReadThenWithdrawal:true,finalNativeAcceptanceReadAfterAuthorityAwait:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
   }finally{try{if(observer)await application.closeReadonlyApplicationStorage(observer);await admin.query("ROLLBACK;BEGIN;UPDATE keryx_storage.control SET mode='held';DELETE FROM public.deliverable_acceptance_entries WHERE original_id='"+input.acceptance.id+"' AND revision=2;UPDATE keryx_storage.control SET mode='active';COMMIT;");}finally{await admin.end();await barrier?.close();}}
+ }
+ if(input.mode==='query-readers'){
+  const reader=await application.createReadonlyApplicationStorage();assert(reader);const same=(value:unknown,expected:unknown)=>assert.equal(canonicalJson(value),canonicalJson(expected)),expected=input.queryReads.projected,id=expected.id;
+  try{
+   same(await reader.getQueryRun(id),expected);same(await reader.listRecentQueries(1),[expected]);same(await reader.listQueryRunsByAsker(input.owner,1),[expected]);same(await reader.listFollowUps('synthetic-runtime-parent'),[expected]);const streamed=[];for await(const row of reader.iterateRecentQueries(1))streamed.push(row);same(streamed,[expected]);checks+=5;
+   same((await reader.runPrivacy!.read(id)).item!.run,expected);assert.equal(expected.confidence?.level,'Low');assert(expected.citations.length===2&&expected.citations.every(c=>c.evidenceProvenance==='synthetic-demo'));checks++;
+   const original=await reader.runPrivacy!.owner(id,{wallet:input.owner,binding:{network:'eip155:5042',origin:'https://keryx.cc'}});assert(original);assert.equal(original.run.answer,'Original answer');assert(original.run.citations.every(c=>c.evidenceProvenance===undefined));assert.equal(Reflect.get(original.run,'uninterpreted'),'\0\ud800');checks++;
+   for(const name of queryMethods){const descriptor=Object.getOwnPropertyDescriptor(reader,name);assert(descriptor&&!descriptor.enumerable&&typeof descriptor.value==='function');}checks++;
+   // The existing application RPC inventory has no provenance fallback. A
+   // nonempty successful page therefore exercises the fixed metadata port.
+   assert.equal(Object.hasOwn(APPLICATION_READ_OPERATIONS,'read_evidence_provenance'),false);for(const name of ['readEvidenceProvenance','verifySourceIfUnchanged','saveQueryRun','recordPayment','upsertSource'])assert.throws(()=>Reflect.get(reader,name));await assert.rejects(application.createApplicationStorage());checks++;
+   const captured=reader.getQueryRun,iterator=reader.iterateRecentQueries(1)[Symbol.asyncIterator]();await native.closePostgresRuntimeAdapter(reader);await assert.rejects(async()=>captured(id));await assert.rejects(iterator.next());checks++;
+   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,genuineFiveQueryReadersAndPrivacyProjection:true,sourceAndItemFlagsNonempty:true,ownerOriginalExact:true,noProvenanceRpcFallback:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{await native.closePostgresRuntimeAdapter(reader);}
+ }
+ if(['held-during-provenance','credential-during-provenance','close-during-provenance'].includes(input.mode)){
+  const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000'});let reader:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>,barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,closing:Promise<void>|undefined;
+  try{
+   await admin.connect();barrier=await startReadonlyCommitBarrier(5432,async()=>{
+    if(input.mode==='held-during-provenance')await admin.query("UPDATE keryx_storage.control SET mode='held'");
+    else if(input.mode==='credential-during-provenance')writeFileSync(readerPath,credential('keryx_reader','different-synthetic-password'));
+    else{assert(reader);closing=Promise.resolve(application.closeReadonlyApplicationStorage(reader));void closing.catch(()=>{});}
+   });manifest.backend.endpoint.port=barrier.port;writeFileSync(manifestPath,canonicalJson(manifest));reader=await application.createReadonlyApplicationStorage();assert(reader);
+   // Privacy read: authority, body, authority, flags. Core point read:
+   // authority, original, flags. Delay the actual flags acknowledgement.
+   barrier.arm(input.mode==='held-during-provenance'?4:3);const pending=input.mode==='held-during-provenance'?reader.runPrivacy!.read(input.queryReads.projected.id):reader.getQueryRun(input.queryReads.projected.id);await assert.rejects(pending);checks++;
+   assert.deepEqual(barrier.observation(),{intercepted:true,completed:true,failed:false});if(closing)await closing;checks++;
+   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,committedProvenanceThenAuthorityChangeRefused:true,noStaleBodyPublished:true,closeDidNotAwaitItsInflightCall:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{writeFileSync(readerPath,credential('keryx_reader'));try{await admin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active'");if(reader)await native.closePostgresRuntimeAdapter(reader);}finally{await admin.end();await barrier?.close();}}
+ }
+ if(input.mode==='query-iterator-guards'){
+  const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000'});const reader=await application.createReadonlyApplicationStorage();assert(reader);
+  try{
+   await admin.connect();
+   for(const fault of ['held','credential','close']){
+    const iterator=reader.iterateRecentQueries(2)[Symbol.asyncIterator](),first=await iterator.next();assert.equal(first.done,false);assert.equal(canonicalJson(first.value),canonicalJson(input.queryReads.projected));checks++;
+    if(fault==='held')await admin.query("UPDATE keryx_storage.control SET mode='held'");else if(fault==='credential')writeFileSync(readerPath,credential('keryx_reader','different-synthetic-password'));else await native.closePostgresRuntimeAdapter(reader);
+    await assert.rejects(iterator.next());checks++;if(fault==='held')await admin.query("UPDATE keryx_storage.control SET mode='active'");if(fault==='credential')writeFileSync(readerPath,credential('keryx_reader'));
+   }
+   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,perYieldHeldCredentialAndCloseGuards:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{writeFileSync(readerPath,credential('keryx_reader'));try{await admin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active'");await native.closePostgresRuntimeAdapter(reader);}finally{await admin.end();}}
  }
  if(input.mode==='restored-cold-factory'){
   progress('restored-cold-admission');const restored=await application.createReadonlyApplicationStorage();assert(restored);checks++;
@@ -306,7 +349,7 @@ async function main(){
    assert(await health(healthNow,false));checks++;
    await healthAdmin.query("UPDATE keryx_storage.control SET mode='held';");await assert.rejects(health(healthNow,false));await assert.rejects(sync([]));await assert.rejects(funding(input.owner));checks++;
   }finally{try{await healthAdmin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active';");}finally{await healthAdmin.end();}}
-  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),[...sourceMethods,'pendingJobOwners','publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments','publicProfiles']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
+  assert.equal(typeof Reflect.get(reader,'getQueryRun'),'function');assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),[...sourceMethods,...queryMethods,'pendingJobOwners','publicLedgerRuns','accountMembership','chatAccountLinks','ownerRunAssignments','publicProfiles']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
   progress('owner-reads');const profile=await reader.privateProfiles!.get(input.owner,'eip155:5042');assert.equal(profile.profile?.handle,input.publicProfile.handle);assert.equal(profile.activity.questions,1);checks++;
   assert.equal((await reader.profileIdentities!.list(input.owner)).identities.length,0);checks++;
   let parsed=0;await assert.rejects(reader.privateProfiles!.update(input.owner,{get displayName(){parsed++;return 'unused';}} as never));assert.equal(parsed,0);checks++;
@@ -315,7 +358,7 @@ async function main(){
   assert.equal((await ownership.list(input.owner,{binding,filters:{},take:1}))[0]?.id,'synthetic-runtime-run');checks++;
   const original=await ownership.read(input.owner,binding,'synthetic-runtime-run');assert.equal(original?.run.id,'synthetic-runtime-run');assert.equal(original?.run.asker,input.owner);checks++;
   const privacy=reader.runPrivacy!,actor={wallet:input.owner,binding},id='synthetic-runtime-run';assert.equal(reader.runPrivacyActive,true);
-  assert.equal((await privacy.read(id)).item?.run.answer,'Original answer');assert.equal(Reflect.get((await privacy.read(id)).item!.run,'uninterpreted'),'\0\ud800');checks++;
+  assert.equal((await privacy.read(id)).item?.run.answer,input.queryReads.projected.answer);assert.equal(Reflect.get((await privacy.read(id)).item!.run,'uninterpreted'),'\0\ud800');checks++;
   assert.equal((await privacy.owner(id,actor))?.run.asker,input.owner);assert.equal(await privacy.defaults(actor),'public');checks++;
   progress('account-history');assert.equal(typeof accounts.prepareAsyncHistoryFence,'function');
   const observed=await privacy.owner(id,actor);assert(observed);const finalHistory=await accounts.prepareAsyncHistoryFence!(input.account.snapshot,[{id,ownerWallet:input.owner,...observed}],Date.now()+25000);await finalHistory();await assert.rejects(finalHistory());checks++;

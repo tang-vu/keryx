@@ -43,6 +43,8 @@ describe('publication containment protocol without execution',()=>{
  });
  it('preserves only the exact approved semantic refusal and a bounded SQLSTATE',()=>{
   expect(publicationSqlFailure({code:'P0001',message:'claim_unavailable',query:'private',detail:'signature'})).toEqual({code:'P0001',semantic:'claim_unavailable'});
+  expect(publicationSqlFailure({code:'P0001',message:'Source JS string token unavailable',query:'private'})).toEqual({code:'P0001',semantic:'source_js_string_unavailable'});
+  expect(publicationSqlFailure({code:'P0001',message:'Source JS string token unavailable\nprivate'})).toEqual({code:'P0001',semantic:null});
   expect(publicationSqlFailure({code:'42703',message:'SECRET SQL PARAMETER'})).toEqual({code:'42703',semantic:null});expect(publicationSqlFailure({code:'secret-state',message:'claim_unavailable\nraw'})).toEqual({code:'XXXXX',semantic:null});
  });
  it('refuses leaked strings, arbitrary report fields, malformed or oversized stdout',()=>{

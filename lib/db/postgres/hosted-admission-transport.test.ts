@@ -1,4 +1,9 @@
 import { describe,it,expect,vi } from 'vitest';
+import { DatabaseSync } from 'node:sqlite';
+import { installMainnetApplicationSchema } from '../mainnet-application-schema';
+import { admitSqliteHostedPolicy,admitSqliteHostedAuthorization,submitSqliteHostedAuthorization,confirmSqliteHostedAuthorization } from '../hosted-treasury-journal';
+import { PAYMENT_EVENT_FIELDS } from './payment-events-packet';
+import { canonicalJson } from '../../canonical-json';
 import { createHash } from 'node:crypto';
 import { ARC_MAINNET_PROFILE as profile } from '../../arc-network-profile';
 import { storageIdentityDigest,validateStorageIdentity,STORAGE_MAINNET_PROFILE_DIGEST } from '../storage-identity';
@@ -9,7 +14,7 @@ const identity=validateStorageIdentity({format:'keryx-mainnet-storage-identity-v
 const signer='0x'+'11'.repeat(20),payee='0x'+'22'.repeat(20),nonce='0x'+'ab'.repeat(32);
 function value():HostedAuthorizationAdmission{const now=Math.floor(Date.now()/1000);return {policy:{format:'keryx-hosted-treasury-policy-v1',network:profile.networkId,storageIdentityDigest:storageIdentityDigest(identity),origin:'https://keryx.cc',signer,lifetimeCapMicroUsdc:'100',queryCapMicroUsdc:'20',expiresAtSeconds:now+3600},context:{kind:'fetch',queryId:'synthetic-query',queryBudgetMicroUsdc:'20',sourceId:'synthetic-source',itemId:null,privateJob:null},payload:{domain:{name:'GatewayWalletBatched',version:'1',chainId:profile.chainId,verifyingContract:profile.gatewayWallet},primaryType:'TransferWithAuthorization',types:{TransferWithAuthorization:[{name:'from',type:'address'},{name:'to',type:'address'},{name:'value',type:'uint256'},{name:'validAfter',type:'uint256'},{name:'validBefore',type:'uint256'},{name:'nonce',type:'bytes32'}]},message:{from:signer,to:payee,value:'7',validAfter:String(now-600),validBefore:String(now+605000),nonce}},accounting:{retainedMicroUsdc:'0',confirmedMicroUsdc:'0'},availableMicroUsdc:'100'};}
 function snapshot(selector:string){const wire=JSON.stringify({selector:JSON.parse(selector),source:null,rows:[],browser:null,hosted:null,purchase:null});return {wire,sha256:createHash('sha256').update(wire).digest('hex')};}
-function fixture(readOnly=false){const call=vi.fn().mockImplementation(async(op,args)=>op==='hostedSourcePolicySnapshot'?snapshot(args[0]):nonce),channel={call,closed:false} as unknown as PostgresDomainChannel;return {call,channel,port:composePostgresHostedAdmission(channel,identity,readOnly)};}
+function fixture(readOnly=false,protocol:'legacy-v1'|'source-payment-originals-v1'='legacy-v1'){const call=vi.fn().mockImplementation(async(op,args)=>op==='hostedSourcePolicySnapshot'?snapshot(args[0]):nonce),channel={call,closed:false} as unknown as PostgresDomainChannel;return {call,channel,port:composePostgresHostedAdmission(channel,identity,readOnly,protocol)};}
 describe('native hosted original admission',()=>{
  it('captures the original and accounting before waiting',async()=>{const f=fixture();let release:(v:unknown)=>void=()=>{};f.call.mockImplementation((op,args)=>op==='hostedSourcePolicySnapshot'?Promise.resolve(snapshot(args[0])):new Promise(resolve=>{release=resolve;}));const raw=value(),pending=f.port.admitHostedAuthorization(raw);raw.payload.message.value='8';raw.context.queryId='changed';raw.accounting.retainedMicroUsdc='1';await vi.waitFor(()=>expect(f.call).toHaveBeenCalledTimes(2));expect(JSON.parse(f.call.mock.calls[1][1][2])).toMatchObject({context:{queryId:'synthetic-query'},payload:{message:{value:'7'}}});expect(JSON.parse(f.call.mock.calls[1][1][3])).toEqual({retainedMicroUsdc:'0',confirmedMicroUsdc:'0'});release(nonce);expect(await pending).toBe(nonce);});
  it('refuses a readonly port before inspecting arguments',async()=>{const f=fixture(true),raw=new Proxy({},{get(){throw Error('argument was inspected');}});await expect(f.port.admitHostedAuthorization(raw as HostedAuthorizationAdmission)).rejects.toThrow('PostgreSQL storage unavailable');expect(f.call).not.toHaveBeenCalled();});
@@ -18,4 +23,49 @@ describe('native hosted original admission',()=>{
  it('does not publish a nonce after policy expiry while the write was pending',async()=>{const f=fixture(),raw=value(),later=Date.now()+4000000,clock=vi.spyOn(Date,'now');f.call.mockImplementation((op,args)=>{if(op==='hostedSourcePolicySnapshot')return Promise.resolve(snapshot(args[0]));clock.mockReturnValue(later);return Promise.resolve(nonce);});try{await expect(f.port.admitHostedAuthorization(raw)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(f.call).toHaveBeenCalledTimes(2);}finally{clock.mockRestore();}});
  it('refuses a missing managed binding after the read before dispatching a write',async()=>{const f=fixture(),raw=value();if(raw.context.kind==='operating-fee')throw Error('wrong fixture');raw.context.sourceClaim={id:'ab'.repeat(32),revision:1,mode:'paid',effectiveAt:'2026-11-14T00:00:00.000Z',verifiedAt:'2026-11-14T00:00:00.000Z'};await expect(f.port.admitHostedAuthorization(raw)).rejects.toThrow('Managed source claim binding is unavailable');expect(f.call).toHaveBeenCalledTimes(1);expect(f.call.mock.calls[0][0]).toBe('hostedSourcePolicySnapshot');});
  it('treats an unexpected committed result or disposed transport as unknown',async()=>{const f=fixture();f.call.mockImplementation(async(op,args)=>op==='hostedSourcePolicySnapshot'?snapshot(args[0]):'0x'+'cd'.repeat(32));await expect(f.port.admitHostedAuthorization(value())).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(f.call).toHaveBeenCalledTimes(2);const g=fixture();g.call.mockImplementation((op,args)=>{if(op==='hostedSourcePolicySnapshot')return Promise.resolve(snapshot(args[0]));Object.defineProperty(g.channel,'closed',{value:true});return Promise.resolve(nonce);});await expect(g.port.admitHostedAuthorization(value())).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);});
+});
+
+describe('Source hosted payment creation capture',()=>{
+ it('matches every actual SQLite creation cell except its server-owned clock slot',async()=>{
+  const db=new DatabaseSync(':memory:');try{
+   installMainnetApplicationSchema(db);const raw=value(),f=fixture(false,'source-payment-originals-v1');
+   admitSqliteHostedPolicy(db,raw.policy,identity,'public');admitSqliteHostedAuthorization(db,raw,identity);
+   const source=db.prepare('SELECT '+PAYMENT_EVENT_FIELDS.join(',')+' FROM payment_events WHERE id=?').get('x402:'+nonce)!;
+   await f.port.admitHostedAuthorization(raw);
+   const envelope=JSON.parse(f.call.mock.calls[1][1][2]);
+   expect(envelope.originalWire).toBe(canonicalJson({context:raw.context,payload:raw.payload}));
+   expect(JSON.parse(envelope.paymentTemplateWire)).toEqual({...source,created_at:null});
+   expect(new Date(String(source.created_at)).toISOString()).toBe(source.created_at);
+   expect(Object.keys(JSON.parse(envelope.paymentTemplateWire))).toEqual(PAYMENT_EVENT_FIELDS);
+  }finally{db.close();}
+ });
+ it('does not create a public payment template for a private original',async()=>{
+  const raw=value(),f=fixture(false,'source-payment-originals-v1');if(raw.context.kind==='operating-fee')throw Error('fixture');
+  raw.context.privateJob={id:raw.context.queryId,owner:payee,workerId:'synthetic-worker'};
+  await f.port.admitHostedAuthorization(raw);
+  const envelope=JSON.parse(f.call.mock.calls[1][1][2]);
+  expect(envelope.paymentTemplateWire).toBeNull();
+  expect(envelope.originalWire).toBe(canonicalJson({context:raw.context,payload:raw.payload}));
+ });
+});
+
+describe('genuine Source public confirmation receipts',()=>{
+ it.each(['\0','\u00e9'.repeat(256),'\ud83d\ude00'.repeat(128),'\ud800'])('keeps the actual Source scalar/readback outcome: %j',(receipt)=>{
+  const db=new DatabaseSync(':memory:');try{
+   installMainnetApplicationSchema(db);const raw=value();
+   admitSqliteHostedPolicy(db,raw.policy,identity,'public');admitSqliteHostedAuthorization(db,raw,identity);
+   const submission={authorizationId:nonce,authorizationExpiresAt:new Date(Number(raw.payload.message.validBefore)*1000).toISOString(),payer:signer,payee,amountMicros:'7',network:profile.networkId,asset:profile.usdcAddress.toLowerCase()};
+   submitSqliteHostedAuthorization(db,signer,submission,'0x'+'cd'.repeat(32));
+   if(receipt==='\ud800')expect(()=>confirmSqliteHostedAuthorization(db,signer,nonce,receipt)).toThrow('Original settlement conflict');
+   else{confirmSqliteHostedAuthorization(db,signer,nonce,receipt);confirmSqliteHostedAuthorization(db,signer,nonce,receipt);}
+   const row=db.prepare('SELECT settled,tx_hash,authorization_phase FROM payment_events WHERE id=?').get('x402:'+nonce)!;
+   expect(row).toEqual(receipt==='\ud800'?{settled:0,tx_hash:null,authorization_phase:'submission_attempted'}:{settled:1,tx_hash:receipt,authorization_phase:'settled'});
+   expect(db.prepare('SELECT count(*) AS n FROM browser_journal_writer').get()?.n).toBe(0);
+  }finally{db.close();}
+ });
+});
+
+describe('hosted admission protocol isolation',()=>{
+ it('keeps the canonical original as the legacy default',async()=>{const f=fixture(),raw=value();await f.port.admitHostedAuthorization(raw);expect(f.call.mock.calls[1][1][2]).toBe(canonicalJson({context:raw.context,payload:raw.payload}));});
+ it('refuses an unknown selection without inspecting a caller',()=>{const f=fixture();expect(()=>composePostgresHostedAdmission(f.channel,identity,false,'other' as never)).toThrow('PostgreSQL storage unavailable');expect(f.call).not.toHaveBeenCalled();});
 });
