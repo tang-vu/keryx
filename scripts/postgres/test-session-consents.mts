@@ -175,7 +175,8 @@ try {
   const nativeRuntimeOnly=process.argv.includes("--native-runtime-only");
   const nativeRuntimeTailOnly=process.argv.includes("--native-runtime-tail-only");
   assert(!(nativeRuntimeOnly&&nativeRuntimeTailOnly), "Native runtime partitions are mutually exclusive");
-  const nativeFactoryOnly=process.argv.includes("--native-factory-only");
+  const nativeTerminalRetirementOnly=process.argv.includes("--native-terminal-retirement-only");
+  const nativeFactoryOnly=process.argv.includes("--native-factory-only")||nativeTerminalRetirementOnly;
   const originalJsonOnly=process.argv.includes("--original-json-only");
   const runClaimsOnly=process.argv.includes("--run-claims-only");
   const ownershipHistoryOnly=process.argv.includes("--ownership-history-only");
@@ -458,8 +459,8 @@ try {
     console.log(JSON.stringify({passed:true,workspacesOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,workspaces,runtimeQualified:false,applicationBackendSwitched:false}));return;
   }
   if(nativeFactoryOnly){
-    const nativeRuntime=await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
-    console.log(JSON.stringify({passed:true,nativeFactoryOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,nativeRuntime,applicationBackendSwitched:false}));return;
+    const nativeRuntime=await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement),qualification:nativeTerminalRetirementOnly?'terminal-retirement-only':'full'});
+    console.log(JSON.stringify({passed:true,nativeFactoryOnly:true,...(nativeTerminalRetirementOnly?{nativeTerminalRetirementOnly:true}:{}),image,sourceSha256:source.sha256,referenceContract:reference.sha256,nativeRuntime,applicationBackendSwitched:false}));return;
   }
   if(privacyOnly){
     const privacy=await qualifyPrivacy({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
