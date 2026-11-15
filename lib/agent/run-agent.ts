@@ -2178,8 +2178,10 @@ async function* runAdmittedAgent(
   if (gateway.operatingFeePolicy && gateway.payOperatingFee && origin !== "a2a" && input.fundingOwner !== "browser"
       && citations.some(citation => citation.sourceKind === "public-reference")) {
     try {
-      const plan = await prepareOperatingFee({ queryId, poolUsdc: Math.min(round(citationPool), Math.floor(budget * 1e6 / 2) / 1e6),
-        citations, policy: gateway.operatingFeePolicy(), readClaim: url => sourceClaimForUrl(db, url), itemClaimUrls });
+      const terms = { queryId, poolUsdc: Math.min(round(citationPool), Math.floor(budget * 1e6 / 2) / 1e6),
+        citations: structuredClone(citations), itemClaimUrls: new Map([...itemClaimUrls].map(([url, claims]) => [url, [...claims]] as const)) };
+      const policy = await gateway.operatingFeePolicy();
+      const plan = await prepareOperatingFee({ ...terms, policy, readClaim: url => sourceClaimForUrl(db, url) });
       if (plan) {
         checkpointCapture.economicUnavailable("reward-authority", "operating-allocation", 0);
         operatingFee = plan.snapshot;

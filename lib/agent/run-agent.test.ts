@@ -3933,7 +3933,7 @@ describe("sponsored operating fees", () => {
     const gateway = fakeGateway();
     const policy = { format: "keryx-operating-fee-policy-v1" as const, network: "eip155:5042" as const,
       origin: "https://keryx.cc", storageIdentityDigest: "a".repeat(64), beneficiary: `0x${"22".repeat(20)}`, expiresAtSeconds: 2_000_000_000 };
-    gateway.operatingFeePolicy = () => policy;
+    gateway.operatingFeePolicy = async () => policy;
     const settle = vi.fn(async ({ queryId, operatingFee }: Parameters<NonNullable<PaymentGateway["payOperatingFee"]>>[0]) => makePayment({
       kind: "operating-fee", id: "synthetic-fee", queryId, sourceId: "keryx:operating-fee", sourceName: "Keryx operating fee",
       payer: "synthetic-treasury", payee: policy.beneficiary, amountUsdc: Number(operatingFee.amountMicroUsdc) / 1e6,

@@ -138,3 +138,20 @@ it.each(["", "*", `0x${"0".repeat(40)}`, Array(17).fill(`0x${"9".repeat(40)}`).j
     vi.stubEnv("KERYX_PRIVATE_PURCHASE_PAYERS", payers);
     expect(await privatePurchaseBootstrap(db, signal())).toBeNull(); expect(state.balance).not.toHaveBeenCalled();
   });
+
+it("refuses configuration or cancellation changes during the final backing observation", async () => {
+  state.balance.mockImplementationOnce(async () => {
+    vi.stubEnv("KERYX_PRIVATE_PROVIDER_API_KEY", "changed-during-await"); return BigInt(100000);
+  });
+  expect(await privatePurchaseBootstrap(db, signal())).toBeNull();
+  vi.stubEnv("KERYX_PRIVATE_PROVIDER_API_KEY", "synthetic-secret");
+  const stop = new AbortController(); state.balance.mockImplementationOnce(async () => { stop.abort(); return BigInt(100000); });
+  expect(await privatePurchaseBootstrap(db, stop.signal)).toBeNull();
+  expect(fetch).not.toHaveBeenCalled();
+});
+it("narrows held quote and submit operations against current runtime configuration", async () => {
+  const service = (await privatePurchaseBootstrap(db, signal()))!;
+  vi.stubEnv("KERYX_PRIVATE_RESEARCH_ENABLED", "0");
+  expect(() => service.quote({})).toThrow(); await expect(service.submit(null, payer)).rejects.toThrow();
+  expect(fetch).not.toHaveBeenCalled(); expect(await db.getPrivateTreasurySummary(signer)).toBeNull();
+});
