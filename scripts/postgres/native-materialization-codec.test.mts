@@ -2,7 +2,13 @@ import { expect,it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 import { nativeMaterializationCell as cell,nativeMaterializationQueryCell as queryCell,nativeMaterializationValueKey as key } from './native-materialization-codec.mts';
 import { snapshotRows,snapshotTables } from './typed-snapshot.mts';
+import {nativeMaterializationProfile} from '../../lib/db/postgres/runtime-profile';
 const text=(s:string)=>['text',Buffer.from(s).toString('hex')] as const;
+it('does not turn explicit current DATA selection into an unsafe scalar codec exception',()=>{
+ expect(nativeMaterializationProfile('development-current510-data-only').catalogSha256).not.toBe(nativeMaterializationProfile().catalogSha256);
+ for(const type of ['text','jsonb'] as const)expect(()=>cell(text('Source\0original'),type)).toThrow();
+ expect(queryCell(text('Source\0original'),'text','question')).toBe(JSON.stringify('Source\0original'));
+});
 it.each([false,true])('preserves actual Source leading BOM bytes without repairing generic TEXT (NUL=%s)',nul=>{
  const db=new DatabaseSync(':memory:'),value='\ufeffSource café'+(nul?'\0retained':'');try{
   db.exec('CREATE TABLE source_cells(value TEXT)');db.prepare('INSERT INTO source_cells VALUES(?)').run(value);db.exec('BEGIN');

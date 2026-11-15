@@ -5,7 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { canonicalJson } from '../../lib/canonical-json';
 import { readStorageIdentity } from '../../lib/db/storage-identity-sqlite';
 import { storageIdentityDigest,type StorageIdentity } from '../../lib/db/storage-identity';
-import { NATIVE_READONLY_RUNTIME_PROFILE } from '../../lib/db/postgres/runtime-profile';
+import { nativeMaterializationProfile,type NativeMaterializationProfileMode } from '../../lib/db/postgres/runtime-profile';
 import type { exportNativePostgresSchemaContract } from './native-contract.mts';
 
 export const PRIVATE_RESULT_SOURCE_COLUMNS=Object.freeze({private_research_intents:Object.freeze(['id','payer','data','created_at'] as const),private_research_payment_attempts:Object.freeze(['id','started_at','confirmation','settled_at'] as const),private_research_executions:Object.freeze(['id','worker_id','started_at'] as const),private_research_results:Object.freeze(['id','serialized_run','saved_at'] as const)});
@@ -15,12 +15,14 @@ type Reference=Pick<ReturnType<typeof exportNativePostgresSchemaContract>,'sha25
 const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 /** Feature classification follows only an independently exported, pinned
  * descriptor. Presence with a different schema/fence refuses, never adopts. */
-export function hasPrivateResultIdentity(reference:Reference){
- assert.equal(reference.sha256,NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256);const sections=reference.metadata?.sections;if(!object(sections))return false;
+export function hasPrivateResultIdentity(reference:Reference,mode:NativeMaterializationProfileMode='observation505'){
+ assert.equal(reference.sha256,nativeMaterializationProfile(mode).catalogSha256);const sections=reference.metadata?.sections;if(!object(sections))return false;
  const relations=sections.relations;assert(Array.isArray(relations));const matches=relations.filter(v=>object(v)&&v.schema==='keryx_storage'&&v.name==='private_research_result_identity');assert(matches.length<=1);if(!matches.length)return false;assert(object(matches[0])&&matches[0].kind==='r');
  const columns=sections.columns,constraints=sections.constraints,triggers=sections.triggers,functions=sections.functions;assert(Array.isArray(columns)&&Array.isArray(constraints)&&Array.isArray(triggers)&&Array.isArray(functions));
  const actual=columns.filter(v=>object(v)&&v.schema==='keryx_storage'&&v.relation==='private_research_result_identity').map(v=>{assert(object(v));return [v.name,v.type];});assert.deepEqual(actual.sort(),Object.entries(PRIVATE_RESULT_IDENTITY_COLUMNS).sort());
- for(const [name,fields] of Object.entries(PRIVATE_RESULT_SOURCE_COLUMNS)){const cells:unknown[][]=columns.filter(v=>object(v)&&v.schema==='public'&&v.relation===name).map(v=>{assert(object(v));return [v.name,v.type];});assert.deepEqual(cells.sort(),fields.map(f=>[f,'text']).sort());}
+ // The pinned native schema constrains worker_id with its exact UUID-text
+ // domain. Original SQLite source cells remain TEXT; no domain alias is adopted.
+ for(const [name,fields] of Object.entries(PRIVATE_RESULT_SOURCE_COLUMNS)){const cells:unknown[][]=columns.filter(v=>object(v)&&v.schema==='public'&&v.relation===name).map(v=>{assert(object(v));return [v.name,v.type];});assert.deepEqual(cells.sort(),fields.map(f=>[f,name==='private_research_executions'&&f==='worker_id'?'keryx_storage.native_uuid_text':'text']).sort());}
  assert(constraints.some(v=>object(v)&&v.schema==='keryx_storage'&&v.relation==='private_research_result_identity'&&v.type==='p'&&v.definition==='PRIMARY KEY (id)'));
  assert(constraints.some(v=>object(v)&&v.schema==='keryx_storage'&&v.relation==='private_research_result_identity'&&v.type==='f'&&v.referencedSchema==='public'&&v.referencedRelation==='private_research_results'&&typeof v.definition==='string'&&/^FOREIGN KEY \(id\) REFERENCES (?:public\.)?private_research_results\(id\) ON DELETE CASCADE$/.test(v.definition)));
  for(const [name,fn] of [['native_private_result_identity_writer','write_fence'],['native_private_result_identity_retained','immutable']])assert(triggers.some(v=>object(v)&&v.schema==='keryx_storage'&&v.relation==='private_research_result_identity'&&v.name===name&&v.functionSchema==='keryx_storage'&&v.function===fn&&v.enabled==='O'));

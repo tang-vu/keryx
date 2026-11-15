@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
 const yaml = createRequire(import.meta.url)('js-yaml') as { load: (wire: string) => unknown };
 const wire = readFileSync(new URL('../../.github/workflows/postgres-mainnet.yml', import.meta.url), 'utf8');
-type Job = { needs?: string[]; if?: string; 'timeout-minutes': number; steps: { run?: string; name?: string; if?: string }[] };
+type Job = { needs?: string[]; if?: string; 'timeout-minutes': number; steps: { run?: string; name?: string; if?: string; env?: Record<string,string> }[] };
 const workflow = yaml.load(wire) as { jobs: Record<string, Job> };
 const names = ['contracts-bootstrap-financial', 'native-runtime-core', 'native-runtime-tail', 'synthetic-materialization', 'publication-contained', 'a2a-fulfillment', 'payment-browser-protocols', 'current-producer-protocols'];
 const gate = workflow.jobs['postgres-preparation'];
@@ -46,5 +47,25 @@ describe('PostgreSQL partition acceptance', () => {
   it('preserves bounded jobs and refuses whole-workflow cancellation', () => {
     for (const name of names) expect(workflow.jobs[name]['timeout-minutes']).toBe(25);
     expect(gate.steps.some(step => step.if === '${{ cancelled() }}' && step.run === 'exit 1')).toBe(true);
+  });
+  it('requires both the observed factory profile and current DATA-only intake', () => {
+    const steps=workflow.jobs['synthetic-materialization'].steps;
+    expect(steps.filter(step=>step.run?.endsWith('qualify-native-materialization.mts --synthetic'))).toHaveLength(1);
+    const current=steps.filter(step=>step.run?.endsWith('qualify-native-materialization.mts --development-current-data-synthetic'));
+    expect(current).toHaveLength(1);
+    expect(current[0].if).toBeUndefined();
+    expect(current[0].run).toContain('--import ./scripts/postgres/current-data-source-bootstrap.mjs');
+    expect(current[0].env).toMatchObject({NODE_OPTIONS:'--max-old-space-size=512',KERYX_NETWORK:'arc',NEXT_PUBLIC_KERYX_NETWORK:'arc',KERYX_FORCE_OFFLINE:'0'});
+  });
+  it('boots the actual Source schema rehearsal with provider access trapped', () => {
+    const bootstrap=new URL('./current-data-source-bootstrap.mjs',import.meta.url).href;
+    const env={KERYX_NETWORK:'arc',NEXT_PUBLIC_KERYX_NETWORK:'arc',KERYX_FORCE_OFFLINE:'0'};
+    const program="fetch('data:text/plain,unexpected').then(()=>{process.exitCode=2},error=>{if(error.message!=='Current data qualification forbids provider HTTP')process.exitCode=3})";
+    const run=(flags:string[],overrides:Record<string,string>={})=>spawnSync(process.execPath,['--import',bootstrap,'--eval',program,'--',...flags],{env:{...env,...overrides},encoding:'utf8',timeout:5000,windowsHide:true});
+    expect(run(['--development-current-data-synthetic']).status).toBe(0);
+    expect(run(['--synthetic']).status).not.toBe(0);
+    expect(run(['--development-current-data-synthetic','--development-current-data-retained']).status).not.toBe(0);
+    expect(run(['--development-current-data-synthetic'],{KERYX_FORCE_OFFLINE:'1'}).status).not.toBe(0);
+    expect(run(['--development-current-data-synthetic'],{KERYX_NETWORK:'arcTestnet'}).status).not.toBe(0);
   });
 });

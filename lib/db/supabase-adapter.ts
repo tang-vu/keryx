@@ -1,3 +1,4 @@
+import { POSTGRES_RUNTIME_STORE_NAMES,type NativePostgresRuntimeStores } from './postgres/runtime-stores';
 import type { PostgresA2aFulfillmentPort } from './postgres/a2a-fulfillment-transport';
 import type { PostgresPaymentEventsPort } from './postgres/payment-events-transport';
 import type { PostgresBrowserJournalPort } from './postgres/browser-journal-transport';
@@ -177,6 +178,8 @@ export interface NativePostgresBusinessCoreOptions {
   readonly authority:StorageDomainAuthority&{domainClient():SupabaseClient};
   readonly assertEntry:()=>void;
   readonly verify:()=>Promise<void>;
+  /** Internal guarded objects shared with the selected facade, never provenance. */
+  readonly runtimeStores?:NativePostgresRuntimeStores;
   readonly sourceClaims?:PostgresSourceClaimsPort;
   readonly a2aFulfillment?:PostgresA2aFulfillmentPort;
   readonly paymentEvents?:PostgresPaymentEventsPort;
@@ -427,6 +430,10 @@ export class SupabaseAdapter implements KeryxDB {
         getSourceClaimChallenge:{value:(id:string)=>read(()=>claims.getSourceClaimChallenge(id)),configurable:true},
         listSourceClaims:{value:(wallet?:string)=>read(()=>claims.listSourceClaims(wallet)),configurable:true},
       });
+    }
+    if(native?.runtimeStores)for(const name of POSTGRES_RUNTIME_STORE_NAMES){
+      const store=native.runtimeStores[name];
+      if(store!==undefined)Object.defineProperty(this,name,{value:store,enumerable:false,writable:false,configurable:true});
     }
     if(native)enrolledEntryGuards.set(this,{verify:async()=>{this.assertEntry();await native.verify();this.assertEntry();},
       close:()=>{this.#native!.closed=true;this.#native!.ready=false;}});

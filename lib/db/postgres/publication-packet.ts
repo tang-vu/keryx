@@ -81,13 +81,14 @@ function capturePublicationRecord(input:QueryRun,publication?:{visibility:z.infe
 /** Pure Source DTO only; no connection, facade, issuer or writer authority. */
 export function capturePublicationSourcePacket(input:QueryRun,publication?:{visibility:z.infer<typeof visibilitySchema>}){return capturePublicationRecord(input,publication).packet;}
 
-/** Installed write capture remains closed for these Source values until the
- * complete scalar protocol has its actual PostgreSQL/load qualification. This
- * is a temporary refusal gate, not an authority issuer or a protocol test flag.
+/** The fixed protocol derives body scalars from the exact retained original and
+ * validates the other non-key Source bindings against their byte metadata.
+ * NUL/UTF-16 in those values never becomes a rewritten original or an absent
+ * scalar. Key/clock/owner encodings remain held; capture is no authority issuer.
  */
 export function capturePostgresPublication(input:QueryRun,publication?:{visibility:z.infer<typeof visibilitySchema>}){
  const {packet,run}=capturePublicationRecord(input,publication);
- for(const value of [run.question,run.answer,run.engine,run.asker,run.parentId,run.origin,run.mcpClient,run.paymentMode,run.confidence?.level]){
+ for(const value of [run.id,run.createdAt,run.asker,run.parentId]){
   if(typeof value==='string'&&(value.includes('\0')||Buffer.from(value).toString('utf8')!==value))throw new PrivacyError('privacy_unavailable');
  }
  return packet;

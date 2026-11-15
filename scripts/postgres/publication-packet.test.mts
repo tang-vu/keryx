@@ -26,10 +26,10 @@ it('keeps canonical JS string identity separate from SQL binding and JSON1 modes
  expect(Buffer.byteLength(JSON.stringify(scalarSource))).toBeLessThanOrEqual(32768);
 });
 const base=():QueryRun=>({id:'synthetic-publication-packet',createdAt:'2026-11-13T00:00:00.000Z',question:'Question "unicode đ"',answer:'Answer',engine:'heuristic',budget:1,totalSpent:0.1,totalToCreators:0.05,subClaims:[],decisions:[],citations:[],trace:[],paymentMode:'offline'});
-function compare(run:QueryRun){
+function compare(run:QueryRun,sourceReferenceOnly=false){
  const db=new DatabaseSync(':memory:');try{
   installSqliteApplicationSchema(db);writeSqliteQueryRun(db,run,false);
-  const packet=JSON.parse(capturePublicationSourcePacket(run).wire),row=db.prepare('SELECT * FROM query_runs WHERE id=?').get(run.id)!;
+  const packet=JSON.parse((sourceReferenceOnly?capturePublicationSourcePacket:capturePostgresPublication)(run).wire),row=db.prepare('SELECT * FROM query_runs WHERE id=?').get(run.id)!;
   expect(Buffer.from(packet.originalHex,'hex').toString()).toBe(row.data);
   expect(packet.history).toEqual(sqliteOriginalHistoryProjection(db,run.id));
   const {questionHex:sqlQuestionHex,...ownership}=sqliteOwnershipHistoryProjection(db,run.id);expect(packet.ownership).toEqual(ownership);expect(sqlQuestionHex).toBe(db.prepare("SELECT lower(hex(CAST(json_extract(data,'$.question') AS BLOB))) h FROM query_runs WHERE id=?").get(run.id)!.h);
@@ -89,6 +89,15 @@ describe('pure native publication packet vs current SQLite record mapping',()=>{
  it('matches numeric counters and nested citation, learning and usage metadata',()=>compare({...base(),budget:0.123456,totalSpent:0.012345,totalToCreators:0.000001,citations:[{marker:'S1',sourceId:'source',itemId:'item',sourceName:'Publisher',sourceKind:'public-reference',itemTitle:'Document',itemUrl:'https://example.test/doc',weight:1,reward:0.000001,rationale:'Fixture only',contentReceipt:{bodyHash:'ab'.repeat(32)},uninterpreted:'\0\ud800'}],decisions:[{sourceId:'source',action:'SKIP',reason:'Fixture only'}],sourceLearning:{extra:[1,true,'x']},usage:{extra:{x:1}}} as unknown as QueryRun));
  it('retains JSON.stringify economics cells independently of scalar normalization',()=>compare({...base(),llmUsage:[{engine:'llm:fixture',model:'model\0\ud800',inputTokens:1,outputTokens:2}],llmCalls:[{uninterpreted:'\0\udc00'}]} as unknown as QueryRun));
  it.each([null,false,0,1,'',[],{}])('keeps original fulfillment truthiness for %j',originalFulfillment=>compare({...base(),originalFulfillment} as unknown as QueryRun));
- it.each(['\0','\ud800','\udc00','\u0130'])('pure DTO matches genuine Source binding and metadata for %j while writer admission stays gated',text=>compare({...base(),question:'q'+text,answer:'PRIVATE_BODY'+text,engine:'engine'+text,asker:'owner'+text,mcpClient:('client'+text) as never}));
- it('refuses private IDs and scalar bytes PostgreSQL cannot represent before submission',()=>{expect(()=>capturePostgresPublication({...base(),id:'prv_example'})).toThrow();expect(()=>capturePostgresPublication({...base(),answer:'bad\0answer'})).toThrow();expect(()=>capturePostgresPublication({...base(),question:'bad\ud800'})).toThrow();});
+ it.each(['\0','\ud800','\udc00','\u0130'])('keeps an explicit Source-reference oracle for unadmitted raw owner %j',text=>{
+  const run={...base(),question:'q'+text,answer:'PRIVATE_BODY'+text,engine:'engine'+text,asker:'owner'+text,mcpClient:('client'+text) as never};compare(run,true);
+  if(text!=='\u0130')expect(()=>capturePostgresPublication(run)).toThrow();
+ });
+ it.each(['question','answer','engine','origin','mcpClient','paymentMode','confidence'] as const)('fresh codec matches every Source projection for qualified %s text',field=>{
+  const text='\ufeffBOM\0high\ud800 low\udc00',run={...base(),[field]:field==='confidence'?{level:text}:text} as unknown as QueryRun;compare(run);
+ });
+ it('retains private/key holds while allowing qualified scalar data before submission',()=>{
+  for(const run of [{...base(),id:'prv_example'},{...base(),parentId:'prv_example'},{...base(),asker:'owner\0key'},{...base(),parentId:'parent\ud800'}])expect(()=>capturePostgresPublication(run)).toThrow();
+  expect(()=>capturePostgresPublication({...base(),answer:'bad\0answer'})).not.toThrow();expect(()=>capturePostgresPublication({...base(),question:'bad\ud800'})).not.toThrow();
+ });
 });

@@ -15,7 +15,7 @@ import { captureObservedPaymentSource } from './payment-original-source.mts';
 import { materializeNativeProjections } from './materialize-native-projections.mts';
 
 const state=vi.hoisted(()=>({present:true,badShape:false,rows:new Map<string,Record<string,unknown>[]>(),saved:new Map<string,Record<string,unknown>[]>(),publicRows:new Map<string,Record<string,unknown>>(),queries:[] as string[],identity:undefined as unknown,drift:'',hook:undefined as undefined|(()=>void)}));
-vi.mock('../../lib/db/postgres/runtime-profile',()=>({NATIVE_READONLY_RUNTIME_PROFILE:{catalogSha256:'a'.repeat(64)}}));
+vi.mock('../../lib/db/postgres/runtime-profile',()=>({NATIVE_READONLY_RUNTIME_PROFILE:{catalogSha256:'a'.repeat(64)},nativeMaterializationProfile:(mode='observation505')=>{if(mode!=='observation505')throw Error('Recording fixture supports observation505 only');return {catalogSha256:'a'.repeat(64)};}}));
 vi.mock('./native-contract.mts',()=>({exportNativePostgresSchemaContract:()=>({sha256:'a'.repeat(64),metadata:{sections:{relations:state.present?[{schema:'keryx_storage',name:'payment_event_originals',kind:'r'}]:[],columns:state.present?[['payment_id','text'],['identity_digest','text'],['original_wire',state.badShape?'jsonb':'json'],['original_sha256','text'],['current_wire','json'],['current_sha256','text'],['native_projection','jsonb'],['unprojected_fields','text[]']].map(([name,type])=>({schema:'keryx_storage',relation:'payment_event_originals',name,type})):[]}}})}));
 vi.mock('./materialize-native-snapshot.mts',()=>({assertDevelopmentMaterializationContainment:()=>{},NativeMaterializationUnavailable:class extends Error{constructor(readonly diagnostic:unknown){super('Native materialization unavailable');}}}));
 vi.mock('pg',()=>({Client:class{

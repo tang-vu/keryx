@@ -10,7 +10,7 @@ import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from '../../lib/d
 import { materializeNativeProjections } from './materialize-native-projections.mts';
 
 const driver=vi.hoisted(()=>({rows:new Map<string,Record<string,unknown>[]>(),queries:[] as string[],identity:undefined as unknown,changeWire:false,changeCells:false}));
-vi.mock('../../lib/db/postgres/runtime-profile',()=>({NATIVE_READONLY_RUNTIME_PROFILE:{catalogSha256:'a'.repeat(64)}}));
+vi.mock('../../lib/db/postgres/runtime-profile',()=>({NATIVE_READONLY_RUNTIME_PROFILE:{catalogSha256:'a'.repeat(64)},nativeMaterializationProfile:(mode='observation505')=>{if(mode!=='observation505')throw Error('Recording fixture supports observation505 only');return {catalogSha256:'a'.repeat(64)};}}));
 vi.mock('./native-contract.mts',()=>({exportNativePostgresSchemaContract:()=>({sha256:'a'.repeat(64)})}));
 vi.mock('./materialize-native-snapshot.mts',()=>({assertDevelopmentMaterializationContainment:()=>{},NativeMaterializationUnavailable:class extends Error{constructor(readonly diagnostic:unknown){super('Native materialization unavailable');}}}));
 vi.mock('pg',()=>({Client:class{

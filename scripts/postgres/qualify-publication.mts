@@ -55,8 +55,12 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
   const ownership=createEnrolledSqliteRunOwnershipHistory(source.db),privacy=createEnrolledSqliteRunPrivacy(source.db),history=createEnrolledSqlitePersonalHistory(source.db),profiles=createEnrolledSqlitePrivateProfiles(source.db);assert(profiles);
   const creation={privacy:{runPrivacy:privacy,runPrivacyActive:true},enrolled:true};
   pg(`INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES(${q(session)},${q(owner)},${Date.now()-10000},${Date.now()+3600000});`);
-  const protocolSave=async(run:QueryRun,visibility:'public'|'private'|'unlisted'='public')=>{
-   const packet=capturePublicationSourcePacket(run,{visibility}),sha=createHash('sha256').update(Buffer.from(JSON.parse(packet.wire).originalHex,'hex')).digest('hex'),started=performance.now(),result=await channel.call('publicationSave',[packet.wire]);writeTimes.push(performance.now()-started);
+  const protocolSave=async(run:QueryRun,visibility:'public'|'private'|'unlisted'='public',sourceReferenceOnly=false)=>{
+   // Qualified positives use the same fresh capture as the real typed port.
+   // The one held raw-owner vector remains an explicit Source-reference test,
+   // never a purported installed producer or a fresh-capture authority bypass.
+   if(sourceReferenceOnly)assert.throws(()=>capturePostgresPublication(run,{visibility}));
+   const packet=(sourceReferenceOnly?capturePublicationSourcePacket:capturePostgresPublication)(run,{visibility}),sha=createHash('sha256').update(Buffer.from(JSON.parse(packet.wire).originalHex,'hex')).digest('hex'),started=performance.now(),result=await channel.call('publicationSave',[packet.wire]);writeTimes.push(performance.now()-started);
    assert.deepEqual(result,{id:run.id,originalSha256:sha});writeSqliteQueryRun(source!.db,run,true,{...creation,publication:{visibility}});ids.push(run.id);
    assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(run.id)};`),db.prepare('SELECT data FROM query_runs WHERE id=?').get(run.id)!.data);vectors++;
    const questionHex=sqliteOwnershipHistoryProjection(db,run.id).questionHex,nativeQuestion=JSON.parse(input.ownerSql(`SELECT jsonb_build_object('hex',encode(question_search,'hex'))::text FROM keryx_storage.run_ownership_projection WHERE run_id=${q(run.id)};`));assert.equal(nativeQuestion.hex,questionHex);vectors++;
@@ -92,9 +96,14 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
    {...base('high'),question:'high \ud800 after-high',answer:'PAID_BODY_HIGH\udc00'}, {...base('low'),question:'low \udc00 after-low'},
    {...base('replacement'),question:'literal \ufffd'}, {...base('engine'),engine:'engine\0\ud800'},
    {...base('owner'),asker:'\u0130'}, {...base('nonnull-owner'),asker:'0xBAD\0owner'}, {...base('client'),origin:'mcp',mcpClient:'custom\0\ud800'} as unknown as QueryRun,
-   {...base('origin'),origin:'web\0tail'} as unknown as QueryRun];
+   {...base('origin'),origin:'web\0tail'} as unknown as QueryRun,
+   {...base('bom-question'),question:'\ufeffquestion\0\ud800'}, {...base('bom-answer'),answer:'\ufeffPAID_BODY\0\udc00'},
+   {...base('bom-engine'),engine:'\ufeffengine\0\ud800'}, {...base('bom-origin'),origin:'\ufeffweb\0tail'} as unknown as QueryRun,
+   {...base('bom-client'),mcpClient:'\ufeffclient\0\udc00'} as unknown as QueryRun,
+   {...base('bom-mode'),paymentMode:'\ufeffmode\0\ud800'} as unknown as QueryRun,
+   {...base('bom-confidence'),confidence:{level:'\ufefflevel\0\udc00'}} as unknown as QueryRun];
   for(const run of cases){
-   await protocolSave(run);await same(()=>native.runPrivacy.read(run.id,actor),()=>privacy.read(run.id,actor));await same(()=>native.runPrivacy.owner(run.id,actor),()=>privacy.owner(run.id,actor));await same(()=>native.runPrivacy.owner(run.id,{...actor,wallet:other}),()=>privacy.owner(run.id,{...actor,wallet:other}));
+   await protocolSave(run,'public',run===cases[7]);await same(()=>native.runPrivacy.read(run.id,actor),()=>privacy.read(run.id,actor));await same(()=>native.runPrivacy.owner(run.id,actor),()=>privacy.owner(run.id,actor));await same(()=>native.runPrivacy.owner(run.id,{...actor,wallet:other}),()=>privacy.owner(run.id,{...actor,wallet:other}));
    await same(()=>native.runPrivacy.settlement(run.id),()=>privacy.settlement(run.id));await same(()=>native.runPrivacy.questions!([run.id]),()=>privacy.questions!([run.id]));
    const fields=['question','answer','engine','asker','parent_id','origin','mcp_client','payment_mode','confidence_level'];
    const observed=db.prepare('SELECT * FROM query_runs WHERE id=?').get(run.id)!;
@@ -153,10 +162,10 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
    const result=await outcome(()=>channel.call('publicationSave',[JSON.stringify(packet)]));assert(!result.ok||Boolean((result.value as {error?:unknown})?.error));assert.equal(input.ownerSql(`SELECT count(*) FROM public.query_runs WHERE id=${q(run.id)};`),'0');vectors++;
   }
   for(const field of ['question','answer','retainedOriginal'] as const){
-   const run={...base('large-'+field),[field]:''},small=JSON.parse(capturePublicationSourcePacket(run).wire),overhead=Buffer.from(small.originalHex,'hex').length;Object.assign(run,{[field]:'x'.repeat(4000000-overhead)});
+   const run={...base('large-'+field),[field]:''},small=JSON.parse(capturePostgresPublication(run).wire),overhead=Buffer.from(small.originalHex,'hex').length;Object.assign(run,{[field]:'x'.repeat(4000000-overhead)});
    const packet=await protocolSave(run);assert.equal(Buffer.from(JSON.parse(packet.wire).originalHex,'hex').length,4000000);assert(writeTimes.at(-1)!<5000,'actual large publication exceeds5s');
    await same(()=>native.runPrivacy.read(run.id,actor),()=>privacy.read(run.id,actor));await same(()=>native.applicationRead('get_query_run',{p_id:run.id}),()=>({data:JSON.parse(String(db.prepare('SELECT data FROM query_runs WHERE id=?').get(run.id)!.data))}));
-   assert.throws(()=>capturePublicationSourcePacket({...run,[field]:'x'.repeat(4000001-overhead)}));vectors++;
+   assert.throws(()=>capturePostgresPublication({...run,[field]:'x'.repeat(4000001-overhead)}));vectors++;
   }
   // Additional complete originals exceed32MiB in HEX as a collection. Refuse
   // the whole requested result, while every individually bounded original stays.
@@ -166,7 +175,7 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
   await assert.rejects(native.personalHistory.list(owner,{filters:{search:'plain'},take:51}));await assert.rejects(native.runPrivacy.settlement(stale));vectors++;
   // Restore through the same fixed protocol, not by inventing a derivative.
   await protocolSave(cases[0]);
-  const race=base('erase-race');await protocolSave(race);const replacement={...race,answer:'PAID_BODY_NEW\0\ud800'},packet=capturePublicationSourcePacket(replacement),requestId=randomUUID();let held=false,pending:Promise<unknown>|undefined;
+  const race=base('erase-race');await protocolSave(race);const replacement={...race,answer:'PAID_BODY_NEW\0\ud800'},packet=capturePostgresPublication(replacement),requestId=randomUUID();let held=false,pending:Promise<unknown>|undefined;
   try{
    await input.contentionClient.query('BEGIN');held=true;await input.contentionClient.query('SELECT pg_advisory_xact_lock(634781904177022::bigint)');
    // Erase stays invisible until COMMIT. Starting the queued publication now
@@ -180,8 +189,8 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
    assert.deepEqual(await pending,{error:'privacy_unavailable'});pending=undefined;await privacy.erase(race.id,actor,{revision:0,requestId});assert.throws(()=>writeSqliteQueryRun(source!.db,replacement,true,{...creation,publication:{visibility:'public'}}));await same(()=>native.runPrivacy.read(race.id,actor),()=>privacy.read(race.id,actor));vectors++;
   }finally{if(held)await input.contentionClient.query('ROLLBACK');if(pending)await pending.catch(()=>{});}
   assert(input.options.endpoint.kind==='loopback');const proxy=await startCommitAckLossProxy(input.options.endpoint.port),loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);
-  try{const run={...base('lost-ack'),answer:'PAID_BODY_LOST_ACK\0\udc00'},packet=capturePublicationSourcePacket(run);proxy.arm();await assert.rejects(loss.call('publicationSave',[packet.wire]),PostgresDomainWriteOutcomeUnknown);assert(proxy.observation().dropped);assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(run.id)};`),Buffer.from(JSON.parse(packet.wire).originalHex,'hex').toString());vectors++;}finally{await loss.close();await proxy.close();}
-  const reader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(reader.call('publicationSave',[capturePublicationSourcePacket(base('reader')).wire]));vectors++;}finally{await reader.close();}
+  try{const run={...base('lost-ack'),answer:'PAID_BODY_LOST_ACK\0\udc00'},packet=capturePostgresPublication(run);proxy.arm();await assert.rejects(loss.call('publicationSave',[packet.wire]),PostgresDomainWriteOutcomeUnknown);assert(proxy.observation().dropped);assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(run.id)};`),Buffer.from(JSON.parse(packet.wire).originalHex,'hex').toString());vectors++;}finally{await loss.close();await proxy.close();}
+  const reader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(reader.call('publicationSave',[capturePostgresPublication(base('reader')).wire]));vectors++;}finally{await reader.close();}
   // The invalid non-null Source origin is a strict private-profile surface
   // refusal. Its enrolled port deliberately retires the shared verified Source
   // connection on that unclassified failure, so exercise it LAST. Earlier page
@@ -192,7 +201,10 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
   assert.equal(channel.closed,true,'Strict private-profile decode failure must retire the shared native channel');
   await assert.rejects(native.runPrivacy.sourceHistory!(),/privacy_unavailable/);vectors++;
   assert.throws(()=>source!.db.prepare('SELECT count(*) FROM query_runs').get(),/Verified storage connection closed/);vectors++;
-  assert.throws(()=>capturePostgresPublication(cases[1]));assert.throws(()=>capturePostgresPublication(cases[2]));assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
+  for(const run of [cases[1],cases[2],cases[5],...cases.slice(8)])assert.doesNotThrow(()=>capturePostgresPublication(run));
+  assert.throws(()=>capturePostgresPublication(cases[7]));assert.throws(()=>capturePostgresPublication({...base('held-parent'),parentId:'parent\0key'}));assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
+  // Legacy report field: unsafe key/authority capture remains closed. Qualified
+  // body/metadata text above is no longer classified as an unsafe SQL encoding.
   return {vectors,genuineSqliteOracle:true,verifiedEnrolledSqlite:true,rawSourceDateOrder:true,offsetAndSubmillisecondDates:true,strictHistoryDateRefusal:true,pureFixedProtocol:true,rawScalarVsJsonExtraction:true,rawOriginalPreserved:true,metadataExcludesPaidAnswer:true,unicodeJsOwnerBoundary:true,noNullOwnerFallback:true,staleScalarRefused:true,erasureAfterWriterWaitRefused:true,largeOriginalBytes:4000000,completeCollectionBytes:33554432,largeWriteMaximumMs:Math.max(...writeTimes),lostAckUnknownNoRetry:true,readerRefused:true,unsafeCaptureStillClosed:true,compiled512MiBQualified:false,sourceProfileRefusalRetiresConnection:true,nativeFacadeTerminalRetirementQualified:false,fullFactoryBlockers:['native-private-profile-terminal-retirement'],fullFactoryQualified:false,retainedSyntheticRows:Number(input.ownerSql('SELECT count(*) FROM public.query_runs;')),providerCalls:0,paymentActions:0,schedulesCreated:0};
  }finally{
   try{await channel.close();}finally{try{source?.close();}finally{db.close();}}
