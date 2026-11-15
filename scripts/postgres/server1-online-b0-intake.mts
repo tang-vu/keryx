@@ -2,6 +2,7 @@
  * No target selector, supplied connection, approval callback, runtime issuer,
  * Source retirement, application activation, retry, or financial delta. */
 import assert from 'node:assert/strict';
+import { setTimeout as yieldTimers } from 'node:timers/promises';
 import { createHash } from 'node:crypto';
 import { execFile, execFileSync } from 'node:child_process';
 import { closeSync, constants, createReadStream, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, realpathSync, writeSync, type BigIntStats } from 'node:fs';
@@ -20,8 +21,8 @@ import { exportNativePostgresSchemaContract } from './native-contract.mts';
 const ROOT='/root/keryx-migration', B0=ROOT+'/postgres-b0';
 const paths={preparation:ROOT+'/postgres17-server1-preparation.json',held:ROOT+'/postgres17-server1-held-target.json',
  manifest:'/root/.local/share/keryx-mainnet-runtime/production-v2/storage.json',audit:'/root/.local/share/keryx-mainnet-runtime/production-v2/.business-operator-audit',
- snapshot:B0+'/source.sqlite',copy:B0+'/snapshot.json',sql:B0+'/source.sql',bundle:B0+'/intake.cjs',journal:B0+'/intake.jsonl'} as const;
-const socket='/run/postgresql-keryx',unit='keryx-postgres-online-b0.service',serviceDropIn='/etc/systemd/system/postgresql@17-keryx.service.d/20-keryx-preparation.conf',mode='development-current510-data-only' as const;
+ snapshot:B0+'/source.sqlite',copy:B0+'/snapshot.json',sql:B0+'/source.sql',bundle:B0+'/intake.cjs',journal:B0+'/intake.jsonl',inspector:B0+'/inspect.cjs',inspectionIntent:B0+'/inspection-invocation-intent.json'} as const;
+const socket='/run/postgresql-keryx',unit='keryx-postgres-online-b0.service',inspectionUnit='keryx-postgres-online-b0-inspect.service',serviceDropIn='/etc/systemd/system/postgresql@17-keryx.service.d/20-keryx-preparation.conf',mode='development-current510-data-only' as const;
 const phaseNames=['typed-staging','public-cells','private-projections'] as const;
 type Phase=typeof phaseNames[number];type Outcome='not_attempted'|'unknown'|'acknowledged';
 type Outcomes=Record<Phase,Outcome>;
@@ -53,14 +54,15 @@ function pinnedJson(path:string){
  }catch(error){held.close();throw error;}
 }
 async function fileSha(path:string,held:ReturnType<typeof pin>){held.verify();const h=createHash('sha256');for await(const chunk of createReadStream(path,{fd:held.descriptor,autoClose:false,start:0})){h.update(chunk);}held.verify();return h.digest('hex');}
-function containment(){
+function containment(inspect:boolean){
+ const expectedUnit=inspect?inspectionUnit:unit;
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid!(),0);
- assert.equal(process.argv[1],paths.bundle);assert.deepEqual(process.execArgv,['--no-warnings','--max-old-space-size=256']);
- const cg=readFileSync('/proc/self/cgroup','utf8').trim();assert.equal(cg,'0::/system.slice/'+unit);
- for(const [key,value] of [['memory.max','536870912'],['memory.swap.max','0'],['cpu.max','25000 100000'],['pids.max','32']])assert.equal(readFileSync('/sys/fs/cgroup/system.slice/'+unit+'/'+key,'utf8').trim(),value);
+ assert.equal(process.argv[1],inspect?paths.inspector:paths.bundle);assert.deepEqual(process.execArgv,['--no-warnings','--max-old-space-size=256']);
+ const cg=readFileSync('/proc/self/cgroup','utf8').trim();assert.equal(cg,'0::/system.slice/'+expectedUnit);
+ for(const [key,value] of [['memory.max','536870912'],['memory.swap.max','0'],['cpu.max','25000 100000'],['pids.max','32']])assert.equal(readFileSync('/sys/fs/cgroup/system.slice/'+expectedUnit+'/'+key,'utf8').trim(),value);
  const status=readFileSync('/proc/self/status','utf8');assert(/^CapEff:\s+0+$/m.test(status)&&/^NoNewPrivs:\s+1$/m.test(status));
  assert.equal(readFileSync('/proc/net/route','utf8').trim().split('\n').length,1);
- const deadline=execFileSync('/usr/bin/systemctl',['show',unit,'-p','RuntimeMaxUSec','--value'],{encoding:'utf8',timeout:2000,maxBuffer:4096,env:{PATH:'/usr/bin:/bin'}}).trim();assert.equal(deadline,'30min');
+ const deadline=execFileSync('/usr/bin/systemctl',['show',expectedUnit,'-p','RuntimeMaxUSec','--value'],{encoding:'utf8',timeout:2000,maxBuffer:4096,env:{PATH:'/usr/bin:/bin'}}).trim();assert.equal(deadline,'30min');
  const service=execFileSync('/usr/bin/systemctl',['show','postgresql@17-keryx.service','--property=ActiveState,User,Group,DropInPaths'],{encoding:'utf8',timeout:2000,maxBuffer:4096,env:{PATH:'/usr/bin:/bin'}}).trim();
  const observed=Object.fromEntries(service.split('\n').map(line=>{const at=line.indexOf('=');assert(at>0);return [line.slice(0,at),line.slice(at+1)];}));
  assert.deepEqual(observed,{ActiveState:'active',User:'postgres',Group:'root',DropInPaths:serviceDropIn});
@@ -92,9 +94,10 @@ async function deniedByLoadedHba(database:'keryx_source'|'keryx_mainnet',role:'k
 export class Server1B0Unavailable extends Error{
  constructor(readonly diagnostic:Readonly<{stage:string;phases:Outcomes;cleanupFailures:readonly string[];pgCode:string|null}>){super('Server1 online B0 unavailable');}
 }
-type Context={preparation:ReturnType<typeof pinnedJson>;held:ReturnType<typeof pinnedJson>;manifest:ReturnType<typeof pinnedJson>;copy:ReturnType<typeof pinnedJson>;source:ReturnType<typeof pin>;sql:ReturnType<typeof pin>;bundle:ReturnType<typeof pin>;service:ReturnType<typeof pin>;db:DatabaseSync;identityDigest:string;identityWire:string;referenceWire:string;lockSql:string;sourceHash:string;auditToken:string;started:number;keepaliveFailure?:unknown};
+type Context={preparation:ReturnType<typeof pinnedJson>;held:ReturnType<typeof pinnedJson>;manifest:ReturnType<typeof pinnedJson>;copy:ReturnType<typeof pinnedJson>;source:ReturnType<typeof pin>;sql:ReturnType<typeof pin>;bundle:ReturnType<typeof pin>;service:ReturnType<typeof pin>;db:DatabaseSync;identityDigest:string;identityWire:string;referenceWire:string;lockSql:string;sourceHash:string;auditToken:string;started:number;inspection?:{intent:ReturnType<typeof pinnedJson>;bundle:ReturnType<typeof pin>;sha256:string;sourceCommit:string;journalBeforeSha256:string};keepaliveFailure?:unknown};
 function controls(c:Context){
  assert(performance.now()-c.started<1790000);for(const p of [c.preparation,c.held,c.manifest,c.copy,c.source,c.sql,c.bundle,c.service])p.verify();checkSnapshotSidecars(paths.snapshot);
+ if(c.inspection){c.inspection.intent.verify();c.inspection.bundle.verify();}
  if(c.keepaliveFailure)refuse();
  assert.equal(location(privateDirectory(paths.audit)),c.auditToken);
  assert(c.db.isTransaction&&c.db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(canonicalJson(readStorageIdentity(c.db)),c.identityWire);
@@ -162,6 +165,8 @@ async function target(pg:Client,c:Context,fresh:boolean){
  assert.equal((await pg.query('SELECT mode FROM keryx_storage.control WHERE singleton FOR SHARE')).rows[0]?.mode,'held');
  const catalog=await pg.query("WITH observed AS MATERIALIZED(SELECT keryx_storage.catalog_contract()::text wire) SELECT CASE WHEN octet_length(wire)<=8388608 THEN wire END wire FROM observed");controls(c);
  const contract=exportNativePostgresSchemaContract(catalog.rows[0].wire);
+ // A second catalog export must not starve another locked owner session.
+ await yieldTimers(0);controls(c);
  assert.equal(contract.sha256,profile.catalogSha256);c.referenceWire=catalog.rows[0].wire;
  const sections=record(contract.metadata.sections);const relations=sections.relations;assert(Array.isArray(relations));
  const names=relations.map(record).filter(r=>(r.schema==='public'||r.schema==='keryx_storage')&&r.kind==='r').map(r=>quoted(String(r.schema))+'.'+quoted(String(r.name))).sort();assert(names.length>=108&&names.length<=256);
@@ -179,7 +184,7 @@ async function target(pg:Client,c:Context,fresh:boolean){
 
 /** Sole fixed production write entry. Arguments are refused before any I/O. */
 export async function runServer1OnlineB0(){if(arguments.length)refuse();return intake(false);}
-/** Reads a prior ambiguous target independently; never resumes or repeats it. */
+/** Independently reads one known three-ACK refusal through the fixed inspector. */
 export async function inspectServer1OnlineB0(){if(arguments.length)refuse();return intake(true);}
 async function intake(inspect:boolean){
  const started=performance.now();
@@ -191,7 +196,7 @@ async function intake(inspect:boolean){
  const stopKeepalive=async()=>{if(timer){clearInterval(timer);timer=undefined;}await inFlight;if(c?.keepaliveFailure)refuse();};
  const emit=(event:Json)=>{assert(journal!==undefined);privateDirectory(B0);assert.equal(location(fstatSync(journal,{bigint:true})),location(pathStat(paths.journal)));const wire=JSON.stringify(event)+'\n';assert(Buffer.byteLength(wire)<=131072&&fstatSync(journal).size+Buffer.byteLength(wire)<=1048576);const b=Buffer.from(wire);let n=0;while(n<b.length){const written=writeSync(journal,b,n,b.length-n);assert(written>0);n+=written;}fsyncSync(journal);const directory=openSync(B0,constants.O_RDONLY|constants.O_DIRECTORY);try{fsyncSync(directory);}finally{closeSync(directory);}};
  try{
-  containment();stage='controls';
+  containment(inspect);stage='controls';
   const preparation=pinnedJson(paths.preparation);pins.push(preparation);const held=pinnedJson(paths.held);pins.push(held);const manifest=pinnedJson(paths.manifest);pins.push(manifest);const copy=pinnedJson(paths.copy);pins.push(copy);
   const p=preparation.value,h=held.value;
   assert.equal(p.format,'keryx-server1-postgres17-preparation-v1');assert.equal(p.phase,'prepared-unenrolled');assert.equal(p.cluster,'17/keryx');assert.equal(p.service,'postgresql@17-keryx.service');assert.equal(p.socketDirectory,socket);assert.equal(p.port,5432);assert.equal(p.serverVersionNum,170012);assert.equal(p.dataDirectory,'/var/lib/postgresql/17/keryx');decimal(p.systemIdentifier);hash(p.approvedPinSha256);hash(p.packageInventorySha256);
@@ -200,12 +205,31 @@ async function intake(inspect:boolean){
   const source=pin(paths.snapshot,536870912);pins.push(source);validateSnapshotHeader(source.descriptor);checkSnapshotSidecars(paths.snapshot);const sourceHash=await fileSha(paths.snapshot,source);
   assert.equal(copy.value.format,'keryx-consistent-online-sqlite-copy-v1');assert.equal(copy.value.backupComplete,true);assert.equal(copy.value.sha256,sourceHash);assert.equal(copy.value.bytes,Number(source.initial.size));assert.equal(copy.value.sourceManifestSha256,manifest.sha256);
   const sql=pin(paths.sql,8388608);pins.push(sql);assert.equal(await fileSha(paths.sql,sql),profile.sourceSqlSha256);const bundle=pin(paths.bundle,4194304);pins.push(bundle);assert.equal(await fileSha(paths.bundle,bundle),hash(h.intakeSha256));
+  let inspection:Context['inspection'];
+  if(inspect){
+   stage='inspection-intent';const intent=pinnedJson(paths.inspectionIntent);pins.push(intent);const self=pin(paths.inspector,4194304);pins.push(self);const value=intent.value;
+   for(const file of [intent,self])assert(file.initial.gid===BigInt(0)&&(file.initial.mode&BigInt(0o777))===BigInt(0o600));
+   assert.deepEqual(Object.keys(value).sort(),['format','inspectorSha256','inspectorSourceCommit','producerSourceCommit','intakeSha256','heldControlSha256','journalBeforeSha256','sourceSnapshotSha256','sourceSqlSha256','catalogSha256','identityDigest','systemIdentifier','sourceDatabaseOid','targetDatabaseOid'].sort());
+   assert.equal(value.format,'keryx-server1-online-b0-inspection-invocation-v1');assert.equal(value.producerSourceCommit,'9f7a689eee36f658bf9b05d4ee98b5843ed78996');assert(typeof value.inspectorSourceCommit==='string'&&/^[a-f0-9]{40}$/.test(value.inspectorSourceCommit));
+   const selfSha=await fileSha(paths.inspector,self);assert.equal(selfSha,hash(value.inspectorSha256));
+   for(const [key,expected] of Object.entries({intakeSha256:h.intakeSha256,heldControlSha256:held.sha256,sourceSnapshotSha256:sourceHash,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256,identityDigest:h.identityDigest,systemIdentifier:p.systemIdentifier,sourceDatabaseOid:h.sourceDatabaseOid,targetDatabaseOid:h.targetDatabaseOid}))assert.equal(value[key],expected);
+   inspection={intent,bundle:self,sha256:selfSha,sourceCommit:value.inspectorSourceCommit,journalBeforeSha256:hash(value.journalBeforeSha256)};
+  }
   stage='source';db=new DatabaseSync(paths.snapshot,{readOnly:true,allowExtension:false,timeout:1000});configureSnapshotConnection(db,OFFLINE_SNAPSHOT_LIMITS);db.exec('BEGIN');
   const identity=readStorageIdentity(db),identityWire=canonicalJson(identity),identityDigest=storageIdentityDigest(identity);assert.equal(identity.network,'eip155:5042');assert.equal(identity.authorityMode,'mainnet-real');assert.equal(identityDigest,h.identityDigest);assert.equal(canonicalJson(manifest.value.identity),identityWire);assert.equal(record(manifest.value.backend).kind,'sqlite');assert.notEqual(record(manifest.value.backend).databasePath,paths.snapshot);
   const original=pathStat(String(record(manifest.value.backend).databasePath));assert(original.isFile());assert(original.dev!==source.initial.dev||original.ino!==source.initial.ino);
-  c={preparation,held,manifest,copy,source,sql,bundle,service,db,sourceHash,identityDigest,identityWire,referenceWire:'',lockSql:'',auditToken:location(privateDirectory(paths.audit)),started};controls(c);
+  c={preparation,held,manifest,copy,source,sql,bundle,service,db,sourceHash,identityDigest,identityWire,inspection,referenceWire:'',lockSql:'',auditToken:location(privateDirectory(paths.audit)),started};controls(c);
   stage='resource-initial';await verifyPreparedRuntime(c);controls(c);
-  stage='receipt';if(inspect){const previous=pin(paths.journal,1048576);try{const lines=readFileSync(previous.descriptor,'utf8').trim().split('\n').map(v=>record(JSON.parse(v)));assert(lines.length>0&&lines.length<=64);const first=lines[0];assert.equal(first.sourceSha256,sourceHash);assert.equal(first.heldSha256,held.sha256);assert.equal(first.preparationSha256,preparation.sha256);for(const event of lines)if(phaseNames.includes(event.phase as Phase)){if(event.event==='commit-intent')outcomes[event.phase as Phase]='unknown';if(event.event==='phase'){assert(event.outcome==='acknowledged');outcomes[event.phase as Phase]='acknowledged';}}previous.verify();journal=openSync(paths.journal,constants.O_WRONLY|constants.O_APPEND|constants.O_NOFOLLOW);assert.equal(fingerprint(fstatSync(journal,{bigint:true})),fingerprint(previous.initial));}finally{previous.close();}}
+  stage='receipt';if(inspect){
+   assert(inspection);const previous=pin(paths.journal,1048576);try{
+    const wire=readFileSync(previous.descriptor,'utf8');assert.equal(sha(wire),inspection.journalBeforeSha256);assert(wire.endsWith('\n'));
+    const lines=wire.trim().split('\n').map(v=>record(JSON.parse(v)));assert.equal(lines.length,8);
+    assert.deepEqual(lines[0],{event:'intent',format:'keryx-server1-online-b0-journal-v1',sourceSha256:sourceHash,preparationSha256:preparation.sha256,heldSha256:held.sha256,manifestSha256:manifest.sha256,identityDigest,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256});
+    for(const [index,phase] of phaseNames.entries()){assert.deepEqual(lines[1+index*2],{event:'commit-intent',phase});assert.deepEqual(lines[2+index*2],{event:'phase',phase,outcome:'acknowledged'});outcomes[phase]='acknowledged';}
+    assert.deepEqual(lines[7],{event:'refused',stage:'independent-census',phases:{...outcomes},cleanupFailures:['keepalive','control_stability']});
+    previous.verify();journal=openSync(paths.journal,constants.O_WRONLY|constants.O_APPEND|constants.O_NOFOLLOW);assert.equal(fingerprint(fstatSync(journal,{bigint:true})),fingerprint(previous.initial));
+   }finally{previous.close();}
+  }
   else{journal=openSync(paths.journal,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);emit({event:'intent',format:'keryx-server1-online-b0-journal-v1',sourceSha256:sourceHash,preparationSha256:preparation.sha256,heldSha256:held.sha256,manifestSha256:manifest.sha256,identityDigest,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256});}
   // Dynamic literal imports after fixed mainnet environment checks. No Source
   // module can turn this copy or these clients into an installed native proof.
@@ -241,7 +265,7 @@ async function intake(inspect:boolean){
   const publicCensus=await publicCells.compareNativeSnapshotTransaction(db,readTarget,readSource,c.referenceWire,mode),projections=await privateCells.compareNativeProjectionsTransaction(db,readTarget,mode);assert.equal(projections.domains.length,12);await target(readTarget,c,false);
   stage='resource-final';await verifyPreparedRuntime(c);controls(c);await stopKeepalive();await readTarget.query('ROLLBACK');active=readSource;await readSource.query('ROLLBACK');active=undefined;assert.equal(await fileSha(paths.snapshot,source),sourceHash);
   const heldBaseline={format:'keryx-native-held-data-baseline-metadata-v1',profileMode:mode,catalogSha256:profile.catalogSha256,targetState:'held',sequence:0,snapshotSha256:sourceHash,schemaSha256:typedCensus.schemaSha256,identityDigest,dataDigest:typedCensus.dataDigest};
-  result={format:'keryx-server1-online-b0-receipt-v1',inspectionOnly:inspect,phases:{...outcomes},sourceSnapshotSha256:sourceHash,sourceSchemaSha256:typedCensus.schemaSha256,dataDigest:typedCensus.dataDigest,identity:JSON.parse(identityWire),identityDigest,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256,preparationSha256:preparation.sha256,heldControlSha256:held.sha256,sourceManifestSha256:manifest.sha256,intakeSha256:h.intakeSha256,systemIdentifier:p.systemIdentifier,sourceDatabaseOid:h.sourceDatabaseOid,targetDatabaseOid:h.targetDatabaseOid,staging,publicCensus,projections,nativeCensusSha256:sha(canonicalJson({staging,publicCensus,projections})),heldBaseline,writerMode:'held',applicationBackendSwitched:false,sourceRetired:false,financialCatchupQualified:false,privateAuditRootPreserved:true,applicationAuthority:false,paymentActions:0,jobActions:0};
+  result={format:'keryx-server1-online-b0-receipt-v1',inspectionOnly:inspect,...(inspection?{inspectorSha256:inspection.sha256,inspectorSourceCommit:inspection.sourceCommit,inspectionInvocationSha256:inspection.intent.sha256,priorJournalSha256:inspection.journalBeforeSha256}:{}),phases:{...outcomes},sourceSnapshotSha256:sourceHash,sourceSchemaSha256:typedCensus.schemaSha256,dataDigest:typedCensus.dataDigest,identity:JSON.parse(identityWire),identityDigest,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256,preparationSha256:preparation.sha256,heldControlSha256:held.sha256,sourceManifestSha256:manifest.sha256,intakeSha256:h.intakeSha256,systemIdentifier:p.systemIdentifier,sourceDatabaseOid:h.sourceDatabaseOid,targetDatabaseOid:h.targetDatabaseOid,staging,publicCensus,projections,nativeCensusSha256:sha(canonicalJson({staging,publicCensus,projections})),heldBaseline,writerMode:'held',applicationBackendSwitched:false,sourceRetired:false,financialCatchupQualified:false,privateAuditRootPreserved:true,applicationAuthority:false,paymentActions:0,jobActions:0};
  }catch(error){failure=error;}
  // Every owned disposal is attempted, including after acknowledged COMMIT.
  try{await stopKeepalive();}catch{cleanupFailures.push('keepalive');}
@@ -254,7 +278,7 @@ async function intake(inspect:boolean){
  if(failure||cleanupFailures.length){const code=failure&&typeof failure==='object'?Reflect.get(failure,'code'):null;throw new Server1B0Unavailable({stage,phases:{...outcomes},cleanupFailures,pgCode:typeof code==='string'&&/^[A-Z0-9]{5}$/.test(code)?code:null});}
  return result;
 }
-if(process.argv[1]===paths.bundle||typeof import.meta.url==='string'&&process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- const args=process.argv.slice(2);const task=args.length===0?runServer1OnlineB0:args.length===1&&args[0]==='--inspect'?inspectServer1OnlineB0:null;
+if(process.argv[1]===paths.bundle||process.argv[1]===paths.inspector||typeof import.meta.url==='string'&&process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+ const args=process.argv.slice(2);const task=args.length===0?(process.argv[1]===paths.inspector?inspectServer1OnlineB0:runServer1OnlineB0):null;
  if(!task)process.exitCode=1;else task().then(receipt=>console.log(JSON.stringify(receipt))).catch(error=>{console.log(JSON.stringify({format:'keryx-server1-online-b0-refusal-v1',diagnostic:error instanceof Server1B0Unavailable?error.diagnostic:null}));process.exitCode=1;});
 }
