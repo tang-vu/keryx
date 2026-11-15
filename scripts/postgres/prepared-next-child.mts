@@ -55,7 +55,7 @@ export function assertPreparedNextNamespace(interfaces:string[],route:string,ipv
  if(ipv6.trim().split(/\r?\n/).some(line=>line.trim()&&!/\slo\s*$/.test(line)))preparedNextRefused();
 }
 function privateBytes(file:string,max:number):Buffer{
- const a=lstatSync(file,{bigint:true});if(!a.isFile()||a.isSymbolicLink()||a.nlink!==1n||a.size<1n||a.size>BigInt(max)||a.uid!==BigInt(process.getuid!())||(a.mode&0o022n))preparedNextRefused();
+ const a=lstatSync(file,{bigint:true});if(!a.isFile()||a.isSymbolicLink()||a.nlink!==BigInt(1)||a.size<BigInt(1)||a.size>BigInt(max)||a.uid!==BigInt(process.getuid!())||(a.mode&BigInt(0o022)))preparedNextRefused();
  const bytes=readFileSync(file),b=lstatSync(file,{bigint:true});
  if([a.dev,a.ino,a.size,a.mtimeNs].join(':')!==[b.dev,b.ino,b.size,b.mtimeNs].join(':')||bytes.length!==Number(a.size))preparedNextRefused();return bytes;
 }
