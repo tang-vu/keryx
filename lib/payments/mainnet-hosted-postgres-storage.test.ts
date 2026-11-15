@@ -14,7 +14,7 @@ import type { StorageIdentity } from "../db/storage-identity";
 import type { HostedTreasuryPolicy } from "./hosted-treasury-policy";
 
 const cleanup: Array<() => void> = [];
-afterEach(() => { for (const close of cleanup.splice(0).reverse()) close(); vi.doUnmock("viem/accounts"); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+afterEach(() => { for (const close of cleanup.splice(0).reverse()) close(); vi.doUnmock("viem/accounts"); vi.doUnmock("../a2a/private-worker"); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 const publicKey = `0x${"11".repeat(32)}` as const, privateKey = `0x${"22".repeat(32)}` as const;
 async function fixture() {
   vi.resetModules();
@@ -46,7 +46,7 @@ async function fixture() {
       signed(payload); return account.signTypedData(payload);
     } };
   } }));
-  const db = await (await import("../db/index")).getDb(); cleanup.push(() => (db as { close(): void }).close());
+  const db = await (await import("../db/index")).getDb(); cleanup.push(() => (db as unknown as { close(): void }).close());
   const policyModule = await import("./hosted-treasury-policy");
   const policy: HostedTreasuryPolicy = { format: "keryx-hosted-treasury-policy-v1", network: profile.networkId, origin: "https://hosted-storage-fixture.invalid",
     storageIdentityDigest: storage.storageIdentityDigest(identity), signer, queryCapMicroUsdc: "10000", lifetimeCapMicroUsdc: "20000", expiresAtSeconds: Math.floor(Date.now() / 1000) + 3600 };
@@ -103,9 +103,9 @@ it.each(["expiry", "key", "baseURL", "selection", "closed"])("refuses %s changin
   f.state.finalRpc = () => {
     if (reason === "expiry") f.configure({ ...f.policy, expiresAtSeconds: Math.floor(Date.now() / 1000) });
     if (reason === "key") vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY", privateKey);
-    if (reason === "baseURL") f.config.baseUrl = "https://changed-fixture.invalid";
+    if (reason === "baseURL") Object.assign(f.config, { baseUrl: "https://changed-fixture.invalid" });
     if (reason === "selection") writeFileSync(f.manifest, canonicalJson({ ...f.deployment, identity: { ...f.identity, provenanceDigest: "bb".repeat(32) } }));
-    if (reason === "closed") (f.db as { close(): void }).close();
+    if (reason === "closed") (f.db as unknown as { close(): void }).close();
   };
   await expect(gateway.payOperatingFee({ queryId: randomUUID(), operatingFee: f.fee })).rejects.toThrow("local signing policy");
   expect(f.native.prepare("SELECT count(*) AS n FROM hosted_treasury_authorizations").get()?.n).toBe(1);
@@ -118,7 +118,7 @@ it("captures fee inputs before awaiting identity and never retries unknown paid 
   vi.spyOn(f.app, "applicationStorageIdentity").mockImplementationOnce(async (db, access) => { await gate; return original(db, access); });
   const args = { queryId: randomUUID(), operatingFee: { ...f.fee, sourceUrls: [...f.fee.sourceUrls] } }, originalQuery = args.queryId;
   f.state.loseAck = true;
-  const pending = gateway.payOperatingFee(args); args.queryId = "mutated"; args.operatingFee.sourceUrls[0] = "https://mutated.invalid/"; release();
+  const pending = gateway.payOperatingFee(args); args.queryId = randomUUID(); args.operatingFee.sourceUrls[0] = "https://mutated.invalid/"; release();
   await expect(pending).rejects.toThrow("pending");
   const row = f.native.prepare("SELECT query_id,original FROM hosted_treasury_authorizations").get()!;
   expect(row.query_id).toBe(originalQuery); expect(JSON.parse(String(row.original)).context.operatingFee.sourceUrls).toEqual(f.fee.sourceUrls);
@@ -167,4 +167,33 @@ it("retains the actual original after an unknown admission acknowledgement witho
   expect(admit).toHaveBeenCalledOnce(); expect(f.signed).not.toHaveBeenCalled(); expect(f.counts().paidCalls).toBe(0);
   expect(f.native.prepare("SELECT submitted FROM hosted_treasury_authorizations").all()).toEqual([{ submitted: 0 }]);
   expect(f.native.prepare("SELECT settlement_status FROM payment_events").all()).toEqual([{ settlement_status: "pending" }]);
+});
+
+it("refuses private worker configuration changed during the real hosted gateway constructor await", async () => {
+  const f = await fixture(), privateSigner = f.actualAccounts.privateKeyToAddress(privateKey).toLowerCase();
+  f.configure({ ...f.policy, signer: privateSigner }, "private"); vi.stubEnv("KERYX_MAINNET_PRIVATE_TREASURY_PRIVATE_KEY", privateKey);
+  Object.assign(f.config, { sellerAddress: `0x${"bb".repeat(20)}`, privateResearchReservedPayees: `0x${"aa".repeat(20)}` });
+  for (const [name, value] of Object.entries({ KERYX_PRIVATE_WORKER_ENABLED: "1", KERYX_PRIVATE_RESEARCH_ENABLED: "1",
+    KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES: f.config.privateResearchReservedPayees, KERYX_PRIVATE_RESEARCH_PAYEE: f.config.privateResearchReservedPayees,
+    KERYX_PRIVATE_TREASURY_ADDRESS: privateSigner, KERYX_PRIVATE_TREASURY_CAPACITY_MICROS: "50000", KERYX_PRIVATE_SERVICE_FEE_MICROS: "20000",
+    KERYX_PRIVATE_MODEL_ID: "deepseek-flash", KERYX_PRIVATE_PROVIDER: "deepseek", KERYX_PRIVATE_PROVIDER_BASE_URL: "https://synthetic.example/v1",
+    KERYX_PRIVATE_PROVIDER_API_KEY: "synthetic-secret", KERYX_PRIVATE_APPROVED_ENDPOINTS: '["https://synthetic.example/v1/chat/completions"]' })) vi.stubEnv(name, value);
+  // Record constructor options only. No worker/provider/job executes and this is
+  // not evidence of private execution readiness or installed native authority.
+  const worker = { tick: vi.fn() }, create = vi.fn((_db: KeryxDB, _options: unknown) => worker);
+  vi.doMock("../a2a/private-worker", () => ({ createPrivateWorker: create }));
+  const spool = { save: vi.fn(), read: vi.fn(), restore: vi.fn(), entries: vi.fn() };
+  const boot = await (await import("../a2a/private-worker-bootstrap")).privateWorkerBootstrap(f.db, spool);
+  expect(boot).not.toBeNull();
+  const actual = f.gatewayModule.createMainnetHostedGateway;
+  let release!: () => void, entered!: () => void;
+  const reached = new Promise<void>(resolve => { entered = resolve; }), gate = new Promise<void>(resolve => { release = resolve; });
+  vi.spyOn(f.gatewayModule, "createMainnetHostedGateway").mockImplementationOnce(async (db, options) => {
+    const gateway = await actual(db, options); entered(); await gate; return gateway;
+  });
+  const options = create.mock.calls[0][1] as { gatewayFactory(job: { id: string; owner: string; workerId: string }): Promise<unknown> };
+  const pending = options.gatewayFactory({ id: randomUUID(), owner: `0x${"44".repeat(20)}`, workerId: "synthetic-worker" });
+  await reached; vi.stubEnv("KERYX_PRIVATE_PROVIDER_API_KEY", "changed-during-gateway-construction"); release();
+  await expect(pending).rejects.toThrow("Private worker authority changed");
+  expect(f.signed).not.toHaveBeenCalled(); expect(worker.tick).not.toHaveBeenCalled(); expect(f.http).not.toHaveBeenCalled();
 });

@@ -58,16 +58,17 @@ export async function getMainnetTreasuryObservation(): Promise<MainnetTreasuryOb
   const selectionWire = canonicalJson(selection);
   const db = await createReadonlyApplicationStorage();
   if (!db) throw new Error("Mainnet treasury observation unavailable");
+  let publish: (() => MainnetTreasuryObservation) | undefined;
   try {
     const identity = await applicationStorageIdentity(db, "read"), identityWire = canonicalJson(identity);
-    const readPolicy = () => {
-      assertApplicationStorageCurrentLocal(db, "read");
+    const configuredPolicy = () => {
       if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl
         || canonicalJson(readRuntimeStorageDeployment()) !== selectionWire
         || canonicalJson(selection.identity) !== identityWire)
         throw new Error("Mainnet treasury observation changed");
       return configuredHostedTreasuryPolicy(identity, origin.origin, "public");
     };
+    const readPolicy = () => { assertApplicationStorageCurrentLocal(db, "read"); return configuredPolicy(); };
     const policy = readPolicy(), digest = hostedTreasuryPolicyDigest(policy);
     const refresh = async () => {
       const current = await applicationStorageIdentity(db, "read");
@@ -84,13 +85,22 @@ export async function getMainnetTreasuryObservation(): Promise<MainnetTreasuryOb
     await refresh();
     if (hostedTreasuryPolicyDigest(readPolicy()) !== digest)
       throw new Error("Mainnet treasury observation changed");
-    return { network: ARC_MAINNET_PROFILE.networkId, address: policy.signer, policyDigest: digest,
+    const result: MainnetTreasuryObservation = { network: ARC_MAINNET_PROFILE.networkId, address: policy.signer, policyDigest: digest,
       storageIdentityDigest: policy.storageIdentityDigest, availableUsdc: amount === null ? null : formatUnits(amount, 6),
       fetchedAt: new Date().toISOString(), paymentReadiness: "not-probed" };
+    publish = () => {
+      // Disposal is the final await. Narrow protected configuration once more
+      // before publishing; the intentionally closed facade cannot issue proof.
+      if (hostedTreasuryPolicyDigest(configuredPolicy()) !== digest)
+        throw new Error("Mainnet treasury observation changed");
+      return result;
+    };
   } finally {
     // Each uncached observation owns this read-only facade, including policy/vendor refusal paths.
     await closeReadonlyApplicationStorage(db);
   }
+  if (!publish) throw new Error("Mainnet treasury observation unavailable");
+  return publish();
 }
 
 /** The persistent spend wallet is created by RealGateway; only its address is read here. */

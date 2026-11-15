@@ -142,3 +142,18 @@ it("keeps the genuine native writer unconditionally closed without RPC fallback"
   await expect(f.app.createApplicationStorage()).rejects.toMatchObject({ reason: "adapter_not_initialized" });
   expect(state.balance).not.toHaveBeenCalled();
 });
+
+it.each(["expiry", "policy", "profile", "origin", "selection"])("does not publish when %s changes during the final canonical disposal await", async reason => {
+  const f = await fixture(), original = f.app.closeReadonlyApplicationStorage;
+  let release!: () => void, entered!: () => void, published = false;
+  const reached = new Promise<void>(resolve => { entered = resolve; }), gate = new Promise<void>(resolve => { release = resolve; });
+  vi.spyOn(f.app, "closeReadonlyApplicationStorage").mockImplementationOnce(async db => { await original(db); entered(); await gate; });
+  const pending = f.observe().then(value => { published = true; return value; }); await reached;
+  expect(published).toBe(false);
+  if (reason === "expiry") f.configure({ ...f.policy, expiresAtSeconds: Math.floor(Date.now() / 1000) });
+  if (reason === "policy") f.configure({ ...f.policy, queryCapMicroUsdc: "1000" });
+  if (reason === "profile") Object.assign((await import("../config")).config, { profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE });
+  if (reason === "origin") Object.assign((await import("../config")).config, { baseUrl: "https://changed.invalid" });
+  if (reason === "selection") writeFileSync(f.manifestPath, "{}");
+  release(); await expect(pending).rejects.toThrow(); expect(published).toBe(false);
+});

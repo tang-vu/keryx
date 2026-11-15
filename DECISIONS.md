@@ -18,7 +18,11 @@ hooks refuse signing. Private accounting keeps its explicit historical role.
 Policy expiry or rotation stops new admission; an already observed settlement
 still attempts original confirmation and retains recovery-required evidence when
 persistence fails. No automatic retry, funding, policy renewal or factory opening
-is introduced. Async policy consumers are updated as a separate coherent group.
+is introduced. Policy consumers await genuine identity and policy acquisition.
+Private workers recheck captured configuration after gateway construction. Public
+treasury observations await their owned reader's disposal, then synchronously
+recheck protected policy and selection before publishing; this final check grants
+no authority from an intentionally closed facade.
 
 ## Preserve Source A2A execution checkpoints in one bounded native writer - 2026-11-14
 

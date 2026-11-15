@@ -66,8 +66,9 @@ export async function privateWorkerBootstrap(db: KeryxDB, resultSpool?: PrivateR
       const worker = createPrivateWorker(db, { signerAddress: privatePolicy.signer,
         signer: { createPaymentPayload: async () => { throw new Error("Mainnet private signing requires original execution context"); } },
         gatewayFactory: async job => {
-          const captured = { ...job }; await refresh();
-          return createMainnetHostedGateway(db, { role: "private", job: captured });
+          const captured = { ...job }; await refresh(); assertCurrent();
+          const gateway = await createMainnetHostedGateway(db, { role: "private", job: captured });
+          assertCurrent(); return gateway;
         }, resultSpool,
         privateProvider: policy.provider, getGatewayBalance: async () => {
           await refresh();
