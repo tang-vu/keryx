@@ -6,7 +6,7 @@ import {canonicalJson} from '../../lib/canonical-json';
 import {STORAGE_MAINNET_PROFILE_DIGEST} from '../../lib/db/storage-identity';
 import {nativeCurrentProducersSource} from './current-producers-source.mts';
 
-const model=vi.hoisted(()=>({files:new Map<string,Buffer>(),fds:new Map<number,string>(),events:[] as string[],queries:[] as string[],connections:[] as Record<string,unknown>[],nextFd:20,roles:false,databases:[] as string[],installed:false,failCreate:false,failHba:false,wrongCatalog:false,changeManifest:false,readOids:false,unsafe:'' as ''|'mode'|'hardlink'|'symlink',verifiers:{} as Record<string,string>,inspection:vi.fn()}));
+const model=vi.hoisted(()=>({files:new Map<string,Buffer>(),fds:new Map<number,string>(),events:[] as string[],queries:[] as string[],connections:[] as Record<string,unknown>[],nextFd:20,roles:false,databases:[] as string[],installed:false,failCreate:false,failHba:false,wrongCatalog:false,changeManifest:false,readOids:false,seedVariant:'' as ''|'changed'|'extra'|'nonseed'|'missing',unsafe:'' as ''|'mode'|'hardlink'|'symlink',verifiers:{} as Record<string,string>,inspection:vi.fn()}));
 function rootPath(x:unknown):x is string{return typeof x==='string'&&(x==='/'||x.startsWith('/root'));}
 vi.mock('node:path',async original=>{const actual=await original<typeof import('node:path')>();return {...actual,resolve:(...parts:string[])=>parts[0]?.startsWith('/')?actual.posix.resolve(...parts):actual.resolve(...parts)};});
 vi.mock('node:fs',async original=>{
@@ -34,6 +34,7 @@ vi.mock('./native-contract.mts',async original=>({...await original<typeof impor
  expect(wire).toBe('recording-wire-from-pg-text');return {sha256:model.wrongCatalog?'0'.repeat(64):'d368c98db910ff072d10d7c2a20ba3b8b2934e4f5f76c0afdd875ebfda07803f',metadata:{sections:{functions:Array(510).fill(null)}}};
 })}));
 const rules=[{type:'local',database:['all'],user_name:['postgres'],auth_method:'peer',error:null},{type:'local',database:['keryx_mainnet','keryx_source'],user_name:['keryx_app','keryx_reader'],auth_method:'reject',error:null},{type:'local',database:['all'],user_name:['all'],auth_method:'reject',error:null}];
+const seeds:Record<string,Record<string,number|boolean>[]>={browser_journal_control:[{id:1,active:false}],browser_signing_v2_control:[{id:1,active:false,min_original_version:2}],browser_signing_v2_barrier:[{id:1,ever_active:0,min_original_version:2}]};
 vi.mock('pg',async original=>{
  const actual=await original<typeof import('pg')>();
  return {...actual,Client:class{
@@ -55,8 +56,9 @@ vi.mock('pg',async original=>{
    if(sql.includes("'publicRelations'"))return row({namespaces:model.installed&&this.config.database==='keryx_mainnet'?['keryx_storage']:[],publicRelations:model.installed&&this.config.database==='keryx_mainnet'?100:0,publicFunctions:0,extensions:['plpgsql']});
    if(sql.includes('catalog_contract()'))return row('recording-wire-from-pg-text');
    if(sql.includes("'identity',(SELECT count(*)"))return row({identity:0,contract:0,writer:0,control:[{mode:'held',origin:'https://keryx.cc',singleton:true}]});
-   if(sql.includes("'schema',n.nspname"))return row([{schema:'public',name:'browser_journal_writer'},{schema:'public',name:'payment_events'},{schema:'keryx_storage',name:'writer'}]);
-   if(sql.includes('count(*)::text AS wire FROM "'))return row('0');
+   if(sql.includes("'schema',n.nspname"))return row([...Object.keys(seeds).filter(name=>model.seedVariant!=='missing'||name!=='browser_signing_v2_barrier').map(name=>({schema:'public',name})),{schema:'public',name:'browser_journal_writer'},{schema:'public',name:'payment_events'},{schema:'keryx_storage',name:'writer'}]);
+   if(sql.includes('count(*)::text AS wire FROM "')){const name=sql.match(/\."([a-z0-9_]+)"$/)![1];return row(Object.hasOwn(seeds,name)?model.seedVariant==='extra'?'2':'1':model.seedVariant==='nonseed'&&name==='payment_events'?'1':'0');}
+   if(sql.includes('jsonb_agg(t)')&&sql.includes('FROM public."')){const name=sql.match(/FROM public\."([a-z0-9_]+)"/)![1];return row(model.seedVariant==='changed'?seeds[name].map(x=>({...x,id:2})):seeds[name]);}
    if(sql.includes("'owner',(SELECT pg_get_userbyid"))return row({owner:'postgres',limit:16,allow:true,app:true,reader:true});
    if(sql.includes('jsonb_object_agg(datname,oid::text)')){model.readOids=true;return row({keryx_source:'16384',keryx_mainnet:'16385'});}
    return {rows:[],command:'ACK'};
@@ -68,7 +70,7 @@ import {SERVER1_HELD,enrollServer1HeldTarget,isServer1HbaRejection,server1Databa
 let sourceSql:string;
 beforeAll(()=>{const source=nativeCurrentProducersSource();expect(source.sha256).toBe(SERVER1_HELD.sourceSqlSha256);sourceSql=source.sql;});
 beforeEach(()=>{
- model.files.clear();model.fds.clear();model.events=[];model.queries=[];model.connections=[];model.nextFd=20;model.roles=false;model.databases=[];model.installed=false;model.failCreate=false;model.failHba=false;model.wrongCatalog=false;model.changeManifest=false;model.readOids=false;model.unsafe='';model.verifiers={};
+ model.files.clear();model.fds.clear();model.events=[];model.queries=[];model.connections=[];model.nextFd=20;model.roles=false;model.databases=[];model.installed=false;model.failCreate=false;model.failHba=false;model.wrongCatalog=false;model.changeManifest=false;model.readOids=false;model.seedVariant='';model.unsafe='';model.verifiers={};
  const identity={format:'keryx-mainnet-storage-identity-v1',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,enrolledAt:'2026-11-15T00:00:00.000Z',provenanceDigest:'ab'.repeat(32)};
  model.files.set(SERVER1_HELD.manifest,Buffer.from(canonicalJson({format:'keryx-storage-deployment-v1',identity,backend:{kind:'sqlite',databasePath:'/root/synthetic-never-opened.sqlite'}})));
  model.files.set(SERVER1_HELD.sourceSql,Buffer.from(sourceSql));model.files.set(SERVER1_HELD.intake,Buffer.from('synthetic B0 bytes, never executed'));
@@ -86,7 +88,7 @@ describe('finite readonly entry and retained phase boundaries (recording only)',
   const before=[...model.files.keys()];expect(await enrollServer1HeldTarget()).toMatchObject({readOnly:true,fresh:true,applicationAuthority:false});expect([...model.files.keys()]).toEqual(before);expect(model.events.some(x=>x.startsWith('write:'))).toBe(false);expect(model.queries.every(sql=>sql.startsWith('SELECT '))).toBe(true);
  });
  it('writes durable intents before every mutation and never sends password plaintext to SQL',async()=>{
-  const manifest=Buffer.from(model.files.get(SERVER1_HELD.manifest)!);const result=await enrollServer1HeldTarget('apply');expect(result).toMatchObject({phase:'fresh-held-unenrolled',applicationAuthority:false,connectionDenial:'hba-reject',applicationConnectDenied:true,readerConnectDenied:true,catalogSha256:SERVER1_HELD.catalogSha256});
+  const manifest=Buffer.from(model.files.get(SERVER1_HELD.manifest)!);const result=await enrollServer1HeldTarget('apply');expect(result).toMatchObject({phase:'fresh-held-unenrolled',applicationAuthority:false,connectionDenial:'hba-reject',applicationConnectDenied:true,readerConnectDenied:true,catalogSha256:SERVER1_HELD.catalogSha256,targetPublicDataEmptyExceptBootstrapControls:true,mandatoryBootstrapControlRows:3});expect(result).not.toHaveProperty('targetPublicDataEmpty');
   for(const name of ['roles','create-source','allow-source','create-target','allow-target','schema']){
    const file=`/root/keryx-migration/postgres17-server1-held-target.${name}.intent.json`,write=model.events.indexOf('write:'+file),sync=model.events.indexOf('sync:'+file);expect(write).toBeGreaterThan(-1);expect(sync).toBeGreaterThan(write);expect(model.files.has(file.replace('.intent.','.ack.'))).toBe(true);
   }
@@ -104,6 +106,7 @@ describe('finite readonly entry and retained phase boundaries (recording only)',
  });
  it.each(['mode','hardlink','symlink'] as const)('refuses unsafe private input %s before SQL or journal writes',async(kind)=>{model.unsafe=kind;await expect(enrollServer1HeldTarget('apply')).rejects.toThrow('private_file');expect(model.queries).toHaveLength(0);expect(model.events.some(x=>x.startsWith('write:'))).toBe(false);});
  it('refuses the whole recording result if the catalog differs',async()=>{model.wrongCatalog=true;await expect(enrollServer1HeldTarget('apply')).rejects.toThrow('catalog');expect(model.files.has(SERVER1_HELD.receipt)).toBe(false);});
+ it.each(['changed','extra','nonseed','missing'] as const)('refuses %s bootstrap/application data instead of expanding the fresh allowlist',async variant=>{model.seedVariant=variant;await expect(enrollServer1HeldTarget('apply')).rejects.toThrow(/bootstrap_control|nonempty_application_data/);expect(model.files.has(SERVER1_HELD.receipt)).toBe(false);});
  it('does not call password failure an HBA denial',async()=>{model.failHba=true;await expect(enrollServer1HeldTarget('apply')).rejects.toThrow('loaded_hba_rejection_not_proven');expect(model.files.has(SERVER1_HELD.receipt)).toBe(false);});
  it('retains known schema ACK but refuses changed active manifest after await',async()=>{model.changeManifest=true;await expect(enrollServer1HeldTarget('apply')).rejects.toThrow(/input_changed|private_file/);expect(model.files.has('/root/keryx-migration/postgres17-server1-held-target.schema.ack.json')).toBe(true);expect(model.files.has(SERVER1_HELD.receipt)).toBe(false);});
  it('rechecks preparation after the final SQL await before writing a receipt',async()=>{

@@ -23,6 +23,13 @@ export const SERVER1_HELD=Object.freeze({
  socket:'/run/postgresql-keryx',port:5432,sourceDatabase:'keryx_source',targetDatabase:'keryx_mainnet',
 });
 const PHASES=['operation','roles','create-source','allow-source','create-target','allow-target','schema'] as const;
+// Mandatory rows installed by the exact qualified SOURCE DDL. These are
+// closed, inactive bootstrap controls, never imported application data.
+const BOOTSTRAP_CONTROLS=Object.freeze({
+ browser_journal_control:Object.freeze([Object.freeze({id:1,active:false})]),
+ browser_signing_v2_control:Object.freeze([Object.freeze({id:1,active:false,min_original_version:2})]),
+ browser_signing_v2_barrier:Object.freeze([Object.freeze({id:1,ever_active:0,min_original_version:2})]),
+});
 type Phase=typeof PHASES[number];
 type Database='postgres'|'keryx_source'|'keryx_mainnet';
 type ApplicationRole='keryx_app'|'keryx_reader';
@@ -134,7 +141,14 @@ async function targetCensus(target:Client){
  const control=JSON.parse(await wire(target,"SELECT jsonb_build_object('identity',(SELECT count(*) FROM keryx_storage.identity),'contract',(SELECT count(*) FROM keryx_storage.source_contract),'control',(SELECT jsonb_agg(jsonb_build_object('singleton',singleton,'mode',mode,'origin',origin)) FROM keryx_storage.control),'writer',(SELECT count(*) FROM keryx_storage.writer))::text AS wire"));
  if(control.identity!==0||control.contract!==0||control.writer!==0||JSON.stringify(control.control)!=='[{"mode":"held","origin":"https://keryx.cc","singleton":true}]')refuse('held_unenrolled');
  const relations=JSON.parse(await wire(target,"SELECT coalesce(jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname) ORDER BY n.nspname,c.relname),'[]'::jsonb)::text AS wire FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN('r','p','m') AND (n.nspname='public' OR n.nspname='keryx_storage' AND c.relname LIKE '%writer%')")) as {schema:string;name:string}[];
- if(relations.length>512)refuse('relation_bound');for(const r of relations){if(!['public','keryx_storage'].includes(r.schema)||!/^[_a-z][_a-z0-9]*$/.test(r.name))refuse('relation_name');if(await wire(target,`SELECT count(*)::text AS wire FROM "${r.schema}"."${r.name}"`)!=='0')refuse('nonempty_application_data');}
+ if(relations.length>512)refuse('relation_bound');const seenBootstrap=new Set<string>();
+ for(const r of relations){
+  if(!['public','keryx_storage'].includes(r.schema)||!/^[_a-z][_a-z0-9]*$/.test(r.name))refuse('relation_name');
+  const seed=r.schema==='public'&&Object.hasOwn(BOOTSTRAP_CONTROLS,r.name)?BOOTSTRAP_CONTROLS[r.name as keyof typeof BOOTSTRAP_CONTROLS]:undefined;
+  if(await wire(target,`SELECT count(*)::text AS wire FROM "${r.schema}"."${r.name}"`)!==(seed?'1':'0'))refuse('nonempty_application_data');
+  if(seed){const actual=JSON.parse(await wire(target,`SELECT coalesce(jsonb_agg(t),'[]'::jsonb)::text AS wire FROM(SELECT * FROM public."${r.name}" LIMIT 2)t`));if(canonicalJson(actual)!==canonicalJson(seed))refuse('bootstrap_control_changed');seenBootstrap.add(r.name);}
+ }
+ if(Object.keys(BOOTSTRAP_CONTROLS).some(name=>!seenBootstrap.has(name)))refuse('bootstrap_control_missing');
  await target.query('COMMIT');return contract.sha256;
  }catch(error){await target.query('ROLLBACK').catch(()=>{});throw error;}
 }
@@ -189,7 +203,7 @@ export async function enrollServer1HeldTarget(mode:'preflight'|'apply'='prefligh
   const oids=JSON.parse(await wire(admin,"SELECT jsonb_object_agg(datname,oid::text)::text AS wire FROM pg_database WHERE datname IN('keryx_source','keryx_mainnet')"));
   for(const name of ['keryx_source','keryx_mainnet'])if(typeof oids[name]!=='string'||!/^[1-9][0-9]{0,9}$/.test(oids[name])||BigInt(oids[name])>BigInt('4294967295'))refuse('database_oid');if(oids.keryx_source===oids.keryx_mainnet)refuse('database_oid');
   await unchanged();inputs.current();for(const c of credentials)current(c);
-  const receipt={format:'keryx-server1-postgres17-held-target-v1',phase:'fresh-held-unenrolled',sourceDatabaseOid:oids.keryx_source as string,targetDatabaseOid:oids.keryx_mainnet as string,systemIdentifier:system,sourceSqlSha256:SERVER1_HELD.sourceSqlSha256,catalogSha256:SERVER1_HELD.catalogSha256,identityDigest:inputs.identityDigest,sourceManifestSha256:inputs.manifest.sha256,preparationSha256:preparation.fingerprints.receiptSha256,intakeSha256:inputs.intake.sha256,connectionDenial:'hba-reject',applicationConnectDenied:true,readerConnectDenied:true,hbaSha256:preparation.fingerprints.configHashes.hba,hbaRulesSha256,nativeFunctionCount:510,sourceTypedStagingEmpty:true,targetIdentityEmpty:true,targetContractEmpty:true,targetPublicDataEmpty:true,writerMode:'held',applicationAuthority:false,sourceRetired:false,createdAt:new Date().toISOString()};
+  const receipt={format:'keryx-server1-postgres17-held-target-v1',phase:'fresh-held-unenrolled',sourceDatabaseOid:oids.keryx_source as string,targetDatabaseOid:oids.keryx_mainnet as string,systemIdentifier:system,sourceSqlSha256:SERVER1_HELD.sourceSqlSha256,catalogSha256:SERVER1_HELD.catalogSha256,identityDigest:inputs.identityDigest,sourceManifestSha256:inputs.manifest.sha256,preparationSha256:preparation.fingerprints.receiptSha256,intakeSha256:inputs.intake.sha256,connectionDenial:'hba-reject',applicationConnectDenied:true,readerConnectDenied:true,hbaSha256:preparation.fingerprints.configHashes.hba,hbaRulesSha256,nativeFunctionCount:510,sourceTypedStagingEmpty:true,targetIdentityEmpty:true,targetContractEmpty:true,targetPublicDataEmptyExceptBootstrapControls:true,mandatoryBootstrapControlRows:3,writerMode:'held',applicationAuthority:false,sourceRetired:false,createdAt:new Date().toISOString()};
   record(SERVER1_HELD.receipt,receipt);record(phasePath('operation','ack'),{...binding,phase:'operation',state:'acknowledged',receiptSha256:capture(SERVER1_HELD.receipt,65536).sha256,at:new Date().toISOString()});return receipt;
  }finally{await target?.end().catch(()=>{});await source?.end().catch(()=>{});if(locked)await admin.query('SELECT pg_advisory_unlock(634781904177099::bigint)').catch(()=>{});await admin.end().catch(()=>{});}
 }
