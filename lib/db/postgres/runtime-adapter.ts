@@ -1,19 +1,13 @@
+import { composePostgresRuntimeStores,guardPostgresRuntimeIterator } from './runtime-stores';
+import type { PostgresSourceMethod } from './runtime-surface';
 import { createHash } from 'node:crypto';
 import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
 import { config } from '../../config';
 import { canonicalJson } from '../../canonical-json';
 import { hasContentKey } from '../../ipfs/content-crypto';
 import { openEnrolledCacheText } from '../../sources/enrolled-content-cache';
-import type { PrivateProfilesStore } from '../../profiles/private-profile';
-import type { ProfileIdentitiesStore } from '../../profiles/verified-identities';
-import type { PersonalHistoryStore } from '../../history/personal-history';
-import type { RunOwnershipHistoryStore } from '../../run-claims/history';
-import { runClaimsEnabled,runClaimBindingSchema } from '../../run-claims/contracts';
-import { privacyId,privacyWallet,type PrivacyActor,type RunPrivacyStore } from '../../run-privacy/contracts';
-import { projectRecordedEvidenceProvenance,type EvidenceProvenanceLookup } from '../../research/evidence-provenance';
-import type { PrivateBibliographiesStore } from '../../bibliographies/private-bibliography';
-import type { DecisionReviewsStore } from '../../research/decision-review-types';
-import type { TopicWatchesPort,PrivateTopicWatchStore } from '../topic-watches-sqlite';
+import { runClaimsEnabled } from '../../run-claims/contracts';
+import type { EvidenceProvenanceLookup } from '../../research/evidence-provenance';
 import type { KeryxDB } from '../keryx-db';
 import { readRuntimeStorageDeployment } from '../runtime-storage-config';
 import { assembleNativePostgresBusinessCore } from '../supabase-adapter';
@@ -23,18 +17,9 @@ import { readPrivatePostgresCredential } from './private-credential';
 import { createPostgresRuntimeTransport } from './runtime-transport';
 import { NATIVE_READONLY_RUNTIME_PROFILE } from './runtime-profile';
 import { composeNativeFinancialObservation } from './financial-observation';
-import type { PublicUsageStore } from '../../usage/contracts';
-import type { PublicLedgerRunReader } from '../../operator-ledger/native-runs';
-import { capturePublicLedgerLimit } from './ledger-transport';
 import { z } from 'zod';
-import { interactiveSessionSchema,bindingSchema as accountBindingSchema,snapshotSchema as accountSnapshotSchema,digestSchema as accountDigestSchema,type AccountMembershipStore } from '../../accounts/contracts';
-import { recipientSchema as chatRecipientSchema,type ChatAccountLinksStore } from '../../chat-accounts/contracts';
-import { publicProfilesEnabled,publicHandle,publicProfileActor,type PublicProfilesStore } from '../../profiles/public-profile';
-import type { AsyncOwnerRunAssignmentsPort } from '../../owner-run-assignments/contracts';
-import { captureOwnerAssignmentReply } from './owner-assignments-transport';
-import { capturePostgresPendingOwnerSession } from '../../a2a/pending-owner-session';
-import type { PendingJobOwnersStore } from '../pending-job-owners-sqlite';
-import { acceptanceWallet,networkSchema,deliverableIdSchema,type DeliverableAcceptanceStore } from '../../deliverable-acceptance/contracts';
+import { digestSchema as accountDigestSchema } from '../../accounts/contracts';
+import { publicProfilesEnabled } from '../../profiles/public-profile';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
 /** Deliberately closed until all writer/current-domain/data gates are qualified. */
@@ -60,8 +45,9 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
    ||readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader').fingerprint!==credential.fingerprint)refuseStorage('identity_mismatch');
  };
  const guard=async()=>{entry();await transport.verifyRuntimeAuthority();entry();};
- const core=assembleNativePostgresBusinessCore({identity:deployment.identity,authority:createPostgresApplicationDomainAuthority(transport),assertEntry:entry,verify:guard,sourceClaims:transport.sourceClaims,sourceUpsert:transport.sourceUpsert.upsertSource,sourceMetaSetter:transport.sourceUpsert.setSourceMeta,sourceObservations:transport.sourceObservations});
- const close=()=>{closed=true;core.hooks.close();return closing??=transport.close();};
+ let retireCore=()=>{};
+ const close=()=>{closed=true;retireCore();return closing??=transport.close();};
+ try{
  // Each closed work closure below performs its own fresh guarded native SQL.
  // Invoke it before awaiting so its typed port captures the caller's arguments.
  // A separate fresh guard still checks authority before publishing the result.
@@ -80,88 +66,15 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   }
   return flags;
  };
- const sourceNames=['getSource','getSourceByOnchainId','listSources','listAllSources','getSourceMeta','getSourceClaim','getSourceClaimForSource','getSourceClaimChallenge','listSourceClaims'] as const;
+ const sourceNames=['getSource','getSourceByOnchainId','listSources','listAllSources','getSourceMeta','getSourceClaim','getSourceClaimForSource','getSourceClaimChallenge','listSourceClaims'] as const satisfies readonly PostgresSourceMethod[];
  const sourceReads=Object.freeze(Object.fromEntries(sourceNames.map(name=>[name,(...args:unknown[])=>read(()=>Reflect.apply(transport.sourceClaims[name],transport.sourceClaims,args))])));
- const ownerCursor=z.object({createdAt:z.string().max(64).datetime({offset:true}),id:z.string().regex(/^a2a_[a-f0-9]{64}$/)}).strict();
- const pending:PendingJobOwnersStore=Object.freeze({
-  assertAdmission:()=>refuseStorage('readonly_operation'),assertAdmissionAsync:async()=>refuseStorage('readonly_operation'),
-  async list(proof,before,id){
-   entry();capturePostgresPendingOwnerSession(proof,deployment.identity,'read');
-   const cursor=before===undefined?undefined:ownerCursor.parse(before),selected=id===undefined?undefined:ownerCursor.shape.id.parse(id);
-   await guard();const result=await transport.pendingJobOwners.list(proof,cursor,selected);entry();return result;
-  },
- } satisfies PendingJobOwnersStore);
- Object.defineProperty(core.adapter,'pendingJobOwners',{value:pending,enumerable:false,writable:false,configurable:true});
+ const stores=composePostgresRuntimeStores({transport,identity:deployment.identity,readOnly:true,privacyActive,claimsEnabled,publicProfilesActive,entry,guard,evidence});
+ const {privateProfiles:profiles,profileIdentities:identities,personalHistory:history,runOwnershipHistory:ownership,runPrivacy:privacy,privateBibliographies:bibliographies,decisionReviews:reviews,topicWatches:watches,publicUsage:usage,publicLedgerRuns:ledger,deliverableAcceptance:acceptance,accountMembership:accounts,chatAccountLinks:chat,publicProfiles,ownerRunAssignments:assignments,pendingJobOwners:pending}=stores;
+ const core=assembleNativePostgresBusinessCore({identity:deployment.identity,authority:createPostgresApplicationDomainAuthority(transport),assertEntry:entry,verify:guard,runtimeStores:stores,sourceClaims:transport.sourceClaims,sourceUpsert:transport.sourceUpsert.upsertSource,sourceMetaSetter:transport.sourceUpsert.setSourceMeta,sourceObservations:transport.sourceObservations});
+ retireCore=core.hooks.close;
  const financial=composeNativeFinancialObservation(transport);
- const usage:PublicUsageStore=Object.freeze({
-  summary:window=>read(()=>transport.publicUsage.summary(window)),
-  async history(window,cohort,limit){const plan=await read(()=>transport.prepareUsageHistory(window,cohort,limit,false));entry();const result=await transport.finishUsageHistory(plan);entry();return result;},
-  async publishedHistory(window,cohort,limit){const plan=await read(()=>transport.prepareUsageHistory(window,cohort,limit,true));entry();const result=await transport.finishPublishedUsageHistory(plan);entry();return result;},
- } satisfies PublicUsageStore);
- const ledger:PublicLedgerRunReader=Object.freeze({async read(raw:number){entry();const take=capturePublicLedgerLimit(raw);await guard();const result=await transport.publicLedgerRuns.read(take);entry();return result;}});
- const readonly=async():Promise<never>=>refuseStorage('readonly_operation');
- // Capture selectors before the authority await, then read the current original
- // and sharing consent in the final native snapshot. No stale pre-guard result.
- const acceptance:DeliverableAcceptanceStore=Object.freeze({
-  async read(owner,network,id){entry();const args=[acceptanceWallet(owner),networkSchema.parse(network),deliverableIdSchema.parse(id)] as const;await guard();const result=await transport.deliverableAcceptance.read(...args);entry();return result;},
-  async publicState(network,id){entry();const args=[networkSchema.parse(network),deliverableIdSchema.parse(id)] as const;await guard();const result=await transport.deliverableAcceptance.publicState(...args);entry();return result;},
-  async metrics(network){entry();const selected=networkSchema.parse(network);await guard();const result=await transport.deliverableAcceptance.metrics(selected);entry();return result;},
-  submit:readonly,
- } satisfies DeliverableAcceptanceStore);
- const accounts:AccountMembershipStore=Object.freeze({
-  async offer(raw,b){entry();const session=interactiveSessionSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.accountMembership.offer(session,binding);entry();return value;},
-  async resolve(raw,b){entry();const session=interactiveSessionSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.accountMembership.resolve(session,binding);entry();return value;},
-  async assertCurrent(raw){entry();const snapshot=accountSnapshotSchema.parse(raw);await guard();await transport.accountMembership.assertCurrent(snapshot);entry();},
-  ...(privacyActive&&transport.accountMembership.prepareAsyncHistoryFence?{async prepareAsyncHistoryFence(raw,observed,deadline){
-   entry();const final=await read(()=>transport.accountMembership.prepareAsyncHistoryFence!(raw,observed,deadline));let unused=true;
-   return async()=>{if(!unused)refuseStorage('invalid_operation');unused=false;entry();await guard();await final();entry();};
-  }}:{}),
-  resume:readonly,issue:readonly,take:readonly,complete:readonly,unlink:readonly,revokeSession:readonly,
- } satisfies AccountMembershipStore);
- Object.defineProperty(core.adapter,'accountMembership',{value:accounts,enumerable:false,writable:false,configurable:true});
- const chat:ChatAccountLinksStore=Object.freeze({
-  async preview(raw,b){entry();const hash=accountDigestSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.chatAccountLinks.preview(hash,binding);entry();return value;},
-  async lookup(raw,b){entry();const recipient=chatRecipientSchema.parse(raw),binding=accountBindingSchema.parse(b);await guard();const value=await transport.chatAccountLinks.lookup(recipient,binding);entry();return value;},
-  async list(raw){entry();const snapshot=accountSnapshotSchema.parse(raw);await guard();const value=await transport.chatAccountLinks.list(snapshot);entry();return value;},
-  issue:readonly,complete:readonly,unlink:readonly,unlinkAccount:readonly,
- } satisfies ChatAccountLinksStore);
- Object.defineProperty(core.adapter,'chatAccountLinks',{value:chat,enumerable:false,writable:false,configurable:true});
- const publicProfiles:PublicProfilesStore=Object.freeze({
-  async read(raw){entry();const handle=publicHandle.parse(raw);await guard();const value=await transport.publicProfiles.read(handle);entry();return value;},
-  async settings(raw){entry();const actor=publicProfileActor.parse(raw);await guard();const value=await transport.publicProfiles.settings(actor);entry();return value;},
-  async sitemap(raw){entry();const take=z.number().int().min(1).max(1000).parse(raw);await guard();const value=await transport.publicProfiles.sitemap(take);entry();return value;},
-  update:readonly,unpublish:readonly,
- } satisfies PublicProfilesStore);
- if(publicProfilesActive)Object.defineProperty(core.adapter,'publicProfiles',{value:publicProfiles,enumerable:false,writable:false,configurable:true});
- const assignments:AsyncOwnerRunAssignmentsPort=Object.freeze({
-  mode:'native-postgres-async-v1',act:readonly,
-  async reply(session,wallet,origin,expected,receipt){
-   entry();const args=captureOwnerAssignmentReply(session,wallet,origin,expected,receipt);await guard();
-   const response=await transport.ownerRunAssignments.reply(...args);entry();return response;
-  },
- } satisfies AsyncOwnerRunAssignmentsPort);
- Object.defineProperty(core.adapter,'ownerRunAssignments',{value:assignments,enumerable:false,writable:false,configurable:true});
  const sessionRow=z.object({hash:accountDigestSchema,wallet:z.string().regex(/^0x[a-fA-F0-9]{40}$/),issued_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),expires_at:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)}).strict().refine(row=>row.expires_at>row.issued_at&&row.expires_at-row.issued_at<=604800000);
- const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
- const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
- const history:PersonalHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.personalHistory.list(owner,query)),receipts:(id,take)=>read(()=>transport.personalHistory.receipts!(id,take))} satisfies PersonalHistoryStore);
- const ownership:RunOwnershipHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.runOwnershipHistory.list(owner,query)),read:(owner,binding,id)=>read(()=>transport.runOwnershipHistory.read(owner,binding,id))} satisfies RunOwnershipHistoryStore);
- const privacy:RunPrivacyStore=Object.freeze({
-  creationReady:readonly,
-  async read(rawId,rawActor){
-   entry();const id=privacyId.parse(rawId),actor:PrivacyActor|undefined=rawActor?{wallet:privacyWallet.parse(rawActor.wallet),binding:runClaimBindingSchema.parse(rawActor.binding)}:undefined;
-   return guardedRead(async()=>{const value=await transport.runPrivacy.read(id,actor);entry();return value.item?{...value,item:{...value.item,run:await projectRecordedEvidenceProvenance(evidence,value.item.run)}}:value;});
-  },owner:(id,actor)=>read(()=>transport.runPrivacy.owner(id,actor)),
-  list:query=>read(()=>transport.runPrivacy.list(query)),defaults:actor=>read(()=>transport.runPrivacy.defaults(actor)),
-  questions:ids=>read(()=>transport.runPrivacy.questions!(ids)),sourceHistory:()=>read(()=>transport.runPrivacy.sourceHistory!()),
-  learningPage:query=>read(()=>transport.runPrivacy.learningPage!(query)),archivePage:query=>read(()=>transport.runPrivacy.archivePage!(query)),
-  memories:take=>read(()=>transport.runPrivacy.memories(take)),offers:take=>read(()=>transport.runPrivacy.offers(take)),
-  settlement:id=>read(()=>transport.runPrivacy.settlement(id)),pending:id=>read(()=>transport.runPrivacy.pending(id)),setDefault:readonly,change:readonly,erase:readonly,export:readonly,
- } satisfies RunPrivacyStore);
- // The Core's public-only list/stream branches consult its own privacy store.
- // Keep owner/export originals exact; only Source's public read is demoted.
- if(privacyActive)Object.defineProperty(core.adapter,'runPrivacy',{value:privacy,enumerable:false,writable:false,configurable:true});
- const queryNames=['getQueryRun','listRecentQueries','listQueryRunsByAsker','listFollowUps','iterateRecentQueries'] as const;
+ const queryNames=['getQueryRun','listRecentQueries','listQueryRunsByAsker','listFollowUps','iterateRecentQueries'] as const satisfies readonly PostgresSourceMethod[];
  const text=(value:string)=>{entry();if(typeof value!=='string')refuseStorage('invalid_operation');return value;};
  const count=(value:number)=>{entry();if(typeof value!=='number')refuseStorage('invalid_operation');return value;};
  const queries=Object.freeze({
@@ -171,17 +84,9 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   async listFollowUps(raw:string){const id=text(raw);return guardedRead(()=>core.adapter.listFollowUps(id));},
   iterateRecentQueries(raw:number){
    const limit=count(raw);
-   return(async function*(){
-    await guard();const iterator=core.adapter.iterateRecentQueries(limit)[Symbol.asyncIterator]();
-    try{for(;;){await guard();const item=await iterator.next();await guard();if(item.done)return;yield item.value;}}
-    finally{await iterator.return?.();}
-   })();
+   return guardPostgresRuntimeIterator(()=>core.adapter.iterateRecentQueries(limit)[Symbol.asyncIterator](),entry,guard);
   },
  } satisfies Pick<KeryxDB,typeof queryNames[number]>);
- const bibliographies:PrivateBibliographiesStore=Object.freeze({list:owner=>read(()=>transport.privateBibliographies.list(owner)),read:token=>read(()=>transport.privateBibliographies.read(token)),create:readonly,replace:readonly,revoke:readonly} satisfies PrivateBibliographiesStore);
- const reviews:DecisionReviewsStore=Object.freeze({ready:()=>read(()=>transport.decisionReviews.ready()),read:(owner,id)=>read(()=>transport.decisionReviews.read(owner,id)),list:(owner,run)=>read(()=>transport.decisionReviews.list(owner,run)),metrics:(network,since,until)=>read(()=>transport.decisionReviews.metrics(network,since,until)),capture:readonly,begin:readonly,verdict:readonly,consume:readonly,cancel:readonly,expire:readonly,observe:readonly} satisfies DecisionReviewsStore);
- const watches:TopicWatchesPort=Object.freeze({bindSession(session){entry();const bound=transport.topicWatches.bindSession(session);return Object.freeze({list:()=>read(()=>bound.list()),read:key=>read(()=>bound.read(key)),compareAndSwap:readonly} satisfies PrivateTopicWatchStore);}} satisfies TopicWatchesPort);
- try{
   entry();const cache=await transport.readColdCache();await guard();entry();
   for(const row of cache.cacheRows){openEnrolledCacheText(row.text,row.sourceId,deployment.identity);entry();}
   await core.adapter.init();await guard();
