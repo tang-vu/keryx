@@ -163,9 +163,72 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=2048
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --a2a-fulfillment-only
 
+  payment-browser-protocols:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Pinned PostgreSQL fixture image
+        run: docker pull postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
+      - name: Source payment and historical browser protocols
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --payment-browser-only
+      - name: Source observation after an actual writer wait
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --payment-observer-wait-only
+      - name: Hosted producers and receipts with immutable Source originals
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --hosted-source-payments-only
+      - name: Source evidence, verification and article offers
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --source-observations-offers-only
+      - name: Source Operator views and withdrawal reporting
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --operator-withdrawal-only
+      - name: Source public archive fidelity and atomic writes
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --reference-archive-only
+
+  current-producer-protocols:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Pinned PostgreSQL fixture image
+        run: docker pull postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
+      - name: Private Source producers, readers and original-bound results
+        env:
+          KERYX_NETWORK: arc
+          NEXT_PUBLIC_KERYX_NETWORK: arc
+          KERYX_FORCE_OFFLINE: "0"
+          KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
+          NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
+          KERYX_MAINNET_TREASURY_PRIVATE_KEY: ""
+          KERYX_MAINNET_PRIVATE_TREASURY_PRIVATE_KEY: ""
+          REGISTRY_OPERATOR_KEY: ""
+        run: node --import ./scripts/postgres/private-source-bootstrap.mjs --import tsx --no-warnings scripts/postgres/test-session-consents.mts --private-research-only
+      - name: Registration sponsorship storage without an issuer or custody
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --registration-sponsor-only
+      - name: Onramp reservation metadata without funding
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --onramp-only
+      - name: Current selected scholarly closure
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --scholarly-only
+      - name: Metadata origin admission and content writes
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --content-writes-only
+      - name: Raw Source payment observations
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --payment-observers-only
+
   postgres-preparation:
     if: ${{ always() }}
-    needs: [contracts-bootstrap-financial, native-runtime-core, native-runtime-tail, synthetic-materialization, publication-contained, a2a-fulfillment]
+    needs: [contracts-bootstrap-financial, native-runtime-core, native-runtime-tail, synthetic-materialization, publication-contained, a2a-fulfillment, payment-browser-protocols, current-producer-protocols]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -174,7 +237,7 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
           node --input-type=module -e '
-            const required = ["contracts-bootstrap-financial", "native-runtime-core", "native-runtime-tail", "synthetic-materialization", "publication-contained", "a2a-fulfillment"];
+            const required = ["contracts-bootstrap-financial", "native-runtime-core", "native-runtime-tail", "synthetic-materialization", "publication-contained", "a2a-fulfillment", "payment-browser-protocols", "current-producer-protocols"];
             const needs = JSON.parse(process.env.NEEDS_JSON);
             if (Object.keys(needs).length !== required.length || required.some(name => needs[name]?.result !== "success")) {
               console.error("PostgreSQL acceptance refused", needs);

@@ -53,6 +53,7 @@ import {qualifyPrivateResearch} from "./qualify-private-research.mts";
 import {qualifyRegistrationSponsor} from "./qualify-registration-sponsor.mts";
 import {qualifyScholarly} from "./qualify-scholarly.mts";
 import {qualifyOnramp} from "./qualify-onramp.mts";
+import {qualifyPaymentObservers} from "./qualify-payment-observers.mts";
 import { qualifyPaymentEvents } from "./qualify-payment-events.mts";
 import {qualifyPaymentObserverWait} from "./qualify-payment-observer-wait.mts";
 import {capturePaymentEvent} from "../../lib/db/postgres/payment-events-packet";
@@ -158,7 +159,8 @@ try {
   const registrationSponsorOnly=process.argv.includes("--registration-sponsor-only");
   const scholarlyOnly=process.argv.includes("--scholarly-only");
   const onrampOnly=process.argv.includes("--onramp-only");
-  const currentProducersOnly=privateResearchOnly||registrationSponsorOnly||scholarlyOnly||onrampOnly;
+  const paymentObserversOnly=process.argv.includes("--payment-observers-only");
+  const currentProducersOnly=privateResearchOnly||registrationSponsorOnly||scholarlyOnly||onrampOnly||paymentObserversOnly;
   const referenceArchiveOnly=process.argv.includes("--reference-archive-only")||currentProducersOnly;
   const operatorWithdrawalOnly=process.argv.includes("--operator-withdrawal-only")||referenceArchiveOnly;
   const hostedSourcePaymentsOnly=process.argv.includes("--hosted-source-payments-only");
@@ -329,8 +331,9 @@ try {
     if(scholarlyRuntime)transports.push(scholarlyRuntime);
     const scholarly=scholarlyRuntime?await qualifyScholarly({...input,sourceClaims:scholarlyRuntime.sourceClaims}):undefined;
     const onramp=onrampOnly?await qualifyOnramp(input):undefined;
+    const paymentObservers=paymentObserversOnly?await qualifyPaymentObservers(input):undefined;
     const nativeFunctionCount=JSON.parse(reference.canonicalJson).sections.functions.length;assert(nativeFunctionCount<=512);
-    console.log(JSON.stringify({passed:true,currentProducersOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,nativeFunctionCount,privateResearch,registrationSponsor,scholarly,onramp,fullWriterQualified:false,applicationBackendSwitched:false}));return;
+    console.log(JSON.stringify({passed:true,currentProducersOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,nativeFunctionCount,privateResearch,registrationSponsor,scholarly,onramp,paymentObservers,fullWriterQualified:false,applicationBackendSwitched:false}));return;
   }
   if(referenceArchiveOnly){
     const referenceArchive=await qualifyReferenceArchive({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:(statement:string)=>sql('native_target',statement)});

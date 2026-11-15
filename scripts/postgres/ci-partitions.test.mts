@@ -7,7 +7,7 @@ const yaml = createRequire(import.meta.url)('js-yaml') as { load: (wire: string)
 const wire = readFileSync(new URL('../../.github/workflows/postgres-mainnet.yml', import.meta.url), 'utf8');
 type Job = { needs?: string[]; if?: string; 'timeout-minutes': number; steps: { run?: string; name?: string; if?: string }[] };
 const workflow = yaml.load(wire) as { jobs: Record<string, Job> };
-const names = ['contracts-bootstrap-financial', 'native-runtime-core', 'native-runtime-tail', 'synthetic-materialization', 'publication-contained', 'a2a-fulfillment'];
+const names = ['contracts-bootstrap-financial', 'native-runtime-core', 'native-runtime-tail', 'synthetic-materialization', 'publication-contained', 'a2a-fulfillment', 'payment-browser-protocols', 'current-producer-protocols'];
 const gate = workflow.jobs['postgres-preparation'];
 const command = gate.steps.find(step => step.name === 'Require successful acceptance from every partition')!.run!;
 const program = command.match(/node --input-type=module -e '\n([\s\S]+)\n'\s*$/)![1];
