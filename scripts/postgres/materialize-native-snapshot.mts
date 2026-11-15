@@ -9,7 +9,8 @@ import { canonicalJson } from '../../lib/canonical-json';
 import { readStorageIdentity } from '../../lib/db/storage-identity-sqlite';
 import { storageIdentityDigest } from '../../lib/db/storage-identity';
 import { postgresPoolConfiguration,type PostgresConnectionOptions } from '../../lib/db/postgres/connection';
-import { NATIVE_READONLY_RUNTIME_PROFILE } from '../../lib/db/postgres/runtime-profile';
+import { nativeMaterializationProfile,type NativeMaterializationProfileMode } from '../../lib/db/postgres/runtime-profile';
+import { hasPrivateResultIdentity } from './private-result-source.mts';
 import { exportNativePostgresSchemaContract } from './native-contract.mts';
 import { snapshotRows,snapshotTables,type SnapshotTable,type SnapshotRow } from './typed-snapshot.mts';
 import { nativeMaterializationCell,nativeMaterializationQueryCell,nativeMaterializationType,nativeMaterializationValueKey,type NativeMaterializationType } from './native-materialization-codec.mts';
@@ -24,8 +25,8 @@ const identifier=(value:string)=>{if(!/^[a-z][a-z0-9_]{0,62}$/.test(value))throw
 const articleOfferColumns=['source_id','item_id','id','content_version','price_usdc6','expires_at','signer','nonce','signature','created_at'];
 /** Classification of an already digest-pinned SOURCE, never target adoption or
  * a caller-provided feature flag. Old qualified layouts keep their old holds. */
-export function supportsBrowserMaterialization(reference:Reference):boolean{
- assert.equal(reference.sha256,NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256);
+export function supportsBrowserMaterialization(reference:Reference,mode:NativeMaterializationProfileMode='observation505'):boolean{
+ assert.equal(reference.sha256,nativeMaterializationProfile(mode).catalogSha256);
  const sections=reference.metadata.sections;assert(sections&&typeof sections==='object'&&!Array.isArray(sections));
  const relations=sections.relations,columns=sections.columns,constraints=sections.constraints;assert(Array.isArray(relations)&&Array.isArray(columns)&&Array.isArray(constraints));
  const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -83,8 +84,9 @@ export function assertDevelopmentMaterializationContainment(){
 /** Every nonempty input table must have an exact native column mapping and PK.
  * The three empty ephemeral writer tables use native transaction IDs. Legacy
  * profiles retain their two additional empty historical-layout holds. */
-export function planNativeMaterializationTables(db:DatabaseSync,native:NativeTable[],counts:Map<string,number>,reference:Reference):Plan[]{
- const browser=supportsBrowserMaterialization(reference),emptyDifferent=new Set(['browser_journal_writer','browser_signing_v2_writer','browser_signing_v3_writer',...(browser?[]:['browser_signing_namespaces','browser_signing_originals'])]);
+export function planNativeMaterializationTables(db:DatabaseSync,native:NativeTable[],counts:Map<string,number>,reference:Reference,mode:NativeMaterializationProfileMode='observation505'):Plan[]{
+ const browser=supportsBrowserMaterialization(reference,mode);if(mode==='development-current510-data-only')assert(browser&&hasPrivateResultIdentity(reference,mode),'Current DATA intake requires complete browser/payment/private Source shapes');
+ const emptyDifferent=new Set(['browser_journal_writer','browser_signing_v2_writer','browser_signing_v3_writer',...(browser?[]:['browser_signing_namespaces','browser_signing_originals'])]);
  const plans=snapshotTables(db).filter(t=>t.name!=='keryx_storage_identity').map(source=>{try{
   const target=native.find(t=>t.name===source.name);assert(target);const rows=counts.get(source.name);assert(rows!==undefined&&Number.isSafeInteger(rows)&&rows>=0);
   if(emptyDifferent.has(source.name)){assert.equal(rows,0);return null;}
@@ -104,9 +106,9 @@ function rendering(column:string,type:NativeMaterializationType){
 function rowKey(plan:Plan,values:readonly (string|null)[]){
  assert.equal(values.length,plan.types.length);return JSON.stringify(values.map((value,i)=>nativeMaterializationValueKey(plan.types[i],value)));
 }
-export async function materializeNativeSnapshot(db:DatabaseSync,options:PostgresConnectionOptions,referenceWire:string){
+export async function materializeNativeSnapshot(db:DatabaseSync,options:PostgresConnectionOptions,referenceWire:string,mode:NativeMaterializationProfileMode='observation505'){
  assertDevelopmentMaterializationContainment();assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(options.database,'native_materialized');assert.equal(options.role,'postgres');assert.deepEqual(options.endpoint,{kind:'loopback',port:5432});assert(/^[a-f0-9]{48}$/.test(options.password));
- const reference=exportNativePostgresSchemaContract(referenceWire);assert.equal(reference.sha256,NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256);
+ const reference=exportNativePostgresSchemaContract(referenceWire);assert.equal(reference.sha256,nativeMaterializationProfile(mode).catalogSha256);
  const identity=readStorageIdentity(db);assert.equal(identity.authorityMode,'mainnet-real');assert.equal(identity.network,'eip155:5042');
  const pg=new Client(postgresPoolConfiguration(options)),staging=new Client(postgresPoolConfiguration({...options,database:'native_staging'}));pg.on('error',()=>{});staging.on('error',()=>{});let stage='connect',table:string|null=null,commit=false,started=false;
  try{
@@ -123,7 +125,7 @@ export async function materializeNativeSnapshot(db:DatabaseSync,options:Postgres
   // The runtime rejects every extra namespace. Keep typed originals in a
   // separate operator database; do not add a catalog exception for staging.
   stage='retained-staging';await staging.connect();const retained=await staging.query('SELECT name,row_count::text rows FROM keryx_migration.snapshot_tables ORDER BY name');assert.equal(retained.rowCount,94);
-  const counts=new Map<string,number>(retained.rows.map(r=>[r.name,Number(r.rows)])),browser=supportsBrowserMaterialization(reference),plans=planNativeMaterializationTables(db,native,counts,reference);
+  const counts=new Map<string,number>(retained.rows.map(r=>[r.name,Number(r.rows)])),browser=supportsBrowserMaterialization(reference,mode),plans=planNativeMaterializationTables(db,native,counts,reference,mode);
   stage='pristine-data';const seeds:Record<string,unknown[]>={browser_journal_control:[{id:1,active:false}],browser_signing_v2_control:[{id:1,active:false,min_original_version:2}],...(browser?{browser_signing_v2_barrier:[{id:1,ever_active:0,min_original_version:2}]}:{})};
   for(const t of native){table=t.name;const rows=JSON.parse((await pg.query(`SELECT coalesce(jsonb_agg(t),'[]'::jsonb)::text wire FROM(SELECT * FROM public.${identifier(t.name)} LIMIT 2)t`)).rows[0].wire);assert.deepEqual(rows,seeds[t.name]??[]);}
   await pg.query('BEGIN');started=true;await pg.query('SET CONSTRAINTS ALL DEFERRED');
@@ -173,7 +175,7 @@ export async function materializeNativeSnapshot(db:DatabaseSync,options:Postgres
   await pg.query('INSERT INTO keryx_storage.source_contract VALUES(true,$1::jsonb,$2)',[reference.canonicalJson,reference.sha256]);
   stage='final-catalog';assert.equal(exportNativePostgresSchemaContract((await pg.query('SELECT keryx_storage.catalog_contract()::text wire')).rows[0].wire).sha256,reference.sha256);
   stage='commit';commit=true;await pg.query('COMMIT');started=false;
-  return {format:'keryx-native-public-materialization-v1',publicTables:93,emptyDifferentLayouts:browser?3:5,browserPermanentLayoutsMaterialized:browser,emptyDifferentPrimaryKeys:plans.filter(p=>p.emptyDifferentPrimaryKey).map(p=>p.source.name),copiedTables:plans.length,totalRows,tables:results,typedOriginalStagingRetained:true,typedStagingDatabase:'native_staging',logicalIdentityPreserved:true,sourceCatalogSha256:reference.sha256,writerMode:'held',publicApplicationTablesMaterialized:true,sourceDerivedProjectionsMaterialized:false,applicationMaterialized:false,applicationBackendSwitched:false,completeWriterQualified:false,productionChanged:false,paymentActions:0,jobActions:0};
+  return {format:'keryx-native-public-materialization-v1',...(mode==='development-current510-data-only'?{profileMode:mode,dataIntakeOnly:true,genuineColdFactoryQualified:false}:{}),publicTables:93,emptyDifferentLayouts:browser?3:5,browserPermanentLayoutsMaterialized:browser,emptyDifferentPrimaryKeys:plans.filter(p=>p.emptyDifferentPrimaryKey).map(p=>p.source.name),copiedTables:plans.length,totalRows,tables:results,typedOriginalStagingRetained:true,typedStagingDatabase:'native_staging',logicalIdentityPreserved:true,sourceCatalogSha256:reference.sha256,writerMode:'held',publicApplicationTablesMaterialized:true,sourceDerivedProjectionsMaterialized:false,applicationMaterialized:false,applicationBackendSwitched:false,completeWriterQualified:false,productionChanged:false,paymentActions:0,jobActions:0};
  }catch(error){
   if(started)try{await pg.query('ROLLBACK');}catch{}
   const field=(key:string)=>{const v=error&&typeof error==='object'?Reflect.get(error,key):null;return typeof v==='string'&&/^[a-zA-Z0-9_]{1,128}$/.test(v)?v:null;};
