@@ -38,20 +38,30 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  const selected=deployment.backend,expectedWire=canonicalJson(deployment),credential=readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader'),key=keyFingerprint();
  const claimsEnabled=runClaimsEnabled(process.env),privacyActive=process.env.KERYX_RUN_PRIVACY_ENABLED==='true',publicProfilesActive=publicProfilesEnabled(process.env);
  const transport=createPostgresRuntimeTransport({endpoint:selected.endpoint,database:selected.database,role:'keryx_reader',password:credential.password},deployment.identity,selected.sourceDigest,claimsEnabled,privacyActive,()=>entry());
- let closed=false,closing:Promise<void>|undefined;
+ let closed=false,closing:Promise<void>|undefined,retireCore=()=>{};
+ const close=()=>{
+  if(!closed){closed=true;retireCore();}
+  return closing??=transport.close();
+ };
+ const isClosed=()=>{
+  if(!closed&&transport.closed){
+   // A strict decoder may already have closed the shared channel. Atomically
+   // retire the facade/Core before any next argument access and start draining.
+   try{void close().catch(()=>{});}catch{/* Retirement remains terminal. */}
+  }
+  return closed;
+ };
  const entry=()=>{
-  if(closed)refuseStorage('adapter_not_initialized');
+  if(isClosed())refuseStorage('adapter_not_initialized');
   if(canonicalJson(readRuntimeStorageDeployment())!==expectedWire||keyFingerprint()!==key||runClaimsEnabled(process.env)!==claimsEnabled||(process.env.KERYX_RUN_PRIVACY_ENABLED==='true')!==privacyActive||publicProfilesEnabled(process.env)!==publicProfilesActive
    ||readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader').fingerprint!==credential.fingerprint)refuseStorage('identity_mismatch');
  };
- const guard=async()=>{entry();await transport.verifyRuntimeAuthority();entry();};
- let retireCore=()=>{};
- const close=()=>{closed=true;retireCore();return closing??=transport.close();};
+ const guard=async()=>{entry();try{await transport.verifyRuntimeAuthority();}catch(error){entry();throw error;}entry();};
  try{
  // Each closed work closure below performs its own fresh guarded native SQL.
  // Invoke it before awaiting so its typed port captures the caller's arguments.
  // A separate fresh guard still checks authority before publishing the result.
- const read=async<T>(work:()=>Promise<T>)=>{entry();const value=await work();await guard();return value;};
+ const read=async<T>(work:()=>Promise<T>)=>{entry();let value:T;try{value=await work();}catch(error){entry();throw error;}await guard();return value;};
  const guardedRead=async<T>(work:()=>Promise<T>)=>{
   await guard();
   let value:T;try{value=await work();}catch(error){await guard();throw error;}
@@ -135,7 +145,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
    ownKeys:()=>[...sourceNames,...queryNames,'pendingJobOwners',...(privacyActive?['publicLedgerRuns']:[]),'accountMembership','chatAccountLinks','ownerRunAssignments',...(publicProfilesActive?['publicProfiles']:[])],getOwnPropertyDescriptor(_target,property){entry();if(property==='pendingJobOwners')return {value:pending,enumerable:false,writable:false,configurable:true};if(typeof property==='string'&&Object.hasOwn(sourceReads,property))return {value:sourceReads[property],enumerable:false,writable:false,configurable:true};if(typeof property==='string'&&Object.hasOwn(queries,property))return {value:Reflect.get(queries,property),enumerable:false,writable:false,configurable:true};if(property==='ownerRunAssignments')return {value:assignments,enumerable:false,writable:false,configurable:true};if(publicProfilesActive&&property==='publicProfiles')return {value:publicProfiles,enumerable:false,writable:false,configurable:true};if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
    setPrototypeOf:()=>false,set:()=>false,defineProperty:()=>false,deleteProperty:()=>false,preventExtensions:()=>false,
   });
-  facades.set(facade,{identity:deployment.identity,entry,guard,close,closed:()=>closed});
+  facades.set(facade,{identity:deployment.identity,entry,guard,close,closed:isClosed});
   await guard();return facade;
  }catch(error){await close().catch(()=>{});throw error;}
 }

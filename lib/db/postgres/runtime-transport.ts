@@ -19,6 +19,8 @@ import { composePostgresPublicProfiles } from './public-profiles-transport';
 import { composePostgresOwnerAssignments } from './owner-assignments-transport';
 import { composePostgresA2aOriginals,type PostgresA2aOriginalsPort } from './a2a-originals-transport';
 import { composePostgresHostedAdmission,type PostgresHostedAdmissionPort } from './hosted-admission-transport';
+import {composePostgresHostedLedgerTransport} from './hosted-ledger-transport';
+import {NATIVE_CURRENT_DATA_INTAKE_PROFILE} from './runtime-profile';
 import { composePostgresResearchPurchases,type PostgresResearchPurchasesPort } from './research-purchases-transport';
 import { composePostgresSourceClaims,type PostgresSourceClaimsPort } from './source-claims-transport';
 import { composePostgresA2aFulfillment,type PostgresA2aFulfillmentPort } from './a2a-fulfillment-transport';
@@ -45,6 +47,7 @@ import type { AsyncOwnerRunAssignmentsPort } from '../../owner-run-assignments/c
 const cacheRow=z.object({sourceId:z.string().min(1).max(256),text:z.string().max(2097152)}).strict();
 export interface NativeColdCacheSnapshot {readonly cacheRows:readonly Readonly<{sourceId:string;text:string}>[];readonly cacheRowCount:number;readonly cacheWireBytes:number;}
 export interface PostgresRuntimeTransport extends PostgresA2aFulfillmentPort,PostgresUserDomainTransport,PostgresHealthTransport,PostgresUsageTransport,PostgresPublicLedgerTransport,PostgresA2aOriginalsPort,PostgresHostedAdmissionPort,PostgresResearchPurchasesPort {
+ readonly closed:boolean;
  readonly privateResearch:PostgresPrivateResearchPort;
  readonly onramp:PostgresOnrampPort;
  readonly scholarly:PostgresScholarlyPort;
@@ -79,7 +82,14 @@ export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,id
  const expected=validateStorageIdentity(identity),wire=canonicalJson(expected),unavailable=()=>new PostgresStorageUnavailable(),live=()=>{if(channel.closed)throw unavailable();};
  if(typeof digest!=='string'||!/^[a-f0-9]{64}$/.test(digest)||typeof readOnly!=='boolean')throw unavailable();
  const authority=z.object({identity:z.unknown(),sourceDigest:z.literal(digest)}).strict();
- const domain=composePostgresUserDomainTransport(channel,expected,readOnly,claimsEnabled),hosted=composePostgresHostedAdmission(channel,expected,readOnly);
+ // Only the independently pinned current DATA catalogue selects the prepared
+ // Source27 hosted protocol. This does not admit that profile to either factory.
+ const hostedProtocol=digest===NATIVE_CURRENT_DATA_INTAKE_PROFILE.catalogSha256?'source-payment-originals-v1':'legacy-v1';
+ const ledger=composePostgresHostedLedgerTransport(channel,expected,hostedProtocol);
+ const domain=Object.freeze({...composePostgresUserDomainTransport(channel,expected,readOnly,claimsEnabled),
+  admitHostedTreasuryPolicy:ledger.admitHostedTreasuryPolicy,hostedTreasuryAccounting:ledger.hostedTreasuryAccounting,
+  submitHostedAuthorization:ledger.submitHostedAuthorization,confirmHostedAuthorization:ledger.confirmHostedAuthorization});
+ const hosted=composePostgresHostedAdmission(channel,expected,readOnly,hostedProtocol);
  const sourceClaims=composePostgresSourceClaims(channel);
  let sponsor:PostgresRegistrationSponsorPort|undefined,sponsorFacade:KeryxDB|undefined,bindingSponsor=false;
  const sponsorMethod=<N extends keyof PostgresRegistrationSponsorPort>(name:N,write:boolean)=>(async(...args:Parameters<PostgresRegistrationSponsorPort[N]>)=>{
@@ -94,6 +104,7 @@ export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,id
  const cold=authority.extend({format:z.literal('keryx-native-storage-cold-read-v1'),cacheRows:z.array(cacheRow).max(512),cacheRowCount:z.number().int().min(0).max(512),cacheWireBytes:z.number().int().min(0).max(8388608)}).strict();
  return Object.freeze({
   ...domain,
+  get closed(){return channel.closed;},
   privateResearch:composePostgresPrivateResearch(channel,readOnly),
   onramp:composePostgresOnramp(channel,readOnly),
   scholarly:composePostgresScholarly(channel,expected,digest,sourceClaims),

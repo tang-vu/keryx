@@ -22,7 +22,12 @@ is introduced. Policy consumers await genuine identity and policy acquisition.
 Private workers recheck captured configuration after gateway construction. Public
 treasury observations await their owned reader's disposal, then synchronously
 recheck protected policy and selection before publishing; this final check grants
-no authority from an intentionally closed facade.
+no authority from an intentionally closed facade. Strict decoder retirement of the
+shared transport also terminally retires the factory facade and its Core on the
+next entry, starts pool disposal, and rejects retained methods before argument
+inspection. Business refusals and recognized contention do not cause retirement.
+The prepared current DATA catalogue alone selects Source-aware hosted wires;
+this selection does not admit that catalogue to either application factory.
 
 ## Preserve Source A2A execution checkpoints in one bounded native writer - 2026-11-14
 
