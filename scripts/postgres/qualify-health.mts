@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { sqliteAcceptanceProjection,heldAcceptanceProjectionSql } from './acceptance-projection.mts';
 import { heldQueryRunFixture } from './held-query-run-fixture.mts';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql,sqliteA2aOriginalCellProjection,heldA2aOriginalCellProjectionSql } from './a2a-time-projection.mts';
 import { DatabaseSync } from 'node:sqlite';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { Client } from 'pg';
@@ -24,7 +25,7 @@ export async function qualifyHealth(input:{options:PostgresConnectionOptions;ide
   const columns='id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,service_fee_usdc,research_mode,status,transaction_id,created_at,updated_at,started_at,execution_journal_version,package_data,response_data,resolution_data,request_data';
   const json=(v:unknown)=>v===undefined?'NULL':q(JSON.stringify(v));
   const values=[q(id),q(id+'-query'),q(id+'-authorization'),q('ab'.repeat(32)),q(wallet),q(wallet),'0.01','0.005','0.005',q('quick'),q(status),q('synthetic-health-transaction'),q(stamp(created)),q(stamp(updated)),started===null?'NULL':q(stamp(started)),String(markers.version??'NULL'),json(markers.pkg),json(markers.receipt===undefined?undefined:{serviceReceipt:markers.receipt,...(markers.answer===undefined?{}:{answer:markers.answer})}),json(markers.resolution),json({network:'eip155:5042'})].join(',');
-  db.exec(`INSERT INTO a2a_orders(${columns}) VALUES(${values});`);pg(`INSERT INTO public.a2a_orders(${columns}) VALUES(${values});`+(input.rawCompletionMetadata?heldAcceptanceProjectionSql(sqliteAcceptanceProjection(db,id)):''));
+  db.exec(`INSERT INTO a2a_orders(${columns}) VALUES(${values});`);pg(`INSERT INTO public.a2a_orders(${columns}) VALUES(${values});`+(input.rawCompletionMetadata?heldA2aTimeProjectionSql(sqliteA2aTimeProjection(db,id,input.identity))+heldA2aOriginalCellProjectionSql(sqliteA2aOriginalCellProjection(db,id,input.identity))+heldAcceptanceProjectionSql(sqliteAcceptanceProjection(db,id)):''));
  };
  try{
   db.exec('BEGIN');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);db.exec('COMMIT');await compare();
