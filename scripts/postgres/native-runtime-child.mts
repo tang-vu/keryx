@@ -55,6 +55,9 @@ async function main(){
  if(input.mode==='private-profile-terminal-retirement'){
   const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});
   let reader:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>,locked=false,readerSql=0,profileSelectsCompleted=0;
+  let profileSelectFailure:{sqlState:string;refusal:string}|undefined;
+  const observedProfileFailure=():{sqlState:string;refusal:string}|undefined=>profileSelectFailure;
+  const fixedProfileRefusals=new Set(['native profile read-only transaction required','native profile context refused','native profile network refused','native profile activity bound','native profile topic shape','native profile surface unavailable','native profile record bound','native history context refused','native Source scalar projection unavailable','canceling statement due to lock timeout','canceling statement due to statement timeout']);
   const descriptor=Object.getOwnPropertyDescriptor(Client.prototype,'query');assert(descriptor&&typeof descriptor.value==='function');
   // Record the real driver's reader calls without replacing SQL, results,
   // credentials, factory selection or its private provenance registration.
@@ -65,7 +68,10 @@ async function main(){
    const result=Reflect.apply(target,thisArg,args);
    const query=args[0],text=typeof query==='string'?query:query&&typeof query==='object'?Reflect.get(query,'text'):'';
    if(observed&&typeof text==='string'&&text.includes('public.storage_private_profile_get('))
-    void Promise.resolve(result).then(()=>{profileSelectsCompleted++;},()=>{});
+    void Promise.resolve(result).then(()=>{profileSelectsCompleted++;},(error:unknown)=>{
+     const code=error&&typeof error==='object'?Reflect.get(error,'code'):undefined,message=error instanceof Error?error.message:undefined;
+     profileSelectFailure={sqlState:typeof code==='string'&&/^[0-9A-Z]{5}$/.test(code)?code:'unclassified',refusal:typeof message==='string'&&fixedProfileRefusals.has(message)?message:'unclassified native profile refusal'};
+    });
    return result;
   }})});
   const readerCount=async()=>Number((await admin.query("SELECT count(*)::integer n FROM pg_stat_activity WHERE datname=current_database() AND usename='keryx_reader'")).rows[0].n);
@@ -92,9 +98,10 @@ async function main(){
    await admin.query('ROLLBACK');locked=false;assert.deepEqual(await native.assertPostgresRuntimeIdentity(reader),input.identity);assert.equal((await profileRead(other,'eip155:5042')).activity.questions,0);checks+=2;
    let getters=0;const hostile=new Proxy({},{get(){getters++;throw Error('Terminal facade inspected caller fields');}}) as never;
    await assert.rejects(profiles.update(input.owner,hostile),/readonly_operation/);assert.equal(getters,0);assert.deepEqual(await native.assertPostgresRuntimeIdentity(reader),input.identity);checks++;
-   const completed=profileSelectsCompleted;
-   await assert.rejects(profileRead(input.owner,'eip155:5042'),/adapter_not_initialized/);
-   assert.equal(profileSelectsCompleted,completed+1,'The actual SELECT must succeed before strict Source surface decoding retires the reader');checks++;
+   const completed=profileSelectsCompleted;profileSelectFailure=undefined;
+   await assert.rejects(profileRead('0x'+'d8'.repeat(20),'eip155:5042'),/adapter_not_initialized/);
+   const failure=observedProfileFailure();if(failure)process.stderr.write(JSON.stringify({fixtureMode:input.mode,event:'terminal-profile-native-select-refused',...failure})+'\n');
+   assert.equal(profileSelectsCompleted,completed+1,'The actual SELECT must succeed before strict Source profile decoding retires the reader');assert.equal(failure,undefined);checks++;
    const afterFailure=readerSql;
    assert.throws(()=>native.assertPostgresRuntimeCurrentLocal(reader!),/adapter_not_initialized/);
    await assert.rejects(native.assertPostgresRuntimeIdentity(reader),/adapter_not_initialized/);await assert.rejects(application.applicationStorageIdentity(reader,'read'),/adapter_not_initialized/);checks++;
