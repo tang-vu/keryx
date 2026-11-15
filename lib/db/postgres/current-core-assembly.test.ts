@@ -92,7 +92,9 @@ describe('complete current internal Core assembly',()=>{
  const mutations=['issueSessionGrantConsent','issueSourceClaimChallenge','claimSourceUpkeep','upsertSource','setSourceMeta','verifySourceIfUnchanged','createA2aOrder','claimA2aFailedOriginalFulfillment','recordPayment','admitBrowserJournal','setArticleOffer','recordWithdrawal','upsertPublicReference','reservePrivateResearchIntent','reserveOnramp','claimResearchPurchase','saveQueryRun','beginPaperEnrollment','admitRegistrationSponsor'] as const;
  it.each(mutations)('retains readonly refusal before caller getters or SQL for %s',async name=>{
   const f=fixture(true);await f.core.adapter.init();let getters=0;const hostile=new Proxy({},{get(){getters++;throw Error('Readonly arguments inspected');},ownKeys(){getters++;throw Error('Readonly keys inspected');}});
-  const method=Reflect.get(f.core.adapter,name);expect(typeof method).toBe('function');await expect(Reflect.apply(method,f.core.adapter,[hostile,hostile,hostile,hostile])).rejects.toThrow();expect(getters).toBe(0);expect(f.call).not.toHaveBeenCalled();
+  const method=Reflect.get(f.core.adapter,name);expect(typeof method).toBe('function');
+  if(typeof method!=='function')throw Error('Expected prepared native mutation');
+  await expect(Reflect.apply(method,f.core.adapter,[hostile,hostile,hostile,hostile])).rejects.toThrow();expect(getters).toBe(0);expect(f.call).not.toHaveBeenCalled();
  });
  it.each([false,true])('retires acquired methods and suppresses late completion (write=%s)',async write=>{
   const f=fixture();await f.core.adapter.init();const acquired=f.core.adapter.getArticleOffer;let finish!:(value:unknown)=>void;f.call.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
