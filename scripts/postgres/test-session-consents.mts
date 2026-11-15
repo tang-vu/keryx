@@ -54,6 +54,7 @@ import {qualifyRegistrationSponsor} from "./qualify-registration-sponsor.mts";
 import {qualifyScholarly} from "./qualify-scholarly.mts";
 import {qualifyOnramp} from "./qualify-onramp.mts";
 import {qualifyPaymentObservers} from "./qualify-payment-observers.mts";
+import {qualifyPaymentConsumedFields} from "./qualify-payment-consumed-fields.mts";
 import { qualifyPaymentEvents } from "./qualify-payment-events.mts";
 import {qualifyPaymentObserverWait} from "./qualify-payment-observer-wait.mts";
 import {capturePaymentEvent} from "../../lib/db/postgres/payment-events-packet";
@@ -160,7 +161,8 @@ try {
   const scholarlyOnly=process.argv.includes("--scholarly-only");
   const onrampOnly=process.argv.includes("--onramp-only");
   const paymentObserversOnly=process.argv.includes("--payment-observers-only");
-  const currentProducersOnly=privateResearchOnly||registrationSponsorOnly||scholarlyOnly||onrampOnly||paymentObserversOnly;
+  const paymentConsumedFieldsOnly=process.argv.includes("--payment-consumed-fields-only");
+  const currentProducersOnly=privateResearchOnly||registrationSponsorOnly||scholarlyOnly||onrampOnly||paymentObserversOnly||paymentConsumedFieldsOnly;
   const referenceArchiveOnly=process.argv.includes("--reference-archive-only")||currentProducersOnly;
   const operatorWithdrawalOnly=process.argv.includes("--operator-withdrawal-only")||referenceArchiveOnly;
   const hostedSourcePaymentsOnly=process.argv.includes("--hosted-source-payments-only");
@@ -312,7 +314,7 @@ try {
 
   sql("native_target", `INSERT INTO keryx_storage.identity VALUES(true,${literal(identity)},'${storageIdentityDigest(identity)}');
     INSERT INTO keryx_storage.source_contract VALUES(true,${literal(JSON.parse(reference.canonicalJson))},'${reference.sha256}');
-    INSERT INTO public.browser_signer_capacity VALUES('${signer}',7);
+    ${paymentConsumedFieldsOnly?'':`INSERT INTO public.browser_signer_capacity VALUES('${signer}',7);`}
     UPDATE keryx_storage.control SET mode='active';`);
   const port = Number(docker(["port", name, "5432/tcp"]).trim().split(":")[1]);
   const connect = async (role: string) => {
@@ -332,8 +334,9 @@ try {
     const scholarly=scholarlyRuntime?await qualifyScholarly({...input,sourceClaims:scholarlyRuntime.sourceClaims}):undefined;
     const onramp=onrampOnly?await qualifyOnramp(input):undefined;
     const paymentObservers=paymentObserversOnly?await qualifyPaymentObservers(input):undefined;
+    const paymentConsumedFields=paymentConsumedFieldsOnly?await qualifyPaymentConsumedFields(input):undefined;
     const nativeFunctionCount=JSON.parse(reference.canonicalJson).sections.functions.length;assert(nativeFunctionCount<=512);
-    console.log(JSON.stringify({passed:true,currentProducersOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,nativeFunctionCount,privateResearch,registrationSponsor,scholarly,onramp,paymentObservers,fullWriterQualified:false,applicationBackendSwitched:false}));return;
+    console.log(JSON.stringify({passed:true,currentProducersOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,nativeFunctionCount,privateResearch,registrationSponsor,scholarly,onramp,paymentObservers,paymentConsumedFields,fullWriterQualified:false,applicationBackendSwitched:false}));return;
   }
   if(referenceArchiveOnly){
     const referenceArchive=await qualifyReferenceArchive({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,contentionClient:app,ownerSql:(statement:string)=>sql('native_target',statement)});

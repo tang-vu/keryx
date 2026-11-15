@@ -229,6 +229,8 @@ jobs:
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --content-writes-only
       - name: Raw Source payment observations
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --payment-observers-only
+      - name: Consumed financial fields and original receipt holds
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --payment-consumed-fields-only
 
   postgres-preparation:
     if: ${{ always() }}

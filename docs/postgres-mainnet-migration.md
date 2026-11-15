@@ -1400,6 +1400,9 @@ profile. Protocol success cannot select a datastore or open the complete writer.
 Payment originals/current wires retain all27 Source cells and independent hashes.
 Commit checks bind them to the exact public projection. Explicit payment readers
 use those retained cells; raw scans do not enable metrics or financial aggregates.
+Five fixed financial operations check only their audited consumed payment fields.
+Unknown flags, receipt gaps and the unqualified receipt-whitespace class remain
+held; unrelated presentation fields do not grant a financial exemption.
 Private result intake adds fourteen Source-derived identity fields only for the
 exact pinned schema, after comparing all four public Source rows. It shares the
 same all-empty preflight and transaction as the other private projections.
@@ -1423,6 +1426,8 @@ Run individual disposable protocol fixtures with
 --registration-sponsor-only
 --onramp-only
 --scholarly-only
+--payment-observers-only
+--payment-consumed-fields-only
 ```
 
 Private protocol fixtures require explicit synthetic mainnet schema/profile

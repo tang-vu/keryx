@@ -13,7 +13,7 @@ import {composePostgresHostedAdmission} from '../../lib/db/postgres/hosted-admis
 import {composeNativeFinancialApplicationPort} from '../../lib/db/postgres/native-financial-application-port';
 import {composePostgresBrowserJournal} from '../../lib/db/postgres/browser-journal-transport';
 import {composePostgresPaymentEvents} from '../../lib/db/postgres/payment-events-transport';
-import {PAYMENT_EVENT_FIELDS} from '../../lib/db/postgres/payment-events-packet';
+import {PAYMENT_EVENT_FIELDS,paymentEventWireSha256} from '../../lib/db/postgres/payment-events-packet';
 import {LEGACY_PAYMENT_CONSUMED_FIELDS,KNOWN_PAYMENT_UNPROJECTED_FIELDS} from './payment-browser-source.mts';
 import {createPaymentConsumedFieldsFixture,PAYMENT_CONSUMED_FIXTURE_RECEIPTS,type PaymentConsumedFixtureCase} from './payment-consumed-fields-fixture.mts';
 
@@ -32,7 +32,8 @@ export async function qualifyPaymentConsumedFields(input:{options:PostgresConnec
  const originals=new Map<string,ReturnType<typeof fixture.payment>>();
  const exactPayment=(key:PaymentConsumedFixtureCase)=>{const record=fixture.cases[key],current=fixture.payment(key),original=originals.get(record.id)!;
   const raw=input.ownerSql(`SELECT jsonb_build_object('identity',o.identity_digest,'original',o.original_wire::text,'originalSha',o.original_sha256,'current',o.current_wire::text,'currentSha',o.current_sha256,'projectionMatches',o.native_projection=to_jsonb(p),'fields',o.unprojected_fields)::text FROM keryx_storage.payment_event_originals o JOIN public.payment_events p ON p.id=o.payment_id WHERE o.payment_id=${q(record.id)};`),row=JSON.parse(raw);
-  assert.equal(row.identity,identitySha);assert.equal(row.original,original.rowWire);assert.equal(row.originalSha,original.sha256);assert.equal(row.current,current.rowWire);assert.equal(row.currentSha,current.sha256);assert.equal(row.projectionMatches,true);assert.deepEqual(row.fields,current.unprojectedFields);tokensEmpty();vectors++;
+  assert.equal(row.identity,identitySha);assert.equal(row.original,original.rowWire);assert.equal(row.originalSha,original.sha256);// Intake preserves the observed wire; mutations use the protocol's sorted-key wire.
+   const expectedCurrent=current.sha256===original.sha256?current.rowWire:canonicalJson(current.row);assert.equal(row.current,expectedCurrent);assert.equal(row.currentSha,paymentEventWireSha256(expectedCurrent));assert.equal(row.projectionMatches,true);assert.deepEqual(row.fields,current.unprojectedFields);tokensEmpty();vectors++;
  };
  const directRefusal=async(sql:string,args:readonly unknown[],write:boolean,kind:'admission'|'whitespace'|'raw')=>{
   await input.contentionClient.query(write?'BEGIN READ WRITE':'BEGIN READ ONLY');try{await assert.rejects(input.contentionClient.query(sql,[canonicalJson(identity),input.digest,...args]),(error:unknown)=>{

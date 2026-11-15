@@ -36,6 +36,13 @@ describe('PostgreSQL partition acceptance', () => {
       }
     });
   }
+  it('keeps every current producer protocol in the required acceptance partition', () => {
+    const commands = workflow.jobs['current-producer-protocols'].steps.flatMap(step => step.run ? [step.run] : []);
+    for (const flag of ['private-research-only', 'registration-sponsor-only', 'onramp-only', 'scholarly-only', 'content-writes-only', 'payment-observers-only', 'payment-consumed-fields-only']) {
+      expect(commands.filter(command => command.endsWith(`test-session-consents.mts --${flag}`))).toHaveLength(1);
+    }
+    expect(commands.some(command => command.includes('--import ./scripts/postgres/private-source-bootstrap.mjs'))).toBe(true);
+  });
   it('preserves bounded jobs and refuses whole-workflow cancellation', () => {
     for (const name of names) expect(workflow.jobs[name]['timeout-minutes']).toBe(25);
     expect(gate.steps.some(step => step.if === '${{ cancelled() }}' && step.run === 'exit 1')).toBe(true);
