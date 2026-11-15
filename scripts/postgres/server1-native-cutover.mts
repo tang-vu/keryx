@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {closeSync,constants,createReadStream,existsSync,fstatSync,fsyncSync,lstatSync,mkdirSync,openSync,readFileSync,readSync,readdirSync,realpathSync,renameSync,writeSync,type BigIntStats} from 'node:fs';
-import {dirname,parse,relative,resolve,sep} from 'node:path';
+import {dirname,join,parse,relative,resolve,sep} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {parseEnv} from 'node:util';
 import {createRequire} from 'node:module';
@@ -48,7 +48,7 @@ function refuse(stage:string):never{throw Error('server1_native_cutover_refused:
 const sha=(wire:string|Uint8Array)=>createHash('sha256').update(wire).digest('hex');
 function releaseSource(commit:string){assert(/^[a-f0-9]{40}$/.test(commit));return '/root/.local/share/keryx-releases/'+commit+'/source';}
 type ReleaseModule=typeof import('../redeploy-reviewed-roles.mjs');
-async function releaseModule(commit:string):Promise<ReleaseModule>{const url=pathToFileURL(releaseSource(commit)+'/scripts/redeploy-reviewed-roles.mjs').href;return import(url);}
+async function releaseModule(commit:string):Promise<ReleaseModule>{return import(pathToFileURL(join(releaseSource(commit),'scripts/redeploy-reviewed-roles.mjs')).href);}
 const token=(s:BigIntStats)=>[s.dev,s.ino,s.uid,s.gid,s.mode,s.nlink,s.size,s.mtimeNs,s.ctimeNs].join(':');
 function record(value:unknown):Json{if(!value||typeof value!=='object'||Array.isArray(value)||![Object.prototype,null].includes(Object.getPrototypeOf(value))||Reflect.ownKeys(value).some(key=>typeof key!=='string')||Object.values(Object.getOwnPropertyDescriptors(value)).some(d=>!Object.hasOwn(d,'value')))return refuse('object');return value as Json;}
 function hash(value:unknown):string{if(typeof value!=='string'||!/^[a-f0-9]{64}$/.test(value))return refuse('hash');return value;}
@@ -231,7 +231,7 @@ export function parseServer1SourceRoles(raw:unknown):readonly RoleFrame[]{
  return Object.freeze(rows.map(r=>Object.freeze(r)));
 }
 type Rpc={call:(method:string,data:Json,cb:(error:unknown,data:unknown)=>void)=>void;sock:{connected:boolean;closing:boolean;retry:number;set:(name:string,value:number)=>void;close:()=>void}};
-type PmApi={Client:{client:Rpc;launchRPC:(cb:(error:unknown)=>void)=>void;executeRemote:(method:string,data:Json,cb:()=>void)=>void;killDaemon:(cb:(error:unknown)=>void)=>void}};
+type PmApi={Client:{client:Rpc;launchRPC:(cb:(error:unknown)=>void)=>void;killDaemon:(cb:(error:unknown)=>void)=>void}};
 type Lease={api:PmApi;rpc:Rpc;sock:Rpc['sock'];process:ProcessFrame};
 const pm2Hashes={
  'lib/God.js':'fb1f0e352d8356d8b00ae19a52c0f58baf0ff6c55a624b8a245d9f9cfecf3b24',
@@ -263,7 +263,7 @@ async function drainSource(lease:Lease,old:readonly RoleFrame[],os:readonly Proc
  assert.deepEqual(parseServer1SourceRoles(await rpc(lease,'getMonitorData',{},frame)),old);for(const p of os)sameProcess(p);
  // Qualified PM2 7.0.1: callback intentionally never fires. Same captured
  // client ping + exact monitor frame is the ordering barrier, no reconnect.
- frame();leaseGuard(lease);emit({event:'restart-suppression-intent'});lease.api.Client.executeRemote('notifyKillPM2',{},()=>{});
+ frame();leaseGuard(lease);emit({event:'restart-suppression-intent'});lease.rpc.call('notifyKillPM2',{},()=>{});
  assert.equal(record(await rpc(lease,'ping',{},frame)).msg,'pong');assert.deepEqual(parseServer1SourceRoles(await rpc(lease,'getMonitorData',{},frame)),old);emit({event:'restart-suppression-barrier'});
  const from=Date.now();for(const p of os){frame();sameProcess(p);emit({event:'natural-sigint-intent',pid:p.pid});process.kill(p.pid,'SIGINT');}
  await until(async()=>{const rows=await rpc(lease,'getMonitorData',{},frame);if(!os.every(gone))return false;stoppedRows(rows,old,false);return true;},frame,330000);const untilAt=Date.now();emit({event:'source-natural-exits',webExit:130,workerExit:0});
@@ -345,13 +345,12 @@ async function child(mode:'verify-native-only'|'verify-artifact-only'){
   // The old installed inspector is byte-identical to reviewed3654. No code or
   // TSX loader from the candidate is executed before its full hash succeeds.
   const inspector=pin('/root/keryx/scripts/immutable-release-staging.mjs',65536,false);held.push(inspector);assert.equal(await fileSha(inspector),SERVER1_CUTOVER.immutableInspectorSha256);const rawBinding=record(json(currentRoles).release);assert.equal(rawBinding.commit,commit);assert.equal(rawBinding.artifactReuseFile,undefined);assert.equal(rawBinding.artifactReuseSha256,undefined);
-  const url=pathToFileURL('/root/keryx/scripts/immutable-release-staging.mjs').href;const immutable:typeof import('../immutable-release-staging.mjs')=await import(url);inspector.frame();const artifact=immutable.verifyImmutableArtifact({candidate:dirname(releaseSource(commit)),sourceManifestSha256:hash(rawBinding.sourceManifestSha256),artifactInspectionSha256:hash(rawBinding.artifactInspectionSha256)});assert.equal(artifact.commit,commit);inspector.frame();
+  const immutable:typeof import('../immutable-release-staging.mjs')=await import(pathToFileURL('/root/keryx/scripts/immutable-release-staging.mjs').href);inspector.frame();const artifact=immutable.verifyImmutableArtifact({candidate:dirname(releaseSource(commit)),sourceManifestSha256:hash(rawBinding.sourceManifestSha256),artifactInspectionSha256:hash(rawBinding.artifactInspectionSha256)});assert.equal(artifact.commit,commit);inspector.frame();
   const ops=await releaseModule(commit);const roles=ops.readReviewedRoles(SERVER1_CUTOVER.roles,rolesSha);assert(roles.release&&roles.release.commit===commit&&!roles.release.artifactReuseFile&&!roles.release.artifactReuseSha256);const binding=roles.release;ops.verifyReleaseSourcePaths(releaseSource(commit));const review=ops.verifyReleaseReview(binding,ops.readProtectedDeploymentJson,artifact,undefined,'artifact');assert.equal(review.format,'keryx-reviewed-native-release-compatibility-v1');
   const frame=()=>{for(const p of held)p.frame();assert.equal(canonicalJson(ops.readReviewedRoles(SERVER1_CUTOVER.roles,rolesSha)),canonicalJson(roles));assert.equal(canonicalJson(ops.verifyReleaseReview(binding,ops.readProtectedDeploymentJson,artifact,undefined,'artifact')),canonicalJson(review));};frame();
   if(mode==='verify-artifact-only')return {format:'keryx-server1-cutover-artifact-check-v1',accepted:true,fullArtifactHashed:true,reuseProofUsed:false};
   const env=take(SERVER1_CUTOVER.activeEnvironment),manifest=take(SERVER1_CUTOVER.activeManifest,8192);assert.equal(sha(bytes(env)),intent.runtimeEnvironmentSha256);assert.equal(sha(bytes(manifest)),intent.runtimeManifestSha256);const parsed=parseEnv(bytes(env).toString('utf8'));for(const [key,value]of Object.entries(parsed))assert.equal(process.env[key],value);assert.equal(process.env.KERYX_STORAGE_MANIFEST,SERVER1_CUTOVER.activeManifest);
-  const appUrl=pathToFileURL(releaseSource(commit)+'/lib/db/application-storage.ts').href,configUrl=pathToFileURL(releaseSource(commit)+'/lib/config.ts').href,policyUrl=pathToFileURL(releaseSource(commit)+'/lib/payments/hosted-treasury-policy.ts').href,allowanceUrl=pathToFileURL(releaseSource(commit)+'/lib/research/research-allowance.ts').href,deploymentUrl=pathToFileURL(releaseSource(commit)+'/lib/db/runtime-storage-config.ts').href;
-  const app:typeof import('../../lib/db/application-storage')=await import(appUrl),configuration:typeof import('../../lib/config')=await import(configUrl),policyModule:typeof import('../../lib/payments/hosted-treasury-policy')=await import(policyUrl),allowance:typeof import('../../lib/research/research-allowance')=await import(allowanceUrl),deployment:typeof import('../../lib/db/runtime-storage-config')=await import(deploymentUrl);frame();
+  const app:typeof import('../../lib/db/application-storage')=await import(pathToFileURL(join(releaseSource(commit),'lib/db/application-storage.ts')).href),configuration:typeof import('../../lib/config')=await import(pathToFileURL(join(releaseSource(commit),'lib/config.ts')).href),policyModule:typeof import('../../lib/payments/hosted-treasury-policy')=await import(pathToFileURL(join(releaseSource(commit),'lib/payments/hosted-treasury-policy.ts')).href),allowance:typeof import('../../lib/research/research-allowance')=await import(pathToFileURL(join(releaseSource(commit),'lib/research/research-allowance.ts')).href),deployment:typeof import('../../lib/db/runtime-storage-config')=await import(pathToFileURL(join(releaseSource(commit),'lib/db/runtime-storage-config.ts')).href);frame();
   const selected=deployment.readRuntimeStorageDeployment();assert.equal(selected.backend.kind,'postgres');assert.equal(canonicalJson(selected.identity),canonicalJson(json(manifest).identity));assert.equal(storageIdentityDigest(selected.identity),review.storageIdentityDigest);const selection=canonicalJson(selected);
   const current=()=>{frame();assert.equal(canonicalJson(deployment.readRuntimeStorageDeployment()),selection);assert.equal(configuration.config.profile.name,'arc');assert.equal(configuration.config.baseUrl,'https://keryx.cc');assert.equal(allowance.configuredResearchAllowance(),null);for(const [key,value]of Object.entries(parsed))assert.equal(process.env[key],value);const policy=policyModule.configuredHostedTreasuryPolicy(selected.identity,'https://keryx.cc','public');assert.equal(policyModule.hostedTreasuryPolicyDigest(policy),SERVER1_CUTOVER.publicPolicySha256);return policy;};current();await privateWorker(current);current();
   const native=await app.createReadonlyApplicationStorage();assert(native);store=native;closeStore=async()=>{await app.closeReadonlyApplicationStorage(native);};current();const identity=await app.applicationStorageIdentity(native,'read');current();assert.equal(canonicalJson(identity),canonicalJson(selected.identity));assert.equal(storageIdentityDigest(identity),review.storageIdentityDigest);
