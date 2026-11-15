@@ -332,7 +332,7 @@ function nativeCompatibilityFixture() {
   const preparation={format:'keryx-immutable-preparation-v1',productionAdmitted:false,...artifact,artifactInspectionSha256:binding.artifactInspectionSha256,writerHoldStarted:false,runtimeEnvironmentLoaded:false,
     checks:{publicBuildSettings:{network:'arc',forceOffline:false,mainnetPublicConfigSha256:'4'.repeat(64),privateRunHeadersSha256:'d'.repeat(64)},platform:'linux',node:'24.22.1',npm:'11.19.0',results:['typecheck','tests','build'].map(name=>({name,exitCode:0,signal:null,processError:null,outputSha256:'a'.repeat(64)}))}};
   const nativeEnvironment={manifest:SERVER1_NATIVE_RELEASE.manifest,legacySelectorsAbsent:true,network:'arc',publicNetwork:'arc',baseUrl:'https://keryx.cc',forceOffline:'0',publicPolicySha256:SERVER1_NATIVE_RELEASE.publicPolicySha256};
-  const manifest={format:'keryx-storage-deployment-v1',identity,backend:{kind:'postgres',database:'keryx_mainnet',endpoint:{kind:'unix',directory:'/run/postgresql-keryx',port:5432},sourceDigest:SERVER1_NATIVE_RELEASE.sourceSqlSha256,credentialPaths:{application:'/root/.local/share/keryx-mainnet-runtime/production-v2/app.json',reader:'/root/.local/share/keryx-mainnet-runtime/production-v2/reader.json'}}};
+  const manifest={format:'keryx-storage-deployment-v1',identity,backend:{kind:'postgres',database:'keryx_mainnet',endpoint:{kind:'unix',directory:'/run/postgresql-keryx',port:5432},sourceDigest:SERVER1_NATIVE_RELEASE.catalogSha256,credentialPaths:{application:'/root/.local/share/keryx-mainnet-runtime/production-v2/app.json',reader:'/root/.local/share/keryx-mainnet-runtime/production-v2/reader.json'}}};
   const receipt={format:'keryx-server1-native-cutover-v1',phase:'complete',sourceCommit:SERVER1_NATIVE_RELEASE.sourceCommit,targetCommit:binding.commit,sourceManifestSha256:'a'.repeat(64),runtimeManifestSha256:review.nativeStorage.runtimeManifestSha256,identityDigest:review.storageIdentityDigest,sourceSqlSha256:SERVER1_NATIVE_RELEASE.sourceSqlSha256,catalogSha256:SERVER1_NATIVE_RELEASE.catalogSha256,finalSnapshotSha256:'b'.repeat(64),finalSchemaSha256:'c'.repeat(64),finalDataDigest:'d'.repeat(64),nativeCensusSha256:'e'.repeat(64),publicPolicySha256:SERVER1_NATIVE_RELEASE.publicPolicySha256,
     sourceWritersNaturallyEnded:true,sourceStartupRetired:true,sourceManifestRetired:true,privateWorkerInactive:true,pendingOriginalsPreserved:true,targetMode:'active',activationOutcome:'acknowledged',runtimeHbaVerified:true,newFunding:false,financialPolicyChanged:false,createdAt:'2026-11-15T00:00:00.000Z'};
   const calls=[];let cutover=receipt;
@@ -366,4 +366,11 @@ test('native cutover receipt remains explicit metadata; original transfer commit
   const f=nativeCompatibilityFixture();assert.notEqual(f.receipt.sourceCommit,f.receipt.targetCommit);assert.equal(verifyNativeCutoverReceipt(f.binding,f.review,f.receipt),f.receipt);
   assert.equal(Object.hasOwn(f.review,'economicSchemaDigest'),false);assert.equal(Object.hasOwn(f.review,'retainedEconomicStateSha256'),false);
   assert.equal(f.files.cutover,path.posix.dirname(f.binding.compatibilityReviewFile)+'/native-cutover.json');
+});
+test('native manifest uses the genuine runtime catalog digest and refuses the distinct SQL assembly digest',()=>{
+  const f=nativeCompatibilityFixture();assert.equal(f.manifest.backend.sourceDigest,SERVER1_NATIVE_RELEASE.catalogSha256);
+  assert.notEqual(SERVER1_NATIVE_RELEASE.catalogSha256,SERVER1_NATIVE_RELEASE.sourceSqlSha256);
+  assert.equal(f.verify('startup'),f.review);assert.equal(f.review.nativeStorage.sourceSqlSha256,SERVER1_NATIVE_RELEASE.sourceSqlSha256);
+  f.manifest.backend.sourceDigest=SERVER1_NATIVE_RELEASE.sourceSqlSha256;
+  assert.throws(()=>f.verify('startup'));assert.throws(()=>f.verify('artifact'));
 });
