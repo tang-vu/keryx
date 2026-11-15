@@ -1,5 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { Script } from 'node:vm';
+import { createRequire } from 'node:module';
+import { transformSync } from 'esbuild';
 import { describe, expect, it, vi } from 'vitest';
 
 const boundary = vi.hoisted(() => ({ exec: vi.fn(), realpath: vi.fn(async () => { throw Error('synthetic-host-boundary'); }) }));
@@ -122,5 +125,64 @@ describe('preparation service and initial-vs-runtime HBA boundaries', () => {
     expect(service).not.toMatch(/PM2|keryx-public|ExecStartPre|pg_ctlcluster/);
     expect(service).toContain('ExecStart=/usr/lib/postgresql/17/bin/postgres -D /var/lib/postgresql/17/keryx');
     expect(SERVER1_PG17.serviceDropIn).toBe('/etc/systemd/system/postgresql@17-keryx.service.d/20-keryx-preparation.conf');
+  });
+});
+
+describe('actual CJS import and zero-argument inspector refusal', () => {
+  const source = fileURLToPath(new URL('./prepare-server1-pg17.mts', import.meta.url));
+  const builtin = createRequire(import.meta.url);
+  let cjs: string | undefined;
+  function load(platform: 'win32' | 'linux') {
+    // The operator children compile this same module as CJS. Transform only in
+    // memory: no bundle/artifact or real host/private control is created/read.
+    cjs ??= transformSync(readFileSync(source, 'utf8'), { loader: 'ts', format: 'cjs', platform: 'node', target: 'es2017', logLevel: 'silent' }).code;
+    const commands = vi.fn(() => { throw Error('CJS test forbids commands'); });
+    const paths: string[] = [];
+    const os = Buffer.from('ID=ubuntu\nVERSION_ID="24.04"\n');
+    const close = vi.fn(async () => undefined);
+    const readonlyFs = {
+      realpath: vi.fn(async (path: string) => { paths.push(path); if (path !== '/etc/os-release') throw Error('CJS test forbids host/private access'); return path; }),
+      open: vi.fn(async (path: string, flags: number) => {
+        paths.push(path);
+        expect(path).toBe('/etc/os-release');
+        // O_RDONLY is zero; no create/truncate/append/write access is allowed.
+        expect(flags & (0o1 | 0o2 | 0o100 | 0o1000 | 0o2000)).toBe(0);
+        return { stat: async () => ({ isFile: () => true, nlink: 1, uid: 0, mode: 0o100644, size: os.length, mtimeMs: 1, ctimeMs: 1 }), readFile: async () => os, close };
+      }),
+      readFile: vi.fn(async (path: string) => { paths.push(path); if (path !== '/proc/sys/kernel/osrelease') throw Error('CJS test forbids host/private access'); return 'isolated-non-WSL-Linux\n'; }),
+    };
+    const isolatedProcess = {
+      platform, arch: 'x64', getuid: () => 0, getgid: () => 0, versions: { node: '24.22.1' },
+      // Even a matching entry name cannot turn a CJS import into CLI invocation.
+      argv: ['node', source], stdout: { write: vi.fn() }, stderr: { write: vi.fn() }, exitCode: undefined,
+    };
+    const module = { exports: {} as { inspectServer1PreparedPostgres: typeof inspectServer1PreparedPostgres } };
+    const requires = new Map<string, unknown>([
+      ['node:crypto', builtin('node:crypto')], ['node:path', builtin('node:path')], ['node:url', builtin('node:url')],
+      ['node:child_process', { execFile: commands }], ['node:fs', { constants: builtin('node:fs').constants, promises: readonlyFs }],
+    ]);
+    new Script(cjs, { filename: 'server1-inspector-import.test.cjs' }).runInNewContext({
+      module, exports: module.exports, Buffer, process: isolatedProcess,
+      require: (name: string) => { if (!requires.has(name)) throw Error('CJS test refuses unknown module'); return requires.get(name); },
+    });
+    expect(commands).not.toHaveBeenCalled();
+    expect(paths).toEqual([]);
+    expect(isolatedProcess.stdout.write).not.toHaveBeenCalled();
+    expect(isolatedProcess.stderr.write).not.toHaveBeenCalled();
+    expect(isolatedProcess.exitCode).toBeUndefined();
+    return { module, paths, commands, readonlyFs, close };
+  }
+  it('imports CJS without invoking CLI, then refuses Windows before any I/O', async () => {
+    const loaded = load('win32');
+    await expect(loaded.module.exports.inspectServer1PreparedPostgres()).rejects.toThrow('operator_platform');
+    expect(loaded.paths).toEqual([]);
+    expect(loaded.commands).not.toHaveBeenCalled();
+  });
+  it('refuses an isolated Linux OS observation using readonly access only', async () => {
+    const loaded = load('linux');
+    await expect(loaded.module.exports.inspectServer1PreparedPostgres()).rejects.toThrow('server1_os');
+    expect(loaded.paths).toEqual(['/etc/os-release', '/etc/os-release', '/etc/os-release', '/proc/sys/kernel/osrelease']);
+    expect(loaded.close).toHaveBeenCalledOnce();
+    expect(loaded.commands).not.toHaveBeenCalled();
   });
 });
