@@ -56,7 +56,7 @@ async function main(){
   assert(Object.isFrozen(db)&&Object.getPrototypeOf(db)===null);checks++;
   for(const name of Object.keys(POSTGRES_SOURCE_METHOD_ACCESS))assert.equal(typeof Reflect.get(db,name),'function');checks++;
   for(const name of Object.keys(POSTGRES_SOURCE_PROPERTIES) as Array<keyof typeof POSTGRES_SOURCE_PROPERTIES>)assert.equal(Reflect.has(db,name),postgresSourcePropertyEnabled(name,surface));checks++;
-  for(const name of POSTGRES_RUNTIME_STORE_NAMES)if(postgresSourcePropertyEnabled(name,surface)){const store=Reflect.get(db,name);assert(store&&typeof store==='object');assert.equal(store,Reflect.get(db,name));}checks++;
+  for(const name of POSTGRES_RUNTIME_STORE_NAMES)if(postgresSourcePropertyEnabled(name,surface)){const store:unknown=Reflect.get(db,name);assert(store&&typeof store==='object');assert.equal(store,Reflect.get(db,name));}checks++;
   if(input.mode==='readonly'){
    stage='readonly-role-and-write-refusal';await assert.rejects(storage.applicationStorageIdentity(db,'write'),/readonly_operation/);checks++;
    await assert.rejects(Promise.resolve().then(()=>db.upsertUser('0x'+'e2'.repeat(20),'asker')),/readonly_operation/);checks++;
