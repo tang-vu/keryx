@@ -4,6 +4,8 @@ import { deployReviewedRole, validateReviewedRoles, readReviewedRoles, releaseSo
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
+import { nativeReleaseFiles, SERVER1_NATIVE_RELEASE, verifyNativeCutoverReceipt } from './redeploy-reviewed-roles.mjs';
 
 const config = () => ({ apps: ['keryx', 'keryx-a2a-worker'].map(name => ({
   name, script: '/usr/bin/env', interpreter: 'none', cwd: '/root/keryx',
@@ -318,4 +320,50 @@ test('protected reader rejects caller-controlled path/hash before file access', 
   for (const file of ['/tmp/roles.json', '/root/.local/share/../roles.json', '/root/.local/share/x;touch.json'])
     assert.throws(() => readReviewedRoles(file, '0'.repeat(64)));
   assert.throws(() => readReviewedRoles('/root/.local/share/roles.json', 'invalid'));
+});
+
+function nativeCompatibilityFixture() {
+  const c=stagedConfig(),binding=c.release,files=nativeReleaseFiles(binding),hash=v=>createHash('sha256').update(v).digest('hex');
+  const artifact={commit:binding.commit,tree:'b'.repeat(40),buildId:'accepted-build',artifactDigest:'5'.repeat(64),sourceManifestSha256:binding.sourceManifestSha256};
+  const identity={format:'keryx-mainnet-storage-identity-v1',deploymentId:'11111111-1111-4111-8111-111111111111',storageId:'22222222-2222-4222-8222-222222222222',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:'a'.repeat(64),enrollmentId:'33333333-3333-4333-8333-333333333333',enrolledAt:'2026-11-11T00:00:00.000Z',provenanceDigest:'b'.repeat(64)};
+  const review={format:'keryx-reviewed-native-release-compatibility-v1',...artifact,artifactInspectionSha256:binding.artifactInspectionSha256,runtimeEnvironmentSha256:binding.runtimeEnvironmentSha256,
+    acceptanceEvidenceSha256:'6'.repeat(64),storageIdentityDigest:hash(JSON.stringify(identity)),nativeStorage:{sourceSqlSha256:SERVER1_NATIVE_RELEASE.sourceSqlSha256,catalogSha256:SERVER1_NATIVE_RELEASE.catalogSha256,runtimeManifestSha256:'8'.repeat(64),cutoverReceiptSha256:'9'.repeat(64)},
+    sourceAndArtifactAccepted:true,mainnetPublicSettingsAccepted:true,previouslyActiveRoles:['keryx','keryx-a2a-worker'],heldSchedulers:true,rollback:'hold-for-review'};
+  const preparation={format:'keryx-immutable-preparation-v1',productionAdmitted:false,...artifact,artifactInspectionSha256:binding.artifactInspectionSha256,writerHoldStarted:false,runtimeEnvironmentLoaded:false,
+    checks:{publicBuildSettings:{network:'arc',forceOffline:false,mainnetPublicConfigSha256:'4'.repeat(64),privateRunHeadersSha256:'d'.repeat(64)},platform:'linux',node:'24.22.1',npm:'11.19.0',results:['typecheck','tests','build'].map(name=>({name,exitCode:0,signal:null,processError:null,outputSha256:'a'.repeat(64)}))}};
+  const nativeEnvironment={manifest:SERVER1_NATIVE_RELEASE.manifest,legacySelectorsAbsent:true,network:'arc',publicNetwork:'arc',baseUrl:'https://keryx.cc',forceOffline:'0',publicPolicySha256:SERVER1_NATIVE_RELEASE.publicPolicySha256};
+  const manifest={format:'keryx-storage-deployment-v1',identity,backend:{kind:'postgres',database:'keryx_mainnet',endpoint:{kind:'unix',directory:'/run/postgresql-keryx',port:5432},sourceDigest:SERVER1_NATIVE_RELEASE.sourceSqlSha256,credentialPaths:{application:'/root/.local/share/keryx-mainnet-runtime/production-v2/app.json',reader:'/root/.local/share/keryx-mainnet-runtime/production-v2/reader.json'}}};
+  const receipt={format:'keryx-server1-native-cutover-v1',phase:'complete',sourceCommit:SERVER1_NATIVE_RELEASE.sourceCommit,targetCommit:binding.commit,sourceManifestSha256:'a'.repeat(64),runtimeManifestSha256:review.nativeStorage.runtimeManifestSha256,identityDigest:review.storageIdentityDigest,sourceSqlSha256:SERVER1_NATIVE_RELEASE.sourceSqlSha256,catalogSha256:SERVER1_NATIVE_RELEASE.catalogSha256,finalSnapshotSha256:'b'.repeat(64),finalSchemaSha256:'c'.repeat(64),finalDataDigest:'d'.repeat(64),nativeCensusSha256:'e'.repeat(64),publicPolicySha256:SERVER1_NATIVE_RELEASE.publicPolicySha256,
+    sourceWritersNaturallyEnded:true,sourceStartupRetired:true,sourceManifestRetired:true,privateWorkerInactive:true,pendingOriginalsPreserved:true,targetMode:'active',activationOutcome:'acknowledged',runtimeHbaVerified:true,newFunding:false,financialPolicyChanged:false,createdAt:'2026-11-15T00:00:00.000Z'};
+  const calls=[];let cutover=receipt;
+  const read=(file,expected,environment)=>{
+    calls.push({file,expected,environment});
+    if(file.endsWith('/preparation.json'))return preparation;
+    if(file===binding.compatibilityReviewFile)return review;
+    if(environment)return {mainnetPublicConfigSha256:'4'.repeat(64),nativeEnvironment};
+    if(file===files.manifest||file===SERVER1_NATIVE_RELEASE.manifest){assert.equal(expected,review.nativeStorage.runtimeManifestSha256);return manifest;}
+    if(file===files.cutover){assert.equal(expected,review.nativeStorage.cutoverReceiptSha256);return cutover;}
+    throw Error('Unreviewed fixture read');
+  };
+  return {binding,files,artifact,review,preparation,manifest,receipt,nativeEnvironment,calls,read,setCutover:v=>{cutover=v;},verify:phase=>verifyReleaseReview(binding,read,artifact,()=>'d'.repeat(64),phase)};
+}
+test('native artifact preparation uses fixed staged ENV/manifest while Source remains online; startup requires actual completed cutover',()=>{
+  const f=nativeCompatibilityFixture();f.setCutover(null);
+  assert.equal(f.verify('artifact'),f.review);assert(f.calls.some(c=>c.file===f.files.environment&&c.environment==='native-staged'));assert(!f.calls.some(c=>c.file===f.files.cutover||c.file==='/root/keryx/.env.local'));
+  assert.throws(()=>f.verify('startup'));f.setCutover(f.receipt);assert.equal(f.verify('startup'),f.review);assert(f.calls.some(c=>c.file==='/root/keryx/.env.local'&&c.environment==='native-active'));
+  assert.throws(()=>f.verify('allow-production'));
+});
+test('native compatibility cannot overload old SQLite digest fields, choose a target, or activate held/private/unknown state',()=>{
+  for(const mutate of [f=>{f.review.economicSchemaDigest='f'.repeat(64);},f=>{delete f.review.nativeStorage;},f=>{f.review.nativeStorage.catalogSha256='0'.repeat(64);},f=>{f.review.nativeStorage.runtimeManifestSha256='bad';},
+    f=>{f.manifest.backend.kind='sqlite';},f=>{f.manifest.backend.database='other';},f=>{f.manifest.backend.endpoint.kind='loopback';},f=>{f.manifest.backend.credentialPaths.reader='/root/other/reader.json';},f=>{f.manifest.identity.provenanceDigest='f'.repeat(64);},
+    f=>{f.nativeEnvironment.legacySelectorsAbsent=false;},f=>{f.nativeEnvironment.manifest='/root/old-sqlite.json';},f=>{f.nativeEnvironment.baseUrl='https://other.invalid';},f=>{f.nativeEnvironment.publicPolicySha256='0'.repeat(64);},
+    f=>{f.receipt.activationOutcome='unknown';},f=>{f.receipt.targetMode='held';},f=>{f.receipt.sourceCommit=f.binding.commit;},f=>{f.receipt.targetCommit='a'.repeat(40);},f=>{f.receipt.runtimeManifestSha256='a'.repeat(64);},f=>{f.receipt.identityDigest='a'.repeat(64);},
+    f=>{f.receipt.finalDataDigest='bad';},f=>{f.receipt.sourceStartupRetired=false;},f=>{f.receipt.sourceWritersNaturallyEnded=false;},f=>{f.receipt.pendingOriginalsPreserved=false;},f=>{f.receipt.privateWorkerInactive=false;},f=>{f.receipt.newFunding=true;},f=>{f.receipt.financialPolicyChanged=true;},f=>{f.receipt.createdAt='2026-11-15';},f=>{f.receipt.extra='caller proof';}]){
+    const f=nativeCompatibilityFixture();mutate(f);assert.throws(()=>f.verify('startup'));
+  }
+});
+test('native cutover receipt remains explicit metadata; original transfer commit is separate from new serving commit',()=>{
+  const f=nativeCompatibilityFixture();assert.notEqual(f.receipt.sourceCommit,f.receipt.targetCommit);assert.equal(verifyNativeCutoverReceipt(f.binding,f.review,f.receipt),f.receipt);
+  assert.equal(Object.hasOwn(f.review,'economicSchemaDigest'),false);assert.equal(Object.hasOwn(f.review,'retainedEconomicStateSha256'),false);
+  assert.equal(f.files.cutover,path.posix.dirname(f.binding.compatibilityReviewFile)+'/native-cutover.json');
 });
