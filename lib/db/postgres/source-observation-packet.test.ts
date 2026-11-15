@@ -2,6 +2,7 @@ import {describe,it,expect,vi} from 'vitest';
 import {DatabaseSync} from 'node:sqlite';
 import {mkdtempSync,readdirSync,unlinkSync,rmdirSync} from 'node:fs';
 import {resolve,join,dirname} from 'node:path';
+import {tmpdir} from 'node:os';
 import {SqliteAdapter} from '../sqlite-adapter';
 import {installSqliteApplicationSchema} from '../sqlite-application-schema';
 import {writeSqliteQueryRun} from '../query-run-record';
@@ -12,7 +13,7 @@ import {captureEvidenceProvenanceBatch,decodeEvidenceProvenanceBatch,captureSour
 const hex=(value:string)=>Buffer.from(value).toString('hex');
 const wallet='0x'+'ab'.repeat(20);
 function sourceFixture(){
- const root=resolve(process.env.TEMP!),folder=mkdtempSync(join(root,'source-observation-unit-')),file=join(folder,'source.sqlite'),owner=new DatabaseSync(file);installSqliteApplicationSchema(owner);const source=new SqliteAdapter(file);
+ const root=resolve(tmpdir()),folder=mkdtempSync(join(root,'source-observation-unit-')),file=join(folder,'source.sqlite'),owner=new DatabaseSync(file);installSqliteApplicationSchema(owner);const source=new SqliteAdapter(file);
  return {owner,source,close(){source.close();owner.close();for(const name of readdirSync(folder)){expect(['source.sqlite','source.sqlite-wal','source.sqlite-shm','source.sqlite-journal']).toContain(name);const path=join(folder,name);expect(dirname(resolve(path))).toBe(resolve(folder));unlinkSync(path);}expect(dirname(resolve(folder))).toBe(root);rmdirSync(folder);}};
 }
 describe('Source observation packets',()=>{
