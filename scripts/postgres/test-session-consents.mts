@@ -60,6 +60,7 @@ import {qualifyPaymentObserverWait} from "./qualify-payment-observer-wait.mts";
 import {capturePaymentEvent} from "../../lib/db/postgres/payment-events-packet";
 import { qualifyBrowserJournal } from "./qualify-browser-journal.mts";
 import { qualifyNativeRuntime } from "./qualify-native-runtime.mts";
+import {qualifyCurrentRuntime} from "./qualify-current-runtime.mts";
 import { qualifyOriginalJson } from "./qualify-original-json.mts";
 import { nativePrivacySource } from './privacy-source.mts';
 import { qualifyPrivacy } from './qualify-privacy.mts';
@@ -105,7 +106,7 @@ import { qualifyOwnerAssignments } from './qualify-owner-assignments.mts';
 import { qualifyOwnershipHistory } from './qualify-ownership-history.mts';
 import { qualifyRunClaims } from "./qualify-run-claims.mts";
 import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
-import { NATIVE_READONLY_RUNTIME_PROFILE } from "../../lib/db/postgres/runtime-profile";
+import { NATIVE_READONLY_RUNTIME_PROFILE,NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE } from "../../lib/db/postgres/runtime-profile";
 import { createPostgresUserDomainTransport,type PostgresUserDomainTransport } from "../../lib/db/postgres/user-domain-transport";
 import { createPostgresApplicationDomainTransport,type PostgresApplicationDomainTransport } from "../../lib/db/postgres/application-domain-transport";
 import { nativeCurrentApplicationSource } from "./current-application-source.mts";
@@ -175,6 +176,8 @@ try {
   const nativeRuntimeOnly=process.argv.includes("--native-runtime-only");
   const nativeRuntimeTailOnly=process.argv.includes("--native-runtime-tail-only");
   assert(!(nativeRuntimeOnly&&nativeRuntimeTailOnly), "Native runtime partitions are mutually exclusive");
+  const currentRuntimeOnly=process.argv.includes('--current-runtime-only');
+  if(currentRuntimeOnly)assert.deepEqual(process.argv.slice(2),['--current-runtime-only'],'Current runtime qualification is a closed standalone mode');
   const nativeTerminalRetirementOnly=process.argv.includes("--native-terminal-retirement-only");
   const nativeFactoryOnly=process.argv.includes("--native-factory-only")||nativeTerminalRetirementOnly;
   const originalJsonOnly=process.argv.includes("--original-json-only");
@@ -206,7 +209,7 @@ try {
   const a2aOriginalsOnly=process.argv.includes('--a2a-originals-only'),a2aOriginalsSourceReferenceOnly=process.argv.includes('--a2a-originals-source-reference-only');
   const publicProfilesOnly=process.argv.includes('--public-profiles-only'),publicProfilesSourceReferenceOnly=process.argv.includes('--public-profiles-source-reference-only');
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
-  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeRuntimeTailOnly||nativeFactoryOnly||a2aFulfillmentOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly||readGroupsOnly||accountHistoryOnly;
+  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeRuntimeTailOnly||nativeFactoryOnly||currentRuntimeOnly||a2aFulfillmentOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly||readGroupsOnly||accountHistoryOnly;
   const qualifyNativeCore=withNativeRuntime&&!nativeRuntimeTailOnly;
   const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly||workspacesOnly||contentWritesOnly||reviewsOnly||healthOnly||usageOnly||ledgerOnly||acceptanceOnly||accountsSourceReferenceOnly||accountsOnly||chatLinksOnly||chatLinksSourceReferenceOnly||publicProfilesOnly||publicProfilesSourceReferenceOnly||ownerAssignmentsSourceReferenceOnly||ownerAssignmentsOnly||operatorWithdrawalOnly||sourceObservationsOffersOnly||paymentBrowserOnly||a2aOriginalsOnly||a2aOriginalsSourceReferenceOnly||hostedAdmissionOnly||hostedAdmissionSourceReferenceOnly||responseWireOnly||currentSourceOwnerOnly;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
@@ -228,7 +231,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = currentProducersOnly ? nativeCurrentProducersSource() : referenceArchiveOnly ? nativeReferenceArchiveSource() : operatorWithdrawalOnly ? nativeOperatorWithdrawalSource() : sourceObservationsOffersOnly ? nativeSourceObservationsOffersSource() : paymentBrowserOnly ? nativePaymentBrowserSource(hostedSourcePaymentsOnly) : publicationOnly ? nativeA2aFulfillmentSource() : a2aFulfillmentOnly ? nativeRuntimeSource() : sourceProducersOnly ? nativeSourceProducersSource() : currentSourceOwnerOnly ? nativeA2aResponseWireSource() : responseWireOnly ? nativeA2aResponseWireSource() : hostedAdmissionOnly||hostedAdmissionSourceReferenceOnly ? nativeHostedAdmissionSource() : a2aOriginalsOnly||a2aOriginalsSourceReferenceOnly ? nativeA2aOriginalsSource() : ownerAssignmentsSourceReferenceOnly||ownerAssignmentsOnly ? nativeOwnerAssignmentsSource() : publicProfilesOnly||publicProfilesSourceReferenceOnly ? nativePublicProfilesSource() : chatLinksOnly||chatLinksSourceReferenceOnly ? nativeChatLinksSource() : accountsSourceReferenceOnly||accountsOnly ? nativeAccountsSource() : acceptanceOnly ? nativeAcceptanceSource() : ledgerOnly ? nativeLedgerSource() : usageOnly ? nativeUsageSource() : healthOnly ? nativeHealthSource() : reviewsOnly ? nativeReviewsSource() : contentWritesOnly ? nativeCurrentProducersSource() : workspacesOnly ? nativeWorkspacesSource() : privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = currentRuntimeOnly||currentProducersOnly ? nativeCurrentProducersSource() : referenceArchiveOnly ? nativeReferenceArchiveSource() : operatorWithdrawalOnly ? nativeOperatorWithdrawalSource() : sourceObservationsOffersOnly ? nativeSourceObservationsOffersSource() : paymentBrowserOnly ? nativePaymentBrowserSource(hostedSourcePaymentsOnly) : publicationOnly ? nativeA2aFulfillmentSource() : a2aFulfillmentOnly ? nativeRuntimeSource() : sourceProducersOnly ? nativeSourceProducersSource() : currentSourceOwnerOnly ? nativeA2aResponseWireSource() : responseWireOnly ? nativeA2aResponseWireSource() : hostedAdmissionOnly||hostedAdmissionSourceReferenceOnly ? nativeHostedAdmissionSource() : a2aOriginalsOnly||a2aOriginalsSourceReferenceOnly ? nativeA2aOriginalsSource() : ownerAssignmentsSourceReferenceOnly||ownerAssignmentsOnly ? nativeOwnerAssignmentsSource() : publicProfilesOnly||publicProfilesSourceReferenceOnly ? nativePublicProfilesSource() : chatLinksOnly||chatLinksSourceReferenceOnly ? nativeChatLinksSource() : accountsSourceReferenceOnly||accountsOnly ? nativeAccountsSource() : acceptanceOnly ? nativeAcceptanceSource() : ledgerOnly ? nativeLedgerSource() : usageOnly ? nativeUsageSource() : healthOnly ? nativeHealthSource() : reviewsOnly ? nativeReviewsSource() : contentWritesOnly ? nativeCurrentProducersSource() : workspacesOnly ? nativeWorkspacesSource() : privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   if(sourceProducersOnly){
     const raw=JSON.stringify({id:'synthetic',x:String.fromCharCode(0),y:String.fromCharCode(0xd800)}),j="'"+raw.replaceAll("'","''")+"'::json",probe:Record<string,unknown>={};
@@ -283,9 +286,10 @@ try {
     assert.throws(()=>sql('native_source',"INSERT INTO keryx_storage.source_contract VALUES(true,'{}'::jsonb,'"+'00'.repeat(32)+"');"),/source_contract_digest/);
     assert.equal(sql('native_source','SELECT count(*) FROM keryx_storage.source_contract;'),'0');
     if(runtimeSourceReferenceOnly){console.log(JSON.stringify({sourceReferenceOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,normalizedDescriptorSha256:reference.normalizedSha256,digestFormat:reference.digestFormat,nativeMetadataDigestBound:true,independentSourceTargetEqual:true,runtimeQualified:false,applicationBackendSwitched:false}));return;}
-    assert.equal(source.sha256,NATIVE_READONLY_RUNTIME_PROFILE.sourceSqlSha256,'Runtime profile must be pinned to the separately reviewed SOURCE');
-    assert.equal(reference.sha256,NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256,'An unknown SOURCE catalog cannot self-allocate runtime approval');
-    assert.equal(reference.digestFormat,NATIVE_READONLY_RUNTIME_PROFILE.digestFormat);
+    const runtimeProfile=currentRuntimeOnly?NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE:NATIVE_READONLY_RUNTIME_PROFILE;
+    assert.equal(source.sha256,runtimeProfile.sourceSqlSha256,'Runtime profile must be pinned to the separately reviewed SOURCE');
+    assert.equal(reference.sha256,runtimeProfile.catalogSha256,'An unknown SOURCE catalog cannot self-allocate runtime approval');
+    assert.equal(reference.digestFormat,runtimeProfile.digestFormat);
   }
   let currentTableConstraints:unknown;
   if(currentTables){
@@ -315,8 +319,12 @@ try {
 
   sql("native_target", `INSERT INTO keryx_storage.identity VALUES(true,${literal(identity)},'${storageIdentityDigest(identity)}');
     INSERT INTO keryx_storage.source_contract VALUES(true,${literal(JSON.parse(reference.canonicalJson))},'${reference.sha256}');
-    ${paymentConsumedFieldsOnly?'':`INSERT INTO public.browser_signer_capacity VALUES('${signer}',7);`}
+    ${paymentConsumedFieldsOnly||currentRuntimeOnly?'':`INSERT INTO public.browser_signer_capacity VALUES('${signer}',7);`}
     UPDATE keryx_storage.control SET mode='active';`);
+  if(currentRuntimeOnly){
+    const currentRuntime=await qualifyCurrentRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
+    console.log(JSON.stringify({passed:true,currentRuntimeOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,currentRuntime,applicationBackendSwitched:false}));return;
+  }
   const port = Number(docker(["port", name, "5432/tcp"]).trim().split(":")[1]);
   const connect = async (role: string) => {
     const client = new Client(postgresPoolConfiguration({ endpoint: { kind: "loopback", port }, database: "native_target", role, password }));
