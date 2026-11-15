@@ -15,7 +15,7 @@ DECLARE request jsonb;s jsonb;i jsonb;op text;selection_wire text;retained jsonb
  total_count integer;daily_count integer;wallet_count integer;origin_count integer;total_wei numeric;daily_wei numeric;day_value text;amount numeric;current_key text;source_claim json;proof_meta jsonb;proof_root jsonb;seen text[]:=ARRAY[]::text[];
 BEGIN
  IF phase IS NULL OR phase NOT IN('snapshot','read','commit') OR session_user<>'keryx_app' OR request_wire IS NULL
-  OR octet_length(request_wire)>CASE WHEN phase='snapshot' THEN 262144 ELSE 16777216 END THEN RAISE EXCEPTION 'request refused';END IF;
+  OR octet_length(request_wire)>(CASE WHEN phase='snapshot' THEN 262144 ELSE 16777216 END) THEN RAISE EXCEPTION 'request refused';END IF;
  request:=request_wire::jsonb;
  IF phase='snapshot' THEN s:=request;selection_wire:=request_wire;
  ELSE
@@ -123,7 +123,7 @@ BEGIN
      OR next_execution IS NOT NULL AND(NOT(change_request?'signedTransaction') OR meta->>'signedTransactionHash' IS DISTINCT FROM change_request->>'transactionHash') THEN RAISE EXCEPTION 'signed original differs';END IF;
    ELSIF current_root->>'state'=change_request->>'nextState' AND current_root->>'state' IN('signing','submitted') THEN
     requires_claim:=NOT(change_request?'expiredResolution');requires_funds:=p->>'protocol'='keryx-registration-sponsor-v2';IF next_execution IS NULL OR change_request?'actualGasWei' OR change_request?'transactionNonce' AND change_request->'transactionNonce' IS DISTINCT FROM current_root->'transactionNonce' OR change_request?'transactionHash' AND change_request->'transactionHash' IS DISTINCT FROM current_root->'transactionHash'
-     OR p->>'protocol'='keryx-registration-sponsor-v1' AND greatest(n,wall_now)>=(p->>'expiresAt')::numeric OR CASE WHEN change_request?'expiredResolution' THEN n<=(current_root->>'deadline')::numeric*1000 ELSE greatest(n,wall_now)>(current_root->>'deadline')::numeric*1000 OR current_root?'expiredResolution' END THEN RAISE EXCEPTION 'resume authority refused';END IF;
+     OR p->>'protocol'='keryx-registration-sponsor-v1' AND greatest(n,wall_now)>=(p->>'expiresAt')::numeric OR (CASE WHEN change_request?'expiredResolution' THEN n<=(current_root->>'deadline')::numeric*1000 ELSE greatest(n,wall_now)>(current_root->>'deadline')::numeric*1000 OR current_root?'expiredResolution' END) THEN RAISE EXCEPTION 'resume authority refused';END IF;
    ELSIF current_root->>'state'='submitted' AND change_request->>'nextState' IN('confirmed','reverted') THEN
     IF NOT(change_request?'actualGasWei') OR(change_request->>'actualGasWei')::numeric>(current_root->>'reservedWei')::numeric OR change_request?'transactionNonce' AND change_request->'transactionNonce' IS DISTINCT FROM current_root->'transactionNonce' OR change_request?'transactionHash' AND change_request->'transactionHash' IS DISTINCT FROM current_root->'transactionHash' THEN RAISE EXCEPTION 'finality tuple differs';END IF;
    ELSE RAISE EXCEPTION 'transition refused';END IF;

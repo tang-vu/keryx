@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import { Client } from 'pg';
+import { Client,type QueryResult } from 'pg';
 import { canonicalJson } from '../../lib/canonical-json';
 import { readStorageIdentity } from '../../lib/db/storage-identity-sqlite';
 import { validateStorageIdentity,storageIdentityDigest } from '../../lib/db/storage-identity';
@@ -121,7 +121,7 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
     stage='private-result-public-compare';
     for(const [name,columns] of Object.entries(PRIVATE_RESULT_SOURCE_COLUMNS)){
      const bytes=columns.map(c=>'octet_length('+quote(c)+'::text)').join('+'),bounded=bytes+'<='+PRIVATE_RESULT_SOURCE_BYTE_LIMITS[name as PrivateResultSourceTable];
-     const native=await pg.query('SELECT '+columns.map(c=>'CASE WHEN '+bounded+' THEN '+quote(c)+'::text END AS '+quote(c)).join(',')+','+bounded+' bounded FROM public.'+quote(name)+' WHERE id=$1 FOR SHARE',[key.id]);
+     const native:QueryResult<Record<string,unknown>>=await pg.query('SELECT '+columns.map(c=>'CASE WHEN '+bounded+' THEN '+quote(c)+'::text END AS '+quote(c)).join(',')+','+bounded+' bounded FROM public.'+quote(name)+' WHERE id=$1 FOR SHARE',[key.id]);
      assert.equal(native.rowCount,1);assert.equal(native.rows[0].bounded,true);const actual={...native.rows[0]};delete actual.bounded;
      assert(canonicalJson(actual)===canonicalJson(captured.rows[name as PrivateResultSourceTable]),'Private Source public cells changed');sourceCurrent();
     }

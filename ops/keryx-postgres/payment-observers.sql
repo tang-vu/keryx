@@ -10,7 +10,7 @@ BEGIN
  THEN RAISE EXCEPTION 'native payment observers require fresh Source';END IF;
  function_oid:='public.storage_application_read_group_8(jsonb,text,text,jsonb)'::regprocedure::oid;
  SELECT prosrc INTO STRICT body FROM pg_proc WHERE oid=function_oid;
- anchor:=E'  CASE selected_action\n';
+ anchor:=E'\n CASE selected_action WHEN ''operator_source_inventory'' THEN\n';
  IF (length(body)-length(replace(body,anchor,'')))/length(anchor)<>1 OR strpos(body,'Native raw payment observers v1')>0
  THEN RAISE EXCEPTION 'payment observer router constructor refused';END IF;
  extended:=replace(body,anchor,$read$

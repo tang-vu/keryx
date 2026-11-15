@@ -21,6 +21,7 @@ export const LEGACY_PAYMENT_OBSERVERS=Object.freeze([
 ] as const);
 export const SOURCE_PAYMENT_OBSERVERS=Object.freeze([
  'payment_event_record','payment_event_record_once','payment_event_snapshot','payment_event_terminal',
+ 'payment_observer_read',
  'browser_source_read','browser_source_activate','browser_source_grant','browser_source_intent','browser_source_admit','browser_source_transition','browser_source_query',
 ] as const);
 export const HOSTED_SOURCE_PAYMENT_OBSERVERS=Object.freeze(['hosted_admit_authorization','hosted_submit','hosted_confirm','hosted_accounting'] as const);

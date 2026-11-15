@@ -23,6 +23,7 @@ END LOOP;
 END;$$;
 CREATE FUNCTION public.storage_private_research(expected jsonb,digest text,action text,selector text,packet_wire text) RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+<<private_state>>
 DECLARE packet jsonb;proof jsonb;value_json jsonb;value_wire text;run_json json;run_wire text;confirmation jsonb;attempt jsonb;capture jsonb;
 payer text;worker text;signer text;capacity bigint;budget bigint;used bigint;released bigint;changed bigint;created boolean:=false;phase integer;bulk boolean;scopes text[];wallet text;rows_json json;legs_json json;ceiling text;
 stamp text;field text;key text;leg text;intent_wire text;payment_wire text;execution_wire text;result_wire text;interruption_wire text;reservation_wire text;release_wire text;
@@ -32,7 +33,7 @@ BEGIN
 bulk:=action IN('history','summary','workers','reconciliation');
 IF action IS NULL OR action NOT IN('snapshot','history','summary','workers','reconciliation','reserve-intent','reserve-treasury','claim-payment','confirm-payment','claim-execution','admit-creator','confirm-creator','save-result','interrupt','release')
 OR selector IS NULL OR(bulk AND(selector !~ '^0x[a-f0-9]{40}$' OR selector='0x0000000000000000000000000000000000000000') OR NOT bulk AND selector !~ '^prv_[a-f0-9]{64}$') OR packet_wire IS NULL
-OR octet_length(packet_wire)>CASE WHEN bulk THEN 512 WHEN action='snapshot' THEN 256 ELSE 67108864 END
+OR octet_length(packet_wire)>(CASE WHEN bulk THEN 512 WHEN action='snapshot' THEN 256 ELSE 67108864 END)
 THEN RAISE EXCEPTION 'native private research action refused';END IF;
 IF (action='snapshot' OR bulk) AND current_setting('transaction_read_only')<>'on'
 OR action<>'snapshot' AND NOT bulk AND(current_setting('transaction_read_only')<>'off' OR session_user<>'keryx_app')
@@ -83,7 +84,7 @@ FOR phase IN 1..2 LOOP
 IF NOT bulk THEN
 intent_wire:=NULL;intent_data:=NULL;payment_wire:=NULL;execution_wire:=NULL;result_wire:=NULL;interruption_wire:=NULL;reservation_wire:=NULL;release_wire:=NULL;
 submissions_wire:='[]';confirmations_wire:='[]';
-SELECT row_to_json(i)::text,keryx_storage.private_research_fields(i.data,'intent') INTO intent_wire,intent_data FROM public.private_research_intents i WHERE i.id=selector AND i.payer=storage_private_research.payer;
+SELECT row_to_json(i)::text,keryx_storage.private_research_fields(i.data,'intent') INTO intent_wire,intent_data FROM public.private_research_intents i WHERE i.id=selector AND i.payer=private_state.payer;
 IF intent_wire IS NOT NULL THEN
 SELECT row_to_json(p)::text INTO payment_wire FROM public.private_research_payment_attempts p WHERE p.id=selector;
 SELECT row_to_json(e)::text INTO execution_wire FROM public.private_research_executions e WHERE e.id=selector;
@@ -145,7 +146,7 @@ AND value_json#>>'{submission,payment,authorization,nonce}' ~ '^0x[a-f0-9]{64}$'
 AND value_json#>>'{submission,salt}' ~ '^0x[a-f0-9]{64}$'
 AND selector='prv_'||encode(sha256(convert_to('keryx-private-order-v1|'||(expected->>'network')||'|'||payer||'|'||(value_json#>>'{submission,payment,authorization,to}')||'|'||(value_json#>>'{submission,payment,authorization,nonce}'),'UTF8')),'hex')) IS NOT TRUE
 THEN RAISE EXCEPTION 'native private intent packet refused';END IF;
-IF EXISTS(SELECT 1 FROM public.private_research_intents WHERE id=selector AND payer<>storage_private_research.payer) THEN RAISE EXCEPTION 'native private original owner conflict';END IF;
+IF EXISTS(SELECT 1 FROM public.private_research_intents i WHERE i.id=selector AND i.payer<>private_state.payer) THEN RAISE EXCEPTION 'native private original owner conflict';END IF;
 IF intent_data IS NOT NULL AND (intent_data-'_budgetSql')#-'{submission,payment,signature}'
 IS DISTINCT FROM (value_json-'_budgetSql')#-'{submission,payment,signature}'
 THEN RAISE EXCEPTION 'native private intent reservation conflict';END IF;
@@ -158,16 +159,16 @@ OR capacity NOT BETWEEN 1 AND 999999999999 THEN RAISE EXCEPTION 'native private 
 budget:=floor((intent_data#>>'{submission,request,budget}')::double precision*1000000+0.5)::bigint;
 IF budget NOT BETWEEN 1 AND 500000 THEN RAISE EXCEPTION 'native private creator budget refused';END IF;
 INSERT INTO public.private_treasury_pools(signer,capacity_micros) VALUES(signer,capacity) ON CONFLICT DO NOTHING;
-IF (SELECT capacity_micros FROM public.private_treasury_pools p WHERE p.signer=storage_private_research.signer) IS DISTINCT FROM capacity THEN RAISE EXCEPTION 'native private capacity policy conflict';END IF;
+IF (SELECT capacity_micros FROM public.private_treasury_pools p WHERE p.signer=private_state.signer) IS DISTINCT FROM capacity THEN RAISE EXCEPTION 'native private capacity policy conflict';END IF;
 SELECT * INTO reservation FROM public.private_treasury_reservations WHERE job_id=selector;
 IF FOUND AND(reservation.signer IS DISTINCT FROM signer OR reservation.amount_micros IS DISTINCT FROM budget) THEN
 -- Exactly Source's documented autocommit pool insert preceding a known
 -- reservation conflict. No generic SQL fault is caught or committed.
 PERFORM keryx_storage.leave_operation();RETURN json_build_object('refusal','treasury-reservation-conflict');
 END IF;
-SELECT coalesce(sum(r.amount_micros-coalesce(x.amount_micros,0)),0) INTO used FROM public.private_treasury_reservations r LEFT JOIN public.private_treasury_releases x ON x.job_id=r.job_id WHERE r.signer=storage_private_research.signer;
+SELECT coalesce(sum(r.amount_micros-coalesce(x.amount_micros,0)),0) INTO used FROM public.private_treasury_reservations r LEFT JOIN public.private_treasury_releases x ON x.job_id=r.job_id WHERE r.signer=private_state.signer;
 INSERT INTO public.private_treasury_reservations(job_id,signer,amount_micros) SELECT selector,signer,budget WHERE budget<=capacity-used ON CONFLICT DO NOTHING;
-created:=EXISTS(SELECT 1 FROM public.private_treasury_reservations r WHERE r.job_id=selector AND r.signer=storage_private_research.signer AND r.amount_micros=budget);
+created:=EXISTS(SELECT 1 FROM public.private_treasury_reservations r WHERE r.job_id=selector AND r.signer=private_state.signer AND r.amount_micros=budget);
 WHEN 'claim-payment' THEN
 IF value_wire<>'null' OR worker IS NOT NULL THEN RAISE EXCEPTION 'native private payment claim packet refused';END IF;
 INSERT INTO public.private_research_payment_attempts(id,started_at) VALUES(selector,stamp) ON CONFLICT DO NOTHING;GET DIAGNOSTICS changed=ROW_COUNT;created:=changed=1;
@@ -177,7 +178,7 @@ IF (confirmation->>'source' IN('circle-facilitator-success','circle-transfer-sea
 AND confirmation->>'network'=expected->>'network' AND confirmation->>'payer'=payer AND confirmation->>'payee'=intent_data#>>'{submission,payment,authorization,to}'
 AND confirmation->>'amountMicros'=intent_data#>>'{submission,payment,authorization,value}' AND confirmation->>'authorizationId'=intent_data#>>'{submission,payment,authorization,nonce}'
 AND confirmation->>'transaction' ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$') IS NOT TRUE THEN RAISE EXCEPTION 'native private incoming confirmation refused';END IF;
-UPDATE public.private_research_payment_attempts SET confirmation=value_wire,settled_at=stamp WHERE id=selector AND confirmation IS NULL;
+UPDATE public.private_research_payment_attempts p SET confirmation=value_wire,settled_at=stamp WHERE p.id=selector AND p.confirmation IS NULL;
 GET DIAGNOSTICS changed=ROW_COUNT;created:=changed=1;
 IF (SELECT keryx_storage.private_research_fields(p.confirmation,'confirmation')-'_sql1' FROM public.private_research_payment_attempts p WHERE p.id=selector) IS DISTINCT FROM confirmation-'_sql1' THEN RAISE EXCEPTION 'native private incoming confirmation conflict';END IF;
 WHEN 'claim-execution' THEN

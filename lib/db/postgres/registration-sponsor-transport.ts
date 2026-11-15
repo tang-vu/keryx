@@ -18,9 +18,9 @@ function observationInQuery(query:RegistrationSponsorSelection):RegistrationSpon
 export function composePostgresRegistrationSponsor(channel:PostgresDomainChannel,facade:KeryxDB,readOnly:boolean){
  if(typeof readOnly!=='boolean'||!facade||typeof facade!=='object')throw new PostgresStorageUnavailable();
  const live=(write=false)=>{if(channel.closed||write&&readOnly)throw new PostgresStorageUnavailable();};
- const capture=(observation:RegistrationSponsorFundingObservation|undefined,purpose:'read'|'new-exposure',policy?:ActiveRegistrationSponsorPolicy)=>{if(observation===undefined)return undefined;try{return captureRegistrationSponsorObservation(observation,facade,purpose,policy);}catch{return fundingUnavailable();}};
+ const capture=(observation:unknown,purpose:'read'|'new-exposure',policy?:ActiveRegistrationSponsorPolicy)=>{if(observation===undefined)return undefined;try{return captureRegistrationSponsorObservation(observation,facade,purpose,policy);}catch{return fundingUnavailable();}};
  const validate=async(token:RegistrationSponsorObservationCapture|undefined,policy:ActiveRegistrationSponsorPolicy|null,purpose:'read'|'new-exposure',query:RegistrationSponsorSelection,required:boolean)=>{
-  if(!token){if(required)fundingUnavailable();return null;}if(!policy)fundingUnavailable();
+  if(!token){if(required)fundingUnavailable();return null;}if(!policy)return fundingUnavailable();
   try{const qualified=await validateRegistrationSponsorObservation(token,facade,policy,purpose),observed=observationInQuery(query);if(!observed||sha(canonicalJson(observed))!==qualified.dtoDigest)fundingUnavailable();live();return qualified;}catch{return fundingUnavailable();}
  };
  const execute=async(query:RegistrationSponsorSelection,write:boolean,token?:RegistrationSponsorObservationCapture)=>{

@@ -20,10 +20,18 @@ import { OWNER_ASSIGNMENT_CALLS } from './owner-assignments-calls';
 import { SOURCE_OBSERVATION_CALLS } from './source-observation-calls';
 import { ARTICLE_OFFER_CALLS } from './article-offer-transport';
 import { OPERATOR_WITHDRAWAL_CALLS } from './operator-withdrawal-calls';
+import { PRIVATE_RESEARCH_CALLS } from './private-research-calls';
 
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
+  paymentObserve:{sql:"SELECT public.storage_application_read_group_8($1::jsonb,$2::text,'source_payment_observe',$3::jsonb) AS result",args:1,write:false,transaction:true,bytes:4194304,inputBytes:139264},
+  onrampFrame:{sql:"SELECT public.storage_application_operational_write($1::jsonb,$2::text,'onramp_frame',$3::jsonb) AS result",args:1,write:false,transaction:true,bytes:4194304,inputBytes:139264},
+  onrampApply:{sql:"SELECT public.storage_application_operational_write($1::jsonb,$2::text,'onramp_apply',$3::jsonb) AS result",args:1,write:true,bytes:4194304,inputBytes:139264},
+  ...PRIVATE_RESEARCH_CALLS,
+  registrationSponsorSnapshot:{sql:"SELECT public.storage_registration_sponsor($1::jsonb,$2::text,'snapshot',$3::text) AS result",args:1,write:false,transaction:true,bytes:33562624,inputBytes:532480},
+  registrationSponsorRead:{sql:"SELECT public.storage_registration_sponsor($1::jsonb,$2::text,'read',$3::text) AS result",args:1,write:false,transaction:true,bytes:270336,inputBytes:33562624},
+  registrationSponsorCommit:{sql:"SELECT public.storage_registration_sponsor($1::jsonb,$2::text,'commit',$3::text) AS result",args:1,write:true,bytes:270336,inputBytes:33562624},
   referenceArchiveFrame:{sql:"SELECT public.storage_reference_archive($1::jsonb,$2::text,'frame',$3::text) AS result",args:1,write:false,bytes:134225920,inputBytes:1048576,transaction:true},
   referenceArchiveApply:{sql:"SELECT public.storage_reference_archive($1::jsonb,$2::text,'apply',$3::text) AS result",args:1,write:true,bytes:256,inputBytes:268443648},
   referenceArchiveRead:{sql:"SELECT public.storage_reference_archive($1::jsonb,$2::text,$3::text,$4::text) AS result",args:2,write:false,bytes:67117056,inputBytes:262144,transaction:true},

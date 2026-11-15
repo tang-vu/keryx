@@ -5,6 +5,7 @@ import type { PostgresSourceObservationPort } from './postgres/source-observatio
 import type { PostgresArticleOfferPort } from './postgres/article-offer-transport';
 import type {PostgresOperatorWithdrawalPort} from './postgres/operator-withdrawal-transport';
 import type {PostgresReferenceArchivePort} from './postgres/reference-archive-transport';
+import type {PostgresPaymentObservationPort} from './postgres/payment-observation-transport';
 
 import { PostgresDomainWriteOutcomeUnknown } from './postgres/domain-channel';
 import type { NativeFinancialApplicationPort } from './postgres/native-financial-application-port';
@@ -177,11 +178,13 @@ export interface NativePostgresBusinessCoreOptions {
   readonly articleOffers?:PostgresArticleOfferPort;
   readonly operatorWithdrawal?:PostgresOperatorWithdrawalPort;
   readonly referenceArchive?:PostgresReferenceArchivePort;
+  readonly paymentObservations?:PostgresPaymentObservationPort;
 
   readonly financialApplication?:NativeFinancialApplicationPort;
   readonly sourceClaimWrites?:ReturnType<typeof composePostgresSourceClaimWrites>;
   readonly sourceUpkeep?:ReturnType<typeof composePostgresSourceUpkeep>;
   readonly sourceUpsert?:(source:Source)=>Promise<void>;
+  readonly sourceMetaSetter?:(id:string,meta:import('./keryx-db').SourceMeta)=>Promise<void>;
 }
 const nativeConstructions = new WeakMap<object,Readonly<NativePostgresBusinessCoreOptions>>();
 const enrolledEntryGuards = new WeakMap<object, { verify: () => Promise<void>; close: () => void }>();
@@ -312,11 +315,13 @@ export class SupabaseAdapter implements KeryxDB {
         },configurable:true});
       }
     };
+    if(native?.sourceMetaSetter)installNativeMethods({setSourceMeta:native.sourceMetaSetter},[['setSourceMeta',true]]);
     if(native?.paymentEvents)installNativeMethods(native.paymentEvents,[['recordPayment',true],['recordPaymentOnce',true],['settlePendingPayment',true],['failPendingPayment',true]]);
     if(native?.sourceObservations)installNativeMethods(native.sourceObservations,[['verifySourceIfUnchanged',true]]);
     if(native?.articleOffers)installNativeMethods(native.articleOffers,[['setArticleOffer',true],['deleteArticleOffer',true],['getArticleOffer',false],['listArticleOffers',false]]);
     if(native?.operatorWithdrawal)installNativeMethods(native.operatorWithdrawal,[['recordWithdrawal',true],['operatorInventory',false],['operatorPublicSnapshot',false]]);
     if(native?.referenceArchive)installNativeMethods(native.referenceArchive,[['listPublicReferences',false],['getPublicReference',false],['upsertPublicReference',true],['archivePublicReferenceItems',true],['queryPublicReferenceItems',false],['publicReferenceArchiveStats',false]]);
+    if(native?.paymentObservations)installNativeMethods(native.paymentObservations,[['listPayments',false],['listPaymentsByQuery',false],['listPaymentsBySource',false],['listPendingPayments',false],['listCreatorPaymentAttemptsByQuery',false]]);
     if(native?.browserJournal)installNativeMethods(native.browserJournal,[
       ['browserJournalActive',false],['activateBrowserJournal',true],
       ['upsertSessionGrant',true],['getSessionGrant',false],['addSessionGrantSpend',true],['releaseSessionGrantSpend',true],

@@ -230,7 +230,7 @@ async function main(){
    await admin.connect();barrier=await startReadonlyCommitBarrier(5432,async()=>{
     if(input.mode==='held-during-provenance')await admin.query("UPDATE keryx_storage.control SET mode='held'");
     else if(input.mode==='credential-during-provenance')writeFileSync(readerPath,credential('keryx_reader','different-synthetic-password'));
-    else{assert(reader);closing=application.closeReadonlyApplicationStorage(reader);void closing.catch(()=>{});}
+    else{assert(reader);closing=Promise.resolve(application.closeReadonlyApplicationStorage(reader));void closing.catch(()=>{});}
    });manifest.backend.endpoint.port=barrier.port;writeFileSync(manifestPath,canonicalJson(manifest));reader=await application.createReadonlyApplicationStorage();assert(reader);
    // Privacy read: authority, body, authority, flags. Core point read:
    // authority, original, flags. Delay the actual flags acknowledgement.

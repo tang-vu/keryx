@@ -60,7 +60,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
    ||readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader').fingerprint!==credential.fingerprint)refuseStorage('identity_mismatch');
  };
  const guard=async()=>{entry();await transport.verifyRuntimeAuthority();entry();};
- const core=assembleNativePostgresBusinessCore({identity:deployment.identity,authority:createPostgresApplicationDomainAuthority(transport),assertEntry:entry,verify:guard,sourceClaims:transport.sourceClaims,sourceUpsert:transport.sourceUpsert.upsertSource,sourceObservations:transport.sourceObservations});
+ const core=assembleNativePostgresBusinessCore({identity:deployment.identity,authority:createPostgresApplicationDomainAuthority(transport),assertEntry:entry,verify:guard,sourceClaims:transport.sourceClaims,sourceUpsert:transport.sourceUpsert.upsertSource,sourceMetaSetter:transport.sourceUpsert.setSourceMeta,sourceObservations:transport.sourceObservations});
  const close=()=>{closed=true;core.hooks.close();return closing??=transport.close();};
  // Each closed work closure below performs its own fresh guarded native SQL.
  // Invoke it before awaiting so its typed port captures the caller's arguments.

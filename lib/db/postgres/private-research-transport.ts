@@ -97,8 +97,8 @@ export function composePostgresPrivateResearch(channel:PostgresDomainChannel,rea
    write();const key=privateResearchLookup(id,payer),value=capturePrivateResearchValue('release',rawSigner) as string,state=await snapshot(key);
    if(!privateSnapshotResult(state)&&!privateSnapshotInterruption(state))return null;const reservation=privateSnapshotReservation(state);
    if(!reservation||reservation.signer!==value)throw Error('Private treasury release authority unavailable');
-   const used=privateSnapshotSubmissions(state).reduce((sum,leg)=>{if(leg.data.submission.payer!==value)throw Error('Private treasury release accounting mismatch');return sum+BigInt(leg.data.submission.amountMicros);},0n),remaining=BigInt(reservation.amountMicros)-used;
-   if(remaining<0n)throw Error('Private treasury release accounting mismatch');const result=await execute('release',state,value),row=result.state.releaseRow;
+   const used=privateSnapshotSubmissions(state).reduce((sum,leg)=>{if(leg.data.submission.payer!==value)throw Error('Private treasury release accounting mismatch');return sum+BigInt(leg.data.submission.amountMicros);},BigInt('0')),remaining=BigInt(reservation.amountMicros)-used;
+   if(remaining<BigInt('0'))throw Error('Private treasury release accounting mismatch');const result=await execute('release',state,value),row=result.state.releaseRow;
    if(!row||row.job_id!==key.id||String(row.amount_micros)!==String(remaining))throw new PostgresDomainWriteOutcomeUnknown();return {amountMicros:String(remaining),newlyReleased:result.created};
   },
  } satisfies PostgresPrivateResearchPort);
