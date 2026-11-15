@@ -48,7 +48,7 @@ describe('PostgreSQL partition acceptance', () => {
     for (const name of names) expect(workflow.jobs[name]['timeout-minutes']).toBe(25);
     expect(gate.steps.some(step => step.if === '${{ cancelled() }}' && step.run === 'exit 1')).toBe(true);
   });
-  it('requires the observed factory, held current DATA intake and current original-key readonly factory', () => {
+  it('requires observed/current cold factories, held DATA intake and synthetic HELD catchup', () => {
     const steps=workflow.jobs['synthetic-materialization'].steps;
     expect(steps.filter(step=>step.run?.endsWith('qualify-native-materialization.mts --synthetic'))).toHaveLength(1);
     const current=steps.filter(step=>step.run?.endsWith('qualify-native-materialization.mts --development-current-data-synthetic'));
@@ -59,6 +59,24 @@ describe('PostgreSQL partition acceptance', () => {
     const runtime=steps.filter(step=>step.run?.endsWith('qualify-native-materialization.mts --current-runtime-synthetic'));
     expect(runtime).toHaveLength(1);expect(runtime[0].if).toBeUndefined();expect(runtime[0].run).toContain('--import ./scripts/postgres/current-data-source-bootstrap.mjs');
     expect(runtime[0].env).toMatchObject({NODE_OPTIONS:'--max-old-space-size=512',KERYX_NETWORK:'arc',NEXT_PUBLIC_KERYX_NETWORK:'arc',KERYX_FORCE_OFFLINE:'0'});
+    const catchup=steps.filter(step=>step.run?.endsWith('qualify-native-materialization.mts --held-catchup-synthetic'));
+    expect(catchup).toHaveLength(1);expect(catchup[0].if).toBeUndefined();expect(catchup[0].run).toContain('--import ./scripts/postgres/current-data-source-bootstrap.mjs');
+    expect(catchup[0].env).toMatchObject({NODE_OPTIONS:'--max-old-space-size=512',KERYX_NETWORK:'arc',NEXT_PUBLIC_KERYX_NETWORK:'arc',KERYX_FORCE_OFFLINE:'0'});
+
+  });
+  it('keeps catchup on its contained synthetic child without skipping either existing cold mode',()=>{
+    const controller=readFileSync(new URL('./qualify-native-materialization.mts',import.meta.url),'utf8');
+    const child=readFileSync(new URL('./native-held-catchup-child.mts',import.meta.url),'utf8');
+    expect(controller).toContain("heldCatchup?'./native-held-catchup-child.mts':'./native-materialization-child.mts'");
+    expect(controller).toContain("mode:heldCatchup?'held-catchup-synthetic':retained?'retained':'synthetic'");
+    const heldBranch=controller.split('if(heldCatchup){')[1].split('}else{')[0];
+    expect(heldBranch).toContain('keryx-native-held-catchup-synthetic-qualification-v1');expect(heldBranch).toContain('actualOwnerContentionRefusalQualified');expect(heldBranch).not.toContain("mode='active'");expect(heldBranch).not.toContain('coldBundle=');
+    expect(controller).toContain("currentDataOnly?'--current-profile-refusal':currentRuntime?'--current-runtime-cold':'--cold'");
+    expect(controller).toContain('compiled.length<=4194304');expect(controller).toContain("'--memory','512m','--memory-swap','512m','--cpus','.25','--pids-limit','32'");
+    for(const fixed of ['536870912','25000 100000','1800s','sourceUnchanged:true','retainedProductionSnapshotRead:false','genuineColdFactoryQualified:false','briefCutoverQualified:false'])expect(child).toContain(fixed);
+    expect(child).toContain('const fixture=await prepareHeldCatchupSynthetic()');expect(child).toContain('qualifyHeldNativeCatchup({fixture,options,referenceWire:packet.referenceWire})');expect(child).toContain('disposeHeldCatchupSynthetic(fixture)');
+    expect(child.indexOf('source.close();source=undefined')).toBeLessThan(child.indexOf('qualifyHeldNativeCatchup({fixture'));
+    expect(child).not.toContain("mode='active'");expect(child).not.toContain('set_config');expect(child).not.toContain('INSERT INTO keryx_storage.writer');
   });
   it('boots the actual Source schema rehearsal with provider access trapped', () => {
     const bootstrap=new URL('./current-data-source-bootstrap.mjs',import.meta.url).href;
@@ -68,6 +86,9 @@ describe('PostgreSQL partition acceptance', () => {
     expect(run(['--development-current-data-synthetic']).status).toBe(0);
     expect(run(['--current-runtime-synthetic']).status).toBe(0);
     expect(run(['--current-runtime-retained']).status).toBe(0);
+    expect(run(['--held-catchup-synthetic']).status).toBe(0);
+    expect(run(['--held-catchup-synthetic','--current-runtime-synthetic']).status).not.toBe(0);
+    expect(run(['--held-catchup-synthetic'],{KERYX_FORCE_OFFLINE:'1'}).status).not.toBe(0);
     expect(run(['--current-runtime-synthetic','--development-current-data-retained']).status).not.toBe(0);
     expect(run(['--synthetic']).status).not.toBe(0);
     expect(run(['--development-current-data-synthetic','--development-current-data-retained']).status).not.toBe(0);
