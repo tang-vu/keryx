@@ -88,7 +88,7 @@ BEGIN
    SELECT * INTO b FROM public.browser_journal_bindings WHERE nonce=i.nonce;IF NOT FOUND THEN RAISE EXCEPTION 'Original liability unavailable';END IF;
    SELECT * INTO e FROM public.payment_events WHERE id='x402:'||i.nonce;IF NOT FOUND THEN RAISE EXCEPTION 'Original liability unavailable';END IF;
    SELECT * INTO raw_payment FROM keryx_storage.payment_event_originals WHERE payment_id=e.id;
-   IF NOT FOUND OR raw_payment.native_projection IS DISTINCT FROM to_jsonb(e) THEN RAISE EXCEPTION 'native browser payment original unavailable or changed';END IF;
+   IF NOT FOUND OR raw_payment.identity_digest IS DISTINCT FROM keryx_storage.identity_digest(expected) OR raw_payment.original_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_payment.original_wire::text,'UTF8')),'hex') OR raw_payment.current_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_payment.current_wire::text,'UTF8')),'hex') OR raw_payment.native_projection IS DISTINCT FROM to_jsonb(e) THEN RAISE EXCEPTION 'native browser payment original unavailable or changed';END IF;
    history_rows:=history_rows||jsonb_build_array(jsonb_build_object('selector',jsonb_build_object('sessionId',i.session_id,'requestId',i.request_id,'sourceSessionWire',to_json(i.session_id)::text,'sourceRequestWire',to_json(i.request_id)::text),'intent',to_jsonb(i),'binding',to_jsonb(b),'paymentWire',raw_payment.current_wire::text));
    IF octet_length(history_rows::text)>4190000 THEN RAISE EXCEPTION 'native browser history frame bound';END IF;
   END LOOP;
@@ -149,6 +149,8 @@ BEGIN
    rows_json:=jsonb_set(rows_json,ARRAY[g.grant_epoch],jsonb_build_object('sessionId',g.session_id,'signer',lower(g.sess_addr),'grantSpent',spent,'paymentSpent',0));
   END LOOP;
   FOR e IN SELECT * FROM public.payment_events WHERE grant_epoch IS NOT NULL AND settlement_status IN('pending','settled') LOOP
+   SELECT * INTO raw_payment FROM keryx_storage.payment_event_originals WHERE payment_id=e.id;
+   IF NOT FOUND OR raw_payment.identity_digest IS DISTINCT FROM keryx_storage.identity_digest(expected) OR raw_payment.original_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_payment.original_wire::text,'UTF8')),'hex') OR raw_payment.current_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_payment.current_wire::text,'UTF8')),'hex') OR raw_payment.native_projection IS DISTINCT FROM to_jsonb(e) THEN RAISE EXCEPTION 'native browser payment original unavailable or changed';END IF;
    IF e.network IS DISTINCT FROM 'eip155:5042' OR e.payer !~* '^0x[0-9a-f]{40}$' THEN RAISE EXCEPTION 'legacy browser payment identity unavailable';END IF;
    scaled:=e.amount_usdc::double precision*1000000;rounded:=floor(scaled);IF scaled-rounded>=0.5 THEN rounded:=rounded+1;END IF;IF rounded<0 OR rounded>9007199254740991 OR abs(scaled-rounded)>=0.000001 THEN RAISE EXCEPTION 'legacy browser payment amount unavailable';END IF;
    p:=coalesce(rows_json->e.grant_epoch,jsonb_build_object('sessionId','legacy:'||e.grant_epoch,'signer',lower(e.payer),'grantSpent',0,'paymentSpent',0));
@@ -173,9 +175,9 @@ BEGIN
    SELECT * INTO b FROM public.browser_journal_bindings WHERE nonce=i.nonce;has_binding:=FOUND;
    SELECT * INTO e FROM public.payment_events WHERE id='x402:'||i.nonce;has_payment:=FOUND;
    SELECT * INTO original FROM public.browser_signing_originals WHERE nonce=i.nonce;has_original:=FOUND;
-   IF has_payment AND has_binding THEN
+   IF has_payment THEN
     SELECT * INTO raw_payment FROM keryx_storage.payment_event_originals WHERE payment_id=e.id;
-    IF NOT FOUND OR raw_payment.native_projection IS DISTINCT FROM to_jsonb(e) THEN RAISE EXCEPTION 'native browser payment original unavailable or changed';END IF;
+    IF NOT FOUND OR raw_payment.identity_digest IS DISTINCT FROM keryx_storage.identity_digest(expected) OR raw_payment.original_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_payment.original_wire::text,'UTF8')),'hex') OR raw_payment.current_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_payment.current_wire::text,'UTF8')),'hex') OR raw_payment.native_projection IS DISTINCT FROM to_jsonb(e) THEN RAISE EXCEPTION 'native browser payment original unavailable or changed';END IF;
     before_wire:=raw_payment.current_wire::text;
     IF octet_length(before_wire)>1048576 THEN RAISE EXCEPTION 'native browser payment original bound';END IF;
    END IF;
@@ -255,9 +257,9 @@ BEGIN
    SELECT * INTO b FROM public.browser_journal_bindings WHERE nonce=i.nonce;has_binding:=FOUND;
    SELECT * INTO e FROM public.payment_events WHERE id='x402:'||i.nonce;has_payment:=FOUND;
    SELECT * INTO original FROM public.browser_signing_originals WHERE nonce=i.nonce;has_original:=FOUND;
-   IF has_payment AND has_binding THEN
+   IF has_payment THEN
     SELECT * INTO raw_payment FROM keryx_storage.payment_event_originals WHERE payment_id=e.id;
-    IF NOT FOUND OR raw_payment.native_projection IS DISTINCT FROM to_jsonb(e) THEN RAISE EXCEPTION 'native browser payment original unavailable or changed';END IF;
+    IF NOT FOUND OR raw_payment.identity_digest IS DISTINCT FROM keryx_storage.identity_digest(expected) OR raw_payment.original_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_payment.original_wire::text,'UTF8')),'hex') OR raw_payment.current_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_payment.current_wire::text,'UTF8')),'hex') OR raw_payment.native_projection IS DISTINCT FROM to_jsonb(e) THEN RAISE EXCEPTION 'native browser payment original unavailable or changed';END IF;
     before_wire:=raw_payment.current_wire::text;
     IF octet_length(before_wire)>1048576 THEN RAISE EXCEPTION 'native browser payment original bound';END IF;
    END IF;
@@ -291,7 +293,7 @@ BEGIN
   amount:=(intent->>'amount_micro_usdc')::bigint;signer:=lower(intent->>'signer');
   IF intent->>'phase' IS DISTINCT FROM 'prepared' OR (keryx_storage.source_scalar_text(metadata->>'id','scalar')->>'shadow') IS DISTINCT FROM 'x402:'||(intent->>'nonce') OR (keryx_storage.source_scalar_text(metadata->>'authorizationId','scalar')->>'shadow') IS DISTINCT FROM intent->>'nonce' OR (keryx_storage.source_scalar_text(metadata->>'createdAt','scalar')->>'shadow') IS DISTINCT FROM intent->>'created_at' OR (keryx_storage.source_scalar_text(metadata->>'authorizationPhase','scalar')->>'shadow') IS DISTINCT FROM 'prepared' OR (keryx_storage.source_scalar_text(metadata->>'settlementStatus','scalar')->>'shadow') IS DISTINCT FROM 'pending' OR metadata->>'settled' IS DISTINCT FROM 'false' THEN RAISE EXCEPTION 'browser original producer binding mismatch';END IF;
   IF amount<1 OR amount>9007199254740991 OR intent->>'nonce' !~ '^0x[0-9a-f]{64}$' OR intent->>'kind' NOT IN('fetch','citation') OR (keryx_storage.source_scalar_text(requirements->>'scheme','scalar')->>'shadow') IS DISTINCT FROM 'exact' OR lower((keryx_storage.source_scalar_text(requirements->>'payTo','scalar')->>'shadow')) IS DISTINCT FROM lower(intent->>'payee') OR (keryx_storage.source_scalar_text(requirements->>'amount','scalar')->>'shadow') IS DISTINCT FROM amount::text OR (requirements->>'maxTimeoutSeconds')::integer NOT BETWEEN 604900 AND 691200
-   OR (keryx_storage.source_scalar_text(metadata->>'kind','scalar')->>'shadow') IS DISTINCT FROM intent->>'kind' OR (keryx_storage.source_scalar_text(metadata->>'queryId','scalar')->>'sourceHex') IS DISTINCT FROM encode(convert_to(intent->>'query_id','UTF8'),'hex') OR (keryx_storage.source_scalar_text(metadata->>'sourceId','scalar')->>'sourceHex') IS DISTINCT FROM encode(convert_to(intent->>'source_id','UTF8'),'hex') OR CASE WHEN metadata->>'offerId' IS NULL OR metadata->>'offerId'='null' THEN '' ELSE (keryx_storage.source_scalar_text(metadata->>'offerId','scalar')->>'sourceHex') END IS DISTINCT FROM encode(convert_to(coalesce(intent->>'offer_id',''),'UTF8'),'hex') OR lower((keryx_storage.source_scalar_text(metadata->>'payer','scalar')->>'shadow')) IS DISTINCT FROM signer OR lower((keryx_storage.source_scalar_text(metadata->>'payee','scalar')->>'shadow')) IS DISTINCT FROM lower(intent->>'payee') OR (keryx_storage.source_scalar_text(metadata->>'grantEpoch','scalar')->>'sourceHex') IS DISTINCT FROM encode(convert_to(intent->>'grant_epoch','UTF8'),'hex') OR abs((metadata->>'amountUsdc')::double precision*1000000-amount)>0.000001 THEN RAISE EXCEPTION 'browser journal economic tuple differs from challenge';END IF;
+   OR (keryx_storage.source_scalar_text(metadata->>'kind','scalar')->>'shadow') IS DISTINCT FROM intent->>'kind' OR (keryx_storage.source_scalar_text(metadata->>'queryId','scalar')->>'sourceHex') IS DISTINCT FROM encode(convert_to(intent->>'query_id','UTF8'),'hex') OR (keryx_storage.source_scalar_text(metadata->>'sourceId','scalar')->>'sourceHex') IS DISTINCT FROM encode(convert_to(intent->>'source_id','UTF8'),'hex') OR (CASE WHEN metadata->>'offerId' IS NULL OR metadata->>'offerId'='null' THEN '' ELSE (keryx_storage.source_scalar_text(metadata->>'offerId','scalar')->>'sourceHex') END) IS DISTINCT FROM encode(convert_to(coalesce(intent->>'offer_id',''),'UTF8'),'hex') OR lower((keryx_storage.source_scalar_text(metadata->>'payer','scalar')->>'shadow')) IS DISTINCT FROM signer OR lower((keryx_storage.source_scalar_text(metadata->>'payee','scalar')->>'shadow')) IS DISTINCT FROM lower(intent->>'payee') OR (keryx_storage.source_scalar_text(metadata->>'grantEpoch','scalar')->>'sourceHex') IS DISTINCT FROM encode(convert_to(intent->>'grant_epoch','UTF8'),'hex') OR abs((metadata->>'amountUsdc')::double precision*1000000-amount)>0.000001 THEN RAISE EXCEPTION 'browser journal economic tuple differs from challenge';END IF;
   -- Only the separately checked Source-claim receipt DTO is cast to JSONB;
   -- unrelated context/item strings remain opaque raw token TEXT.
   IF (source_policy->>'selector')::jsonb IS DISTINCT FROM jsonb_build_object('sourceId',intent->>'source_id','identity',NULL) OR source_policy->'policySnapshot' IS DISTINCT FROM jsonb_build_object('sourceId',intent->>'source_id','receipt',coalesce(nullif(context->>'sourceClaim','null'),item_tokens->>'sourceClaim','null')::jsonb,'kind',intent->>'kind') OR coalesce(metadata->>'sourceClaim','null')::jsonb IS DISTINCT FROM coalesce(nullif(context->>'sourceClaim','null'),item_tokens->>'sourceClaim','null')::jsonb THEN RAISE EXCEPTION 'browser journal source claim differs from original context';END IF;
@@ -320,7 +322,7 @@ BEGIN
   INSERT INTO public.browser_journal_bindings(nonce,requirements,payment_metadata) VALUES(intent->>'nonce',packet->>'requirementsWire',packet->>'paymentMetadataWire');
   INSERT INTO public.payment_events SELECT(after_e).*;
   IF packet->>'paymentContextWire' IS NOT NULL THEN UPDATE public.browser_journal_bindings SET payment_context=packet->>'paymentContextWire' WHERE nonce=intent->>'nonce';END IF;
-  INSERT INTO keryx_storage.payment_event_originals(payment_id,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields) VALUES(after_e.id,raw_json,payload->>'sha256',raw_json,payload->>'sha256',to_jsonb(after_e),unprojected);
+  INSERT INTO keryx_storage.payment_event_originals(payment_id,identity_digest,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields) VALUES(after_e.id,keryx_storage.identity_digest(expected),raw_json,payload->>'sha256',raw_json,payload->>'sha256',to_jsonb(after_e),unprojected);
   UPDATE public.browser_signer_capacity SET spent_micro=spent_micro+amount WHERE browser_signer_capacity.signer=source_browser.signer;UPDATE public.browser_retained_grants SET spent_micro=spent_micro+amount WHERE grant_epoch=intent->>'grant_epoch';
   IF (SELECT count(*) FROM public.session_grants WHERE lower(sess_addr)=source_browser.signer)>1000 THEN RAISE EXCEPTION 'browser signer alias bound';END IF;UPDATE public.session_grants SET spent=(source_browser.spent+amount)::double precision/1000000 WHERE lower(sess_addr)=source_browser.signer;
   IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN '"admitted"'::json;
@@ -329,7 +331,7 @@ BEGIN
  IF NOT(has_intent AND has_binding AND has_payment) THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
  current_json:=before_wire::json;current_tokens:=keryx_storage.source_scalar_text(before_wire,'tokens');unprojected:=raw_payment.unprojected_fields;target_phase:=e.authorization_phase;status:=e.settlement_status;
  IF action IN('expose','submit') THEN
-  IF e.authorization_phase IS DISTINCT FROM CASE action WHEN 'expose' THEN 'prepared' ELSE 'signed' END OR e.settlement_status IS DISTINCT FROM 'pending' THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
+  IF e.authorization_phase IS DISTINCT FROM (CASE action WHEN 'expose' THEN 'prepared' ELSE 'signed' END) OR e.settlement_status IS DISTINCT FROM 'pending' THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
   target_phase:=CASE action WHEN 'expose' THEN 'exposed' ELSE 'submission_attempted' END;
  ELSIF action='cancel' THEN
   IF e.authorization_phase IS DISTINCT FROM 'prepared' OR e.settlement_status IS DISTINCT FROM 'pending' THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'false'::json;END IF;
@@ -377,7 +379,8 @@ BEGIN
  END IF;
  SELECT ('{'||string_agg(to_json(key)::text||':'||CASE key WHEN 'authorization_phase' THEN to_json(target_phase)::text WHEN 'settlement_status' THEN to_json(status)::text WHEN 'authorization_expires_at' THEN CASE WHEN update_expiry THEN to_json(stamp)::text ELSE value#>>'{}' END ELSE value#>>'{}' END,',' ORDER BY key COLLATE "C")||'}')::json INTO updated_json FROM jsonb_each(current_tokens) WHERE key<>'_rootKeys';
  SELECT * INTO after_e FROM public.payment_events WHERE id=e.id;
- UPDATE keryx_storage.payment_event_originals SET current_wire=updated_json,current_sha256=encode(sha256(convert_to(updated_json::text,'UTF8')),'hex'),native_projection=to_jsonb(after_e),unprojected_fields=unprojected WHERE payment_id=e.id;
+ UPDATE keryx_storage.payment_event_originals SET current_wire=updated_json,current_sha256=encode(sha256(convert_to(updated_json::text,'UTF8')),'hex'),native_projection=to_jsonb(after_e),unprojected_fields=unprojected WHERE payment_id=e.id AND identity_digest=keryx_storage.identity_digest(expected) AND current_sha256=raw_payment.current_sha256 AND current_wire::text=before_wire;
+  GET DIAGNOSTICS changed=ROW_COUNT;IF changed<>1 THEN RAISE EXCEPTION 'native browser payment current wire changed';END IF;
  IF signing_writer THEN DELETE FROM public.browser_signing_v2_writer WHERE transaction_id=txid_current();END IF;IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'true'::json;
 END;$$;
 REVOKE ALL ON FUNCTION public.storage_browser_journal(jsonb,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
