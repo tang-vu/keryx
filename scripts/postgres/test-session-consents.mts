@@ -359,7 +359,7 @@ try {
     console.log(JSON.stringify({passed:true,hostedSourcePaymentsOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,hostedLedger,hostedAdmission,fullWriterQualified:false,applicationBackendSwitched:false}));return;
   }
   if(paymentObserverWaitOnly){
-    const packet=capturePaymentEvent({id:'synthetic-wait-'+randomUUID(),createdAt:new Date().toISOString(),kind:'citation',queryId:'synthetic-wait',sourceId:'synthetic-wait',sourceName:'synthetic\0name',payer:owner,payee:signer,amountUsdc:0.01,network:identity.network,settled:false,settlementStatus:'pending'});
+    const packet=capturePaymentEvent({id:'synthetic-wait-'+randomUUID(),createdAt:new Date().toISOString(),kind:'citation',queryId:'synthetic-wait',sourceId:'synthetic-wait',sourceName:'synthetic\0name',txHash:'synthetic-observer\0receipt',payer:owner,payee:signer,amountUsdc:0.01,network:identity.network,settled:false,settlementStatus:'pending'});
     const observation=await qualifyPaymentObserverWait({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,holder:app},packet);
     console.log(JSON.stringify({passed:true,paymentObserverWaitOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,observation,fullWriterQualified:false,applicationBackendSwitched:false}));return;
   }
