@@ -20,18 +20,37 @@ export interface SnapshotRehearsalResult {
  * It cannot commit a caller's transaction or supply application enrollment. */
 export async function rehearseSqliteSnapshot(db: DatabaseSync, options: PostgresConnectionOptions): Promise<SnapshotRehearsalResult> {
   if (!db.isTransaction) throw new Error("Private consistent snapshot required");
-  const tables = snapshotTables(db);
-  const schema = db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name COLLATE BINARY").all();
-  const schemaWire = JSON.stringify(schema);
-  if (Buffer.byteLength(schemaWire) > 4 * 1024 * 1024) throw new Error("Migration schema bound exceeded");
-  const schemaDigest = createHash("sha256").update(schemaWire).digest("hex");
-  const results: { name: string; rows: number; digest: string }[] = [];
+  snapshotTables(db);
+  if (Buffer.byteLength(JSON.stringify(db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name COLLATE BINARY").all())) > 4 * 1024 * 1024)
+    throw new Error("Migration schema bound exceeded");
   const pg = new Client(postgresPoolConfiguration(options));
   pg.on("error", () => {});
   try {
     await pg.connect();
     await pg.query("BEGIN");
     await pg.query("SET LOCAL statement_timeout='5s'; SET LOCAL lock_timeout='1s'; SET LOCAL idle_in_transaction_session_timeout='15s'");
+    const result = await stageSnapshotTransaction(db, pg);
+    await pg.query("COMMIT");
+    return result;
+  } catch {
+    // Never retry an ambiguous COMMIT or overwrite a possibly accepted copy.
+    try { await pg.query("ROLLBACK"); } catch {}
+    throw new Error("Snapshot rehearsal unavailable; inspect the dedicated target before retrying");
+  } finally {
+    try { await pg.end(); } catch { throw new Error("Snapshot rehearsal connection disposal unavailable"); }
+  }
+}
+
+/** Data-only operator kernel. Caller owns the real connection and transaction;
+ * this function cannot select a target, connect, commit, or grant authority. */
+export async function stageSnapshotTransaction(db: DatabaseSync, pg: Client): Promise<SnapshotRehearsalResult> {
+  if (!db.isTransaction) throw new Error("Private consistent snapshot required");
+  const tables = snapshotTables(db);
+  const schema = db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name COLLATE BINARY").all();
+  const schemaWire = JSON.stringify(schema);
+  if (Buffer.byteLength(schemaWire) > 4 * 1024 * 1024) throw new Error("Migration schema bound exceeded");
+  const schemaDigest = createHash("sha256").update(schemaWire).digest("hex");
+  const results: { name: string; rows: number; digest: string }[] = [];
     const version = await pg.query("SELECT current_setting('server_version_num') AS version");
     if (Number(version.rows[0].version) < 170000 || Number(version.rows[0].version) >= 180000) throw new Error("PostgreSQL17 rehearsal required");
     // No IF NOT EXISTS, DROP, TRUNCATE, conflict overwrite or implicit retry.
@@ -68,17 +87,33 @@ export async function rehearseSqliteSnapshot(db: DatabaseSync, options: Postgres
     if (actualSchema.rowCount !== 1 || actualSchema.rows[0].schema_wire !== schemaWire || actualSchema.rows[0].schema_digest !== schemaDigest)
       throw new Error("Migration schema mismatch");
     for (let i = 0; i < tables.length; i++) await verifyTable(pg, tables[i], results[i]);
-    await pg.query("COMMIT");
     return Object.freeze({ format: "keryx-postgres-snapshot-rehearsal-v1", schemaDigest,
       tables: Object.freeze(results), totalRows: results.reduce((n, t) => n + t.rows, 0), verified: true, applicationBackendSwitched: false });
-  } catch {
-    // Never retry an ambiguous COMMIT. The caller must inspect the dedicated
-    // database and retained source, rather than overwrite a possibly accepted copy.
-    try { await pg.query("ROLLBACK"); } catch {}
-    throw new Error("Snapshot rehearsal unavailable; inspect the dedicated target before retrying");
-  } finally {
-    try { await pg.end(); } catch { throw new Error("Snapshot rehearsal connection disposal unavailable"); }
+}
+
+/** Independent persisted census, derived again from the same pinned Source. */
+export async function compareStagedSnapshotTransaction(db: DatabaseSync, pg: Client) {
+  if (!db.isTransaction) throw new Error("Private consistent snapshot required");
+  const tables = snapshotTables(db), results = [];
+  const schemaWire = JSON.stringify(db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name COLLATE BINARY").all());
+  if (Buffer.byteLength(schemaWire) > 4 * 1024 * 1024) throw new Error("Migration schema bound exceeded");
+  const schemaDigest = createHash("sha256").update(schemaWire).digest("hex");
+  const actual = await pg.query("SELECT schema_wire,schema_digest FROM keryx_migration.snapshot_manifest WHERE singleton");
+  if (actual.rowCount !== 1 || actual.rows[0].schema_wire !== schemaWire || actual.rows[0].schema_digest !== schemaDigest)
+    throw new Error("Migration schema mismatch");
+  if ((await pg.query("SELECT count(*)::text n FROM keryx_migration.snapshot_tables")).rows[0].n !== String(tables.length)) throw new Error("Migration table census mismatch");
+  let totalRows = 0;
+  for (const table of tables) {
+    const digest = createHash("sha256"); let rows = 0, bytes = 0;
+    for (const row of snapshotRows(db, table)) {
+      const wire = snapshotRowWire(row); digest.update(wire).update("\n"); rows++; bytes += Buffer.byteLength(wire);
+      if (rows % 64 === 0 || bytes >= 1048576) { await pg.query('SELECT 1'); bytes = 0; }
+    }
+    const result = { name: table.name, rows, digest: digest.digest("hex") };
+    await verifyTable(pg, table, result); results.push(result); totalRows += rows;
   }
+  if ((await pg.query("SELECT count(*)::text n FROM keryx_migration.snapshot_rows")).rows[0].n !== String(totalRows)) throw new Error("Migration row census mismatch");
+  return { schemaDigest, tables: results, totalRows };
 }
 
 async function verifyTable(pg: Client, table: SnapshotTable, expected: { rows: number; digest: string }): Promise<void> {
