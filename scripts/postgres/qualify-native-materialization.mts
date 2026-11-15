@@ -11,6 +11,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { nativeRuntimeSource } from './native-runtime-source.mts';
 import { exportNativePostgresSchemaContract } from './native-contract.mts';
 import { NATIVE_READONLY_RUNTIME_PROFILE } from '../../lib/db/postgres/runtime-profile';
+import { hasPrivateResultIdentity } from './private-result-source.mts';
 const pgImage='postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065';
 const nodeImage='node@sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c';
 const args=process.argv.slice(2),sourcePlanOnly=args[0]==='--source-plan-only',synthetic=args[0]==='--synthetic',retained=args[0]==='--retained';
@@ -64,6 +65,10 @@ try{
   buildSync({entryPoints:[fileURLToPath(new URL('./native-materialization-child.mts',import.meta.url))],outfile:bundle,bundle:true,platform:'node',target:'node24',format:'cjs',minifyWhitespace:true,external:['pg-native'],logLevel:'silent'});
   const compiled=readFileSync(bundle);assert(compiled.length>0&&compiled.length<=4194304);nodeName='keryx-native-materialization-node-'+randomUUID();
   const run=['run','-i','--name',nodeName,'--label','keryx.native-materialization-node='+name,'--network','container:'+name,'--user','0:0','--read-only','--memory','512m','--memory-swap','512m','--cpus','.25','--pids-limit','32','--cap-drop','ALL','--security-opt','no-new-privileges','--ulimit','core=0','--tmpfs','/run/keryx-intake:rw,nosuid,noexec,mode=0700,size=16m','--mount',`type=bind,source=${bundle},target=/child.cjs,readonly`];
+  // Only the exact new private candidate changes startup. Source buyer/private
+  // profiles are import-sticky, so this must precede Node module evaluation.
+  // Docker receives no host environment; fixed blank keys add no custody.
+  if(hasPrivateResultIdentity(reference))run.push('-e','KERYX_NETWORK=arc','-e','NEXT_PUBLIC_KERYX_NETWORK=arc','-e','KERYX_FORCE_OFFLINE=0','-e','BASE_URL=https://keryx.cc','-e','KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','AGENT_PRIVATE_KEY=','-e','TREASURY_PRIVATE_KEY=','-e','KERYX_TREASURY_PRIVATE_KEY=','-e','SIGNER_PRIVATE_KEY=','-e','PRIVATE_KEY=');
   if(input)run.push('--mount',`type=bind,source=${input},target=/input/snapshot.sqlite,readonly`);run.push(nodeImage,'/usr/bin/timeout','--signal=KILL','1800s','node','--no-warnings','--max-old-space-size=256','/child.cjs','--materialize');
   const packet=JSON.stringify({mode:retained?'retained':'synthetic',password,referenceWire,key,...(expectedHash?{expectedHash}:{})});assert(Buffer.byteLength(packet)<=8388608);
   const result=await runChild(run,packet,1810000);

@@ -24,9 +24,10 @@ import { rehearseSqliteSnapshot } from './rehearse-snapshot.mts';
 import { materializeNativeSnapshot,NativeMaterializationUnavailable,supportsBrowserMaterialization } from './materialize-native-snapshot.mts';
 import { exportNativePostgresSchemaContract } from './native-contract.mts';
 import { seedBrowserMaterializationFixture,assertBrowserMaterializationFixture } from './browser-materialization-fixture.mts';
+import { hasPrivateResultIdentity } from './private-result-source.mts';
 let stage='containment';
 let stagingSummary:{tables:number;rows:number}|undefined;
-async function synthetic(browser=false){
+async function synthetic(browser=false,privateResults=false){
  const target='/run/keryx-intake/synthetic.sqlite',db=new DatabaseSync(target),date='2026-11-14T00:00:00.000Z';chmodSync(target,0o600);
  const identity={...syntheticStorageIdentity('mainnet-real'),format:'keryx-mainnet-storage-identity-v1' as const,network:'eip155:5042' as const,profileDigest:STORAGE_MAINNET_PROFILE_DIGEST};
  try{
@@ -44,6 +45,16 @@ async function synthetic(browser=false){
   const {order}=syntheticA2aOriginal(740,ARC_MAINNET_PROFILE);
   db.prepare("INSERT INTO a2a_orders(id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,service_fee_usdc,research_mode,package_data,status,transaction_id,request_data,response_data,execution_journal_version,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,'completed',?,?,?,1,?,?)").run(order.id,order.id,order.authorizationId,order.requestHash,order.payer,order.payee,order.amountUsdc,order.creatorBudgetUsdc,order.serviceFeeUsdc,order.researchMode,JSON.stringify(order.researchPackage),order.transaction,JSON.stringify(order.request),JSON.stringify({status:'completed',queryId:order.id,answer:'Synthetic delivery',researchPackage:order.researchPackage}),order.createdAt,order.updatedAt);
   if(browser)await seedBrowserMaterializationFixture(db);
+  if(privateResults){
+   // Disposable held Source observations only. This public test-key DATA
+   // signature is never a funded payment, provider response or executed job.
+   const {privateKeyToAccount}=await import('viem/accounts'),{createPrivateAuthorization}=await import('../../lib/buyer/private-request-commitment'),{buyerTypedData,BUYER_NETWORK}=await import('../../lib/buyer/protocol'),{preparePrivateResearchIntent}=await import('../../lib/a2a/private-research-intent');assert.equal(BUYER_NETWORK,identity.network);
+   const account=privateKeyToAccount(`0x${'11'.repeat(32)}`),profile=ARC_MAINNET_PROFILE,merchants={privatePayee:'0x'+'ab'.repeat(20),publicResearchPayee:'0x'+'cd'.repeat(20)},requirement={scheme:'exact',network:profile.networkId,asset:profile.usdcAddress,amount:'50000',payTo:merchants.privatePayee,maxTimeoutSeconds:691200,extra:{name:'GatewayWalletBatched',version:'1',verifyingContract:profile.gatewayWallet}};
+   const request={question:'Synthetic private\0\ud800 original',budget:.03,researchMode:'quick',packageVersion:'1.0.0',responseMode:'async',access:'payer-private-v1',model:null},fresh=await createPrivateAuthorization(request,requirement,account.address,merchants,1788912000000),signature=await account.signTypedData(buyerTypedData(fresh.authorization)),intent=await preparePrivateResearchIntent({request:fresh.request,salt:fresh.salt,payment:{authorization:fresh.authorization,signature}},requirement,merchants);
+   const rawIntent=JSON.stringify(intent).replace('"question":'+JSON.stringify(request.question),'"\\u0071uestion":'+JSON.stringify(' \uFEFF'+request.question+'\t ')).replace('"budget":0.03','"budget":3e-2'),payer=intent.submission.payment.authorization.from,started='2026-09-09T07:00:00.123456789+07:00',settled='2026-09-09T00:00:00.123456Z',saved='2026-09-09T01:00:00.123456789+01:00';
+   const confirmation=JSON.stringify({source:'circle-facilitator-success',transaction:'synthetic-no-private-transfer',network:profile.networkId,payer,payee:merchants.privatePayee,amountMicros:'50000',authorizationId:fresh.authorization.nonce}),run=' \n'+JSON.stringify({id:intent.id,question:intent.submission.request.question,budget:.03,researchMode:'quick',answer:'Private original\0\udfff',trace:[{extension:'Retained\0\ud800\udfff'}]})+'\n';
+   db.prepare('INSERT INTO private_research_intents VALUES(?,?,?,?)').run(intent.id,payer,rawIntent,started);db.prepare('INSERT INTO private_research_payment_attempts VALUES(?,?,?,?)').run(intent.id,started,confirmation,settled);db.prepare('INSERT INTO private_research_executions VALUES(?,?,?)').run(intent.id,'dddddddd-dddd-4ddd-8ddd-dddddddddddd',started);db.prepare('INSERT INTO private_research_results VALUES(?,?,?)').run(intent.id,run,saved);
+  }
   insertStorageIdentity(db,identity);installStorageFences(db,identity);db.exec('COMMIT');
  }finally{db.close();}return target;
 }
@@ -57,8 +68,8 @@ async function main(){
  const buffer=Buffer.alloc(8388609);let bytes=0;for(;;){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;assert(bytes<buffer.length);}
  const packet=JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;password:string;referenceWire:string;key:string;expectedHash?:string};buffer.fill(0);
  assert(['synthetic','retained'].includes(packet.mode));assert.deepEqual(Object.keys(packet).sort(),(packet.mode==='retained'?['mode','password','referenceWire','key','expectedHash']:['mode','password','referenceWire','key']).sort());assert(/^[a-f0-9]{48}$/.test(packet.password));assert(/^[a-fA-F0-9]{64}$/.test(packet.key));process.env.CONTENT_MASTER_KEY=packet.key;
- const browser=supportsBrowserMaterialization(exportNativePostgresSchemaContract(packet.referenceWire));
- stage='snapshot-bootstrap';const target=packet.mode==='synthetic'?await synthetic(browser):'/input/snapshot.sqlite';if(packet.mode==='retained')assert(mounts.some(p=>p[4]===target&&p[5].split(',').includes('ro')));
+ const reference=exportNativePostgresSchemaContract(packet.referenceWire),browser=supportsBrowserMaterialization(reference),privateResults=hasPrivateResultIdentity(reference);
+ stage='snapshot-bootstrap';const target=packet.mode==='synthetic'?await synthetic(browser,privateResults):'/input/snapshot.sqlite';if(packet.mode==='retained')assert(mounts.some(p=>p[4]===target&&p[5].split(',').includes('ro')));
  assert.equal(realpathSync(target),target);checkSnapshotSidecars(target);const before=lstatSync(target,{bigint:true});assert(before.isFile()&&!before.isSymbolicLink()&&before.size>BigInt(0)&&before.size<=BigInt(536870912));
  const descriptor=openSync(target,constants.O_RDONLY|constants.O_NOFOLLOW);let db:DatabaseSync|undefined;
  try{
@@ -77,13 +88,14 @@ async function main(){
     try{
      assert.equal((await owner.query("UPDATE public.decision_review_records SET input_json=input_json||' ' WHERE id=$1",[source.id])).rowCount,1);
      await assert.rejects(materializeNativeProjections(db,options),error=>error instanceof NativeMaterializationUnavailable&&error.diagnostic.stage==='projection-copy'&&error.diagnostic.table==='review_projection'&&error.diagnostic.pgCode==='P0001'&&error.diagnostic.commitOutcome==='not_attempted');
-     for(const table of ['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','acceptance_original_projection','a2a_original_time_projection','a2a_original_cell_projection',...(browser?['payment_event_originals']:[])])assert.equal((await owner.query('SELECT count(*)::text n FROM keryx_storage.'+table)).rows[0].n,'0');
+     for(const table of ['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','acceptance_original_projection','a2a_original_time_projection','a2a_original_cell_projection',...(browser?['payment_event_originals']:[]),...(privateResults?['private_research_result_identity']:[])])assert.equal((await owner.query('SELECT count(*)::text n FROM keryx_storage.'+table)).rows[0].n,'0');
      partialProjectionRollbackQualified=true;
     }finally{assert.equal((await owner.query('UPDATE public.decision_review_records SET input_json=$1 WHERE id=$2',[source.input_json,source.id])).rowCount,1);assert.equal((await owner.query('SELECT input_json FROM public.decision_review_records WHERE id=$1',[source.id])).rows[0].input_json,source.input_json);}
    }finally{await owner.end();}
   }
   stage='source-projections';const projections=await materializeNativeProjections(db,options);
   if(packet.mode==='synthetic')assert(projections.domains.every(domain=>domain.rows===(browser&&domain.table==='payment_event_originals'?3:1)));
+  if(packet.mode==='synthetic'&&privateResults){assert.equal(projections.privateResultIdentityPresent,true);assert.equal(projections.privateResults,1);assert.equal(projections.domains.length,12);}
   let browserCorpus:Awaited<ReturnType<typeof assertBrowserMaterializationFixture>>|undefined;
   if(packet.mode==='synthetic'&&browser){
    assert.equal(projections.paymentEventOriginalsPresent,true);assert.equal(projections.payments,3);assert.equal(materialization.browserPermanentLayoutsMaterialized,true);assert.equal(materialization.emptyDifferentLayouts,3);

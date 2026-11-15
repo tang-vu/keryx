@@ -19,9 +19,10 @@ import { sqlitePrivacyProjection } from './privacy-projection.mts';
 import { sqliteWatchProjection } from './watch-projection.mts';
 import { sqliteAcceptanceProjection } from './acceptance-projection.mts';
 import { captureObservedPaymentSource } from './payment-original-source.mts';
+import { hasPrivateResultIdentity,captureObservedPrivateResultSource,PRIVATE_RESULT_IDENTITY_COLUMNS,PRIVATE_RESULT_SOURCE_COLUMNS,PRIVATE_RESULT_SOURCE_BYTE_LIMITS,type PrivateResultSourceTable } from './private-result-source.mts';
 import { sqliteA2aTimeProjection,sqliteA2aOriginalCellProjection } from './a2a-time-projection.mts';
 const tables=['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','a2a_original_time_projection','a2a_original_cell_projection','acceptance_original_projection'] as const;
-type Table=typeof tables[number]|'payment_event_originals';
+type Table=typeof tables[number]|'payment_event_originals'|'private_research_result_identity';
 type Kind='json'|'json-null'|'hex';
 type Field={name:string;kind?:Kind};
 const field=(name:string,kind?:Kind):Field=>({name,...(kind?{kind}:{})});
@@ -39,8 +40,8 @@ function hasPaymentOriginals(contract:ReturnType<typeof exportNativePostgresSche
 export async function materializeNativeProjections(db:DatabaseSync,options:PostgresConnectionOptions){
  assertDevelopmentMaterializationContainment();assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(options.role,'postgres');assert.equal(options.database,'native_materialized');assert.deepEqual(options.endpoint,{kind:'loopback',port:5432});assert(/^[a-f0-9]{48}$/.test(options.password));
  const identity=readStorageIdentity(db),pg=new Client(postgresPoolConfiguration(options));pg.on('error',()=>{});let stage='projection-entry',table:string|null=null,started=false,commit=false;
- const candidates:Table[]=[...tables,'payment_event_originals'],counts=Object.fromEntries(candidates.map(t=>[t,0])) as Record<Table,number>,digests=new Map(candidates.map(t=>[t,createHash('sha256')]));
- let paymentEventOriginalsPresent:boolean|undefined;const identityWire=canonicalJson(identity),sourceCurrent=()=>{assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(canonicalJson(readStorageIdentity(db)),identityWire);};
+ const candidates:Table[]=[...tables,'payment_event_originals','private_research_result_identity'],counts=Object.fromEntries(candidates.map(t=>[t,0])) as Record<Table,number>,digests=new Map(candidates.map(t=>[t,createHash('sha256')]));
+ let paymentEventOriginalsPresent:boolean|undefined,privateResultIdentityPresent:boolean|undefined;const identityWire=canonicalJson(identity),sourceCurrent=()=>{assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(canonicalJson(readStorageIdentity(db)),identityWire);};
  try{
   await pg.connect();const selected=(await pg.query('SELECT identity::text wire FROM keryx_storage.identity WHERE singleton')).rows;assert.equal(selected.length,1);assert.equal(canonicalJson(validateStorageIdentity(JSON.parse(selected[0].wire))),canonicalJson(identity));
   const verify=async()=>{
@@ -48,11 +49,11 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
    const current=(await pg.query('SELECT identity::text wire FROM keryx_storage.identity WHERE singleton FOR SHARE')).rows;assert.equal(current.length,1);assert.equal(canonicalJson(validateStorageIdentity(JSON.parse(current[0].wire))),identityWire);
    assert.equal((await pg.query('SELECT source_digest FROM keryx_storage.source_contract WHERE singleton FOR SHARE')).rows[0]?.source_digest,NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256);
    const contract=exportNativePostgresSchemaContract((await pg.query('SELECT keryx_storage.catalog_contract()::text wire')).rows[0].wire);assert.equal(contract.sha256,NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256);
-   const present=hasPaymentOriginals(contract);if(paymentEventOriginalsPresent!==undefined)assert.equal(present,paymentEventOriginalsPresent);paymentEventOriginalsPresent=present;sourceCurrent();
+   const present=hasPaymentOriginals(contract);if(paymentEventOriginalsPresent!==undefined)assert.equal(present,paymentEventOriginalsPresent);paymentEventOriginalsPresent=present;const privatePresent=hasPrivateResultIdentity(contract);if(privateResultIdentityPresent!==undefined)assert.equal(privatePresent,privateResultIdentityPresent);privateResultIdentityPresent=privatePresent;if(privatePresent)assert(present);sourceCurrent();
   };await verify();
   await pg.query('BEGIN');started=true;
-  stage='projection-preflight';await verify();const selectedTables:Table[]=[...tables,...(paymentEventOriginalsPresent?['payment_event_originals' as const]:[])];
-  if(paymentEventOriginalsPresent)await pg.query(`LOCK TABLE ${selectedTables.map(name=>'keryx_storage.'+quote(name)).join(',')},public.payment_events IN SHARE ROW EXCLUSIVE MODE`);
+  stage='projection-preflight';await verify();const selectedTables:Table[]=[...tables,...(paymentEventOriginalsPresent?['payment_event_originals' as const]:[]),...(privateResultIdentityPresent?['private_research_result_identity' as const]:[])];
+  if(paymentEventOriginalsPresent)await pg.query(`LOCK TABLE ${selectedTables.map(name=>'keryx_storage.'+quote(name)).join(',')},public.payment_events${privateResultIdentityPresent?','+Object.keys(PRIVATE_RESULT_SOURCE_COLUMNS).map(name=>'public.'+quote(name)).join(','):''} IN SHARE ROW EXCLUSIVE MODE`);
   for(const name of selectedTables){table=name;assert.equal((await pg.query(`SELECT count(*)::text n FROM keryx_storage.${quote(name)}`)).rows[0].n,'0');}
   const insert=async(name:Table,keys:string[],columns:Field[],row:Record<string,unknown>)=>{
    table=name;stage='projection-copy';assert.deepEqual(Object.keys(row).sort(),columns.map(c=>c.name).sort());const wire=canonicalJson(row);assert(Buffer.byteLength(wire)<=8388608);
@@ -107,10 +108,30 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
    assert.equal(actual.native_projection,nativeProjectionWire);actual.native_projection=JSON.parse(actual.native_projection);actual.unprojected_fields=JSON.parse(actual.unprojected_fields);assert.equal(canonicalJson(actual),wire);assert.equal(sha(actual.original_wire),actual.original_sha256);assert.equal(sha(actual.current_wire),actual.current_sha256);sourceCurrent();
    digests.get('payment_event_originals')!.update(wire).update('\n');counts.payment_event_originals++;
   }
+  let privateResults=0;
+  if(privateResultIdentityPresent){
+   table='private_research_result_identity';stage='private-result-public-preflight';sourceCurrent();
+   for(const name of Object.keys(PRIVATE_RESULT_SOURCE_COLUMNS)){
+    const sourceCount=db.prepare('SELECT count(*) n FROM '+name).get()!.n;assert(typeof sourceCount==='number'&&Number.isSafeInteger(sourceCount)&&sourceCount>=0&&sourceCount<=100000);
+    assert.equal((await pg.query('SELECT count(*)::text n FROM public.'+quote(name))).rows[0].n,String(sourceCount));sourceCurrent();
+   }
+   for(const key of db.prepare('SELECT id FROM private_research_results ORDER BY id COLLATE BINARY').iterate()){
+    table='private_research_result_identity';stage='private-result-source-capture';sourceCurrent();assert(typeof key.id==='string'&&++privateResults<=10000);
+    const captured=await captureObservedPrivateResultSource(db,key.id,identity);sourceCurrent();
+    stage='private-result-public-compare';
+    for(const [name,columns] of Object.entries(PRIVATE_RESULT_SOURCE_COLUMNS)){
+     const bytes=columns.map(c=>'octet_length('+quote(c)+'::text)').join('+'),bounded=bytes+'<='+PRIVATE_RESULT_SOURCE_BYTE_LIMITS[name as PrivateResultSourceTable];
+     const native=await pg.query('SELECT '+columns.map(c=>'CASE WHEN '+bounded+' THEN '+quote(c)+'::text END AS '+quote(c)).join(',')+','+bounded+' bounded FROM public.'+quote(name)+' WHERE id=$1 FOR SHARE',[key.id]);
+     assert.equal(native.rowCount,1);assert.equal(native.rows[0].bounded,true);const actual={...native.rows[0]};delete actual.bounded;
+     assert(canonicalJson(actual)===canonicalJson(captured.rows[name as PrivateResultSourceTable]),'Private Source public cells changed');sourceCurrent();
+    }
+    await insert('private_research_result_identity',['id'],Object.keys(PRIVATE_RESULT_IDENTITY_COLUMNS).map(name=>field(name)),captured.metadata);sourceCurrent();
+   }
+  }
   stage='projection-final';await verify();for(const name of selectedTables)assert.equal((await pg.query(`SELECT count(*)::text n FROM keryx_storage.${quote(name)}`)).rows[0].n,String(counts[name]));
   if(paymentEventOriginalsPresent)assert.equal((await pg.query('SELECT count(*)::text n FROM public.payment_events')).rows[0].n,String(payments));
   commit=true;await pg.query('COMMIT');started=false;
-  return {format:'keryx-native-source-projection-materialization-v1',passed:true,sourceDerivedProjectionsMaterialized:true,sourceLogicalIdentityPreserved:true,runs,reviews,watches,orders,paymentEventOriginalsPresent:paymentEventOriginalsPresent===true,payments,domains:selectedTables.map(name=>({table:name,rows:counts[name],digest:digests.get(name)!.digest('hex')})),writerMode:'held',applicationBackendSwitched:false,completeApplicationWriterQualified:false,productionChanged:false,paymentActions:0,jobActions:0};
+  return {format:'keryx-native-source-projection-materialization-v1',passed:true,sourceDerivedProjectionsMaterialized:true,sourceLogicalIdentityPreserved:true,runs,reviews,watches,orders,paymentEventOriginalsPresent:paymentEventOriginalsPresent===true,payments,privateResultIdentityPresent:privateResultIdentityPresent===true,privateResults,domains:selectedTables.map(name=>({table:name,rows:counts[name],digest:digests.get(name)!.digest('hex')})),writerMode:'held',applicationBackendSwitched:false,completeApplicationWriterQualified:false,productionChanged:false,paymentActions:0,jobActions:0};
  }catch(error){
   if(started)try{await pg.query('ROLLBACK');}catch{}
   const safe=(k:string)=>{const value=error&&typeof error==='object'?Reflect.get(error,k):null;return typeof value==='string'&&/^[a-zA-Z0-9_]{1,128}$/.test(value)?value:null;};
