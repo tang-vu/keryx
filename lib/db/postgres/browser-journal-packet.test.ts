@@ -26,7 +26,7 @@ import { captureBrowserJournalAdmission,captureBrowserJournalSelector,captureBro
 // No configured key, live wallet, RPC, transaction, provider or payment is used.
 const owner=privateKeyToAccount(`0x${'13'.repeat(32)}`),signer=privateKeyToAccount(`0x${'14'.repeat(32)}`),payee=`0x${'15'.repeat(20)}`,epoch=randomUUID();
 afterEach(()=>{vi.useRealTimers();});
-function admission(profile=mainnet,requestId=randomUUID()):BrowserJournalAdmission{
+function admission(profile:typeof mainnet|typeof testnet=mainnet,requestId=randomUUID()):BrowserJournalAdmission{
  const queryId=randomUUID();return {sessionId:'synthetic-browser-session',requestId,queryId,grantEpoch:epoch,signer:signer.address,network:profile.networkId,token:profile.usdcAddress,gatewayContract:profile.gatewayWallet,sourceId:'synthetic-browser-source',offerId:null,kind:'fetch',payee,amountMicroUsdc:15700,
  requirements:{scheme:'exact',network:profile.networkId,asset:profile.usdcAddress,payTo:payee,amount:'15700',maxTimeoutSeconds:604900,extra:{name:'GatewayWalletBatched',version:'1',verifyingContract:profile.gatewayWallet}},
  payment:{kind:'fetch',queryId,sourceId:'synthetic-browser-source',sourceName:'retained\ud800source',payer:signer.address,payee,amountUsdc:0.0157,network:profile.networkId,grantEpoch:epoch,rationale:'raw\0metadata\udfff'},paymentContext:{note:'raw\0context\ud800'} as never};
