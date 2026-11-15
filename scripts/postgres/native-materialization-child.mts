@@ -21,10 +21,12 @@ import { postgresPoolConfiguration } from '../../lib/db/postgres/connection';
 import { checkSnapshotSidecars,checkSnapshotUnchanged,configureSnapshotConnection,validateSnapshotHeader } from '../../lib/db/storage-provenance-snapshot';
 import { OFFLINE_SNAPSHOT_LIMITS } from '../../lib/db/storage-provenance';
 import { rehearseSqliteSnapshot } from './rehearse-snapshot.mts';
-import { materializeNativeSnapshot,NativeMaterializationUnavailable } from './materialize-native-snapshot.mts';
+import { materializeNativeSnapshot,NativeMaterializationUnavailable,supportsBrowserMaterialization } from './materialize-native-snapshot.mts';
+import { exportNativePostgresSchemaContract } from './native-contract.mts';
+import { seedBrowserMaterializationFixture,assertBrowserMaterializationFixture } from './browser-materialization-fixture.mts';
 let stage='containment';
 let stagingSummary:{tables:number;rows:number}|undefined;
-async function synthetic(){
+async function synthetic(browser=false){
  const target='/run/keryx-intake/synthetic.sqlite',db=new DatabaseSync(target),date='2026-11-14T00:00:00.000Z';chmodSync(target,0o600);
  const identity={...syntheticStorageIdentity('mainnet-real'),format:'keryx-mainnet-storage-identity-v1' as const,network:'eip155:5042' as const,profileDigest:STORAGE_MAINNET_PROFILE_DIGEST};
  try{
@@ -41,6 +43,7 @@ async function synthetic(){
   db.prepare('INSERT INTO topic_watches(wallet,id,revision,state) VALUES(?,?,?,?)').run(owner,watch.key.watchId,watch.revision,canonicalJson(watch));
   const {order}=syntheticA2aOriginal(740,ARC_MAINNET_PROFILE);
   db.prepare("INSERT INTO a2a_orders(id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,service_fee_usdc,research_mode,package_data,status,transaction_id,request_data,response_data,execution_journal_version,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,'completed',?,?,?,1,?,?)").run(order.id,order.id,order.authorizationId,order.requestHash,order.payer,order.payee,order.amountUsdc,order.creatorBudgetUsdc,order.serviceFeeUsdc,order.researchMode,JSON.stringify(order.researchPackage),order.transaction,JSON.stringify(order.request),JSON.stringify({status:'completed',queryId:order.id,answer:'Synthetic delivery',researchPackage:order.researchPackage}),order.createdAt,order.updatedAt);
+  if(browser)await seedBrowserMaterializationFixture(db);
   insertStorageIdentity(db,identity);installStorageFences(db,identity);db.exec('COMMIT');
  }finally{db.close();}return target;
 }
@@ -54,7 +57,8 @@ async function main(){
  const buffer=Buffer.alloc(8388609);let bytes=0;for(;;){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;assert(bytes<buffer.length);}
  const packet=JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;password:string;referenceWire:string;key:string;expectedHash?:string};buffer.fill(0);
  assert(['synthetic','retained'].includes(packet.mode));assert.deepEqual(Object.keys(packet).sort(),(packet.mode==='retained'?['mode','password','referenceWire','key','expectedHash']:['mode','password','referenceWire','key']).sort());assert(/^[a-f0-9]{48}$/.test(packet.password));assert(/^[a-fA-F0-9]{64}$/.test(packet.key));process.env.CONTENT_MASTER_KEY=packet.key;
- stage='snapshot-bootstrap';const target=packet.mode==='synthetic'?await synthetic():'/input/snapshot.sqlite';if(packet.mode==='retained')assert(mounts.some(p=>p[4]===target&&p[5].split(',').includes('ro')));
+ const browser=supportsBrowserMaterialization(exportNativePostgresSchemaContract(packet.referenceWire));
+ stage='snapshot-bootstrap';const target=packet.mode==='synthetic'?await synthetic(browser):'/input/snapshot.sqlite';if(packet.mode==='retained')assert(mounts.some(p=>p[4]===target&&p[5].split(',').includes('ro')));
  assert.equal(realpathSync(target),target);checkSnapshotSidecars(target);const before=lstatSync(target,{bigint:true});assert(before.isFile()&&!before.isSymbolicLink()&&before.size>BigInt(0)&&before.size<=BigInt(536870912));
  const descriptor=openSync(target,constants.O_RDONLY|constants.O_NOFOLLOW);let db:DatabaseSync|undefined;
  try{
@@ -73,18 +77,23 @@ async function main(){
     try{
      assert.equal((await owner.query("UPDATE public.decision_review_records SET input_json=input_json||' ' WHERE id=$1",[source.id])).rowCount,1);
      await assert.rejects(materializeNativeProjections(db,options),error=>error instanceof NativeMaterializationUnavailable&&error.diagnostic.stage==='projection-copy'&&error.diagnostic.table==='review_projection'&&error.diagnostic.pgCode==='P0001'&&error.diagnostic.commitOutcome==='not_attempted');
-     for(const table of ['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','acceptance_original_projection','a2a_original_time_projection','a2a_original_cell_projection'])assert.equal((await owner.query('SELECT count(*)::text n FROM keryx_storage.'+table)).rows[0].n,'0');
+     for(const table of ['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','acceptance_original_projection','a2a_original_time_projection','a2a_original_cell_projection',...(browser?['payment_event_originals']:[])])assert.equal((await owner.query('SELECT count(*)::text n FROM keryx_storage.'+table)).rows[0].n,'0');
      partialProjectionRollbackQualified=true;
     }finally{assert.equal((await owner.query('UPDATE public.decision_review_records SET input_json=$1 WHERE id=$2',[source.input_json,source.id])).rowCount,1);assert.equal((await owner.query('SELECT input_json FROM public.decision_review_records WHERE id=$1',[source.id])).rows[0].input_json,source.input_json);}
    }finally{await owner.end();}
   }
   stage='source-projections';const projections=await materializeNativeProjections(db,options);
-  if(packet.mode==='synthetic')assert(projections.domains.every(domain=>domain.rows===1));
+  if(packet.mode==='synthetic')assert(projections.domains.every(domain=>domain.rows===(browser&&domain.table==='payment_event_originals'?3:1)));
+  let browserCorpus:Awaited<ReturnType<typeof assertBrowserMaterializationFixture>>|undefined;
+  if(packet.mode==='synthetic'&&browser){
+   assert.equal(projections.paymentEventOriginalsPresent,true);assert.equal(projections.payments,3);assert.equal(materialization.browserPermanentLayoutsMaterialized,true);assert.equal(materialization.emptyDifferentLayouts,3);
+   const check=new Client(postgresPoolConfiguration(options));try{await check.connect();browserCorpus=await assertBrowserMaterializationFixture(db,check);}finally{await check.end();}
+  }
   stage='existing-projection-refusal';await assert.rejects(materializeNativeProjections(db,options),error=>error instanceof NativeMaterializationUnavailable&&error.diagnostic.stage==='projection-preflight'&&error.diagnostic.commitOutcome==='not_attempted');
   stage='source-cache-authentication';const cache=auditCache(db,performance.now()+60000),identity=readStorageIdentity(db);assert(cache.authenticatedRows>0);assert.equal(cache.nullRows,0);
   delete process.env.CONTENT_MASTER_KEY;packet.key='';
   db.exec('ROLLBACK');db.close();db=undefined;checkSnapshotUnchanged(target,descriptor,before.size,before.mtimeNs);
-  console.log(JSON.stringify({format:'keryx-native-materialization-development-rehearsal-v1',passed:true,mode:packet.mode,snapshotSha256,sourceBytes:Number(before.size),staging,materialization,projections,cache,sourceIdentityForColdChild:identity,existingTargetReadoptionRefused:true,existingProjectionReadoptionRefused:true,partialProjectionRollbackQualified,limits,sourceUnchanged:true,hardDeadlineSeconds:1800,retainedProductionSnapshotRead:packet.mode==='retained',liveProductionRead:false,productionChanged:false,applicationBackendSwitched:false,paymentActions:0,jobActions:0}));
+  console.log(JSON.stringify({format:'keryx-native-materialization-development-rehearsal-v1',passed:true,mode:packet.mode,snapshotSha256,sourceBytes:Number(before.size),staging,materialization,projections,cache,...(browserCorpus?{browserCorpus}:{}),sourceIdentityForColdChild:identity,existingTargetReadoptionRefused:true,existingProjectionReadoptionRefused:true,partialProjectionRollbackQualified,limits,sourceUnchanged:true,hardDeadlineSeconds:1800,retainedProductionSnapshotRead:packet.mode==='retained',liveProductionRead:false,productionChanged:false,applicationBackendSwitched:false,paymentActions:0,jobActions:0}));
  }finally{try{db?.close();}finally{closeSync(descriptor);}}
 }
 void main().catch((error:unknown)=>{

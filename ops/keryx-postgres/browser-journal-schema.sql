@@ -45,6 +45,13 @@ BEGIN
 END;$$;
 CREATE OR REPLACE FUNCTION public.browser_signing_control_guard() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE retained integer;BEGIN
+ IF TG_OP='UPDATE' AND session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held'
+  AND current_setting('keryx.source_browser_intake',true)=txid_current()::text THEN
+  IF TG_TABLE_SCHEMA<>'public' OR TG_TABLE_NAME<>'browser_signing_v2_control' OR OLD.id<>1 OR OLD.active OR OLD.min_original_version<>2 OR NEW.id<>1 THEN RAISE EXCEPTION 'browser Source control intake requires fresh singleton';END IF;
+  -- Copy the independently captured Source barrier exactly; do not derive its
+  -- sticky bytes from traversal order or invoke activation as an import side effect.
+  RETURN NEW;
+ END IF;
  IF TG_OP='DELETE' THEN IF OLD.min_original_version=3 THEN RAISE EXCEPTION 'browser source floor is retained';END IF;RETURN OLD;END IF;
  SELECT min_original_version INTO retained FROM public.browser_signing_v2_barrier WHERE id=1;
  IF NEW.min_original_version<coalesce(retained,2) OR TG_OP='UPDATE' AND NEW.min_original_version<OLD.min_original_version THEN RAISE EXCEPTION 'browser source floor is retained';END IF;
@@ -53,6 +60,7 @@ DECLARE retained integer;BEGIN
 END;$$;
 CREATE OR REPLACE FUNCTION public.browser_signing_fresh_gate() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 BEGIN
+ IF TG_OP='INSERT' AND TG_TABLE_SCHEMA='public' AND TG_TABLE_NAME='browser_authorization_intents' AND session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held' AND current_setting('keryx.source_browser_intake',true)=txid_current()::text THEN RETURN NEW;END IF;
  IF ((SELECT active FROM public.browser_signing_v2_control WHERE id=1) IS TRUE OR (SELECT ever_active FROM public.browser_signing_v2_barrier WHERE id=1)=1)
   AND NOT EXISTS(SELECT 1 FROM public.browser_signing_v2_writer WHERE transaction_id=txid_current()) THEN RAISE EXCEPTION 'browser signing v2 writer required';END IF;
  IF (SELECT min_original_version FROM public.browser_signing_v2_barrier WHERE id=1)=3 AND NOT EXISTS(SELECT 1 FROM public.browser_signing_v3_writer WHERE transaction_id=txid_current()) THEN RAISE EXCEPTION 'browser source writer required';END IF;
@@ -60,6 +68,7 @@ BEGIN
 END;$$;
 CREATE OR REPLACE FUNCTION public.browser_signing_validity_gate() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE original jsonb;authorization_tokens jsonb;BEGIN
+ IF TG_OP='INSERT' AND TG_TABLE_SCHEMA='public' AND TG_TABLE_NAME='browser_journal_bindings' AND session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held' AND current_setting('keryx.source_browser_intake',true)=txid_current()::text THEN RETURN NEW;END IF;
  SELECT keryx_storage.source_scalar_text(o.original,'tokens') INTO original FROM public.browser_signing_originals o WHERE o.nonce=NEW.nonce;
  IF original IS NULL THEN RETURN NEW;END IF;authorization_tokens:=keryx_storage.source_scalar_text(original->>'authorization','tokens');
  IF original IS NOT NULL AND NEW.header_hash IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.browser_signing_v2_writer WHERE transaction_id=txid_current()) THEN RAISE EXCEPTION 'browser signing canonical callback required';END IF;
@@ -67,7 +76,9 @@ DECLARE original jsonb;authorization_tokens jsonb;BEGIN
  RETURN NEW;
 END;$$;
 CREATE OR REPLACE FUNCTION public.browser_signing_source_original_gate() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE original jsonb:=keryx_storage.source_scalar_text(NEW.original,'tokens');context_tokens jsonb;protocol text;context_version text;BEGIN
+DECLARE original jsonb;context_tokens jsonb;protocol text;context_version text;BEGIN
+ IF TG_OP='INSERT' AND TG_TABLE_SCHEMA='public' AND TG_TABLE_NAME='browser_signing_originals' AND session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held' AND current_setting('keryx.source_browser_intake',true)=txid_current()::text THEN RETURN NEW;END IF;
+ original:=keryx_storage.source_scalar_text(NEW.original,'tokens');
  protocol:=keryx_storage.source_scalar_text(original->>'protocol','scalar')->>'shadow';
  IF original->>'sourceContext' IS NOT NULL THEN context_tokens:=keryx_storage.source_scalar_text(original->>'sourceContext','tokens');IF context_tokens->>'version' IS NOT NULL THEN context_version:=keryx_storage.source_scalar_text(context_tokens->>'version','scalar')->>'shadow';END IF;END IF;
  IF (SELECT min_original_version FROM public.browser_signing_v2_barrier WHERE id=1)=3 AND(NOT EXISTS(SELECT 1 FROM public.browser_signing_v3_writer WHERE transaction_id=txid_current()) OR protocol IS DISTINCT FROM 'durable-v3' OR context_version IS DISTINCT FROM 'source-context-v1' OR json_typeof((original->>'sourceContextDigest')::json) IS DISTINCT FROM 'string') THEN RAISE EXCEPTION 'browser source original required';END IF;
@@ -83,5 +94,24 @@ DECLARE v3 boolean;BEGIN
  END IF;
  RETURN NEW;
 END;$$;
+-- Preserve both original fence bodies/identities and every existing app path.
+-- A custom GUC alone is not authority: only the isolated postgres+held importer
+-- may use its transaction-local fresh census marker, and only for INSERT.
+DO $browser_intake$ DECLARE selected text;original text;updated text;definition text;at integer;BEGIN
+ FOREACH selected IN ARRAY ARRAY['browser_journal_write_fence','browser_journal_payment_fence'] LOOP
+  SELECT prosrc INTO STRICT original FROM pg_proc WHERE oid=format('public.%I()',selected)::regprocedure;
+  IF original !~* '^\s*begin\s' OR position('Source browser fresh intake v1' IN original)>0 THEN RAISE EXCEPTION 'browser Source fence predecessor refused';END IF;
+  at:=position('begin' IN lower(original))+5;
+  updated:=left(original,at-1)||$guard$
+ -- Source browser fresh intake v1
+ IF TG_OP='INSERT' AND TG_TABLE_SCHEMA='public' AND TG_TABLE_NAME=ANY(ARRAY['session_grants','browser_authorization_intents','payment_events'])
+  AND session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held'
+  AND current_setting('keryx.source_browser_intake',true)=txid_current()::text THEN RETURN NEW;END IF;
+$guard$||substring(original FROM at);
+  definition:=pg_get_functiondef(format('public.%I()',selected)::regprocedure);
+  IF(length(definition)-length(replace(definition,original,'')))/length(original)<>1 THEN RAISE EXCEPTION 'browser Source fence definition refused';END IF;
+  EXECUTE replace(definition,original,updated);
+ END LOOP;
+END;$browser_intake$;
 REVOKE ALL ON FUNCTION public.browser_signing_retention_guard(),public.browser_signing_control_guard(),public.browser_signing_fresh_gate(),public.browser_signing_validity_gate(),public.browser_signing_source_original_gate(),public.browser_signing_source_exposure_gate() FROM PUBLIC,anon,authenticated,service_role,keryx_app,keryx_reader;
 RESET ROLE;
