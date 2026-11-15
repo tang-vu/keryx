@@ -9797,3 +9797,17 @@ holds. Keep the complete writer closed until producer/observer coverage, actual
 intake and memory/load acceptance, genuine consumers, required CI and operational
 cutover requirements pass. Source merges do not authorize deployment or policy
 renewal.
+
+## Keep current Source data intake separate from runtime authority (2026-11-15)
+
+Use the selected SQLite Source's 219 methods and 20 conditional properties for
+native surface checks. Supabase's separate inventory cannot define this contract.
+Share the same guarded nested stores with Core and the facade, checking context
+at acquisition, after awaits and at iterator boundaries. Preserve Source JSON1,
+scalar text and leading BOM bytes independently during publication capture.
+
+Pin the independently generated current510 schema for an explicit held DATA
+intake, including payment originals and private-result identity. Its twelve
+projection groups do not approve a runtime factory or an application writer.
+Require genuine factory refusal in this lane and retain separate consumer,
+memory/load, live catchup, startup-policy and release acceptance.
