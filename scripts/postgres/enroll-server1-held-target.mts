@@ -136,7 +136,8 @@ async function targetCensus(target:Client){
  await target.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL statement_timeout='5s'");
  try{
  const contract=exportNativePostgresSchemaContract(await wire(target,'SELECT keryx_storage.catalog_contract()::text AS wire'));
- if(contract.sha256!==SERVER1_HELD.catalogSha256||contract.metadata.sections.functions.length!==510)refuse('catalog');
+ const sections=contract.metadata.sections;
+ if(contract.sha256!==SERVER1_HELD.catalogSha256||!sections||typeof sections!=='object'||Array.isArray(sections)||!Array.isArray(sections.functions)||sections.functions.length!==510)refuse('catalog');
  await emptyNamespace(target,true);
  const control=JSON.parse(await wire(target,"SELECT jsonb_build_object('identity',(SELECT count(*) FROM keryx_storage.identity),'contract',(SELECT count(*) FROM keryx_storage.source_contract),'control',(SELECT jsonb_agg(jsonb_build_object('singleton',singleton,'mode',mode,'origin',origin)) FROM keryx_storage.control),'writer',(SELECT count(*) FROM keryx_storage.writer))::text AS wire"));
  if(control.identity!==0||control.contract!==0||control.writer!==0||JSON.stringify(control.control)!=='[{"mode":"held","origin":"https://keryx.cc","singleton":true}]')refuse('held_unenrolled');
