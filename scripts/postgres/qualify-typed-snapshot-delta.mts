@@ -26,19 +26,43 @@ if (stress) {
   assert.equal(readFileSync("/proc/net/route", "utf8").trim().split("\n").length, 1);
   kernelMemoryBoundVerified = true;
 }
+// Coarse fixed metadata only: never pass a Source row, identifier, pathname,
+// key or callback to diagnostics. Progress cannot be mistaken for success.
+const phases = ["kernel.ready", "before.make.start", "before.make.closed", "before.hash.start", "before.hash.complete",
+  "after.make.start", "after.make.closed", "after.hash.start", "after.hash.complete", "inventory.start", "inventory.complete",
+  "diff.start", "diff.batch", "diff.complete", "before.final-hash.start", "before.final-hash.complete",
+  "after.final-hash.start", "after.final-hash.complete"] as const;
+type Phase = typeof phases[number];
+let lastPhase = started;
+function progress(phase: Phase, counts: Partial<Record<"rows" | "bytes" | "batches", number>> = {}) {
+  assert(phases.includes(phase));
+  assert(Object.entries(counts).every(([key, value]) => ["rows", "bytes", "batches"].includes(key)
+    && Number.isSafeInteger(value) && value >= 0));
+  const now = performance.now(), cpu = process.cpuUsage();
+  console.log(JSON.stringify({ format: "keryx-typed-snapshot-delta-progress-v1", phase,
+    elapsedMs: Math.round(now - started), phaseMs: Math.round(now - lastPhase), rssBytes: process.memoryUsage().rss,
+    userCpuMicros: cpu.user, systemCpuMicros: cpu.system, ...counts }));
+  lastPhase = now;
+}
+progress("kernel.ready");
 let outbound = 0; globalThis.fetch = async () => { outbound++; throw Error("Synthetic delta forbids outbound HTTP"); };
 const directory = mkdtempSync(join(tmpdir(), "keryx-typed-delta-qualifier-"));
 const identity = { format: "keryx-storage-identity-v1" as const, authorityMode: "testnet-offline" as const, network: "eip155:5042002" as const,
   profileDigest: STORAGE_TESTNET_PROFILE_DIGEST, deploymentId: randomUUID(), storageId: randomUUID(), enrollmentId: randomUUID(),
   enrolledAt: "2026-10-01T00:00:00.000Z", provenanceDigest: "a".repeat(64) };
-function fileHash(path: string) {
+function fileHash(path: string, phase: "before.hash" | "after.hash" | "before.final-hash" | "after.final-hash") {
+  progress(`${phase}.start`);
   const fd = openSync(path, "r"), hash = createHash("sha256"), buffer = Buffer.alloc(1048576);
-  try { for (;;) { const n = readSync(fd, buffer); if (!n) break; hash.update(buffer.subarray(0, n)); check(); } return { sha256: hash.digest("hex"), bytes: Number(fstatSync(fd).size) }; }
+  try { for (;;) { const n = readSync(fd, buffer); if (!n) break; hash.update(buffer.subarray(0, n)); check(); }
+    const result = { sha256: hash.digest("hex"), bytes: Number(fstatSync(fd).size) };
+    progress(`${phase}.complete`, { bytes: result.bytes }); return result; }
   finally { closeSync(fd); }
 }
 try {
   const count = stress ? 1100 : 12, payload = Buffer.alloc(stress ? 262144 : 32, 255);
   const make = (after: boolean) => {
+    const side = after ? "after" : "before";
+    progress(`${side}.make.start`, { rows: count });
     const path = join(directory, after ? "after.sqlite" : "before.sqlite"), db = new DatabaseSync(path);
     try {
       db.exec("PRAGMA journal_mode=DELETE; PRAGMA cache_size=-1024; PRAGMA synchronous=FULL;"); insertStorageIdentity(db, validateStorageIdentity(identity));
@@ -50,23 +74,29 @@ try {
       }
       if (after) insert.run(count + 1, "Synthetic added\0row", payload); db.exec("COMMIT;");
     } finally { db.close(); }
-    chmodSync(path, 0o600); const observed = fileHash(path); return { descriptor: { path, sha256: observed.sha256 }, bytes: observed.bytes };
+    progress(`${side}.make.closed`, { rows: count });
+    chmodSync(path, 0o600); const observed = fileHash(path, `${side}.hash`); return { descriptor: { path, sha256: observed.sha256 }, bytes: observed.bytes };
   };
-  const before = make(false), after = make(true), inventory = await inspectTypedDeltaSnapshot(before.descriptor);
+  const before = make(false), after = make(true);
+  progress("inventory.start");
+  const inventory = await inspectTypedDeltaSnapshot(before.descriptor);
+  progress("inventory.complete", { rows: inventory.rows });
   const prior = { format: "keryx-native-held-data-baseline-metadata-v1", profileMode: "development-current510-data-only",
     catalogSha256: nativeMaterializationProfile("development-current510-data-only").catalogSha256, targetState: "held", sequence: 0,
     snapshotSha256: inventory.snapshotSha256, schemaSha256: inventory.schemaSha256, identityDigest: inventory.identityDigest, dataDigest: inventory.dataDigest };
   const wire = canonicalJson(prior), expectedSha256 = createHash("sha256").update(wire).digest("hex");
+  progress("diff.start");
   const stream = streamTypedSnapshotDelta({ before: before.descriptor, after: after.descriptor, priorTarget: { wire, expectedSha256 } });
   const consume = async () => {
     let batches = 0;
     for (;;) { const part = await stream.next(); if (part.done) return { summary: part.value, batches };
-      assert.equal(part.value.provisional, true); batches++; check(); /* Never log private row contents. */ }
+      assert.equal(part.value.provisional, true); batches++; progress("diff.batch", { batches }); check(); /* Never log private row contents. */ }
   };
   const { summary, batches } = await consume();
- assert.equal(summary.changes, 3); assert.equal(summary.inserts, 1); assert.equal(summary.updates, 1); assert.equal(summary.deletes, 1);
+  progress("diff.complete", { batches });
+  assert.equal(summary.changes, 3); assert.equal(summary.inserts, 1); assert.equal(summary.updates, 1); assert.equal(summary.deletes, 1);
   assert.equal(summary.targetVerified, false); assert.equal(summary.applicationAuthority, false); assert.equal(summary.targetWrites, 0);
-  assert.equal(fileHash(before.descriptor.path).sha256, before.descriptor.sha256); assert.equal(fileHash(after.descriptor.path).sha256, after.descriptor.sha256);
+  assert.equal(fileHash(before.descriptor.path, "before.final-hash").sha256, before.descriptor.sha256); assert.equal(fileHash(after.descriptor.path, "after.final-hash").sha256, after.descriptor.sha256);
   assert.equal(outbound, 0); check();
   console.log(JSON.stringify({ format: "keryx-typed-snapshot-delta-synthetic-qualification-v1", passed: true, syntheticOnly: true,
     mode: stress ? "stress290" : "small", beforeBytes: before.bytes, afterBytes: after.bytes, rowsPerInput: count + 1,
