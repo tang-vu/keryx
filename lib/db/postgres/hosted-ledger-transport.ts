@@ -18,15 +18,21 @@ export interface PostgresHostedLedgerTransport extends PostgresCreatorWithdrawal
 const address=z.string().regex(/^0x[0-9a-f]{40}$/),nonce=z.string().regex(/^0x[0-9a-f]{64}$/);
 const micro=z.string().regex(/^(0|[1-9][0-9]{0,15})$/).refine(v=>BigInt(v)<=BigInt(Number.MAX_SAFE_INTEGER));
 function unavailable():never{throw new PostgresStorageUnavailable();}
+export type PostgresHostedPaymentProtocol='legacy-v1'|'source-payment-originals-v1';
+// The old SQL has a 256-byte receipt gate. This exact fixed prefix makes a
+// selected-version mismatch refuse before mutation; no body detection/fallback.
+export const HOSTED_PAYMENT_SOURCE_RECEIPT_PREFIX='source-payment-originals-v1:'.padEnd(257,':');
 
 /** Retained hosted ledger only. It does not expose authorization admission,
  * funding, signer custody, a provider request, policy renewal or app provenance. */
-export function createPostgresHostedLedgerTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string):PostgresHostedLedgerTransport{
+export function createPostgresHostedLedgerTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,protocol:PostgresHostedPaymentProtocol='legacy-v1'):PostgresHostedLedgerTransport{
   const expected=validateStorageIdentity(identity);
-  return composePostgresHostedLedgerTransport(createPostgresDomainChannel(options,expected,digest),expected);
+  if(protocol!=='legacy-v1'&&protocol!=='source-payment-originals-v1')unavailable();
+  return composePostgresHostedLedgerTransport(createPostgresDomainChannel(options,expected,digest),expected,protocol);
 }
-export function composePostgresHostedLedgerTransport(channel:PostgresDomainChannel,identity:StorageIdentity):PostgresHostedLedgerTransport{
+export function composePostgresHostedLedgerTransport(channel:PostgresDomainChannel,identity:StorageIdentity,protocol:PostgresHostedPaymentProtocol='legacy-v1'):PostgresHostedLedgerTransport{
   const expected=validateStorageIdentity(identity),live=()=>{if(channel.closed)unavailable();};
+  if(protocol!=='legacy-v1'&&protocol!=='source-payment-originals-v1')unavailable();
   const write=async(op:"hostedPolicy"|"hostedSubmit"|"hostedConfirm",args:string[])=>{
     live();await channel.call(op,args);if(channel.closed)throw new PostgresDomainWriteOutcomeUnknown();
   };
@@ -48,12 +54,16 @@ export function composePostgresHostedLedgerTransport(channel:PostgresDomainChann
       live();address.parse(signer);nonce.parse(headerHash);
       const submission=z.object({authorizationId:nonce,authorizationExpiresAt:z.string().datetime(),payer:z.literal(signer),payee:address,
         amountMicros:micro,network:z.literal(ARC_MAINNET_PROFILE.networkId),asset:z.literal(ARC_MAINNET_PROFILE.usdcAddress.toLowerCase())}).strict().parse(value);
-      const wire=canonicalJson(submission);if(Buffer.byteLength(wire)>2048)unavailable();
+      const submissionWire=canonicalJson(submission),wire=protocol==='source-payment-originals-v1'?canonicalJson({format:protocol,submissionWire}):submissionWire;if(Buffer.byteLength(wire)>2048)unavailable();
       await write("hostedSubmit",[signer,wire,headerHash]);if(channel.closed)throw new PostgresDomainWriteOutcomeUnknown();
     },
     async confirmHostedAuthorization(signer:string,id:string,transaction:string){
-      live();address.parse(signer);nonce.parse(id);if(typeof transaction!=="string"||transaction.length<1||transaction.length>256||Buffer.byteLength(transaction)>256)unavailable();
-      await write("hostedConfirm",[signer,id,transaction]);if(channel.closed)throw new PostgresDomainWriteOutcomeUnknown();
+      live();address.parse(signer);nonce.parse(id);if(typeof transaction!=="string"||transaction.length<1||transaction.length>256||protocol==='legacy-v1'&&Buffer.byteLength(transaction)>256)unavailable();
+      // Keep the caller's exact UTF-16 receipt. Public Source scalar readback
+      // rejects lone surrogates, while a private serialized proof can match one.
+      // Escaping also carries NUL without attempting a PostgreSQL TEXT bind.
+      const wire=protocol==='source-payment-originals-v1'?HOSTED_PAYMENT_SOURCE_RECEIPT_PREFIX+JSON.stringify(transaction):transaction;
+      await write("hostedConfirm",[signer,id,wire]);if(channel.closed)throw new PostgresDomainWriteOutcomeUnknown();
     },
   });
 }
