@@ -8,7 +8,7 @@ import { storageIdentityDigest,type StorageIdentity } from '../../lib/db/storage
 import { NATIVE_READONLY_RUNTIME_PROFILE } from '../../lib/db/postgres/runtime-profile';
 import type { exportNativePostgresSchemaContract } from './native-contract.mts';
 
-export const PRIVATE_RESULT_SOURCE_COLUMNS=Object.freeze({private_research_intents:['id','payer','data','created_at'],private_research_payment_attempts:['id','started_at','confirmation','settled_at'],private_research_executions:['id','worker_id','started_at'],private_research_results:['id','serialized_run','saved_at']} as const);
+export const PRIVATE_RESULT_SOURCE_COLUMNS=Object.freeze({private_research_intents:Object.freeze(['id','payer','data','created_at'] as const),private_research_payment_attempts:Object.freeze(['id','started_at','confirmation','settled_at'] as const),private_research_executions:Object.freeze(['id','worker_id','started_at'] as const),private_research_results:Object.freeze(['id','serialized_run','saved_at'] as const)});
 export const PRIVATE_RESULT_SOURCE_BYTE_LIMITS=Object.freeze({private_research_intents:524288,private_research_payment_attempts:32768,private_research_executions:32768,private_research_results:16777216});
 export const PRIVATE_RESULT_IDENTITY_COLUMNS=Object.freeze({id:'text',identity_digest:'text',intent_sha256:'text',run_sha256:'text',owner:'text',question_sha256:'text',creator_budget_micros:'bigint',research_mode:'text',worker_id:'text',execution_started_at:'text',payment_started_at:'text',payment_settled_at:'text',payment_confirmation_sha256:'text',saved_at:'text'});
 type Reference=Pick<ReturnType<typeof exportNativePostgresSchemaContract>,'sha256'|'metadata'>;
