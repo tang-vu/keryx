@@ -83,6 +83,10 @@ export async function qualifyHeldNativeCatchup(input:Readonly<{fixture:Awaited<R
  };
  try{
   await holder.connect();await holder.query('BEGIN');transaction=true;
+  // This synthetic blocker is idle while the separate applier prepares Source
+  // on a throttled event loop. Keep that bounded observation alive; the applier's
+  // original statement/lock/idle timeouts and 300s operation budget are unchanged.
+  await holder.query("SET LOCAL idle_in_transaction_session_timeout='20s'");
   await holder.query('LOCK TABLE public.sources IN SHARE ROW EXCLUSIVE MODE');
   assert.equal((await holder.query('SELECT name FROM public.sources WHERE id=$1',[sourceId])).rows[0]?.name,originalName);
   pending=applyHeldNativeCatchup({source:input.fixture.source,sealed:input.fixture.sealed,options:input.options,referenceWire:input.referenceWire}).then(value=>({ok:true as const,value}),error=>({ok:false as const,error}));
