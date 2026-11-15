@@ -28,6 +28,24 @@ function fixture(chain = "0x4cef52") {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("pinned Arc SDK payment signing callback", () => {
+  it("runs local narrowing after the last RPC and immediately before the captured key", async () => {
+    const f = fixture(), order: string[] = [];
+    f.fetcher.mockImplementation(async (_url, init) => { order.push("rpc"); return Response.json({ jsonrpc: "2.0", id: JSON.parse(String(init?.body)).id, result: "0x4cef52" }); });
+    const originalSign = f.account.signTypedData;
+    f.account.signTypedData = ((payload: Parameters<typeof originalSign>[0]) => { order.push("key"); return originalSign(payload); }) as typeof originalSign;
+    await createPinnedArcBatchSigner(f.account, "https://synthetic.invalid", undefined, undefined,
+      async () => { order.push("admit"); }, payload => { order.push("local"); payload.message.to = ATTACKER; }).createPaymentPayload(2, requirement());
+    expect(order).toEqual(["rpc", "admit", "rpc", "local", "key"]);
+    expect(f.sign.mock.calls[0][0].message.to).toBe(PAYEE);
+  });
+  it.each(["changed", "promise"])("refuses %s local narrowing after durable admission without signing or retry", async reason => {
+    const f = fixture(), admit = vi.fn(async () => {});
+    const local = vi.fn(() => { if (reason === "changed") throw new Error("Authority changed"); return Promise.resolve(); });
+    await expect(createPinnedArcBatchSigner(f.account, "https://synthetic.invalid", undefined, undefined, admit,
+      local as unknown as (payload: TypedDataPayload) => void).createPaymentPayload(2, requirement())).rejects.toThrow("local signing policy");
+    expect(admit).toHaveBeenCalledOnce(); expect(f.fetcher).toHaveBeenCalledTimes(2);
+    expect(local).toHaveBeenCalledOnce(); expect(f.sign).not.toHaveBeenCalled();
+  });
   it("signs the installed SDK mainnet domain and refuses a foreign retained rail before invoking the key", async () => {
     const f = fixture("0x13b2"), profile = ARC_MAINNET_PROFILE;
     const req = { ...requirement(), network: profile.networkId, asset: profile.usdcAddress,

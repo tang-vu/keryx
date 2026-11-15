@@ -1,5 +1,25 @@
 # Keryx — Decision Log
 
+## Await hosted storage authority before local signing checks - 2026-11-15
+
+Hosted public/private policy acquisition now awaits the selected facade's genuine
+storage provenance. This rail admits only enrolled SQLite or the genuine native
+PostgreSQL boundary; generic Supabase provenance does not admit hosted custody.
+The native application writer factory remains unconditionally closed.
+
+After asynchronous authority, accounting and durable nonce admission, the signer
+checks the exact local storage selection, terminal closure, protected policy and
+expiry, configured origin/profile, role key fingerprint and captured payment
+frame immediately after its final RPC await and before invoking its captured key.
+The synchronous local check returns neither identity nor capability and cannot
+replace awaited native SQL authority or create provenance. Promise-returning local
+hooks refuse signing. Private accounting keeps its explicit historical role.
+
+Policy expiry or rotation stops new admission; an already observed settlement
+still attempts original confirmation and retains recovery-required evidence when
+persistence fails. No automatic retry, funding, policy renewal or factory opening
+is introduced. Async policy consumers are updated as a separate coherent group.
+
 ## Preserve Source A2A execution checkpoints in one bounded native writer - 2026-11-14
 
 Group exact-original claim and the payment-start, result-saving and failure

@@ -115,3 +115,31 @@ it("refuses invalid access and injected arguments before inspecting a facade or 
   await expect(Reflect.apply(app.applicationStorageIdentity, undefined, [db, "admin"])).rejects.toThrow("invalid_operation");
   await expect(Reflect.apply(app.applicationStorageIdentity, undefined, [db, "read", () => true])).rejects.toThrow("invalid_operation");
 });
+
+it("narrows genuine SQLite facades synchronously without returning identity or write authority", async () => {
+  const f = await enrolledSqlite();
+  expect(f.app.assertApplicationStorageCurrentLocal(f.writer, "write")).toBeUndefined();
+  expect(f.app.assertApplicationStorageCurrentLocal(f.reader, "read")).toBeUndefined();
+  expect(() => f.app.assertApplicationStorageCurrentLocal(f.reader, "write")).toThrow("Enrolled SQLite adapter unavailable");
+  for (const fake of [{}, new Proxy(f.writer, {}), Object.create(f.writer)])
+    expect(() => f.app.assertApplicationStorageCurrentLocal(fake as KeryxDB)).toThrow();
+  f.writer.close();
+  expect(() => f.app.assertApplicationStorageCurrentLocal(f.writer)).toThrow();
+  writeFileSync(f.manifestPath, canonicalJson({ ...f.deployment, identity: { ...f.identity, provenanceDigest: "b".repeat(64) } }));
+  expect(() => f.app.assertApplicationStorageCurrentLocal(f.reader)).toThrow();
+});
+it.each(["supabase", "postgres"] as const)("local narrowing keeps %s fabricated admission closed", async kind => {
+  await selection(kind); const app = await import("./application-storage");
+  let getters = 0; const fake = new Proxy({}, { get() { getters++; throw new Error("Must not inspect caller methods"); } }) as KeryxDB;
+  expect(() => app.assertApplicationStorageCurrentLocal(fake, "write")).toThrow("adapter_not_initialized");
+  expect(() => Reflect.apply(app.assertApplicationStorageCurrentLocal, undefined, [fake, "read", () => true])).toThrow("invalid_operation");
+  expect(() => Reflect.apply(app.assertApplicationStorageCurrentLocal, undefined, [fake, "admin"])).toThrow("invalid_operation");
+  expect(getters).toBe(0);
+});
+it("does not mistake a Promise-returning native local hook for a completed narrowing check", async () => {
+  await selection("postgres"); const native = await import("./postgres/runtime-adapter");
+  // Negative dependency contract only; this creates no enrolled native facade.
+  vi.spyOn(native, "assertPostgresRuntimeCurrentLocal").mockImplementation((() => Promise.resolve()) as unknown as typeof native.assertPostgresRuntimeCurrentLocal);
+  const app = await import("./application-storage");
+  expect(() => app.assertApplicationStorageCurrentLocal({} as KeryxDB)).toThrow("invalid_operation");
+});

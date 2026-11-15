@@ -20,7 +20,7 @@ import { composeNativeFinancialObservation } from './financial-observation';
 import { z } from 'zod';
 import { digestSchema as accountDigestSchema } from '../../accounts/contracts';
 import { publicProfilesEnabled } from '../../profiles/public-profile';
-const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
+const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;entry:()=>void;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
 /** Deliberately closed until all writer/current-domain/data gates are qualified. */
 export async function createPostgresRuntimeAdapter():Promise<KeryxDB>{
@@ -135,7 +135,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
    ownKeys:()=>[...sourceNames,...queryNames,'pendingJobOwners',...(privacyActive?['publicLedgerRuns']:[]),'accountMembership','chatAccountLinks','ownerRunAssignments',...(publicProfilesActive?['publicProfiles']:[])],getOwnPropertyDescriptor(_target,property){entry();if(property==='pendingJobOwners')return {value:pending,enumerable:false,writable:false,configurable:true};if(typeof property==='string'&&Object.hasOwn(sourceReads,property))return {value:sourceReads[property],enumerable:false,writable:false,configurable:true};if(typeof property==='string'&&Object.hasOwn(queries,property))return {value:Reflect.get(queries,property),enumerable:false,writable:false,configurable:true};if(property==='ownerRunAssignments')return {value:assignments,enumerable:false,writable:false,configurable:true};if(publicProfilesActive&&property==='publicProfiles')return {value:publicProfiles,enumerable:false,writable:false,configurable:true};if(property==='accountMembership')return {value:accounts,enumerable:false,writable:false,configurable:true};if(property==='chatAccountLinks')return {value:chat,enumerable:false,writable:false,configurable:true};return privacyActive&&property==='publicLedgerRuns'?{value:ledger,enumerable:true,writable:false,configurable:true}:undefined;},getPrototypeOf:()=>null,
    setPrototypeOf:()=>false,set:()=>false,defineProperty:()=>false,deleteProperty:()=>false,preventExtensions:()=>false,
   });
-  facades.set(facade,{identity:deployment.identity,guard,close,closed:()=>closed});
+  facades.set(facade,{identity:deployment.identity,entry,guard,close,closed:()=>closed});
   await guard();return facade;
  }catch(error){await close().catch(()=>{});throw error;}
 }
@@ -145,6 +145,15 @@ export async function assertPostgresRuntimeIdentity(adapter:unknown,access:'read
  const record=facades.get(adapter);if(!record||record.closed())refuseStorage('adapter_not_initialized');
  if(access==='write')refuseStorage('readonly_operation');
  await record.guard();if(record.closed())refuseStorage('adapter_not_initialized');return record.identity;
+}
+/** Synchronous local narrowing only. This performs no SQL, returns no proof or
+ * identity and cannot replace the genuine awaited runtime authority guard. */
+export function assertPostgresRuntimeCurrentLocal(adapter:unknown,access:'read'|'write'='read'):void{
+ if(arguments.length>2||!adapter||typeof adapter!=='object'||!['read','write'].includes(access))refuseStorage('invalid_operation');
+ const record=facades.get(adapter);if(!record||record.closed())refuseStorage('adapter_not_initialized');
+ if(access==='write')refuseStorage('readonly_operation');
+ const result:unknown=record.entry();
+ if(result!==undefined){void Promise.resolve(result).catch(()=>{});refuseStorage('invalid_operation');}
 }
 export function closePostgresRuntimeAdapter(adapter:unknown):Promise<void>{
  if(!adapter||typeof adapter!=='object')refuseStorage('invalid_operation');const record=facades.get(adapter);if(!record)refuseStorage('invalid_operation');return record.close();

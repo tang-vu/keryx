@@ -4,7 +4,7 @@ import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqliteAdapter, createReadonlyEnrolledSqliteAdapter, assertEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
 import { createEnrolledSupabaseAdapter, createReadonlyEnrolledSupabaseAdapter, closeEnrolledSupabaseAdapter, assertEnrolledSupabaseAuthority } from "./enrolled-supabase-adapter";
 import { storagePaymentProfile, refuseStorage, type StorageIdentity } from "./storage-identity";
-import { createPostgresRuntimeAdapter,createReadonlyPostgresRuntimeAdapter,closePostgresRuntimeAdapter,assertPostgresRuntimeIdentity } from "./postgres/runtime-adapter";
+import { createPostgresRuntimeAdapter,createReadonlyPostgresRuntimeAdapter,closePostgresRuntimeAdapter,assertPostgresRuntimeIdentity,assertPostgresRuntimeCurrentLocal } from "./postgres/runtime-adapter";
 import type { KeryxDB } from "./keryx-db";
 
 const readonlyClosers = new WeakMap<KeryxDB, () => void | Promise<void>>();
@@ -70,4 +70,18 @@ export async function applicationStorageIdentity(db: KeryxDB, access: "read" | "
     case "supabase": return (await assertEnrolledSupabaseAuthority(db, access)).identity;
     case "postgres": return await assertPostgresRuntimeIdentity(db, access);
   }
+}
+/** Local narrowing of an already admitted SQLite/native facade only. No async
+ * admission, identity result, backend fallback, custody or new spending authority. Always
+ * await applicationStorageIdentity separately before using this final guard. */
+export function assertApplicationStorageCurrentLocal(db: KeryxDB, access: "read" | "write" = "read"): void {
+  if (arguments.length > 2 || !["read", "write"].includes(access)) refuseStorage("invalid_operation");
+  const deployment = readRuntimeStorageDeployment();
+  if (deployment.backend.kind === "sqlite") { assertEnrolledSqliteAdapter(db, access); return; }
+  if (deployment.backend.kind === "postgres") {
+    const result: unknown = assertPostgresRuntimeCurrentLocal(db, access);
+    if (result !== undefined) { void Promise.resolve(result).catch(() => {}); refuseStorage("invalid_operation"); }
+    return;
+  }
+  refuseStorage("adapter_not_initialized");
 }
