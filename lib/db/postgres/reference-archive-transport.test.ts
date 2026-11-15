@@ -21,3 +21,14 @@ it('reframes once for normalized legacy publisher item IDs before the fixed appl
 it('keeps reads independent of the write-capacity gate and rejects publisher provenance loss',async()=>{
  const reference=publisher(),row={id:reference.id,active:1,rss_url:reference.rssUrl,snapshot:JSON.stringify(reference),archived_item_count:15},port=composePostgresReferenceArchive(channel(async(op,args)=>{if(op==='referenceArchiveRead'){if(args[0]==='list')return [row];if(args[0]==='get')return row;return {articles:15,publishers:1};}throw Error('native allocation budget refused');}),false);expect((await port.listPublicReferences())[0].archivedItemCount).toBe(15);expect((await port.getPublicReference(reference.id))!.id).toBe(reference.id);expect(await port.publicReferenceArchiveStats()).toEqual({articles:15,publishers:1});await expect(port.upsertPublicReference(reference)).rejects.toThrow('native allocation budget refused');const bad=composePostgresReferenceArchive(channel(async()=>[{...row,rss_url:'https://other.example/feed'}]),true);await expect(bad.listPublicReferences()).rejects.toThrow('identity differs');
 });
+
+it('carries Source scalar selectors as raw JSON wire, including NUL and lone UTF-16',async()=>{
+ const seen:string[]=[],port=composePostgresReferenceArchive(channel(async(op,args)=>{expect(op).toBe('referenceArchiveRead');expect(args[0]).toBe('get');seen.push(JSON.parse(args[1]!).idWire);return null;}),true);
+ for(const id of ['public:missing\0','public:missing\ud800','public:missing\ud83d\ude00'])expect(await port.getPublicReference(id)).toBeNull();
+ expect(seen).toEqual(['public:missing\0','public:missing\ud800','public:missing\ud83d\ude00'].map(id=>JSON.stringify(id)));
+});
+it('refuses a caller JSON hook before any fixed-channel operation',async()=>{
+ const call=vi.fn(async()=>null),port=composePostgresReferenceArchive(channel(call),false),raw=publisher();
+ const hooked={...raw,toJSON(){return raw;}};await expect(port.upsertPublicReference(hooked)).rejects.toThrow();expect(call).not.toHaveBeenCalled();
+ await expect(port.queryPublicReferenceItems({query:'alpha',toJSON(){return {query:'beta'};}} as never)).rejects.toThrow('Invalid public archive query');expect(call).not.toHaveBeenCalled();
+});

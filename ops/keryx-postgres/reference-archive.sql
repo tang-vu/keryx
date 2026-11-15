@@ -1,6 +1,23 @@
 -- Source public archive protocols; immutable raw TEXT snapshots and literal
 -- Node-tokenized term rows. No PostgreSQL FTS, private/paid catalog or issuer.
 SET ROLE keryx_owner;
+-- Only fresh SOURCE DDL may align a column. Never cast/adopt retained rows.
+DO $archive_numeric_source$ BEGIN
+ IF (SELECT mode FROM keryx_storage.control WHERE singleton) IS DISTINCT FROM 'held'
+  OR EXISTS(SELECT 1 FROM keryx_storage.identity)
+  OR EXISTS(SELECT 1 FROM public.public_references)
+  OR EXISTS(SELECT 1 FROM public.public_reference_articles)
+  OR EXISTS(SELECT 1 FROM public.public_reference_article_versions)
+  OR EXISTS(SELECT 1 FROM public.public_reference_article_terms)
+ THEN RAISE EXCEPTION 'native public archive requires fresh empty Source';END IF;
+ -- INTEGER affinity accepts finite fractional REAL cells as well as int64.
+ -- The bounded numeric domain retains both without a float8/int64 conversion.
+ ALTER TABLE public.public_reference_article_terms ALTER COLUMN weight TYPE keryx_storage.sqlite_number USING weight::numeric;
+ -- Source defines no archive FKs: orphans must remain representable, and its
+ -- own count/page joins and provenance checks decide their read behavior.
+ IF EXISTS(SELECT 1 FROM pg_constraint WHERE contype='f' AND conrelid=ANY(ARRAY['public.public_reference_articles'::regclass,'public.public_reference_article_versions'::regclass,'public.public_reference_article_terms'::regclass]))
+ THEN RAISE EXCEPTION 'native archive unexpected foreign key';END IF;
+END;$archive_numeric_source$;
 CREATE TRIGGER native_public_reference_versions_immutable BEFORE UPDATE OR DELETE ON public.public_reference_article_versions FOR EACH ROW EXECUTE FUNCTION keryx_storage.immutable();
 CREATE TRIGGER native_public_reference_versions_retained BEFORE TRUNCATE ON public.public_reference_article_versions FOR EACH STATEMENT EXECUTE FUNCTION keryx_storage.immutable();
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
@@ -13,7 +30,7 @@ DECLARE packet jsonb;selector jsonb;frame jsonb;result jsonb;wire text;frame_sha
  selected_ids text[];terms text[];field text;relation_name text;namespace_name text;columns text;maximums text;dynamic_sql text;
  measured_rows bigint;measured_bytes numeric;measured_field numeric;source_rows bigint:=0;logical_bytes numeric:=0;allocated_bytes numeric;frame_bytes numeric;
  private_bytes numeric:=0;max_field numeric:=0;valid boolean;deadline_at numeric;entry jsonb;article public.public_reference_articles;version public.public_reference_article_versions;
- original json;snapshot json;snapshot_tokens jsonb;transcript text;content_hash text;ref_id text;query_limit integer;query_sort text;query_match text;has_query boolean;cursor jsonb;read_only boolean;
+ original json;snapshot json;snapshot_tokens jsonb;transcript text;content_hash text;ref_id text;query_limit integer;query_sort text;query_match text;has_query boolean;cursor jsonb;read_only boolean;selector_hex text;
 BEGIN
  IF action IS NULL OR action NOT IN('frame','apply','list','get','query','stats') THEN RAISE EXCEPTION 'native public archive action refused';END IF;
  read_only:=action<>'apply';IF read_only AND current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION 'native public archive readonly transaction required';END IF;
@@ -61,7 +78,7 @@ BEGIN
   IF EXISTS(SELECT 1 FROM jsonb_array_elements_text(packet->'indexItemIds')id WHERE (id=ANY(selected_ids)) IS NOT TRUE) THEN RAISE EXCEPTION 'native public archive index selector refused';END IF;
   DELETE FROM public.public_reference_article_terms WHERE reference_id=ref_id AND item_id IN(SELECT jsonb_array_elements_text(packet->'indexItemIds'));
   FOR entry IN SELECT value FROM jsonb_array_elements(packet->'terms') LOOP
-   IF (entry->>'reference_id'=ref_id AND entry->>'item_id' IN(SELECT jsonb_array_elements_text(packet->'indexItemIds')) AND jsonb_typeof(entry->'term')='string' AND octet_length(entry->>'term') BETWEEN 2 AND 400 AND (entry->>'weight')::integer BETWEEN 1 AND 9) IS NOT TRUE THEN RAISE EXCEPTION 'native public archive literal term refused';END IF;
+   IF (entry->>'reference_id'=ref_id AND entry->>'item_id' IN(SELECT jsonb_array_elements_text(packet->'indexItemIds')) AND jsonb_typeof(entry->'term')='string' AND octet_length(entry->>'term') BETWEEN 2 AND 400 AND jsonb_typeof(entry->'weight')='number' AND (entry->>'weight')::numeric=trunc((entry->>'weight')::numeric) AND (entry->>'weight')::numeric BETWEEN 1 AND 9) IS NOT TRUE THEN RAISE EXCEPTION 'native public archive literal term refused';END IF;
    INSERT INTO public.public_reference_article_terms(term,reference_id,item_id,weight) VALUES(entry->>'term',ref_id,entry->>'item_id',(entry->>'weight')::integer);
   END LOOP;
   IF packet->'publisher' IS DISTINCT FROM 'null'::jsonb THEN
@@ -90,10 +107,11 @@ BEGIN
   PERFORM keryx_storage.leave_operation();RETURN result;
  END IF;
  IF action IN('list','get') THEN
-  IF action='list' AND packet<>'{}'::jsonb OR action='get' AND(packet-'id'<>'{}'::jsonb OR jsonb_typeof(packet->'id') IS DISTINCT FROM 'string' OR octet_length(packet->>'id')>1024) THEN RAISE EXCEPTION 'native public publisher read refused';END IF;
-  SELECT coalesce(sum(octet_length(to_jsonb(p)::text)+2048),0) INTO frame_bytes FROM public.public_references p WHERE CASE WHEN action='list' THEN p.active=1 ELSE p.id=packet->>'id' END;
+  IF action='list' AND packet<>'{}'::jsonb OR action='get' AND(packet-'idWire'<>'{}'::jsonb OR jsonb_typeof(packet->'idWire') IS DISTINCT FROM 'string' OR octet_length(packet->>'idWire')>32768) THEN RAISE EXCEPTION 'native public publisher read refused';END IF;
+  IF action='get' THEN selector_hex:=keryx_storage.source_scalar_text(packet->>'idWire','scalar')->>'sourceHex';END IF;
+  SELECT coalesce(sum(octet_length(to_jsonb(p)::text)+2048),0) INTO frame_bytes FROM public.public_references p WHERE CASE WHEN action='list' THEN p.active=1 ELSE encode(convert_to(p.id,'UTF8'),'hex')=selector_hex END;
   IF frame_bytes>67108864 THEN RAISE EXCEPTION 'native public publisher read frame bound';END IF;
-  SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.id COLLATE "C"),'[]'::jsonb) INTO result FROM(SELECT p.*,(SELECT count(*) FROM public.public_reference_articles a WHERE a.reference_id=p.id) archived_item_count FROM public.public_references p WHERE CASE WHEN action='list' THEN p.active=1 ELSE p.id=packet->>'id' END)x;
+  SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.id COLLATE "C"),'[]'::jsonb) INTO result FROM(SELECT p.*,(SELECT count(*) FROM public.public_reference_articles a WHERE a.reference_id=p.id) archived_item_count FROM public.public_references p WHERE CASE WHEN action='list' THEN p.active=1 ELSE encode(convert_to(p.id,'UTF8'),'hex')=selector_hex END)x;
   IF octet_length(result::text)>67108864 THEN RAISE EXCEPTION 'native public publisher encoded frame bound';END IF;RETURN CASE WHEN action='get' THEN result->0 ELSE result END;
  ELSIF action='stats' THEN
   IF packet<>'{}'::jsonb THEN RAISE EXCEPTION 'native public archive stats selector refused';END IF;
@@ -105,7 +123,24 @@ BEGIN
  -- Current writers produce 1..9, but retained integer indexes may be larger.
  -- Preserve those exact sums; fractional/unsafe imports need separate SQLite
  -- floating-point qualification and remain an explicit hold.
- IF EXISTS(SELECT 1 FROM public.public_reference_article_terms WHERE term=ANY(terms) AND(weight<>trunc(weight) OR weight NOT BETWEEN 1 AND 9007199254740991)) THEN RAISE EXCEPTION 'native public archive imported term weights unsupported';END IF;
+ -- SQLite can finalize an overflowing INTEGER hit group before joining
+ -- active publishers. Preserve that transitive refusal, including inactive
+ -- groups; its explicit reference filter bounds which groups are evaluated.
+ IF EXISTS(SELECT 1 FROM public.public_reference_article_terms WHERE term=ANY(terms) AND(ref_id IS NULL OR reference_id=ref_id)
+  GROUP BY reference_id,item_id HAVING bool_and(weight=trunc(weight) AND weight BETWEEN 1 AND 9223372036854775807) AND sum(weight)>9223372036854775807)
+ THEN RAISE EXCEPTION 'native public archive Source integer aggregate overflow';END IF;
+ -- Preserve noninteger/unsafe cells losslessly. Do not substitute PostgreSQL
+ -- decimal SUM for Source's IEEE754 aggregation or silently omit bad scores.
+ -- The hold covers the whole affected query, including candidates off-page;
+ -- unrelated/inactive publishers and non-search reads remain available.
+ WITH hits AS(SELECT reference_id,item_id,count(*) matched,sum(weight) score,
+   bool_or(weight<>trunc(weight) OR weight NOT BETWEEN 1 AND 9007199254740991) unsupported
+  FROM public.public_reference_article_terms WHERE term=ANY(terms) GROUP BY reference_id,item_id)
+ SELECT EXISTS(SELECT 1 FROM hits h JOIN public.public_reference_articles a ON a.reference_id=h.reference_id AND a.item_id=h.item_id
+  JOIN public.public_references p ON p.id=a.reference_id WHERE p.active=1 AND(ref_id IS NULL OR a.reference_id=ref_id)
+  AND h.matched>=CASE WHEN query_match='all' THEN cardinality(terms) ELSE 1 END
+  AND(h.unsupported OR h.score NOT BETWEEN 0 AND 9007199254740991)) INTO valid;
+ IF valid THEN RAISE EXCEPTION 'native public archive Source numeric score fidelity unavailable';END IF;
  WITH hits AS(SELECT reference_id,item_id,sum(weight) score,count(*) matched FROM public.public_reference_article_terms WHERE term=ANY(terms) GROUP BY reference_id,item_id),
  candidate AS MATERIALIZED(SELECT a.*,(a.published_at IS NOT NULL) has_published,coalesce(h.score,0) score FROM public.public_reference_articles a JOIN public.public_references p ON p.id=a.reference_id LEFT JOIN hits h ON h.reference_id=a.reference_id AND h.item_id=a.item_id WHERE p.active=1 AND(ref_id IS NULL OR a.reference_id=ref_id) AND NOT(has_query AND cardinality(terms)=0) AND(cardinality(terms)=0 OR h.matched>=CASE WHEN query_match='all' THEN cardinality(terms) ELSE 1 END)),
  page AS MATERIALIZED(SELECT a.*,v.snapshot item_snapshot,v.original_snapshot,v.content_version,v.collection_kind FROM candidate a JOIN public.public_reference_article_versions v ON v.reference_id=a.reference_id AND v.item_id=a.item_id AND v.revision=a.current_revision
