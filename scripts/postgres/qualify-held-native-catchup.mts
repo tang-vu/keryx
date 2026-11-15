@@ -31,7 +31,7 @@ export async function prepareHeldCatchupSynthetic(){
  try{
   const db=new DatabaseSync(beforePath);try{db.exec('PRAGMA journal_mode=DELETE;BEGIN');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);
    writeSqliteQueryRun(db,run('synthetic-catchup-a','Before\0\ud800'),false);
-   db.prepare('INSERT INTO sources(id,name,url,wallet_address) VALUES(?,?,?,?)').run('synthetic-catchup-source','Synthetic Source','https://synthetic.invalid/feed','0x'+'ab'.repeat(20));
+   db.prepare('INSERT INTO sources(id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,active,verified,preview_depth) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run('synthetic-catchup-source','Synthetic Source','https://synthetic.invalid/feed','Synthetic fixture metadata','https://synthetic.invalid/feed','0x'+'ab'.repeat(20),0,'[]','[]','2026-11-15T00:00:00.000Z',1,1,'full');
    db.prepare('INSERT INTO article_offers VALUES(?,?,?,?,?,?,?,?,?,?)').run('synthetic-catchup-source','synthetic-item','synthetic-offer','a'.repeat(64),1,1800000000,'0x'+'ab'.repeat(20),'0x'+'12'.repeat(32),'0x'+'cd'.repeat(65),'2026-11-15T00:00:00.000Z');
    insertStorageIdentity(db,identity);installStorageFences(db,identity);db.exec('COMMIT');
   }finally{db.close();}chmodSync(beforePath,0o600);copyFileSync(beforePath,afterPath);chmodSync(afterPath,0o600);
