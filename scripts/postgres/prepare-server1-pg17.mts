@@ -44,6 +44,19 @@ const POLICY_PATH = '/usr/sbin/policy-rc.d';
 const POLICY_WIRE = '#!/bin/sh\n# keryx-pg17-preparation-only\nexit 101\n';
 const SHA = /^[a-f0-9]{64}$/;
 const PACKAGE_NAME = /^[a-z0-9][a-z0-9+.-]{0,95}$/;
+// Closed PG17/Ubuntu24.04 dependency vocabulary. A signed repository alone does
+// not authorize installing an unrelated service. Existing packages cannot be
+// upgraded; an unlisted missing dependency requires a separately reviewed change.
+const PACKAGE_NAMES = new Set([
+  'postgresql-17', 'postgresql-client-17', 'postgresql-common', 'postgresql-client-common', 'libpq5',
+  'libllvm19', 'libicu74', 'libc6', 'libcom-err2', 'libcrypt1', 'libgssapi-krb5-2', 'libk5crypto3',
+  'libkrb5-3', 'libldap2', 'liblz4-1', 'libpam0g', 'libselinux1', 'libssl3t64', 'libsystemd0',
+  'libuuid1', 'libxml2', 'libxslt1.1', 'libzstd1', 'zlib1g', 'perl', 'perl-base', 'perl-modules-5.38',
+  'libperl5.38t64', 'libjson-perl', 'libjson-xs-perl', 'libtypes-serialiser-perl', 'libcommon-sense-perl',
+  'ssl-cert', 'locales', 'tzdata', 'libreadline8t64', 'sensible-utils', 'ucf', 'lsb-release', 'adduser',
+  'procps', 'libcurl4t64', 'liblzma5', 'libedit2', 'libbsd0', 'libmd0', 'libtinfo6', 'libexpat1',
+  'libcap2', 'libpcre2-8-0', 'libffi8',
+]);
 const VERSION = /^[A-Za-z0-9.+:~_-]{1,128}$/;
 const BUNDLE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._+%~-]{0,180}$/;
 const LIMITS = Object.freeze({ pin: 128 * 1024, receipt: 128 * 1024, release: 4 * 1024 * 1024, index: 32 * 1024 * 1024, package: 256 * 1024 * 1024, packages: 64, command: 4 * 1024 * 1024, timeoutMs: 15 * 60 * 1000 });
@@ -118,7 +131,7 @@ export function parseServer1Pg17ApprovedPin(wire: Uint8Array): Server1Pg17Approv
   }
   for (const v of p.packages) {
     exactKeys(v, ['name', 'version', 'file', 'sha256', 'size', 'repository', 'index'], 'package_shape');
-    if (typeof v.name !== 'string' || !PACKAGE_NAME.test(v.name) || names.has(v.name) || typeof v.version !== 'string' || !VERSION.test(v.version) || typeof v.file !== 'string' || !BUNDLE_NAME.test(v.file) || !v.file.endsWith('.deb') || files.has(v.file) || typeof v.sha256 !== 'string' || !SHA.test(v.sha256) || !Number.isSafeInteger(v.size) || Number(v.size) < 1 || Number(v.size) > LIMITS.package || !Number.isInteger(v.repository) || !Number.isInteger(v.index)) refuse('package');
+    if (typeof v.name !== 'string' || !PACKAGE_NAME.test(v.name) || !PACKAGE_NAMES.has(v.name) || names.has(v.name) || typeof v.version !== 'string' || !VERSION.test(v.version) || typeof v.file !== 'string' || !BUNDLE_NAME.test(v.file) || !v.file.endsWith('.deb') || files.has(v.file) || typeof v.sha256 !== 'string' || !SHA.test(v.sha256) || !Number.isSafeInteger(v.size) || Number(v.size) < 1 || Number(v.size) > LIMITS.package || !Number.isInteger(v.repository) || !Number.isInteger(v.index)) refuse('package');
     const r = p.repositories[Number(v.repository)] as Repository | undefined;
     if (!r || !r.indexes[Number(v.index)]) refuse('package_repository');
     if ((v.name === 'postgresql-17' || v.name === 'postgresql-client-17') && (r.kind !== 'pgdg' || !/^17\.12-[A-Za-z0-9.+~_-]+$/.test(v.version))) refuse('package_major');

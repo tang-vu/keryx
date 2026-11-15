@@ -59,6 +59,7 @@ describe('finite preparation input, no executable/capability escape', () => {
     ['index traversal', (p: ReturnType<typeof candidate>) => { p.repositories[0].indexes[0].file = '../Packages'; }],
     ['package traversal', (p: ReturnType<typeof candidate>) => { p.packages[0].file = '../arbitrary.deb'; }],
     ['shell command', (p: ReturnType<typeof candidate>) => { p.packages[0].name = 'postgresql-17;touch'; }],
+    ['unrelated signed service', (p: ReturnType<typeof candidate>) => { p.packages.push({ ...p.packages[0], name: 'nginx', file: 'nginx.deb' }); }],
     ['duplicate package', (p: ReturnType<typeof candidate>) => { p.packages[1] = { ...p.packages[0] }; }],
     ['missing required package', (p: ReturnType<typeof candidate>) => { p.packages.pop(); }],
     ['newer major/minor', (p: ReturnType<typeof candidate>) => { p.packages[0].version = '17.13-1.pgdg24.04+1'; }],
