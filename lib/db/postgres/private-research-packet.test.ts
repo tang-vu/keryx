@@ -45,8 +45,20 @@ it('matches actual SQLite accounting types, first duplicate keys and exact compa
   for(const bad of [`{"submission":{"amountMicros":10000,"payer":"${signer}"}}`,'not-json','null']){db.prepare('UPDATE private_creator_submissions SET data=?').run(bad);await check();}
  }finally{db.close();}
 });
-it('keeps the complete private protocol in one bounded fixed SQL router',()=>{
+it('keeps two bounded fixed SQL identities without raw original JSON getters or public helper grants',()=>{
  const sql=readFileSync(new URL('../../../ops/keryx-postgres/private-research.sql',import.meta.url),'utf8').replaceAll('\r\n','\n').replaceAll('{{USDC_ADDRESS}}',ARC_MAINNET_PROFILE.usdcAddress.toLowerCase());
- expect(Buffer.byteLength(sql)).toBeLessThanOrEqual(32768);expect([...sql.matchAll(/CREATE FUNCTION /g)]).toHaveLength(1);expect(sql).toContain("'history','summary','workers','reconciliation'");
+ const raw=readFileSync(new URL('../../../ops/keryx-postgres/private-research-raw.sql',import.meta.url),'utf8').replaceAll('\r\n','\n');
+ for(const part of [sql,raw]){expect(Buffer.byteLength(part)).toBeLessThanOrEqual(32768);expect(Buffer.byteLength(JSON.stringify(part))).toBeLessThanOrEqual(32768);expect([...part.matchAll(/CREATE FUNCTION /g)]).toHaveLength(1);}
+ expect(sql).toContain("'history','summary','workers','reconciliation'");expect(sql).not.toMatch(/\b(?:i|s|c|private_creator_confirmations)\.data::json/);expect(sql).not.toContain('intent_data json;');
+ expect(raw).toContain("WHEN 'intent' THEN ARRAY['id','submission','requirement','merchants']");expect(raw).toContain("IF field IS NULL AND kind NOT IN('run','first-submission','first-request') THEN RAISE");expect(raw).not.toMatch(/\bEXECUTE\b|\bpublic\.|GRANT EXECUTE/);expect(raw).toContain("source_scalar_text(token,'js-string')");expect(raw).toContain("source_scalar_text(budget_token,'json1-value')");
  expect(sql).toContain('private_research_result_identity');expect(sql).not.toContain('PERFORM keryx_storage.enter_operation');
+});
+it('keeps genuine SQLite first numeric budgets separate from JS-last validated values and compact CAS bytes',()=>{
+ const db=new DatabaseSync(':memory:');try{
+  for(const [wire,expected] of [['{"submission":{"request":{"budget":2e-2,"budget":0.03}}}',20000],['{"submission":{"request":{"budget":0.03}},"submission":{"request":{"budget":0.04}}}',30000],['{"submission":{"request":{"budget":"0.02 trailing","budget":0.03}}}',20000],['{"submission":null,"submission":{"request":{"budget":0.03}}}',null],['{"submission":{"request":{"budget\\u0000suffix":0.02}},"submission":{"request":{"budget":0.03}}}',20000]] as const){
+   expect(db.prepare("SELECT CAST(round(json_extract(?,'$.submission.request.budget')*1000000) AS INTEGER) n").get(wire)!.n).toBe(expected);expect(Math.round(JSON.parse(wire).submission.request.budget*1e6)).not.toBe(expected);
+  }
+  const first='{"amountMicros":"10000","payer":"one"}',other='{ "payer":"one", "amountMicros":"10000" }',a=String(db.prepare("SELECT json_extract(?,'$.submission') v").get('{"submission":'+first+'}')!.v),b=String(db.prepare("SELECT json_extract(?,'$.submission') v").get('{"submission":'+other+'}')!.v);
+  expect(a).toBe(first);expect(b).toBe('{"payer":"one","amountMicros":"10000"}');expect(a).not.toBe(b);expect(JSON.parse(a)).toEqual(JSON.parse(b));
+ }finally{db.close();}
 });

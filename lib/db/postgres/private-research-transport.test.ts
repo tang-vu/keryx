@@ -4,12 +4,16 @@ import { beforeAll,afterAll,expect,it,vi } from 'vitest';
 import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
 import type { PostgresDomainChannel } from './domain-channel';
 import type { QueryRun } from '../../types';
+import { DatabaseSync } from 'node:sqlite';
+import { mkdtempSync,writeFileSync,unlinkSync,existsSync,rmdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join,resolve } from 'node:path';
 let transport:typeof import('./private-research-transport'),packets:typeof import('./private-research-packet'),fixture:Awaited<ReturnType<typeof signedFixture>>,Unknown:typeof import('./domain-channel').PostgresDomainWriteOutcomeUnknown;
-async function signedFixture(){
+async function signedFixture(question='Synthetic offline private storage protocol; no supplier or settlement'){
  const {privateKeyToAccount}=await import('viem/accounts'),{createPrivateAuthorization}=await import('../../buyer/private-request-commitment'),{buyerTypedData}=await import('../../buyer/protocol'),{preparePrivateResearchIntent}=await import('../../a2a/private-research-intent');
  const owner=privateKeyToAccount(`0x${'11'.repeat(32)}`),merchants={privatePayee:'0x'+'ab'.repeat(20),publicResearchPayee:'0x'+'cd'.repeat(20)},profile=ARC_MAINNET_PROFILE;
  const requirement={scheme:'exact',network:profile.networkId,asset:profile.usdcAddress,amount:'50000',payTo:merchants.privatePayee,maxTimeoutSeconds:691200,extra:{name:'GatewayWalletBatched',version:'1',verifyingContract:profile.gatewayWallet}};
- const request={question:'Synthetic offline private storage protocol; no supplier or settlement',budget:.03,researchMode:'quick',packageVersion:'1.0.0',responseMode:'async',access:'payer-private-v1',model:null};
+ const request={question,budget:.03,researchMode:'quick',packageVersion:'1.0.0',responseMode:'async',access:'payer-private-v1',model:null};
  const fresh=await createPrivateAuthorization(request,requirement,owner.address,merchants,1788912000000),signature=await owner.signTypedData(buyerTypedData(fresh.authorization));
  const intent=await preparePrivateResearchIntent({request:fresh.request,salt:fresh.salt,payment:{authorization:fresh.authorization,signature}},requirement,merchants);
  return {intent,payer:owner.address.toLowerCase(),confirmation:{source:'circle-facilitator-success' as const,transaction:'synthetic-no-payment-observation',network:profile.networkId,payer:owner.address.toLowerCase(),payee:merchants.privatePayee,amountMicros:'50000',authorizationId:fresh.authorization.nonce}};
@@ -45,6 +49,10 @@ it('only a fresh execution insert returns a worker and unknown acknowledgement i
  const claim=await f.port.claimPrivateResearchExecution(f.id,f.payer);expect(claim?.workerId).toMatch(/^[a-f0-9-]{36}$/);
  f.call.mockClear();f.call.mockImplementation(async operation=>operation==='privateResearchSnapshot'?f.wire:{created:false,snapshot:f.wire});expect(await f.port.claimPrivateResearchExecution(f.id,f.payer)).toBeNull();
  f.call.mockClear();f.call.mockImplementation(async operation=>{if(operation==='privateResearchSnapshot')return f.wire;throw new (await import('./domain-channel')).PostgresDomainWriteOutcomeUnknown();});
+ await expect(f.port.claimPrivatePaymentSubmission(f.id,f.payer)).rejects.toBeInstanceOf(Unknown);expect(f.call.mock.calls.map(c=>c[0])).toEqual(['privateResearchSnapshot','privateResearchClaimPayment']);
+});
+it('treats closure after a submitted private write as unknown and never retries or falls back',async()=>{
+ const f=setup();f.call.mockImplementation(async operation=>{if(operation==='privateResearchSnapshot')return f.wire;f.state.closed=true;return {created:false,snapshot:f.wire};});
  await expect(f.port.claimPrivatePaymentSubmission(f.id,f.payer)).rejects.toBeInstanceOf(Unknown);expect(f.call.mock.calls.map(c=>c[0])).toEqual(['privateResearchSnapshot','privateResearchClaimPayment']);
 });
 it('keeps only the documented committed reservation conflict as a strict refusal envelope',async()=>{
@@ -102,4 +110,32 @@ it('keeps25/1 candidate hints distinct from execution and reports accounting wit
  expect(await reader.getPrivateTreasurySummary(f.payer)).toMatchObject({capacityMicros:'100000',allocatedMicros:'20000',confirmedMicros:'0',chainFinalityVerified:false,observation:'database-recorded'});
  expect(f.call.mock.calls.map(c=>c[0])).toEqual(['privateResearchWorkers','privateResearchReconciliation','privateResearchSummary']);
  f.call.mockClear();f.call.mockResolvedValue([{id:f.id,payer:f.payer},{id:f.id,payer:f.payer}]);await expect(reader.listPrivateReconciliationCandidates(f.payer)).rejects.toThrow();
+});
+it.each(['Synthetic\0\ud800 high','Synthetic\udfff low','Synthetic\uFEFF\u2028\u2029\ud83d\ude80 pair'])('derives raw identities from the actual enrolled Source with trimmed/escaped question %s',async question=>{
+ vi.resetModules();
+ const f=await signedFixture(question),{syntheticStorageIdentity}=await import('../storage-identity-fixture'),{STORAGE_MAINNET_PROFILE_DIGEST}=await import('../storage-identity'),{canonicalJson}=await import('../../canonical-json');
+ const {installMainnetApplicationSchema}=await import('../mainnet-application-schema'),{installNativeUserDomainSchema}=await import('../native-user-domain-schema'),{insertStorageIdentity,installStorageFences}=await import('../storage-identity-sqlite');
+ const {createEnrolledSqliteAdapter,assertEnrolledSqliteAdapter}=await import('../enrolled-sqlite-adapter');
+ const folder=mkdtempSync(join(tmpdir(),'keryx-private-raw-source-')),file=resolve(folder,'source.sqlite'),manifest=resolve(folder,'manifest.json'),identity={...syntheticStorageIdentity('mainnet-real'),format:'keryx-mainnet-storage-identity-v1' as const,network:'eip155:5042' as const,profileDigest:STORAGE_MAINNET_PROFILE_DIGEST};
+ const raw=JSON.stringify(f.intent).replace('"question":'+JSON.stringify(f.intent.submission.request.question),'"\\u0071uestion":'+JSON.stringify(' \uFEFF'+question+'\t\uFEFF ')).replace('"budget":0.03','"budget":3e-2').replace('Synthetic','\\u0053ynthetic');
+ let source:Awaited<ReturnType<typeof createEnrolledSqliteAdapter>>|undefined;
+ try{
+  const seed=new DatabaseSync(file);try{seed.exec('BEGIN');installMainnetApplicationSchema(seed,{publicReferenceArchive:true});installNativeUserDomainSchema(seed);seed.prepare('INSERT INTO private_research_intents VALUES(?,?,?,?)').run(f.intent.id,f.payer,raw,'2026-09-09T07:00:00.123456789+07:00');insertStorageIdentity(seed,identity);installStorageFences(seed,identity);seed.exec('COMMIT');}finally{seed.close();}
+  writeFileSync(manifest,canonicalJson({format:'keryx-storage-deployment-v1',identity,backend:{kind:'sqlite',databasePath:file}}));vi.stubEnv('KERYX_STORAGE_MANIFEST',manifest);vi.stubEnv('KERYX_SQLITE_PATH',file);vi.stubEnv('KERYX_FORCE_OFFLINE','0');vi.stubEnv('CONTENT_MASTER_KEY','11'.repeat(32));
+  source=await createEnrolledSqliteAdapter();expect(assertEnrolledSqliteAdapter(source)).toEqual(identity);
+  expect((await source.reservePrivateResearchIntent(f.intent)).submission.request.question).toBe(question);
+  expect(await source.reservePrivateTreasury(f.intent.id,f.payer,{signer:'0x'+'44'.repeat(20),capacityMicros:'100000'})).toBe(true);
+  await source.claimPrivatePaymentSubmission(f.intent.id,f.payer);await source.confirmPrivatePayment(f.intent.id,f.payer,f.confirmation);const claim=await source.claimPrivateResearchExecution(f.intent.id,f.payer);expect(claim).not.toBeNull();
+  const leg={kind:'citation' as const,sourceId:'Source\0\ud800\udfff\uFEFF',itemId:'Item\udfff',submission:{authorizationId:'0x'+'af'.repeat(32),authorizationExpiresAt:'2020-01-01T07:00:00+07:00',payer:'0x'+'44'.repeat(20),payee:'0x'+'55'.repeat(20),amountMicros:'10000',network:ARC_MAINNET_PROFILE.networkId,asset:ARC_MAINNET_PROFILE.usdcAddress.toLowerCase()}};
+  expect(await source.admitPrivateCreatorSubmission(f.intent.id,f.payer,claim!.workerId,leg)).toBe(true);expect((await source.listPrivateCreatorSubmissions(f.intent.id,f.payer))[0].legId).toBe(packets.privateCreatorLegId(leg as never));
+  const run={id:f.intent.id,question,budget:.03,researchMode:'quick',answer:'Unrelated\0\ud800\udfff',trace:[{extension:'Raw\0\ud800\udfff'}]} as unknown as QueryRun;
+  await expect(source.savePrivateResearchResult(f.intent.id,f.payer,claim!.workerId,{...run,question:' '+question})).rejects.toThrow('result mismatch');
+  const saved=await source.savePrivateResearchResult(f.intent.id,f.payer,claim!.workerId,run),read=new DatabaseSync(file,{readOnly:true});try{
+   expect(read.prepare('SELECT data FROM private_research_intents WHERE id=?').get(f.intent.id)!.data).toBe(raw);
+   const one=(table:string)=>JSON.stringify(read.prepare('SELECT * FROM '+table+' WHERE id=?').get(f.intent.id));
+   const state=await packets.readPrivateResearchSnapshot({intentRowWire:one('private_research_intents'),paymentRowWire:one('private_research_payment_attempts'),executionRowWire:one('private_research_executions'),resultRowWire:one('private_research_results'),interruptionRowWire:null,reservationRowWire:null,releaseRowWire:null,submissionsWire:'[]',confirmationsWire:'[]'},packets.privateResearchLookup(f.intent.id,f.payer));
+   const capture=packets.privateResearchResultIdentity(saved.serializedRun,state);expect(capture.questionSha256).toBe(packets.privateResearchSha(JSON.stringify(question)));expect(capture.intentSha256).toBe(packets.privateResearchSha(raw));expect(capture.questionSha256).not.toBe(packets.privateResearchSha(JSON.stringify(' \uFEFF'+question+'\t\uFEFF ')));
+  }finally{read.close();}
+  expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+ }finally{source?.close();vi.stubEnv('KERYX_STORAGE_MANIFEST',undefined);vi.stubEnv('KERYX_SQLITE_PATH',undefined);for(const path of [file,file+'-wal',file+'-shm',file+'-journal',manifest])if(existsSync(path))unlinkSync(path);rmdirSync(folder);}
 });
