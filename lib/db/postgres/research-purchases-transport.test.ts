@@ -1,5 +1,6 @@
 import { expect,it,vi } from 'vitest';
-import { createHash } from 'node:crypto';
+import { createHash,randomUUID } from 'node:crypto';
+import { STORAGE_MAINNET_PROFILE_DIGEST,STORAGE_TESTNET_PROFILE_DIGEST,type StorageIdentity } from '../storage-identity';
 import { config } from '../../config';
 import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
 import { a2aRequestHash,legacyA2aRequestHash } from '../../a2a/order';
@@ -30,4 +31,48 @@ it('marks a changed policy runtime after commit as unknown without retry',async(
  const c=channel(),port=composePostgresResearchPurchases(c.port,false),f=fixture(),origin=config.baseUrl;
  c.call.mockImplementation(async(op,args)=>{if(op==='hostedSourcePolicySnapshot')return snapshot(args[0]);Object.assign(config,{baseUrl:'https://changed.example'});return true;});
  try{await expect(port.claimResearchPurchase(f.claim)).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(c.call.mock.calls.filter(v=>v[0]==='researchPurchaseClaim')).toHaveLength(1);}finally{Object.assign(config,{baseUrl:origin});}
+});
+
+// Protocol-only observations never register a facade or confer signing/funding authority.
+const admissionIdentity=():StorageIdentity=>({format:'keryx-mainnet-storage-identity-v1',network:'eip155:5042',authorityMode:'mainnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-15T00:00:00.000Z',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,provenanceDigest:'ab'.repeat(32)});
+const admissionReply=(identity:StorageIdentity)=>({identity,sourceDigest:'cd'.repeat(32)});
+it('keeps admission closed without a captured selected scope while the old four methods remain usable',async()=>{
+ const c=channel(),port=composePostgresResearchPurchases(c.port,false);
+ await expect(port.assertResearchPurchaseAuthority!(ARC_MAINNET_PROFILE.networkId)).rejects.toThrow('PostgreSQL storage unavailable');expect(c.call).not.toHaveBeenCalled();
+ c.call.mockResolvedValue(null);expect(await port.getResearchMonthly(fixture().purchase.id)).toBeNull();expect(c.call).toHaveBeenCalledExactlyOnceWith('researchMonthlyGet',expect.any(Array));
+});
+it.each([[true,'keryx_app'],[false,'keryx_reader'],[false,'service_role']] as const)('refuses readonly=%s role=%s admission before caller conversion or SQL',async(readOnly,role)=>{
+ const c=channel(),port=composePostgresResearchPurchases(c.port,readOnly,{identity:admissionIdentity(),role}),convert=vi.fn(),network={toString:convert} as unknown as string;
+ await expect(port.assertResearchPurchaseAuthority!(network)).rejects.toThrow();expect(convert).not.toHaveBeenCalled();expect(c.call).not.toHaveBeenCalled();
+});
+it('refuses historical profiles and mismatched or nonstring networks before SQL',async()=>{
+ const c=channel(),identity=admissionIdentity(),port=composePostgresResearchPurchases(c.port,false,{identity,role:'keryx_app'});
+ for(const network of ['eip155:5042002','eip155:1',null,{},5042])await expect(port.assertResearchPurchaseAuthority!(network as string)).rejects.toThrow();
+ const historical:StorageIdentity={...identity,format:'keryx-storage-identity-v1',network:'eip155:5042002',authorityMode:'testnet-real',profileDigest:STORAGE_TESTNET_PROFILE_DIGEST};
+ await expect(composePostgresResearchPurchases(c.port,false,{identity:historical,role:'keryx_app'}).assertResearchPurchaseAuthority!(historical.network)).rejects.toThrow();expect(c.call).not.toHaveBeenCalled();
+});
+it('captures all-nine identity and role before awaiting the fixed catalog observation',async()=>{
+ const c=channel(),identity=admissionIdentity(),expected={...identity},scope={identity,role:'keryx_app'},port=composePostgresResearchPurchases(c.port,false,scope);let finish!:(value:unknown)=>void;
+ c.call.mockReturnValue(new Promise(resolve=>{finish=resolve;}));const pending=port.assertResearchPurchaseAuthority!(identity.network);scope.role='keryx_reader';identity.storageId=randomUUID();identity.provenanceDigest='ef'.repeat(32);
+ expect(c.call).toHaveBeenCalledExactlyOnceWith('nativeRuntimeAuthority',[]);finish(admissionReply(expected));await pending;
+});
+it.each(['format','network','authorityMode','deploymentId','storageId','enrollmentId','enrolledAt','profileDigest','provenanceDigest'] as const)('refuses a foreign or malformed observed identity %s',async field=>{
+ const c=channel(),identity=admissionIdentity(),port=composePostgresResearchPurchases(c.port,false,{identity,role:'keryx_app'}),changes={format:'keryx-storage-identity-v1',network:'eip155:5042002',authorityMode:'testnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-15T00:00:01.000Z',profileDigest:'00'.repeat(32),provenanceDigest:'11'.repeat(32)};
+ c.call.mockResolvedValue(admissionReply({...identity,[field]:changes[field]} as StorageIdentity));await expect(port.assertResearchPurchaseAuthority!(identity.network)).rejects.toThrow();expect(c.call).toHaveBeenCalledExactlyOnceWith('nativeRuntimeAuthority',[]);
+});
+it('requires a strict complete observation rather than accepting a bare identity or extra fields',async()=>{
+ const c=channel(),identity=admissionIdentity(),port=composePostgresResearchPurchases(c.port,false,{identity,role:'keryx_app'});
+ for(const observed of [null,identity,{identity},{...admissionReply(identity),sourceDigest:'AB'.repeat(32)},{...admissionReply(identity),sourceDigest:'bad'},{...admissionReply(identity),proof:true},{...admissionReply(identity),identity:{...identity,extra:true}}]){
+  c.call.mockResolvedValue(observed);await expect(port.assertResearchPurchaseAuthority!(identity.network)).rejects.toThrow();
+ }
+ expect(c.call).toHaveBeenCalledTimes(7);
+});
+it('rejects missing or accessor scope fields without invoking configuration getters',()=>{
+ const c=channel(),get=vi.fn();expect(()=>composePostgresResearchPurchases(c.port,false,{get identity(){get();return admissionIdentity();},role:'keryx_app'})).toThrow();expect(get).not.toHaveBeenCalled();expect(c.call).not.toHaveBeenCalled();
+});
+it('keeps catalog failures and terminal close refused without retry or a write outcome claim',async()=>{
+ const c=channel(),identity=admissionIdentity(),port=composePostgresResearchPurchases(c.port,false,{identity,role:'keryx_app'}),error=new Error('catalog held');c.call.mockRejectedValueOnce(error);
+ await expect(port.assertResearchPurchaseAuthority!(identity.network)).rejects.toBe(error);expect(c.call).toHaveBeenCalledTimes(1);
+ c.call.mockImplementationOnce(async()=>{c.state.closed=true;return admissionReply(identity);});await expect(port.assertResearchPurchaseAuthority!(identity.network)).rejects.toThrow('PostgreSQL storage unavailable');expect(c.call).toHaveBeenCalledTimes(2);
+ await expect(port.assertResearchPurchaseAuthority!(identity.network)).rejects.toThrow();expect(c.call).toHaveBeenCalledTimes(2);
 });

@@ -1,12 +1,19 @@
 import type { A2aOrder } from '../../a2a/order';
 import type { MonthlyPurchase,MonthlyRedemptionInput,ResearchPurchaseClaim } from '../research-monthly';
-import { PostgresStorageUnavailable } from './connection';
+import { PostgresStorageUnavailable,type PostgresConnectionOptions } from './connection';
+import { validateStorageIdentity,type StorageIdentity } from '../storage-identity';
+import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
 import { acceptanceOriginalMetadata } from './acceptance-metadata';
 import { canonicalJson } from '../../canonical-json';
 import { sourceClaimPolicySelector,sourceClaimPolicyRuntime,decodeSourceClaimPolicySnapshot,captureSourceClaimPurchasePolicy,type SourceClaimPurchasePolicyInput } from './source-claim-purchase-policy';
 import { captureResearchPurchaseClaim,captureResearchMonthly,captureResearchMonthlyRedemption,sameResearchMonthly,researchMonthlyId,decodeResearchMonthly,decodeResearchMonthlyOrder,assertResearchMonthlyOrder,assertResearchMonthlyReplay } from './research-purchases-packet';
+export interface PostgresResearchPurchaseAdmissionScope {
+ readonly identity:StorageIdentity;
+ readonly role:PostgresConnectionOptions['role'];
+}
 export interface PostgresResearchPurchasesPort {
+ assertResearchPurchaseAuthority?(network:string):Promise<void>;
  claimResearchPurchase(input:ResearchPurchaseClaim):Promise<void>;
  createResearchMonthly(input:MonthlyPurchase):Promise<{created:boolean;purchase:MonthlyPurchase}>;
  getResearchMonthly(id:string):Promise<ReturnType<typeof decodeResearchMonthly>|null>;
@@ -14,9 +21,21 @@ export interface PostgresResearchPurchasesPort {
 }
 /** Closed native protocol. A purchase claim records nonce ownership, never
  * chain settlement, funding, signatures, execution or installed provenance. */
-export function composePostgresResearchPurchases(channel:PostgresDomainChannel,readOnly:boolean):PostgresResearchPurchasesPort {
+export function composePostgresResearchPurchases(channel:PostgresDomainChannel,readOnly:boolean,scope?:Readonly<PostgresResearchPurchaseAdmissionScope>):PostgresResearchPurchasesPort {
  const unavailable=()=>new PostgresStorageUnavailable();if(typeof readOnly!=='boolean')throw unavailable();
  const live=()=>{if(channel.closed)throw unavailable();},writer=()=>{live();if(readOnly)throw unavailable();};
+ // Internal selection data only, never a facade/provenance or custody issuer.
+ // Copy the complete identity and role now; later caller mutation cannot switch
+ // admission, and old four-method compositions keep this new gate closed.
+ let selected:Readonly<{identity:Readonly<StorageIdentity>;role:string}>|undefined;
+ if(scope!==undefined){
+  if(!scope||typeof scope!=='object'||Array.isArray(scope)||![Object.prototype,null].includes(Object.getPrototypeOf(scope))
+   ||Object.getOwnPropertySymbols(scope).length||Object.keys(scope).sort().join(',')!=='identity,role'
+   ||Object.values(Object.getOwnPropertyDescriptors(scope)).some(d=>!d.enumerable||!('value'in d))||typeof scope.role!=='string')throw unavailable();
+  selected=Object.freeze({identity:validateStorageIdentity(scope.identity),role:scope.role});
+ }
+ const identityWire=selected?canonicalJson(selected.identity):undefined;
+
  // Parent registers these four immutable operations with the bounded channel.
  const call=(operation:'researchPurchaseClaim'|'researchMonthlyCreate'|'researchMonthlyGet'|'researchMonthlyRedeem',args:readonly(string|null)[])=>channel.call(operation as Parameters<PostgresDomainChannel['call']>[0],args);
  const getMonthly=async(id:string)=>{live();researchMonthlyId(id);const result=await call('researchMonthlyGet',[JSON.stringify({id})]);live();if(result===null)return null;const monthly=decodeResearchMonthly(result);if(monthly.purchase.id!==id)throw unavailable();return monthly;};
@@ -29,6 +48,23 @@ export function composePostgresResearchPurchases(channel:PostgresDomainChannel,r
  };
  const policyCurrent=(wire:string)=>{try{if(canonicalJson(sourceClaimPolicyRuntime())!==wire)throw unavailable();}catch{throw new PostgresDomainWriteOutcomeUnknown();}};
  return Object.freeze({
+  async assertResearchPurchaseAuthority(network){
+   writer();
+   if(!selected||selected.role!=='keryx_app'||selected.identity.authorityMode!=='mainnet-real'
+    ||selected.identity.network!==ARC_MAINNET_PROFILE.networkId||typeof network!=='string'||network!==selected.identity.network)throw unavailable();
+   // This existing fixed read independently checks the channel's captured
+   // all-nine identity and Source catalog under its native transaction gate.
+   const observed=await channel.call('nativeRuntimeAuthority',[]);writer();
+   try{
+    if(!observed||typeof observed!=='object'||Array.isArray(observed)||![Object.prototype,null].includes(Object.getPrototypeOf(observed))
+     ||Object.getOwnPropertySymbols(observed).length||Object.values(Object.getOwnPropertyDescriptors(observed)).some(d=>!d.enumerable||!('value'in d))
+     ||Object.keys(observed).sort().join(',')!=='identity,sourceDigest'
+     ||typeof Reflect.get(observed,'sourceDigest')!=='string'||!/^[a-f0-9]{64}$/.test(Reflect.get(observed,'sourceDigest')))throw unavailable();
+    const actual=validateStorageIdentity(Reflect.get(observed,'identity'));
+    if(canonicalJson(actual)!==identityWire||actual.network!==network)throw unavailable();
+   }catch{throw unavailable();}
+   writer();
+  },
   async claimResearchPurchase(raw){writer();const input=captureResearchPurchaseClaim(raw),r=input.row,policy=await sourcePolicy({identity:{network:r.network,payer:r.payer,authorizationId:r.authorization_id},...input.context,payee:r.payee,amountMicros:r.amount_micros,requestHash:r.request_hash});
    const result=await call('researchPurchaseClaim',[JSON.stringify({required:input.required,row:r,sourcePolicyCapture:{...policy.capture,purchaseRow:r}})]);if(channel.closed||result!==true)throw new PostgresDomainWriteOutcomeUnknown();policyCurrent(policy.runtimeWire);},
   async createResearchMonthly(raw){writer();const purchase=captureResearchMonthly(raw),original=await getMonthly(purchase.id);live();

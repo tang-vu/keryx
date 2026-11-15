@@ -1,9 +1,14 @@
 import { afterEach,beforeEach,describe,expect,it,vi } from "vitest";
-import { randomUUID } from "node:crypto";
+import { createHash,randomUUID } from "node:crypto";
 import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from "./storage-identity";
 const state=vi.hoisted(()=>({sdk:vi.fn()}));
 vi.mock('@supabase/supabase-js',()=>({createClient:state.sdk}));
-import { assembleNativePostgresBusinessCore } from "./supabase-adapter";
+import { assembleNativePostgresBusinessCore,type NativePostgresBusinessCoreOptions } from "./supabase-adapter";
+import { composePostgresPublication } from "./postgres/publication-transport";
+import { composePostgresResearchPurchases } from "./postgres/research-purchases-transport";
+import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from "./postgres/domain-channel";
+import { assertPostgresRuntimeIdentity } from "./postgres/runtime-adapter";
+import type { QueryRun } from "../types";
 import { storageDomainClient,callSupabaseDomain,type StorageDomainAuthority } from "./supabase-authority";
 import { assertEnrolledSupabaseAuthority } from "./enrolled-supabase-adapter";
 import { assertEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
@@ -12,11 +17,11 @@ import { sealEnrolledCacheText } from '../sources/enrolled-content-cache';
 
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',network:'eip155:5042',authorityMode:'mainnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-12T00:00:00.000Z',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,provenanceDigest:'11'.repeat(32)};
 type DomainResult=Awaited<ReturnType<StorageDomainAuthority["rpcResult"]>>;
-function fixture(){
+function fixture(options:Partial<NativePostgresBusinessCoreOptions>={}){
  const rpc=vi.fn(async():Promise<DomainResult>=>({data:null,error:null}));
  const authority:StorageDomainAuthority={rpcResult:rpc};
  const verify=vi.fn(async()=>{}),entry=vi.fn();
- const core=assembleNativePostgresBusinessCore({identity,authority:{...authority,domainClient:()=>storageDomainClient(authority)},assertEntry:entry,verify});
+ const core=assembleNativePostgresBusinessCore({identity,authority:{...authority,domainClient:()=>storageDomainClient(authority)},assertEntry:entry,verify,...options});
  return {...core,rpc,verify,entry,authority};
 }
 beforeEach(()=>{vi.clearAllMocks();state.sdk.mockImplementation(()=>{throw new Error('SDK construction is forbidden in native assembly');});});
@@ -74,4 +79,49 @@ it('keeps native disposal terminal during the pre-crypto authority check',async(
  vi.stubEnv('CONTENT_MASTER_KEY','11'.repeat(32));const f=fixture();await f.adapter.init();let finish!:()=>void;f.verify.mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve;}));
  const encrypt=vi.spyOn(contentCrypto,'encryptContent'),request=f.adapter.setCached('synthetic','private'),outcome=expect(request).rejects.toThrow();await vi.waitFor(()=>expect(finish).toBeTypeOf('function'));f.hooks.close();finish();await outcome;expect(encrypt).not.toHaveBeenCalled();expect(f.rpc).not.toHaveBeenCalled();
 });
+});
+
+// Real fixed port implementations on a recorded channel exercise composition;
+// these protocol fixtures cannot enroll a facade or issue installed authority.
+function preparedFixture(readOnly=false){
+ let closed=false;const call=vi.fn<PostgresDomainChannel['call']>(),channel:PostgresDomainChannel={call,get closed(){return closed;},async close(){closed=true;}};
+ const publication=composePostgresPublication(channel,readOnly),researchPurchases=composePostgresResearchPurchases(channel,readOnly,{identity,role:readOnly?'keryx_reader':'keryx_app'});
+ return {...fixture({publication,researchPurchases}),call,channel};
+}
+const publicationRun=():QueryRun=>({id:'synthetic-core-publication',createdAt:'2026-11-15T00:00:00.000Z',question:'Original question',answer:'Synthetic answer',engine:'heuristic',budget:0,totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[]});
+const publicationAck=(args:readonly(string|null)[])=>{const packet=JSON.parse(args[0]!);return {id:packet.row.id,originalSha256:createHash('sha256').update(Buffer.from(packet.originalHex,'hex')).digest('hex')};};
+
+describe('optional fixed native research admission and publication bindings',()=>{
+ it('preserves the unconfigured authority-bound refusals without a legacy RPC',async()=>{
+  vi.stubEnv('KERYX_RUN_PRIVACY_ENABLED','true');const f=fixture();await f.adapter.init();
+  await expect(f.adapter.assertResearchPurchaseAuthority(identity.network)).rejects.toThrow('invalid_operation');await expect(f.adapter.saveQueryRun(publicationRun(),{visibility:'public'})).rejects.toThrow('privacy_unavailable');expect(f.rpc).not.toHaveBeenCalled();expect(state.sdk).not.toHaveBeenCalled();
+ });
+ it('binds the actual admission port to the existing fixed all-nine catalog observation',async()=>{
+  const f=preparedFixture();await f.adapter.init();f.call.mockResolvedValue({identity,sourceDigest:'ab'.repeat(32)});
+  await f.adapter.assertResearchPurchaseAuthority(identity.network);expect(f.call).toHaveBeenCalledExactlyOnceWith('nativeRuntimeAuthority',[]);expect(f.rpc).not.toHaveBeenCalled();
+  await expect(assertPostgresRuntimeIdentity(f.adapter,'write')).rejects.toThrow('adapter_not_initialized');expect(state.sdk).not.toHaveBeenCalled();
+ });
+ it('checks Core initialization and terminal disposal before either port inspects caller fields',async()=>{
+  const f=preparedFixture(),read=vi.fn(),run={get id(){read();return 'unused';}} as QueryRun,network={toString:read} as unknown as string;
+  await expect(f.adapter.saveQueryRun(run)).rejects.toThrow('adapter_not_initialized');await expect(f.adapter.assertResearchPurchaseAuthority(network)).rejects.toThrow('adapter_not_initialized');expect(read).not.toHaveBeenCalled();expect(f.call).not.toHaveBeenCalled();
+  await f.adapter.init();const save=f.adapter.saveQueryRun,admit=f.adapter.assertResearchPurchaseAuthority;f.hooks.close();await expect(save(run)).rejects.toThrow('adapter_not_initialized');await expect(admit(network)).rejects.toThrow('adapter_not_initialized');expect(read).not.toHaveBeenCalled();expect(f.call).not.toHaveBeenCalled();
+ });
+ it('preserves the actual readonly port refusals before caller fields or SQL',async()=>{
+  const f=preparedFixture(true),read=vi.fn(),run={get id(){read();return 'unused';}} as QueryRun;await f.adapter.init();
+  await expect(f.adapter.saveQueryRun(run,{visibility:'public'})).rejects.toThrow('privacy_unavailable');await expect(f.adapter.assertResearchPurchaseAuthority({toString:read} as unknown as string)).rejects.toThrow('PostgreSQL storage unavailable');expect(read).not.toHaveBeenCalled();expect(f.call).not.toHaveBeenCalled();expect(f.rpc).not.toHaveBeenCalled();
+ });
+ it('captures publication before the first await and uses the actual fixed writer with privacy active',async()=>{
+  vi.stubEnv('KERYX_RUN_PRIVACY_ENABLED','true');const f=preparedFixture(),run=publicationRun(),visibility={visibility:'public' as const};await f.adapter.init();let finish!:(value:unknown)=>void;f.call.mockReturnValue(new Promise(resolve=>{finish=resolve;}));
+  const pending=f.adapter.saveQueryRun(run,visibility);run.question='Caller changed';const args=f.call.mock.calls[0][1],packet=JSON.parse(args[0]!);expect(JSON.parse(Buffer.from(packet.originalHex,'hex').toString()).question).toBe('Original question');expect(f.call.mock.calls[0][0]).toBe('publicationSave');finish(publicationAck(args));await pending;expect(f.call).toHaveBeenCalledTimes(1);expect(f.rpc).not.toHaveBeenCalled();expect(state.sdk).not.toHaveBeenCalled();
+ });
+ it('propagates unknown publication commit loss exactly once without RPC fallback',async()=>{
+  const f=preparedFixture(),unknown=new PostgresDomainWriteOutcomeUnknown();await f.adapter.init();f.call.mockRejectedValueOnce(unknown);await expect(f.adapter.saveQueryRun(publicationRun())).rejects.toBe(unknown);expect(f.call).toHaveBeenCalledTimes(1);expect(f.rpc).not.toHaveBeenCalled();
+ });
+ it.each(['close','entry'] as const)('keeps a submitted publication unknown after %s changes during the await',async fault=>{
+  const f=preparedFixture();await f.adapter.init();let finish!:(value:unknown)=>void;f.call.mockReturnValue(new Promise(resolve=>{finish=resolve;}));const pending=f.adapter.saveQueryRun(publicationRun()),rejected=expect(pending).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown),args=f.call.mock.calls[0][1];
+  if(fault==='close')f.hooks.close();else f.entry.mockImplementation(()=>{throw Error('Selected storage changed');});finish(publicationAck(args));await rejected;expect(f.call).toHaveBeenCalledTimes(1);expect(f.rpc).not.toHaveBeenCalled();
+ });
+ it('refuses a post-await foreign admission identity instead of falling back',async()=>{
+  const f=preparedFixture();await f.adapter.init();f.call.mockResolvedValue({identity:{...identity,storageId:randomUUID()},sourceDigest:'ab'.repeat(32)});await expect(f.adapter.assertResearchPurchaseAuthority(identity.network)).rejects.toThrow('PostgreSQL storage unavailable');expect(f.call).toHaveBeenCalledExactlyOnceWith('nativeRuntimeAuthority',[]);expect(f.rpc).not.toHaveBeenCalled();
+ });
 });
