@@ -6,11 +6,30 @@ import type { Client } from 'pg';
 
 const model=vi.hoisted(()=>({files:new Map<string,Buffer>(),fds:new Map<number,string>(),next:20,closed:[] as number[],queries:[] as {database:string;sql:string}[],configs:[] as Record<string,unknown>[],ends:[] as string[],kernels:[] as string[],identity:{} as StorageIdentity,digest:'',
  catalog:'',sqlHash:'',fault:'',commit:0,rollback:0,openError:'',keepaliveFailure:false,delayKernel:false,delayBegin:false,privateRows:0,publicRows:0,stagingRows:0,journalWrites:0,fsyncs:0,
- snapshotClosed:false,failDescriptorClose:false,failSqliteClose:false,failPgClose:false,failJournalSync:false,lateControlDrift:false,role:'postgres',held:true,allowConnect:true,sourceTables:94,stagingCount:94,domains:12,badPublic:false}));
+ snapshotClosed:false,failDescriptorClose:false,failSqliteClose:false,failPgClose:false,failJournalSync:false,lateControlDrift:false,role:'postgres',held:true,allowConnect:true,sourceTables:94,stagingCount:94,domains:12,badPublic:false,
+ resourceFault:'',resourceAt:0,resourceChecks:0,serviceReads:0,resourceWaiting:false,heartbeatsDuringGuard:0,finalGuardLocked:false}));
 const base='/root/keryx-migration',b0=base+'/postgres-b0',prep=base+'/postgres17-server1-preparation.json',held=base+'/postgres17-server1-held-target.json',manifest='/root/.local/share/keryx-mainnet-runtime/production-v2/storage.json',audit='/root/.local/share/keryx-mainnet-runtime/production-v2/.business-operator-audit';
 const digest=(v:string|Buffer)=>createHash('sha256').update(v).digest('hex');
+const packageWire='postgresql-17\t17.12-1.pgdg24.04+1\tinstalled\n',pgGroup='/system.slice/system-postgresql.slice/postgresql@17-keryx.service',vendor='/usr/lib/systemd/system/postgresql@.service';
+const runtimeDrift=()=>model.resourceAt===model.resourceChecks;
 vi.mock('node:path',async importOriginal=>{const real=await importOriginal<typeof import('node:path')>();return {...real,...real.posix,default:real.posix};});
-vi.mock('node:child_process',()=>({execFileSync:(_bin:string,args:string[])=>args.includes('RuntimeMaxUSec')?'30min':'ActiveState=active\nUser=postgres\nGroup=root\nDropInPaths=/etc/systemd/system/postgresql@17-keryx.service.d/20-keryx-preparation.conf'}));
+vi.mock('node:child_process',()=>({
+ execFileSync:(_bin:string,args:string[])=>args.includes('RuntimeMaxUSec')?'30min':'ActiveState=active\nUser=postgres\nGroup=root\nDropInPaths=/etc/systemd/system/postgresql@17-keryx.service.d/20-keryx-preparation.conf',
+ execFile:(bin:string,args:string[],options:Record<string,unknown>,done:(error:Error|null,stdout:string,stderr:string)=>void)=>{
+  expect(options).toMatchObject({encoding:'utf8',timeout:30000,maxBuffer:4*1024*1024,env:{PATH:'/usr/bin:/bin'}});
+  if(bin==='/usr/bin/dpkg-query'){
+   expect(args).toEqual(['-W','-f=${binary:Package}\t${Version}\t${db:Status-Status}\n']);model.resourceChecks++;model.serviceReads=0;
+   if(model.resourceChecks===5){const q=model.queries.filter(x=>x.database==='keryx_mainnet').map(x=>x.sql),begin=q.findLastIndex(x=>x.startsWith('BEGIN')),end=q.findLastIndex(x=>x==='COMMIT'||x==='ROLLBACK'),lock=q.findLastIndex(x=>x.startsWith('LOCK TABLE '));model.finalGuardLocked=begin>end&&lock>begin;}
+   const output=runtimeDrift()&&model.resourceFault==='inventory'?packageWire+'unreviewed\t1\tinstalled\n':packageWire;
+   if(runtimeDrift()&&model.resourceFault==='delay'){model.resourceWaiting=true;setTimeout(()=>{model.resourceWaiting=false;done(null,output,'');},1150);}else queueMicrotask(()=>done(null,output,''));
+  }else{
+   expect(bin).toBe('/usr/bin/systemctl');expect(args.slice(0,2)).toEqual(['show','postgresql@17-keryx.service']);model.serviceReads++;
+   const p:Record<string,string>={LoadState:'loaded',ActiveState:'active',SubState:'running',UnitFileState:'enabled',User:'postgres',Group:'root',Type:'simple',DropInPaths:'/etc/systemd/system/postgresql@17-keryx.service.d/20-keryx-preparation.conf',RuntimeDirectory:'postgresql-keryx',RuntimeDirectoryMode:'0750',MemoryMax:'1073741824',MemorySwapMax:'0',CPUQuotaPerSecUSec:'750ms',TasksMax:'64',NoNewPrivileges:'yes',CapabilityBoundingSet:'',MainPID:'4242',FragmentPath:vendor,ExecStart:'path=/usr/lib/postgresql/17/bin/postgres ; argv[]=/usr/lib/postgresql/17/bin/postgres -D /var/lib/postgresql/17/keryx -c config_file=/etc/postgresql/17/keryx/postgresql.conf ;',ControlGroup:pgGroup};
+   if(runtimeDrift()&&model.resourceFault==='service')p.MemoryMax='2147483648';if(runtimeDrift()&&model.resourceFault==='pid'&&model.serviceReads===2)p.MainPID='4243';
+   queueMicrotask(()=>done(null,args.slice(2).map(x=>{const k=x.slice('--property='.length);return k+'='+p[k];}).join('\n')+'\n',''));
+  }return {};
+ },
+}));
 vi.mock('node:fs',async importOriginal=>{
  const real=await importOriginal<typeof import('node:fs')>();
  const file=(path:string)=>model.files.get(path);
@@ -36,10 +55,13 @@ vi.mock('node:fs',async importOriginal=>{
    if(path==='/proc/self/cgroup')value='0::/system.slice/keryx-postgres-online-b0.service';
    const limits:Record<string,string>={'memory.max':'536870912','memory.swap.max':'0','cpu.max':'25000 100000','pids.max':'32'};
    if(path.startsWith('/sys/fs/cgroup/'))value=limits[path.split('/').at(-1)!];
+   if(path==='/proc/4242/status')value=`CapEff:\t${runtimeDrift()&&model.resourceFault==='caps'?'0000000000000001':'0000000000000000'}\nNoNewPrivs:\t${runtimeDrift()&&model.resourceFault==='nnp'?'0':'1'}\nUid:\t${Array(4).fill(runtimeDrift()&&model.resourceFault==='uid'?'124':'123').join('\t')}\n`;
+   if(path==='/proc/4242/cgroup')value='0::'+(runtimeDrift()&&model.resourceFault==='group'?'/other':pgGroup);
+   if(path.startsWith('/sys/fs/cgroup'+pgGroup+'/')){const pgLimits:Record<string,string>={'memory.max':runtimeDrift()&&model.resourceFault==='memory'?'2147483648':'1073741824','memory.swap.max':runtimeDrift()&&model.resourceFault==='swap'?'1073741824':'0','cpu.max':runtimeDrift()&&model.resourceFault==='cpu'?'100000 100000':'75000 100000','pids.max':runtimeDrift()&&model.resourceFault==='pids'?'128':'64'};value=pgLimits[path.split('/').at(-1)!];}
    if(value===undefined)return real.readFileSync(p,encoding as BufferEncoding);
    return encoding?value.toString():Buffer.from(value);
   },
-  createReadStream:(path:string)=>({async *[Symbol.asyncIterator](){yield file(path)!;}}),
+  createReadStream:(path:string)=>({async *[Symbol.asyncIterator](){yield path===vendor&&runtimeDrift()&&model.resourceFault==='vendor'?Buffer.from('changed vendor unit'):file(path)!;}}),
   writeSync:(fd:number,buffer:Buffer,offset:number,length:number)=>{const path=pathOf(fd);model.files.set(path,Buffer.concat([file(path)??Buffer.alloc(0),buffer.subarray(offset,offset+length)]));model.journalWrites++;return length;},
   fsyncSync:()=>{model.fsyncs++;if(model.failJournalSync&&model.commit>0)throw new Error('fsync');},
  };
@@ -85,7 +107,7 @@ vi.mock('pg',async importOriginal=>{
  async query(sql:string){
   model.queries.push({database:this.database,sql});const row=(v:unknown)=>({rowCount:1,rows:[v]});
   if(model.delayBegin&&sql.startsWith('BEGIN'))await new Promise(resolve=>setTimeout(resolve,10));
-  if(sql==='SELECT 1'){if(model.keepaliveFailure)throw Object.assign(new Error('secret fields not exposed'),{code:'08006'});return row({});}
+  if(sql==='SELECT 1'){if(model.resourceWaiting)model.heartbeatsDuringGuard++;if(model.keepaliveFailure)throw Object.assign(new Error('secret fields not exposed'),{code:'08006'});return row({});}
   if(sql==='COMMIT'){model.commit++;if(model.fault==='ack-'+model.commit)throw Object.assign(new Error('raw private body not exposed'),{code:'08006'});if(model.lateControlDrift&&model.commit===1)model.identity={...model.identity,provenanceDigest:'f'.repeat(64)};return row({});}
   if(sql==='ROLLBACK'){model.rollback++;return row({});}
   if(sql.startsWith('SELECT current_database()'))return row({name:this.database,role:model.role,current_role:model.role,version:'170012',port:'5432',directory:'/var/lib/postgresql/17/keryx',socket:'/run/postgresql-keryx',socket_group:'root',socket_mode:'0770',listeners:'',fsync:'on',synchronous_commit:'on',full_page_writes:'on',data_checksums:'on',system_identifier:'123456789',oid:this.database==='keryx_source'?'10001':'10002'});
@@ -108,13 +130,14 @@ import { inspectServer1OnlineB0, runServer1OnlineB0, Server1B0Unavailable } from
 
 beforeEach(async()=>{
  model.files.clear();model.fds.clear();model.next=20;model.closed=[];model.queries=[];model.configs=[];model.ends=[];model.kernels=[];
- Object.assign(model,{fault:'',commit:0,rollback:0,openError:'',keepaliveFailure:false,delayKernel:false,delayBegin:false,privateRows:0,publicRows:0,stagingRows:0,journalWrites:0,fsyncs:0,snapshotClosed:false,failDescriptorClose:false,failSqliteClose:false,failPgClose:false,failJournalSync:false,lateControlDrift:false,role:'postgres',held:true,allowConnect:true,sourceTables:94,stagingCount:94,domains:12,badPublic:false});
+ Object.assign(model,{fault:'',commit:0,rollback:0,openError:'',keepaliveFailure:false,delayKernel:false,delayBegin:false,privateRows:0,publicRows:0,stagingRows:0,journalWrites:0,fsyncs:0,snapshotClosed:false,failDescriptorClose:false,failSqliteClose:false,failPgClose:false,failJournalSync:false,lateControlDrift:false,role:'postgres',held:true,allowConnect:true,sourceTables:94,stagingCount:94,domains:12,badPublic:false,resourceFault:'',resourceAt:0,resourceChecks:0,serviceReads:0,resourceWaiting:false,heartbeatsDuringGuard:0,finalGuardLocked:false});
  const {STORAGE_MAINNET_PROFILE_DIGEST,storageIdentityDigest}=await import('../../lib/db/storage-identity');
  model.identity={format:'keryx-mainnet-storage-identity-v1',deploymentId:'11111111-1111-4111-8111-111111111111',storageId:'22222222-2222-4222-8222-222222222222',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,enrollmentId:'33333333-3333-4333-8333-333333333333',enrolledAt:'2026-11-11T00:00:00.000Z',provenanceDigest:'4'.repeat(64)};
  model.digest=storageIdentityDigest(model.identity);model.catalog='9'.repeat(64);model.sqlHash=digest('fixed-sql');
  const put=(p:string,v:unknown)=>model.files.set(p,Buffer.from(typeof v==='string'?v:JSON.stringify(v)));
  put('/etc/systemd/system/postgresql@17-keryx.service.d/20-keryx-preparation.conf','fixed-service');
- put(prep,{format:'keryx-server1-postgres17-preparation-v1',phase:'prepared-unenrolled',cluster:'17/keryx',service:'postgresql@17-keryx.service',socketDirectory:'/run/postgresql-keryx',port:5432,serverVersionNum:170012,dataDirectory:'/var/lib/postgresql/17/keryx',systemIdentifier:'123456789',approvedPinSha256:'a'.repeat(64),packageInventorySha256:'b'.repeat(64),configHashes:{postgresql:'c'.repeat(64),hba:'d'.repeat(64),ident:'e'.repeat(64),service:digest('fixed-service')},observations:{socketDirectoryUid:123}});
+ put(vendor,'fixed-vendor-unit');
+ put(prep,{format:'keryx-server1-postgres17-preparation-v1',phase:'prepared-unenrolled',cluster:'17/keryx',service:'postgresql@17-keryx.service',socketDirectory:'/run/postgresql-keryx',port:5432,serverVersionNum:170012,dataDirectory:'/var/lib/postgresql/17/keryx',systemIdentifier:'123456789',approvedPinSha256:'a'.repeat(64),packageInventorySha256:digest(packageWire),vendorUnitSha256:digest('fixed-vendor-unit'),configHashes:{postgresql:'c'.repeat(64),hba:'d'.repeat(64),ident:'e'.repeat(64),service:digest('fixed-service')},observations:{socketDirectoryUid:123}});
  put(manifest,{format:'keryx-storage-deployment-v1',identity:model.identity,backend:{kind:'sqlite',databasePath:'/root/live/source.sqlite'}});put('/root/live/source.sqlite','live Original is never opened');put(b0+'/source.sqlite','bounded synthetic copy');put(b0+'/source.sql','fixed-sql');put(b0+'/intake.cjs','fixed-bundle');
  put(held,{format:'keryx-server1-postgres17-held-target-v1',phase:'fresh-held-unenrolled',preparationSha256:digest(model.files.get(prep)!),systemIdentifier:'123456789',sourceDatabaseOid:'10001',targetDatabaseOid:'10002',sourceSqlSha256:model.sqlHash,catalogSha256:model.catalog,identityDigest:model.digest,sourceManifestSha256:digest(model.files.get(manifest)!),intakeSha256:digest('fixed-bundle'),connectionDenial:'hba-reject',applicationConnectDenied:true,readerConnectDenied:true});
  put(b0+'/snapshot.json',{format:'keryx-consistent-online-sqlite-copy-v1',backupComplete:true,sourceOpenedReadOnly:true,sha256:digest('bounded synthetic copy'),bytes:Buffer.byteLength('bounded synthetic copy'),sourceManifestSha256:digest(model.files.get(manifest)!)});
@@ -202,6 +225,21 @@ describe('development wrapper and kernel source boundaries',()=>{
   expect(text).not.toMatch(/assertPostgresRuntimeIdentity|registerPostgres|control_transition\(|allowProduction/);expect(text).not.toContain('postgresPoolConfiguration');
   expect(text).toContain("stage='independent-census'");expect(text).toContain("event:'commit-intent'");expect(text).toContain("constants.O_EXCL");expect(text).toContain("await stopKeepalive()");
   expect(text).toContain("if(process.argv[1]===paths.bundle||typeof import.meta.url==='string'");
+ });
+});
+
+describe('current package/service/kernel observations under CapEff0 (recording only)',()=>{
+ it.each(['inventory','service','uid','caps','nnp','group','memory','swap','cpu','pids','vendor','pid'])('refuses initial %s drift before any SQL copy or journal',async fault=>{
+  model.resourceFault=fault;model.resourceAt=1;const error=await refusal();expect(error.stage).toBe('resource-initial');expect(model.commit).toBe(0);expect(model.kernels).toEqual([]);expect(model.files.has(b0+'/intake.jsonl')).toBe(false);expect(model.fds.size).toBe(0);
+ });
+ it('does not relabel an acknowledged prior phase when a precommit package check fails',async()=>{
+  model.resourceFault='inventory';model.resourceAt=3;const error=await refusal();expect(model.commit).toBe(1);expect(error.phases).toEqual({'typed-staging':'acknowledged','public-cells':'not_attempted','private-projections':'not_attempted'});expect(error.stage).toBe('public-cells-resource-precommit');expect(model.rollback).toBeGreaterThan(0);expect(events().some(e=>e.event==='held-census')).toBe(false);
+ });
+ it('checks final service state while target locks remain held and retains all known ACKs',async()=>{
+  model.resourceFault='service';model.resourceAt=5;const error=await refusal();expect(model.commit).toBe(3);expect(model.finalGuardLocked).toBe(true);expect(error.stage).toBe('resource-final');expect(Object.values(error.phases)).toEqual(['acknowledged','acknowledged','acknowledged']);expect(events().at(-1).event).toBe('refused');expect(model.ends.filter(e=>e.endsWith(':postgres'))).toHaveLength(4);
+ });
+ it('keeps a real heartbeat runnable during slow asynchronous precommit metadata',async()=>{
+  model.resourceFault='delay';model.resourceAt=2;await runServer1OnlineB0();expect(model.resourceChecks).toBe(5);expect(model.heartbeatsDuringGuard).toBeGreaterThan(0);expect(model.commit).toBe(3);expect(events().at(-1).event).toBe('held-census');
  });
 });
 

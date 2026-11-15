@@ -3,7 +3,7 @@
  * Source retirement, application activation, retry, or financial delta. */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { closeSync, constants, createReadStream, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, readSync, realpathSync, writeSync, type BigIntStats } from 'node:fs';
 import { dirname, parse, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -99,6 +99,39 @@ function controls(c:Context){
  assert.equal(location(privateDirectory(paths.audit)),c.auditToken);
  assert(c.db.isTransaction&&c.db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(canonicalJson(readStorageIdentity(c.db)),c.identityWire);
 }
+const pgService='postgresql@17-keryx.service',pgCgroup='/system.slice/system-postgresql.slice/'+pgService;
+const runtimeProperties=['LoadState','ActiveState','SubState','UnitFileState','User','Group','Type','DropInPaths','RuntimeDirectory','RuntimeDirectoryMode','MemoryMax','MemorySwapMax','CPUQuotaPerSecUSec','TasksMax','NoNewPrivileges','CapabilityBoundingSet','MainPID','FragmentPath','ExecStart','ControlGroup'] as const;
+function runtimeCommand(bin:'/usr/bin/dpkg-query'|'/usr/bin/systemctl',args:string[]):Promise<string>{
+ return new Promise((accept,reject)=>execFile(bin,args,{encoding:'utf8',timeout:30000,maxBuffer:4*1024*1024,env:{PATH:'/usr/bin:/bin',LANG:'C.UTF-8',LC_ALL:'C.UTF-8'}},(error,stdout,stderr)=>{
+  if(error||Buffer.byteLength(stdout)>4*1024*1024||Buffer.byteLength(stderr)>4*1024*1024)reject(new Error('B0 runtime observation unavailable'));else accept(stdout);
+ }));
+}
+async function runtimeService(){
+ const wire=await runtimeCommand('/usr/bin/systemctl',['show',pgService,...runtimeProperties.map(p=>'--property='+p)]),entries=wire.trim().split('\n').map(line=>{const at=line.indexOf('=');assert(at>0);return [line.slice(0,at),line.slice(at+1)] as const;});
+ assert.equal(entries.length,runtimeProperties.length);const p=Object.fromEntries(entries);assert.deepEqual(Object.keys(p).sort(),[...runtimeProperties].sort());
+ assert.equal(p.LoadState,'loaded');assert.equal(p.ActiveState,'active');assert.equal(p.SubState,'running');assert.equal(p.UnitFileState,'enabled');assert.equal(p.User,'postgres');assert.equal(p.Group,'root');assert.equal(p.Type,'simple');assert.equal(p.DropInPaths,serviceDropIn);assert.equal(p.RuntimeDirectory,'postgresql-keryx');assert.equal(p.RuntimeDirectoryMode,'0750');assert.equal(p.MemoryMax,'1073741824');assert.equal(p.MemorySwapMax,'0');assert.equal(p.CPUQuotaPerSecUSec,'750ms');assert.equal(p.TasksMax,'64');assert.equal(p.NoNewPrivileges,'yes');assert.equal(p.CapabilityBoundingSet,'');assert.equal(p.ControlGroup,pgCgroup);assert(/^[1-9][0-9]{0,9}$/.test(p.MainPID));
+ assert(['/lib/systemd/system/postgresql@.service','/usr/lib/systemd/system/postgresql@.service'].includes(p.FragmentPath));assert(p.ExecStart.includes('path=/usr/lib/postgresql/17/bin/postgres ; argv[]=/usr/lib/postgresql/17/bin/postgres -D /var/lib/postgresql/17/keryx -c config_file=/etc/postgresql/17/keryx/postgresql.conf ;'));
+ return p;
+}
+function runtimeKernel(p:Record<string,string>,c:Context){
+ const status=readFileSync('/proc/'+p.MainPID+'/status','utf8');assert(Buffer.byteLength(status)<=16384);assert(/^CapEff:\s+0+$/m.test(status)&&/^NoNewPrivs:\s+1$/m.test(status));
+ const expected=Number(record(c.preparation.value.observations).socketDirectoryUid);assert(Number.isSafeInteger(expected)&&expected>0);const uid=status.match(/^Uid:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*$/m);assert(uid&&uid.slice(1).every(x=>x===String(expected)));
+ const group=readFileSync('/proc/'+p.MainPID+'/cgroup','utf8');assert(Buffer.byteLength(group)<=4096);assert.equal(group.trim(),'0::'+pgCgroup);
+ const root='/sys/fs/cgroup'+pgCgroup+'/';for(const [key,value]of [['memory.max','1073741824'],['memory.swap.max','0'],['pids.max','64']])assert.equal(readFileSync(root+key,'utf8').trim(),value);
+ const cpu=readFileSync(root+'cpu.max','utf8').trim();assert(/^[1-9][0-9]* [1-9][0-9]*$/.test(cpu));const [quota,period]=cpu.split(' ').map(Number);assert(Number.isSafeInteger(quota)&&Number.isSafeInteger(period)&&quota/period===0.75);
+}
+/** Observe bounded metadata under CapEff0, without ptrace or /proc/PID/exe.
+ * These are current observations, never a caller-supplied admission result.
+ * Async commands keep the existing transaction heartbeat runnable. */
+async function verifyPreparedRuntime(c:Context){
+ controls(c);const inventory=await runtimeCommand('/usr/bin/dpkg-query',['-W','-f=${binary:Package}\t${Version}\t${db:Status-Status}\n']);controls(c);
+ // Byte-identical to Managed's preparation inventory, including the final LF.
+ assert.equal(sha(inventory),hash(c.preparation.value.packageInventorySha256));assert(inventory.length>0);for(const line of inventory.trimEnd().split('\n')){const cells=line.split('\t');assert.equal(cells.length,3);assert.equal(cells[2],'installed');}
+ const service=await runtimeService();controls(c);runtimeKernel(service,c);
+ const vendor=realpathSync(service.FragmentPath);assert(['/lib/systemd/system/postgresql@.service','/usr/lib/systemd/system/postgresql@.service'].includes(vendor));const held=pin(vendor,65536,'root-owned');
+ try{assert.equal(await fileSha(vendor,held),hash(c.preparation.value.vendorUnitSha256));controls(c);const after=await runtimeService();controls(c);assert.deepEqual(after,service);runtimeKernel(after,c);held.verify();}finally{held.close();}
+ controls(c);
+}
 async function actual(pg:Client,database:'keryx_source'|'keryx_mainnet',c:Context){
  controls(c);const p=c.preparation.value,h=c.held.value,observations=record(p.observations);
  const result=await pg.query(`SELECT current_database() name,session_user role,current_user current_role,current_setting('server_version_num') version,current_setting('port') port,current_setting('data_directory') directory,current_setting('unix_socket_directories') socket,current_setting('unix_socket_group') socket_group,current_setting('unix_socket_permissions') socket_mode,current_setting('listen_addresses') listeners,current_setting('fsync') fsync,current_setting('synchronous_commit') synchronous_commit,current_setting('full_page_writes') full_page_writes,current_setting('data_checksums') data_checksums,(SELECT system_identifier::text FROM pg_control_system()) system_identifier,(SELECT oid::text FROM pg_database WHERE datname=current_database()) oid`);controls(c);
@@ -170,6 +203,7 @@ async function intake(inspect:boolean){
   const identity=readStorageIdentity(db),identityWire=canonicalJson(identity),identityDigest=storageIdentityDigest(identity);assert.equal(identity.network,'eip155:5042');assert.equal(identity.authorityMode,'mainnet-real');assert.equal(identityDigest,h.identityDigest);assert.equal(canonicalJson(manifest.value.identity),identityWire);assert.equal(record(manifest.value.backend).kind,'sqlite');assert.notEqual(record(manifest.value.backend).databasePath,paths.snapshot);
   const original=pathStat(String(record(manifest.value.backend).databasePath));assert(original.isFile());assert(original.dev!==source.initial.dev||original.ino!==source.initial.ino);
   c={preparation,held,manifest,copy,source,sql,bundle,service,db,sourceHash,identityDigest,identityWire,referenceWire:'',lockSql:'',auditToken:location(privateDirectory(paths.audit)),started};controls(c);
+  stage='resource-initial';await verifyPreparedRuntime(c);controls(c);
   stage='receipt';if(inspect){const previous=pin(paths.journal,1048576);try{const lines=readFileSync(previous.descriptor,'utf8').trim().split('\n').map(v=>record(JSON.parse(v)));assert(lines.length>0&&lines.length<=64);const first=lines[0];assert.equal(first.sourceSha256,sourceHash);assert.equal(first.heldSha256,held.sha256);assert.equal(first.preparationSha256,preparation.sha256);for(const event of lines)if(phaseNames.includes(event.phase as Phase)){if(event.event==='commit-intent')outcomes[event.phase as Phase]='unknown';if(event.event==='phase'){assert(event.outcome==='acknowledged');outcomes[event.phase as Phase]='acknowledged';}}previous.verify();journal=openSync(paths.journal,constants.O_WRONLY|constants.O_APPEND|constants.O_NOFOLLOW);assert.equal(fingerprint(fstatSync(journal,{bigint:true})),fingerprint(previous.initial));}finally{previous.close();}}
   else{journal=openSync(paths.journal,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);emit({event:'intent',format:'keryx-server1-online-b0-journal-v1',sourceSha256:sourceHash,preparationSha256:preparation.sha256,heldSha256:held.sha256,manifestSha256:manifest.sha256,identityDigest,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256});}
   // Dynamic literal imports after fixed mainnet environment checks. No Source
@@ -186,7 +220,7 @@ async function intake(inspect:boolean){
   const beginLocked=async(pg:Client,begin:string,lock:()=>Promise<unknown>)=>{
    await stopKeepalive();await pg.query(begin);active=pg;await lock();startKeepalive();
   };
-  const commit=async(pg:Client,phase:Phase)=>{await stopKeepalive();controls(c!);stage=phase+'-commit';emit({event:'commit-intent',phase});outcomes[phase]='unknown';await pg.query('COMMIT');active=undefined;outcomes[phase]='acknowledged';emit({event:'phase',phase,outcome:'acknowledged'});controls(c!);startKeepalive();};
+  const commit=async(pg:Client,phase:Phase)=>{if(!timer)startKeepalive();stage=phase+'-resource-precommit';await verifyPreparedRuntime(c!);await stopKeepalive();controls(c!);stage=phase+'-commit';emit({event:'commit-intent',phase});outcomes[phase]='unknown';await pg.query('COMMIT');active=undefined;outcomes[phase]='acknowledged';emit({event:'phase',phase,outcome:'acknowledged'});controls(c!);startKeepalive();};
   if(!inspect){
    stage='fresh-target';await target(targetPg,c,true);await beginLocked(targetPg,'BEGIN ISOLATION LEVEL REPEATABLE READ',()=>lockTarget(targetPg,c!));await target(targetPg,c,true);await publicCells.compareFreshNativePublicTransaction(targetPg,c.referenceWire,mode);await targetPg.query('ROLLBACK');active=undefined;
    stage='typed-staging';await stopKeepalive();await sourcePg.query('BEGIN');active=sourcePg;await actual(sourcePg,'keryx_source',c);
@@ -204,7 +238,7 @@ async function intake(inspect:boolean){
   const staging=await typed.compareStagedSnapshotTransaction(db,readSource);assert.equal(staging.tables.length,94);
   await target(readTarget,c,false);await beginLocked(readTarget,'BEGIN ISOLATION LEVEL REPEATABLE READ',()=>lockTarget(readTarget,c!));await target(readTarget,c,false);
   const publicCensus=await publicCells.compareNativeSnapshotTransaction(db,readTarget,readSource,c.referenceWire,mode),projections=await privateCells.compareNativeProjectionsTransaction(db,readTarget,mode);assert.equal(projections.domains.length,12);await target(readTarget,c,false);
-  controls(c);await stopKeepalive();await readTarget.query('ROLLBACK');active=readSource;await readSource.query('ROLLBACK');active=undefined;assert.equal(await fileSha(paths.snapshot,source),sourceHash);
+  stage='resource-final';await verifyPreparedRuntime(c);controls(c);await stopKeepalive();await readTarget.query('ROLLBACK');active=readSource;await readSource.query('ROLLBACK');active=undefined;assert.equal(await fileSha(paths.snapshot,source),sourceHash);
   const heldBaseline={format:'keryx-native-held-data-baseline-metadata-v1',profileMode:mode,catalogSha256:profile.catalogSha256,targetState:'held',sequence:0,snapshotSha256:sourceHash,schemaSha256:typedCensus.schemaSha256,identityDigest,dataDigest:typedCensus.dataDigest};
   result={format:'keryx-server1-online-b0-receipt-v1',inspectionOnly:inspect,phases:{...outcomes},sourceSnapshotSha256:sourceHash,sourceSchemaSha256:typedCensus.schemaSha256,dataDigest:typedCensus.dataDigest,identity:JSON.parse(identityWire),identityDigest,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256,preparationSha256:preparation.sha256,heldControlSha256:held.sha256,sourceManifestSha256:manifest.sha256,intakeSha256:h.intakeSha256,systemIdentifier:p.systemIdentifier,sourceDatabaseOid:h.sourceDatabaseOid,targetDatabaseOid:h.targetDatabaseOid,staging,publicCensus,projections,nativeCensusSha256:sha(canonicalJson({staging,publicCensus,projections})),heldBaseline,writerMode:'held',applicationBackendSwitched:false,sourceRetired:false,financialCatchupQualified:false,privateAuditRootPreserved:true,applicationAuthority:false,paymentActions:0,jobActions:0};
  }catch(error){failure=error;}
