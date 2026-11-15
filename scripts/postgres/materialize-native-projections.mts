@@ -72,6 +72,63 @@ export async function captureNativeProjectionSource(db:DatabaseSync,selector:Nat
  }
  current();return {selector,rows,payment,privateResult};
 }
+/** Closed operational tuple shapes. No caller SQL or arbitrary column/key tuple.
+ * These helpers use the operator's PG handle, not an application capability. */
+const projectionLayouts:Record<Exclude<Table,'payment_event_originals'>,{keys:string[];columns:Field[]}>= {
+ run_history_projection:{keys:['run_id'],columns:[field('run_id'),field('original_sha256'),field('original_created_at'),field('recorded_owner'),field('owner_invalid'),field('funded'),field('provenance','json'),field('anonymous_claim_eligible')]},
+ run_ownership_projection:{keys:['run_id'],columns:[field('run_id'),field('original_sha256'),field('question_search','hex'),field('history_eligible'),field('recorded_valid'),field('claimed_valid'),field('summary','json')]},
+ run_privacy_projection:{keys:['run_id'],columns:[field('run_id'),field('original_sha256'),field('data_bytes'),field('original_valid'),field('scalar_identity_sha256'),field('scalar_cells','json'),field('answer_scalar','hex'),field('erase_wire'),field('original_fulfillment'),field('question_fields'),field('history_fields'),field('history_references','json'),field('learning_fields'),field('archive_wire'),field('erase_projection','json'),field('profile_fields'),field('payment_offline'),field('funding_offline'),field('funding_treasury')]},
+ usage_projection:{keys:['run_id'],columns:[field('run_id'),field('original_sha256'),field('usage_wire'),field('provenance_wire'),field('parsed_usage','json-null'),field('body_identity_valid')]},
+ public_ledger_projection:{keys:['run_id'],columns:[field('run_id'),field('original_sha256'),field('original_valid'),field('snapshot_wire'),field('reference_ids','json')]},
+ review_projection:{keys:['id'],columns:[field('id'),field('original_sha256'),field('metadata','json')]},
+ topic_watch_projection:{keys:['wallet','id'],columns:[field('wallet'),field('id'),field('original_sha256'),field('metadata','json')]},
+ acceptance_original_projection:{keys:['order_id'],columns:[field('order_id'),field('store_id'),field('source_order_wire'),field('source_order_sha256'),field('delivery_token'),field('owner'),field('network'),field('binding','json'),field('health_meta','json')]},
+ a2a_original_time_projection:{keys:['order_id'],columns:['order_id', 'identity_digest', 'query_id', 'request_hash', 'created_at', 'updated_at', 'started_at', 'payment_started_at', 'result_saving_at'].map(name=>field(name))},
+ a2a_original_cell_projection:{keys:['order_id'],columns:['order_id', 'identity_digest', 'query_id', 'request_hash', 'package_data_wire', 'request_data_wire'].map(name=>field(name))},
+ private_research_result_identity:{keys:['id'],columns:Object.keys(PRIVATE_RESULT_IDENTITY_COLUMNS).map(name=>field(name))},
+};
+export function checkedNativeProjectionRow(packet:NativeProjectionRow){
+ assert(packet&&Object.hasOwn(projectionLayouts,packet.table));const layout=projectionLayouts[packet.table as keyof typeof projectionLayouts];
+ assert.deepEqual(packet.keys,layout.keys);assert.deepEqual(packet.columns,layout.columns);assert.deepEqual(Object.keys(packet.row).sort(),layout.columns.map(c=>c.name).sort());
+ const wire=canonicalJson(packet.row);assert(Buffer.byteLength(wire)<=8388608);return {table:packet.table,keys:layout.keys,columns:layout.columns,row:packet.row,wire};
+}
+export async function insertNativeSourceProjection(pg:Client,packet:NativeProjectionRow){
+ const {table:name,columns,row,wire}=checkedNativeProjectionRow(packet);
+ const values=columns.map(c=>{const v=row[c.name];return c.kind==='json-null'?JSON.stringify(v):c.kind==='json'&&v!==null?JSON.stringify(v):v;});
+ const expressions=columns.map((c,i)=>c.kind==='hex'?`decode($${i+1},'hex')`:c.kind==='json'||c.kind==='json-null'?`$${i+1}::jsonb`:`$${i+1}`);
+ assert.equal((await pg.query(`INSERT INTO keryx_storage.${quote(name)}(${columns.map(c=>quote(c.name)).join(',')}) VALUES(${expressions.join(',')})`,values)).rowCount,1);return wire;
+}
+export async function compareNativeSourceProjection(pg:Client,packet:NativeProjectionRow){
+ const {table:name,keys,columns,row,wire}=checkedNativeProjectionRow(packet);
+ // Captured Source columns only: a native/generated derivative is not input.
+ const selected=await pg.query(`SELECT to_jsonb(t)::text wire,jsonb_build_array(${columns.map(c=>`t.${quote(c.name)} IS NULL`).join(',')})::text nulls FROM (SELECT ${columns.map(c=>quote(c.name)).join(',')} FROM keryx_storage.${quote(name)} WHERE ${keys.map((k,i)=>`${quote(k)}=$${i+1}`).join(' AND ')}) t`,keys.map(k=>row[k]));assert.equal(selected.rowCount,1);
+ const actual=JSON.parse(selected.rows[0].wire) as Record<string,unknown>,nulls=JSON.parse(selected.rows[0].nulls);
+ for(const c of columns)if(c.kind==='hex'&&actual[c.name]!==null){const hex=actual[c.name];assert(typeof hex==='string'&&/^\\x[a-f0-9]*$/.test(hex));actual[c.name]=hex.slice(2);}
+ assert.deepEqual(nulls,columns.map(c=>row[c.name]===null&&c.kind!=='json-null'));assert.equal(canonicalJson(actual),wire);return wire;
+}
+export async function deriveNativePaymentSourceProjection(pg:Client,id:string,captured:NonNullable<ReturnType<typeof captureObservedPaymentSource>>){
+ const projectionWire=JSON.stringify({...captured.projection,settled:captured.projection.settled===1});
+ const publicBytes=PAYMENT_EVENT_FIELDS.map(name=>`coalesce(octet_length(p.${quote(name)}::text),0)`).join('+');
+ const projected=await pg.query(`SELECT to_jsonb(expected)::text expected_projection,CASE WHEN ${publicBytes}<=${PAYMENT_EVENT_WIRE_BYTES*2} THEN to_jsonb(p)::text END actual_projection,CASE WHEN ${publicBytes}<=${PAYMENT_EVENT_WIRE_BYTES*2} THEN to_jsonb(p) IS NOT DISTINCT FROM to_jsonb(expected) ELSE false END projection_matches FROM jsonb_populate_record(NULL::public.payment_events,$2::jsonb) expected CROSS JOIN public.payment_events p WHERE p.id=$1 FOR SHARE OF p`,[id,projectionWire]);
+ assert.equal(projected.rowCount,1);assert.equal(projected.rows[0].projection_matches,true);for(const name of ['expected_projection','actual_projection'])assert(typeof projected.rows[0][name]==='string'&&Buffer.byteLength(projected.rows[0][name])<=PAYMENT_EVENT_WIRE_BYTES*2);
+ const nativeProjectionWire:string=projected.rows[0].expected_projection,expectedProjection=JSON.parse(nativeProjectionWire);assert(expectedProjection&&typeof expectedProjection==='object'&&!Array.isArray(expectedProjection));assert.deepEqual(Object.keys(expectedProjection).sort(),[...PAYMENT_EVENT_FIELDS].sort());assert.equal(canonicalJson(JSON.parse(projected.rows[0].actual_projection)),canonicalJson(expectedProjection));return {nativeProjectionWire,expectedProjection};
+}
+export async function readNativePaymentSourceOriginal(pg:Client,id:string){
+ // Never to_jsonb a whole original: raw ::text does not decode unrelated NUL.
+ const selected=await pg.query('SELECT payment_id,identity_digest,original_wire::text original_wire,original_sha256,current_wire::text current_wire,current_sha256,native_projection::text native_projection,array_to_json(unprojected_fields)::text unprojected_fields,jsonb_build_array(payment_id IS NULL,identity_digest IS NULL,original_wire IS NULL,original_sha256 IS NULL,current_wire IS NULL,current_sha256 IS NULL,native_projection IS NULL,unprojected_fields IS NULL)::text nulls FROM keryx_storage."payment_event_originals" WHERE payment_id=$1',[id]);
+ assert.equal(selected.rowCount,1);const actual={...selected.rows[0]};assert.deepEqual(JSON.parse(actual.nulls),Array(8).fill(false));delete actual.nulls;
+ assert.equal(sha(actual.original_wire),actual.original_sha256);assert.equal(sha(actual.current_wire),actual.current_sha256);return actual;
+}
+export async function insertNativePaymentSourceOriginal(pg:Client,row:Record<string,unknown>,nativeProjectionWire:string){
+ assert.deepEqual(Object.keys(row).sort(),['payment_id','identity_digest','original_wire','original_sha256','current_wire','current_sha256','native_projection','unprojected_fields'].sort());assert(Buffer.byteLength(canonicalJson(row))<=8388608);
+ assert.equal((await pg.query('INSERT INTO keryx_storage."payment_event_originals"(payment_id,identity_digest,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields) VALUES($1,$2,$3::json,$4,$5::json,$6,$7::jsonb,$8::text[])',[row.payment_id,row.identity_digest,row.original_wire,row.original_sha256,row.current_wire,row.current_sha256,nativeProjectionWire,row.unprojected_fields])).rowCount,1);
+}
+export async function compareNativePrivateResultSourceRow(pg:Client,name:PrivateResultSourceTable,id:string,expected:Record<string,string>){
+ assert(Object.hasOwn(PRIVATE_RESULT_SOURCE_COLUMNS,name));const columns=PRIVATE_RESULT_SOURCE_COLUMNS[name];
+ const bytes=columns.map(c=>'octet_length('+quote(c)+'::text)').join('+'),bounded=bytes+'<='+PRIVATE_RESULT_SOURCE_BYTE_LIMITS[name];
+ const native:QueryResult<Record<string,unknown>>=await pg.query('SELECT '+columns.map(c=>'CASE WHEN '+bounded+' THEN '+quote(c)+'::text END AS '+quote(c)).join(',')+','+bounded+' bounded FROM public.'+quote(name)+' WHERE id=$1 FOR SHARE',[id]);
+ assert.equal(native.rowCount,1);assert.equal(native.rows[0].bounded,true);const actual={...native.rows[0]};delete actual.bounded;assert(canonicalJson(actual)===canonicalJson(expected),'Private Source public cells changed');
+}
 export async function materializeNativeProjections(db:DatabaseSync,options:PostgresConnectionOptions,mode:NativeMaterializationProfileMode='observation505'){
  const profile=nativeMaterializationProfile(mode);
  assertDevelopmentMaterializationContainment();assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(options.role,'postgres');assert.equal(options.database,'native_materialized');assert.deepEqual(options.endpoint,{kind:'loopback',port:5432});assert(/^[a-f0-9]{48}$/.test(options.password));
@@ -92,16 +149,8 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
   if(paymentEventOriginalsPresent)await pg.query(`LOCK TABLE ${selectedTables.map(name=>'keryx_storage.'+quote(name)).join(',')},public.payment_events${privateResultIdentityPresent?','+Object.keys(PRIVATE_RESULT_SOURCE_COLUMNS).map(name=>'public.'+quote(name)).join(','):''} IN SHARE ROW EXCLUSIVE MODE`);
   for(const name of selectedTables){table=name;assert.equal((await pg.query(`SELECT count(*)::text n FROM keryx_storage.${quote(name)}`)).rows[0].n,'0');}
   const insert=async(name:Table,keys:string[],columns:Field[],row:Record<string,unknown>)=>{
-   table=name;stage='projection-copy';assert.deepEqual(Object.keys(row).sort(),columns.map(c=>c.name).sort());const wire=canonicalJson(row);assert(Buffer.byteLength(wire)<=8388608);
-   const values=columns.map(c=>{const v=row[c.name];return c.kind==='json-null'?JSON.stringify(v):c.kind==='json'&&v!==null?JSON.stringify(v):v;});
-   const expressions=columns.map((c,i)=>c.kind==='hex'?`decode($${i+1},'hex')`:c.kind==='json'||c.kind==='json-null'?`$${i+1}::jsonb`:`$${i+1}`);
-   assert.equal((await pg.query(`INSERT INTO keryx_storage.${quote(name)}(${columns.map(c=>quote(c.name)).join(',')}) VALUES(${expressions.join(',')})`,values)).rowCount,1);
-   // Only captured Source columns enter equality. A native/generated derivative
-   // must not change the Source row shape or become an implicit input cell.
-   stage='projection-re-read';const selected=await pg.query(`SELECT to_jsonb(t)::text wire,jsonb_build_array(${columns.map(c=>`t.${quote(c.name)} IS NULL`).join(',')})::text nulls FROM (SELECT ${columns.map(c=>quote(c.name)).join(',')} FROM keryx_storage.${quote(name)} WHERE ${keys.map((k,i)=>`${quote(k)}=$${i+1}`).join(' AND ')}) t`,keys.map(k=>row[k]));assert.equal(selected.rowCount,1);
-   const actual=JSON.parse(selected.rows[0].wire) as Record<string,unknown>,nulls=JSON.parse(selected.rows[0].nulls);
-   for(const c of columns)if(c.kind==='hex'&&actual[c.name]!==null){const hex=actual[c.name];assert(typeof hex==='string'&&/^\\x[a-f0-9]*$/.test(hex));actual[c.name]=hex.slice(2);}
-   assert.deepEqual(nulls,columns.map(c=>row[c.name]===null&&c.kind!=='json-null'));assert.equal(canonicalJson(actual),wire);
+   table=name;stage='projection-copy';const packet={table:name,keys,columns,row},wire=await insertNativeSourceProjection(pg,packet);
+   stage='projection-re-read';await compareNativeSourceProjection(pg,packet);
    digests.get(name)!.update(wire).update('\n');counts[name]++;
   };
   const capturedRows=async(selector:NativeProjectionSelector)=>{sourceCurrent();const captured=await captureNativeProjectionSource(db,selector);sourceCurrent();for(const row of captured.rows)await insert(row.table,row.keys,row.columns,row.row);sourceCurrent();};
@@ -113,18 +162,10 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
   if(paymentEventOriginalsPresent)for(const key of db.prepare("SELECT CASE WHEN typeof(id)='text' AND length(CAST(id AS BLOB))<=1024 THEN id END id FROM payment_events ORDER BY payment_events.id COLLATE BINARY").iterate()){
    table='payment_event_originals';stage='payment-source-capture';sourceCurrent();assert(typeof key.id==='string'&&++payments<=100000);
    const captured=(await captureNativeProjectionSource(db,{family:'payment',id:key.id})).payment;assert(captured);sourceCurrent();
-   const projectionWire=JSON.stringify({...captured.projection,settled:captured.projection.settled===1});
-   const publicBytes=PAYMENT_EVENT_FIELDS.map(name=>`coalesce(octet_length(p.${quote(name)}::text),0)`).join('+');
-   stage='payment-public-compare';const projected=await pg.query(`SELECT to_jsonb(expected)::text expected_projection,CASE WHEN ${publicBytes}<=${PAYMENT_EVENT_WIRE_BYTES*2} THEN to_jsonb(p)::text END actual_projection,CASE WHEN ${publicBytes}<=${PAYMENT_EVENT_WIRE_BYTES*2} THEN to_jsonb(p) IS NOT DISTINCT FROM to_jsonb(expected) ELSE false END projection_matches FROM jsonb_populate_record(NULL::public.payment_events,$2::jsonb) expected CROSS JOIN public.payment_events p WHERE p.id=$1 FOR SHARE OF p`,[key.id,projectionWire]);
-   assert.equal(projected.rowCount,1);assert.equal(projected.rows[0].projection_matches,true);for(const name of ['expected_projection','actual_projection'])assert(typeof projected.rows[0][name]==='string'&&Buffer.byteLength(projected.rows[0][name])<=PAYMENT_EVENT_WIRE_BYTES*2);
-   const nativeProjectionWire:string=projected.rows[0].expected_projection,expectedProjection=JSON.parse(nativeProjectionWire);assert(expectedProjection&&typeof expectedProjection==='object'&&!Array.isArray(expectedProjection));assert.deepEqual(Object.keys(expectedProjection).sort(),[...PAYMENT_EVENT_FIELDS].sort());assert.equal(canonicalJson(JSON.parse(projected.rows[0].actual_projection)),canonicalJson(expectedProjection));sourceCurrent();
+   stage='payment-public-compare';const {nativeProjectionWire,expectedProjection}=await deriveNativePaymentSourceProjection(pg,key.id,captured);sourceCurrent();
    const row={payment_id:key.id,identity_digest:storageIdentityDigest(identity),original_wire:captured.rowWire,original_sha256:captured.sha256,current_wire:captured.rowWire,current_sha256:captured.sha256,native_projection:expectedProjection,unprojected_fields:[...captured.unprojectedFields]},wire=canonicalJson(row);assert(Buffer.byteLength(wire)<=8388608);
-   stage='payment-original-copy';assert.equal((await pg.query('INSERT INTO keryx_storage."payment_event_originals"(payment_id,identity_digest,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields) VALUES($1,$2,$3::json,$4,$5::json,$6,$7::jsonb,$8::text[])',[row.payment_id,row.identity_digest,row.original_wire,row.original_sha256,row.current_wire,row.current_sha256,nativeProjectionWire,row.unprojected_fields])).rowCount,1);
-   // Arbitrary raw JSON may contain escaped NUL. Never run to_jsonb on this
-   // private row; only safe scalar ::text columns and boolean nullness escape.
-   stage='payment-original-re-read';const selected=await pg.query('SELECT payment_id,identity_digest,original_wire::text original_wire,original_sha256,current_wire::text current_wire,current_sha256,native_projection::text native_projection,array_to_json(unprojected_fields)::text unprojected_fields,jsonb_build_array(payment_id IS NULL,identity_digest IS NULL,original_wire IS NULL,original_sha256 IS NULL,current_wire IS NULL,current_sha256 IS NULL,native_projection IS NULL,unprojected_fields IS NULL)::text nulls FROM keryx_storage."payment_event_originals" WHERE payment_id=$1',[key.id]);
-   assert.equal(selected.rowCount,1);const actual={...selected.rows[0]};assert.deepEqual(JSON.parse(actual.nulls),Array(8).fill(false));delete actual.nulls;
-   assert.equal(actual.native_projection,nativeProjectionWire);actual.native_projection=JSON.parse(actual.native_projection);actual.unprojected_fields=JSON.parse(actual.unprojected_fields);assert.equal(canonicalJson(actual),wire);assert.equal(sha(actual.original_wire),actual.original_sha256);assert.equal(sha(actual.current_wire),actual.current_sha256);sourceCurrent();
+   stage='payment-original-copy';await insertNativePaymentSourceOriginal(pg,row,nativeProjectionWire);
+   stage='payment-original-re-read';const actual=await readNativePaymentSourceOriginal(pg,key.id);assert.equal(actual.native_projection,nativeProjectionWire);actual.native_projection=JSON.parse(actual.native_projection);actual.unprojected_fields=JSON.parse(actual.unprojected_fields);assert.equal(canonicalJson(actual),wire);sourceCurrent();
    digests.get('payment_event_originals')!.update(wire).update('\n');counts.payment_event_originals++;
   }
   let privateResults=0;
@@ -139,10 +180,7 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
     const captured=(await captureNativeProjectionSource(db,{family:'private-result',id:key.id})).privateResult;assert(captured);sourceCurrent();
     stage='private-result-public-compare';
     for(const [name,columns] of Object.entries(PRIVATE_RESULT_SOURCE_COLUMNS)){
-     const bytes=columns.map(c=>'octet_length('+quote(c)+'::text)').join('+'),bounded=bytes+'<='+PRIVATE_RESULT_SOURCE_BYTE_LIMITS[name as PrivateResultSourceTable];
-     const native:QueryResult<Record<string,unknown>>=await pg.query('SELECT '+columns.map(c=>'CASE WHEN '+bounded+' THEN '+quote(c)+'::text END AS '+quote(c)).join(',')+','+bounded+' bounded FROM public.'+quote(name)+' WHERE id=$1 FOR SHARE',[key.id]);
-     assert.equal(native.rowCount,1);assert.equal(native.rows[0].bounded,true);const actual={...native.rows[0]};delete actual.bounded;
-     assert(canonicalJson(actual)===canonicalJson(captured.rows[name as PrivateResultSourceTable]),'Private Source public cells changed');sourceCurrent();
+     await compareNativePrivateResultSourceRow(pg,name as PrivateResultSourceTable,key.id,captured.rows[name as PrivateResultSourceTable]);sourceCurrent();
     }
     await insert('private_research_result_identity',['id'],Object.keys(PRIVATE_RESULT_IDENTITY_COLUMNS).map(name=>field(name)),captured.metadata);sourceCurrent();
    }
