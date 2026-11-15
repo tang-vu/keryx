@@ -87,11 +87,16 @@ export async function qualifyHeldNativeCatchup(input:Readonly<{fixture:Awaited<R
   assert.equal((await holder.query('SELECT name FROM public.sources WHERE id=$1',[sourceId])).rows[0]?.name,originalName);
   pending=applyHeldNativeCatchup({source:input.fixture.source,sealed:input.fixture.sealed,options:input.options,referenceWire:input.referenceWire}).then(value=>({ok:true as const,value}),error=>({ok:false as const,error}));
   const started=performance.now();let witness=false;
-  while(performance.now()-started<4000){
+  // Source preparation precedes the target connection at .25 CPU. The bounded
+  // observer waits for that preparation too; it must expose an earlier refusal
+  // instead of misreporting every pre-lock failure as a missing lock witness.
+  while(performance.now()-started<15000){
    await holder.query('SELECT pg_stat_clear_snapshot()');
    const waiting=await holder.query("SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND usename='postgres' AND application_name='keryx-postgres-guarded' AND wait_event_type='Lock' AND query LIKE 'LOCK TABLE %' AND pg_backend_pid()=ANY(pg_blocking_pids(pid))");
    if(waiting.rowCount===1){witness=true;waitWitnessMs=Math.ceil(performance.now()-started);break;}
-   assert.equal(waiting.rowCount,0);await new Promise<void>(done=>setTimeout(done,25));
+   assert.equal(waiting.rowCount,0);
+   const completed=await Promise.race([pending,new Promise<undefined>(done=>setTimeout(()=>done(undefined),25))]);
+   if(completed){if(!completed.ok)throw completed.error;throw Error('Synthetic applier completed before lock-wait observation');}
   }
   assert(witness,'Actual catchup table-lock wait was not observed');
   assert.equal((await holder.query('UPDATE public.sources SET name=$1 WHERE id=$2 AND name IS NOT DISTINCT FROM $3',[driftName,sourceId,originalName])).rowCount,1);driftOwned=true;
