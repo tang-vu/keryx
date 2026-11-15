@@ -50,7 +50,7 @@ function capture(input:HeldNativeCatchupRequest){
 }
 function fingerprint(path:string,expected:string,bound:number,check:()=>void){
  const held=holdStorageTarget(path),initial=fstatSync(held.descriptor,{bigint:true}),token=(s:typeof initial)=>[s.dev,s.ino,s.nlink,s.size,s.mtimeNs,s.ctimeNs].join(':');
- try{assert(initial.nlink===1n&&initial.size<=BigInt(bound));if(process.platform!=='win32')assert(initial.uid===BigInt(process.getuid!())&&(initial.mode&0o077n)===0n);
+ try{assert(initial.nlink===BigInt(1)&&initial.size<=BigInt(bound));if(process.platform!=='win32')assert(initial.uid===BigInt(process.getuid!())&&(initial.mode&BigInt(0o077))===BigInt(0));
   const verify=()=>{check();held.verify();assert.equal(token(fstatSync(held.descriptor,{bigint:true})),token(initial));};
   const hash=()=>{verify();const h=createHash('sha256'),buffer=Buffer.alloc(MiB);for(let offset=0;;){const n=readSync(held.descriptor,buffer,0,buffer.length,offset);if(!n)break;h.update(buffer.subarray(0,n));offset+=n;check();}verify();assert.equal(h.digest('hex'),expected);};hash();return {...held,verify,hash,bytes:Number(initial.size)};
  }catch(error){held.close();throw error;}
@@ -231,21 +231,22 @@ export function applyHeldNativeCatchup(input:HeldNativeCatchupRequest){const req
 async function apply(request:ReturnType<typeof capture>){
  const startedAt=performance.now(),clock=()=>{if(performance.now()-startedAt>TYPED_SNAPSHOT_DELTA_LIMITS.elapsedMs)refuse('deadline');};
  let prepared:Prepared|undefined,file:ReturnType<typeof fingerprint>|undefined,supplied:ReturnType<typeof fingerprint>|undefined,before:Source|undefined,after:Source|undefined,pg:Client|undefined;
- let stage='source-seal',transaction=false,commitSubmitted=false,acknowledged=false;
+ let stage='source-seal',transaction=false,commitSubmitted=false,acknowledged=false,disposeFailed=false;
+ const commitOutcome=()=>acknowledged?'acknowledged' as const:commitSubmitted?'unknown' as const:'not_attempted' as const;
  let priorFirstDigest:string|undefined,publicWrites=0,sidecarPackets=0,selectedPlans:Plan[]|undefined,selectedNative:ReturnType<typeof fixedNativeTables>|undefined;
  const base={dataOnly:true,targetVerified:false,applicationAuthority:false,nativeFactoryQualified:false,completeWriterQualified:false,briefCutoverQualified:false,applicationBackendSwitched:false,automaticRetry:false,paymentActions:0,jobActions:0};
  const check=()=>{clock();before?.verify();after?.verify();file?.verify();};
- const closePg=async()=>{const selected=pg;pg=undefined;if(selected)await selected.end();};
+ const closePg=async()=>{const selected=pg;pg=undefined;if(selected)try{await selected.end();}catch(error){disposeFailed=true;throw error;}};
  const lock=async(client:Client,native:NativeTable[])=>{await client.query('LOCK TABLE '+[...native.map(t=>'public.'+quote(t.name)),...sidecarNames.map(n=>'keryx_storage.'+quote(n)),'keryx_storage.writer'].join(',')+' IN SHARE ROW EXCLUSIVE MODE');check();};
  const inspect=async(plans:Plan[],native:NativeTable[])=>{
   let client:Client|undefined,open=false;try{
-   client=new Client(postgresPoolConfiguration(request.r.options));client.on('error',()=>{});await client.connect();check();await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');open=true;check();await gate(client,before!,check,true);await lock(client,native);
+   client=new Client(postgresPoolConfiguration(request.r.options));client.on('error',()=>{});await client.connect();check();await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');open=true;check();await lock(client,native);await gate(client,before!,check,true);
    const equivalent=async(source:Source)=>{try{await comparePublic(client!,source,plans,native,check);const sidecars=await compareSidecars(client!,source,before!,check);return sidecars.retainedPaymentFirstDigest===priorFirstDigest;}catch{return false;}};
    const allBefore=await equivalent(before!),allAfter=await equivalent(after!);await gate(client,before!,check,true);before!.hash();after!.hash();check();
    // This observes DATA equivalence only. Both-match is explicitly ambiguous.
    return {inspection:'complete' as const,allBefore,allAfter,dataEquivalentAfterOnly:allAfter&&!allBefore,ambiguous:allBefore===allAfter,targetHeld:true};
   }catch{return {inspection:'unavailable' as const,allBefore:false,allAfter:false,dataEquivalentAfterOnly:false,ambiguous:true,targetHeld:null};}
-  finally{if(client){if(open)try{await client.query('ROLLBACK');}catch{}try{await client.end();}catch{}}}
+  finally{if(client){if(open)try{await client.query('ROLLBACK');}catch{disposeFailed=true;}try{await client.end();}catch{disposeFailed=true;}}}
  };
  try{
   // Independently regenerate from the actual hashed Source snapshots before
@@ -257,7 +258,9 @@ async function apply(request:ReturnType<typeof capture>){
   before=openSource(request.r.source.delta.before,prepared.completion.delta.identityDigest,clock);after=openSource(request.r.source.delta.after,prepared.completion.delta.identityDigest,clock);check();
   const native=fixedNativeTables(request.reference),plans=plansFor(before,after,native,request.reference);selectedNative=native;selectedPlans=plans;preflightChanges(file,index,plans,native);check();
   stage='target-connect';pg=new Client(postgresPoolConfiguration(request.r.options));pg.on('error',()=>{});await pg.connect();check();await gate(pg,before,check,false);
-  stage='target-lock';await pg.query('BEGIN ISOLATION LEVEL REPEATABLE READ');transaction=true;check();await gate(pg,before,check,true);await lock(pg,native);await gate(pg,before,check,true);await pg.query('SET CONSTRAINTS ALL DEFERRED');check();
+  // LOCK is deliberately the first command after BEGIN. A gate SELECT before
+  // the lock could pin an RR snapshot that hides an owner's concurrent commit.
+  stage='target-lock';await pg.query('BEGIN ISOLATION LEVEL REPEATABLE READ');transaction=true;check();await lock(pg,native);await gate(pg,before,check,true);await pg.query('SET CONSTRAINTS ALL DEFERRED');check();
   // All old cells and all twelve private families are mandatory, even when no
   // changed row mentions them. Missing/foreign/unprojected originals refuse.
   stage='before-state';const oldPublic=await comparePublic(pg,before,plans,native,check),oldPrivate=await compareSidecars(pg,before,before,check);priorFirstDigest=oldPrivate.retainedPaymentFirstDigest;
@@ -278,12 +281,14 @@ async function apply(request:ReturnType<typeof capture>){
   if(commitSubmitted&&!acknowledged){try{await closePg();}catch{}const observation=before&&after&&file&&selectedPlans&&selectedNative?await inspect(selectedPlans,selectedNative):{inspection:'unavailable' as const,allBefore:false,allAfter:false,dataEquivalentAfterOnly:false,ambiguous:true,targetHeld:null};
    return {format:'keryx-held-native-catchup-data-result-v1',...base,outcome:'commit-ack-unknown' as const,commitOutcome:'unknown' as const,publicWrites,sidecarPackets,inspection:observation,sourceInputSha256:prepared?.sha256};
   }
-  if(transaction&&pg)try{await pg.query('ROLLBACK');transaction=false;}catch{}
-  if(error instanceof HeldNativeCatchupRefused)throw error;
-  throw new HeldNativeCatchupRefused(stage,acknowledged?'acknowledged':commitSubmitted?'unknown':'not_attempted');
+  if(transaction&&pg)try{await pg.query('ROLLBACK');transaction=false;}catch{disposeFailed=true;}
+  throw new HeldNativeCatchupRefused(error instanceof HeldNativeCatchupRefused?error.stage:stage,commitOutcome());
  }finally{
-  let disposeFailed=false;try{await closePg();}catch{disposeFailed=true;}
-  try{before?.close();}finally{try{after?.close();}finally{try{file?.close();}finally{try{supplied?.close();}finally{if(prepared){unlinkSync(prepared.path);rmdirSync(dirname(prepared.path));}}}}}
-  if(disposeFailed)throw new HeldNativeCatchupRefused('dispose',acknowledged?'acknowledged':commitSubmitted?'unknown':'not_attempted');
+  try{await closePg();}catch{disposeFailed=true;}
+  // Attempt each owned resource independently. Cleanup must neither leak the
+  // remaining resources nor erase the known COMMIT submission/ACK phase.
+  for(const resource of [before,after,file,supplied])try{resource?.close();}catch{disposeFailed=true;}
+  if(prepared){try{unlinkSync(prepared.path);}catch{disposeFailed=true;}try{rmdirSync(dirname(prepared.path));}catch{disposeFailed=true;}}
+  if(disposeFailed)throw new HeldNativeCatchupRefused('dispose',commitOutcome());
  }
 }

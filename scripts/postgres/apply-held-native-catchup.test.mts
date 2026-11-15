@@ -11,7 +11,12 @@ const model=vi.hoisted(()=>{
  for(const k of ['AGENT_FUNDER_PRIVATE_KEY','BUYER_PRIVATE_KEY','DEPLOYER_PRIVATE_KEY','KERYX_PRIVATE_TREASURY_PRIVATE_KEY','NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','CONTENT_MASTER_KEY','KERYX_REGISTRY_ORIGINS','NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS'])vi.stubEnv(k,'');
  for(const k of ['KERYX_STORAGE_MANIFEST','KERYX_SQLITE_PATH','KERYX_USDC_ADDRESS','KERYX_GATEWAY_WALLET','KERYX_GATEWAY_MINTER','KERYX_MAX_TIMEOUT_SECONDS'])vi.stubEnv(k,undefined);
  const fetch=vi.fn(()=>{throw Error('No outbound Source I/O');});vi.stubGlobal('fetch',fetch);
- return {fetch,public:new Map<string,Record<string,unknown>[]>(),private:new Map<string,Record<string,unknown>[]>(),jsonNull:new Map<string,Set<string>>(),reference:null as unknown,identity:null as unknown,queries:[] as string[],clients:0,bad:'',writes:0,saved:null as unknown};
+ return {fetch,public:new Map<string,Record<string,unknown>[]>(),private:new Map<string,Record<string,unknown>[]>(),jsonNull:new Map<string,Set<string>>(),reference:null as unknown,identity:null as unknown,queries:[] as string[],clients:0,bad:'',writes:0,saved:null as unknown,commitSubmitted:false,elapsed:0,cleanupKind:'',cleanupInjected:false,cleanupSeen:[] as string[]};
+});
+vi.mock('node:fs',async original=>{
+ const actual=await original<typeof import('node:fs')>();
+ const disposal=(kind:string,action:()=>void)=>{action();if(model.commitSubmitted){model.cleanupSeen.push(kind);if(model.cleanupKind===kind&&!model.cleanupInjected){model.cleanupInjected=true;throw Error('Synthetic private cleanup detail');}}};
+ return {...actual,unlinkSync:(path:Parameters<typeof actual.unlinkSync>[0])=>disposal('unlink',()=>actual.unlinkSync(path)),rmdirSync:(path:Parameters<typeof actual.rmdirSync>[0])=>disposal('rmdir',()=>actual.rmdirSync(path))};
 });
 import { canonicalJson } from '../../lib/canonical-json';
 import { storageIdentityDigest } from '../../lib/db/storage-identity';
@@ -39,11 +44,19 @@ function matches(sql:string,row:Record<string,unknown>,values:unknown[]){
  return clauses.every(c=>{const number=Number(c[2]??c[3]);let actual=row[c[1]];if(typeof actual==='string'&&new RegExp('\\$'+number+'::jsonb').test(sql))actual=JSON.parse(actual);return canonicalJson(actual)===canonicalJson(expectedValue(sql,number,values[number-1]));});
 }
 vi.mock('pg',()=>({Client:class{
- cursor:Record<string,unknown>[]=[];offset=0;constructor(){model.clients++;}on(){}async connect(){}async end(){}
+ cursor:Record<string,unknown>[]=[];offset=0;open=false;locked=false;repeatable=false;constructor(){model.clients++;}on(){}async connect(){}async end(){
+  if(model.commitSubmitted){model.cleanupSeen.push('pg-end');if(model.cleanupKind==='pg-end'&&!model.cleanupInjected){model.cleanupInjected=true;throw Error('Synthetic private connection detail');}}
+ }
  async query(sql:string,values:unknown[]=[]){
   model.queries.push(sql);const result=(rows:Record<string,unknown>[])=>({rows,rowCount:rows.length});
-  if(sql.startsWith('BEGIN')){model.saved=copy();return result([]);}if(sql==='ROLLBACK'){restore(model.saved as ReturnType<typeof copy>);return result([]);}if(sql==='COMMIT'){if(model.bad==='ack-before')restore(model.saved as ReturnType<typeof copy>);if(model.bad.startsWith('ack-'))throw Error('Synthetic lost ACK');return result([]);}
-  if(sql.startsWith('LOCK TABLE')||sql.startsWith('SET CONSTRAINTS')||sql==='CLOSE catchup_rows')return result([]);
+  if(sql.startsWith('BEGIN')){model.saved=copy();this.open=true;this.locked=false;this.repeatable=sql.includes('REPEATABLE READ');return result([]);}if(sql==='ROLLBACK'){this.open=false;restore(model.saved as ReturnType<typeof copy>);return result([]);}if(sql==='COMMIT'){
+   model.commitSubmitted=true;this.open=false;if(model.bad==='ack-deadline'){model.elapsed=300001;return result([]);}if(model.bad==='ack-before')restore(model.saved as ReturnType<typeof copy>);if(model.bad.startsWith('ack-'))throw Error('Synthetic lost ACK');return result([]);
+  }
+  if(sql.startsWith('LOCK TABLE')){this.locked=true;return result([]);}
+  // Recording control only: any statement before the full lock would establish
+  // an RR snapshot too early. Both apply and lost-ACK inspector obey this.
+  if(this.open&&this.repeatable&&!this.locked)throw Error('Snapshot statement before target table lock');
+  if(sql.startsWith('SET CONSTRAINTS')||sql==='CLOSE catchup_rows')return result([]);
   if(sql.includes('current_database() name'))return result([{name:'native_materialized',role:'postgres',current_role:'postgres',version:'170012'}]);
   if(sql.startsWith('SELECT mode FROM'))return result([{mode:model.bad==='mode'?'active':'held'}]);
   if(sql.includes('SELECT identity::text'))return result([{wire:JSON.stringify(model.bad==='identity'?{...model.identity as object,storageId:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'}:model.identity),identity_digest:storageIdentityDigest(model.identity)}]);
@@ -82,8 +95,8 @@ type Fixture=Awaited<ReturnType<typeof prepareHeldCatchupSynthetic>>;
 const fixtures:Fixture[]=[],extraSpools:string[]=[];
 const options={endpoint:{kind:'loopback' as const,port:5432},database:'native_materialized',role:'postgres',password:'ab'.repeat(24)};
 const digest=(wire:string|Buffer)=>createHash('sha256').update(wire).digest('hex');
-beforeEach(()=>{model.public=new Map();model.private=new Map();model.jsonNull=new Map();model.queries=[];model.clients=0;model.bad='';model.writes=0;model.saved=null;});
-afterEach(()=>{expect(model.fetch).not.toHaveBeenCalled();for(const path of extraSpools.splice(0)){unlinkSync(path);rmdirSync(dirname(path));}for(const f of fixtures.splice(0))disposeHeldCatchupSynthetic(f);});
+beforeEach(()=>{model.public=new Map();model.private=new Map();model.jsonNull=new Map();model.queries=[];model.clients=0;model.bad='';model.writes=0;model.saved=null;model.commitSubmitted=false;model.elapsed=0;model.cleanupKind='';model.cleanupInjected=false;model.cleanupSeen=[];});
+afterEach(()=>{vi.restoreAllMocks();model.commitSubmitted=false;expect(model.fetch).not.toHaveBeenCalled();for(const path of extraSpools.splice(0)){unlinkSync(path);rmdirSync(dirname(path));}for(const f of fixtures.splice(0))disposeHeldCatchupSynthetic(f);});
 async function fresh(){const f=await prepareHeldCatchupSynthetic();fixtures.push(f);return f;}
 function typeFor(table:string,column:string,declared:string){if(table==='article_offers'&&column==='source_order')return 'bigint';if(table==='query_runs'&&column==='data')return 'json';if(table==='query_runs'&&column==='economics_data')return 'jsonb';if(table==='private_research_executions'&&column==='worker_id')return 'keryx_storage.native_uuid_text';if((table==='payment_events'&&column==='settled')||column==='active')return 'boolean';return /INT/i.test(declared)?'bigint':/REAL/i.test(declared)?'double precision':'text';}
 async function baseline(f:Fixture){
@@ -100,7 +113,7 @@ async function baseline(f:Fixture){
   for(const [name,type]of [['payment_id','text'],['identity_digest','text'],['original_wire','json'],['original_sha256','text'],['current_wire','json'],['current_sha256','text'],['native_projection','jsonb'],['unprojected_fields','text[]']])columns.push({schema:'keryx_storage',relation:'payment_event_originals',name,type});
   constraints.push({schema:'keryx_storage',relation:privateName,type:'p',definition:'PRIMARY KEY (id)'},{schema:'keryx_storage',relation:privateName,type:'f',referencedSchema:'public',referencedRelation:'private_research_results',definition:'FOREIGN KEY (id) REFERENCES public.private_research_results(id) ON DELETE CASCADE'});
   model.reference={sha256:current(),metadata:{sections:{relations,columns,constraints,triggers:[['native_private_result_identity_writer','write_fence'],['native_private_result_identity_retained','immutable']].map(([name,fn])=>({schema:'keryx_storage',relation:privateName,name,functionSchema:'keryx_storage',function:fn,enabled:'O'})),functions:[{schema:'keryx_storage',name:'write_fence',source:'Private result Source identity fence v1 NEW.question_sha256 private_research_save_result'}]}}};model.identity=f.identity;
-  await materializeNativeProjections(db,options,'development-current510-data-only');model.queries=[];model.clients=0;model.writes=0;
+   await materializeNativeProjections(db,options,'development-current510-data-only');model.queries=[];model.clients=0;model.writes=0;model.commitSubmitted=false;
  }finally{db.close();}
 }
 function request(f:Fixture){return {source:f.source,sealed:f.sealed,options,referenceWire:'recording-source'};}
@@ -119,6 +132,31 @@ it.each(['mode','identity','catalog','writers'])('refuses independent target %s 
 it.each(['public','private'])('requires the entire old %s census and never repairs missing/stale data',async kind=>{const f=await fresh();await baseline(f);if(kind==='public')model.public.get('query_runs')![0].answer='foreign';else model.private.get('run_privacy_projection')![0].original_sha256='f'.repeat(64);const old=copy();await expect(applyHeldNativeCatchup(request(f))).rejects.toMatchObject({stage:'before-state'});expect(model.writes).toBe(0);expect(model.public).toEqual(old.public);expect(model.private).toEqual(old.private);});
 it.each(['cas','after-sidecar'])('rolls back every sidecar/public mutation on %s failure',async bad=>{const f=await fresh();await baseline(f);const old=copy();model.bad=bad;await expect(applyHeldNativeCatchup(request(f))).rejects.toMatchObject({commitOutcome:'not_attempted'});expect(model.public).toEqual(old.public);expect(model.private).toEqual(old.private);expect(model.queries).toContain('ROLLBACK');expect(model.queries).not.toContain('COMMIT');});
 it.each(['ack-after','ack-before'])('lost COMMIT ACK is never retried; complete %s state is DATA observation only',async bad=>{const f=await fresh();await baseline(f);model.bad=bad;const result=await applyHeldNativeCatchup(request(f));expect(result).toMatchObject({outcome:'commit-ack-unknown',commitOutcome:'unknown',automaticRetry:false,targetVerified:false,inspection:{inspection:'complete',allBefore:bad==='ack-before',allAfter:bad==='ack-after',dataEquivalentAfterOnly:bad==='ack-after',targetHeld:true}});expect(model.queries.filter(s=>s==='COMMIT')).toHaveLength(1);});
+it('locks first in every RR transaction, including the fresh lost-ACK inspector',async()=>{
+ const f=await fresh();await baseline(f);model.bad='ack-after';const result=await applyHeldNativeCatchup(request(f));expect(result.outcome).toBe('commit-ack-unknown');
+ const begins=model.queries.flatMap((sql,i)=>sql.startsWith('BEGIN')?[i]:[]);expect(begins).toHaveLength(2);
+ for(const i of begins)expect(model.queries[i+1]).toMatch(/^LOCK TABLE .* IN SHARE ROW EXCLUSIVE MODE$/);
+});
+it('keeps an acknowledged COMMIT when the existing process budget expires during its ACK',async()=>{
+ const f=await fresh();await baseline(f);vi.spyOn(performance,'now').mockImplementation(()=>model.elapsed);model.bad='ack-deadline';
+ await expect(applyHeldNativeCatchup(request(f))).rejects.toMatchObject({stage:'deadline',commitOutcome:'acknowledged'});
+ expect(model.queries.filter(s=>s==='COMMIT')).toHaveLength(1);expect(model.queries).not.toContain('ROLLBACK');expect(model.writes).toBe(4);
+});
+it.each(['unlink','rmdir','pg-end','source-close'])('preserves acknowledged phase and attempts remaining owned cleanup on %s failure',async kind=>{
+ const f=await fresh();await baseline(f);model.cleanupKind=kind;
+ if(kind==='source-close'){
+  const original=DatabaseSync.prototype.close;vi.spyOn(DatabaseSync.prototype,'close').mockImplementation(function(this:DatabaseSync){original.call(this);if(model.commitSubmitted){model.cleanupSeen.push('source-close');if(!model.cleanupInjected){model.cleanupInjected=true;throw Error('Synthetic private Source detail');}}});
+ }
+ await expect(applyHeldNativeCatchup(request(f))).rejects.toMatchObject({stage:'dispose',commitOutcome:'acknowledged',message:'Held native catchup refused: dispose'});
+ expect(model.cleanupInjected).toBe(true);expect(model.cleanupSeen).toEqual(expect.arrayContaining(['pg-end','unlink','rmdir']));
+ if(kind==='source-close')expect(model.cleanupSeen.filter(v=>v==='source-close')).toHaveLength(2);
+ expect(model.queries.filter(s=>s==='COMMIT')).toHaveLength(1);expect(model.queries).not.toContain('ROLLBACK');
+});
+it.each(['pg-end','unlink'])('preserves unknown COMMIT phase on %s disposal failure',async kind=>{
+ const f=await fresh();await baseline(f);model.bad='ack-after';model.cleanupKind=kind;
+ await expect(applyHeldNativeCatchup(request(f))).rejects.toMatchObject({stage:'dispose',commitOutcome:'unknown'});
+ expect(model.clients).toBe(2);expect(model.cleanupSeen).toEqual(expect.arrayContaining(['pg-end','unlink','rmdir']));expect(model.queries.filter(s=>s==='COMMIT')).toHaveLength(1);
+});
 it('rejects a stale sealed-file SHA and Source drift before constructing a target client',async()=>{const f=await fresh();await baseline(f);await expect(applyHeldNativeCatchup({...request(f),sealed:{...f.sealed,sha256:'f'.repeat(64)}})).rejects.toMatchObject({stage:'source-seal'});expect(model.clients).toBe(0);expect(model.writes).toBe(0);});
 
 it('zero typed/projection/order changes compare the complete old state and avoid COMMIT',async()=>{

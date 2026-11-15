@@ -57,7 +57,7 @@ function pin(source:TypedDeltaSnapshot,check:()=>void){
  let part=parse(path).root;for(const leaf of relative(part,path).split(sep)){part=resolve(part,leaf);if(lstatSync(part).isSymbolicLink())refuse('unsafe_path');}
  const real=realpathSync(path);if(process.platform==='win32'?real.toLowerCase()!==path.toLowerCase():real!==path)refuse('unsafe_path');
  const initial=lstatSync(path,{bigint:true}),token=(s:typeof initial)=>[s.dev,s.ino,s.nlink,s.size,s.mode,s.mtimeNs,s.ctimeNs].join(':');
- if(!initial.isFile()||initial.nlink!==1n||initial.size<100n||initial.size>BigInt(TYPED_SNAPSHOT_DELTA_LIMITS.snapshotBytes)||process.platform!=='win32'&&(initial.uid!==BigInt(process.getuid!())||(initial.mode&0o077n)!==0n))refuse('unsafe_path');
+ if(!initial.isFile()||initial.nlink!==BigInt(1)||initial.size<BigInt(100)||initial.size>BigInt(TYPED_SNAPSHOT_DELTA_LIMITS.snapshotBytes)||process.platform!=='win32'&&(initial.uid!==BigInt(process.getuid!())||(initial.mode&BigInt(0o077))!==BigInt(0)))refuse('unsafe_path');
  const fd=openSync(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0));let db:DatabaseSync|undefined;
  const verify=()=>{check();checkSnapshotSidecars(path);if(token(fstatSync(fd,{bigint:true}))!==token(initial)||token(lstatSync(path,{bigint:true}))!==token(initial))refuse('snapshot_changed');};
  const hash=()=>{verify();const h=createHash('sha256'),buffer=Buffer.alloc(MiB);for(let offset=0;;){const n=readSync(fd,buffer,0,buffer.length,offset);if(!n)break;offset+=n;h.update(buffer.subarray(0,n));check();}verify();if(h.digest('hex')!==source.sha256)refuse('snapshot_hash');};
@@ -154,5 +154,11 @@ async function prepare(request:Request,cap:Limits,stream:ReturnType<typeof strea
   if(process.platform!=='win32'){const directory=openSync(folder,constants.O_RDONLY);try{fsyncSync(directory);}finally{closeSync(directory);}}
   before.verify();after.verify();const expected=fileHash.digest('hex'),readFd=openSync(sealed,constants.O_RDONLY|(constants.O_NOFOLLOW??0)),actual=createHash('sha256');try{const st=fstatSync(readFd);if(!st.isFile()||st.nlink!==1||st.size!==bytes)refuse('spool_readback');const chunk=Buffer.alloc(MiB);for(let offset=0;;){check();const n=readSync(readFd,chunk,0,chunk.length,offset);if(!n)break;offset+=n;actual.update(chunk.subarray(0,n));}if(actual.digest('hex')!==expected)refuse('spool_readback');}finally{closeSync(readFd);}before.verify();after.verify();before.close();before=undefined;after.close();after=undefined;finished=true;return Object.freeze({format:'keryx-held-native-catchup-input-data-v1',path:sealed,sha256:expected,bytes,frames,completion:result,targetVerified:false,applicationAuthority:false,nativeFactoryQualified:false,targetWrites:0});
  }catch(error){if(error instanceof HeldCatchupInputRefused)throw error;if(error instanceof TypedSnapshotDeltaRefused)throw error;refuse('input_unavailable_'+stage);}
- finally{try{await stream.return(undefined as never);}finally{try{before?.close();}finally{try{after?.close();}finally{if(fd!==undefined)closeSync(fd);if(!finished&&file){unlinkSync(file);if(folder)rmdirSync(folder);}else if(!finished&&folder)rmdirSync(folder);}}}}
+  finally{
+   let disposeFailed=false;try{await stream.return(undefined as never);}catch{disposeFailed=true;}
+   for(const source of [before,after])try{source?.close();}catch{disposeFailed=true;}
+   if(fd!==undefined)try{closeSync(fd);}catch{disposeFailed=true;}
+   if(!finished||disposeFailed){if(file)try{unlinkSync(file);}catch{disposeFailed=true;}if(folder)try{rmdirSync(folder);}catch{disposeFailed=true;}}
+   if(disposeFailed)refuse('dispose');
+  }
 }

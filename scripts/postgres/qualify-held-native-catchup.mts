@@ -57,9 +57,58 @@ export function disposeHeldCatchupSynthetic(fixture:Awaited<ReturnType<typeof pr
 export async function qualifyHeldNativeCatchup(input:Readonly<{fixture:Awaited<ReturnType<typeof prepareHeldCatchupSynthetic>>;options:HeldNativeCatchupRequest['options'];referenceWire:string}>){
  assert.equal(process.platform,'linux');assert.equal(readFileSync('/sys/fs/cgroup/memory.max','utf8').trim(),'536870912');assert.equal(readFileSync('/sys/fs/cgroup/memory.swap.max','utf8').trim(),'0');assert.equal(readFileSync('/sys/fs/cgroup/pids.max','utf8').trim(),'32');
  assert(/^NoNewPrivs:\s+1$/m.test(readFileSync('/proc/self/status','utf8')));assert.equal(readFileSync('/proc/net/route','utf8').trim().split('\n').length,1);
- const {applyHeldNativeCatchup}=await import('./apply-held-native-catchup.mts');
+ const owned=owners.get(input.fixture);assert(owned,'Contention qualifies only this module\'s owned fresh synthetic fixture');
+ assert.equal(input.fixture.source.delta.before.path,join(owned.folder,'before.sqlite'));
+ assert.equal(input.options.role,'postgres');assert.equal(input.options.database,'native_materialized');assert.deepEqual(input.options.endpoint,{kind:'loopback',port:5432});assert(/^[a-f0-9]{48}$/.test(input.options.password));
+ const {applyHeldNativeCatchup,HeldNativeCatchupRefused}=await import('./apply-held-native-catchup.mts');
+ const {Client}=await import('pg'),{postgresPoolConfiguration}=await import('../../lib/db/postgres/connection');
+ const sourceId='synthetic-catchup-source',driftName='Synthetic held-CAS concurrent owner drift';
+ assert.equal(sha(readFileSync(input.fixture.source.delta.before.path)),input.fixture.source.delta.before.sha256);
+ const source=new DatabaseSync(input.fixture.source.delta.before.path,{readOnly:true,allowExtension:false});let originalName:string;
+ try{source.exec('PRAGMA query_only=ON;BEGIN');const row=source.prepare('SELECT name FROM sources WHERE id=?').get(sourceId);assert(row&&typeof row.name==='string');originalName=row.name;}
+ finally{try{if(source.isTransaction)source.exec('ROLLBACK');}finally{source.close();}}
+ assert.notEqual(originalName,driftName);
+ const holder=new Client(postgresPoolConfiguration(input.options));holder.on('error',()=>{});
+ let transaction=false,driftOwned=false,refusalQualified=false,waitWitnessMs=0;
+ let pending:Promise<{ok:true;value:Awaited<ReturnType<typeof applyHeldNativeCatchup>>}|{ok:false;error:unknown}>|undefined;
+ const restoreName=async()=>{
+  if(!driftOwned)return;
+  await holder.query('BEGIN');transaction=true;await holder.query('LOCK TABLE public.sources IN SHARE ROW EXCLUSIVE MODE');
+  assert.equal((await holder.query('SELECT mode FROM keryx_storage.control WHERE singleton')).rows[0]?.mode,'held');
+  const current=await holder.query('SELECT name FROM public.sources WHERE id=$1 FOR UPDATE',[sourceId]);assert.equal(current.rowCount,1);
+  if(current.rows[0].name===driftName)assert.equal((await holder.query('UPDATE public.sources SET name=$1 WHERE id=$2 AND name IS NOT DISTINCT FROM $3',[originalName,sourceId,driftName])).rowCount,1);
+  else assert.equal(current.rows[0].name,originalName);
+  await holder.query('COMMIT');transaction=false;driftOwned=false;
+  assert.equal((await holder.query('SELECT name FROM public.sources WHERE id=$1',[sourceId])).rows[0]?.name,originalName);
+ };
+ try{
+  await holder.connect();await holder.query('BEGIN');transaction=true;
+  await holder.query('LOCK TABLE public.sources IN SHARE ROW EXCLUSIVE MODE');
+  assert.equal((await holder.query('SELECT name FROM public.sources WHERE id=$1',[sourceId])).rows[0]?.name,originalName);
+  pending=applyHeldNativeCatchup({source:input.fixture.source,sealed:input.fixture.sealed,options:input.options,referenceWire:input.referenceWire}).then(value=>({ok:true as const,value}),error=>({ok:false as const,error}));
+  const started=performance.now();let witness=false;
+  while(performance.now()-started<4000){
+   await holder.query('SELECT pg_stat_clear_snapshot()');
+   const waiting=await holder.query("SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND usename='postgres' AND application_name='keryx-postgres-guarded' AND wait_event_type='Lock' AND query LIKE 'LOCK TABLE %' AND pg_backend_pid()=ANY(pg_blocking_pids(pid))");
+   if(waiting.rowCount===1){witness=true;waitWitnessMs=Math.ceil(performance.now()-started);break;}
+   assert.equal(waiting.rowCount,0);await new Promise<void>(done=>setTimeout(done,25));
+  }
+  assert(witness,'Actual catchup table-lock wait was not observed');
+  assert.equal((await holder.query('UPDATE public.sources SET name=$1 WHERE id=$2 AND name IS NOT DISTINCT FROM $3',[driftName,sourceId,originalName])).rowCount,1);driftOwned=true;
+  await holder.query('COMMIT');transaction=false;
+  const refused=await pending;assert.equal(refused.ok,false,'Unrelated owner drift must not receive an applied receipt');
+  assert(!refused.ok&&refused.error instanceof HeldNativeCatchupRefused);assert.equal(refused.error.stage,'before-state');assert.equal(refused.error.commitOutcome,'not_attempted');refusalQualified=true;
+ }finally{
+  // Release the real blocker before draining the admitted applier. Restore only
+  // the one exact owned synthetic field; all other target data stays for teardown.
+  try{if(transaction){await holder.query('ROLLBACK');transaction=false;}}
+  finally{try{if(pending)await pending;}finally{try{await restoreName();}finally{try{if(transaction)await holder.query('ROLLBACK');}finally{await holder.end();}}}}
+ }
+ assert(refusalQualified);
+ // This independent positive call rechecks the entire old public/twelve-sidecar
+ // census, proving the failed negative phase left zero delta mutations behind.
  const result=await applyHeldNativeCatchup({source:input.fixture.source,sealed:input.fixture.sealed,options:input.options,referenceWire:input.referenceWire});assert.equal(result.outcome,'applied');assert.equal(result.targetVerified,false);assert.equal(result.nativeFactoryQualified,false);
- return {format:'keryx-held-native-catchup-synthetic-protocol-v1',passed:true,dataProtocolOnly:true,kernelContainmentObserved:true,result};
+ return {format:'keryx-held-native-catchup-synthetic-protocol-v1',passed:true,dataProtocolOnly:true,kernelContainmentObserved:true,actualOwnerContentionRefusalQualified:true,actualLockWaitWitnessObserved:true,ownedSourceNameRestoredExactly:true,negativeDeltaWrites:0,waitWitnessMs,result};
 }
 async function main(){
  assert.deepEqual(process.argv.slice(2),['--synthetic-preparation-only']);
