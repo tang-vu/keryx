@@ -1,9 +1,13 @@
 /** Fixed SOURCE-generated JSON adapters; never a runtime query translator. */
 const quote=(s:string)=>"'"+s.replaceAll("'","''")+"'";
-export function nativeApplicationJsonEntrySource(names:readonly string[],write=false,inputBytes=65536,group?:'operational_write'):string{
+export function nativeApplicationJsonEntrySource(names:readonly string[],write=false,inputBytes=65536,group?:'operational_write'|'operational_write_article_offers'):string{
  if(names.length<1||names.length>128||new Set(names).size!==names.length||names.some(n=>!/^[_a-z][_a-z0-9]{0,62}$/.test(n)))throw new Error('Native entry source inventory refused');
  if(!Number.isSafeInteger(inputBytes)||inputBytes<65536||inputBytes>8388608)throw new Error('Native entry source input bound refused');
  if(group!==undefined){
+  if(group==='operational_write_article_offers'){
+   if(write!==true||inputBytes!==65536||names.length!==2||names[0]!=='set_article_offer'||names[1]!=='delete_article_offer')throw new Error('Article offer grouped SOURCE inventory refused');
+   return articleOfferGroupExtension();
+  }
   if(group!=='operational_write'||write!==true||names.length!==11||inputBytes!==65536)throw new Error('Native grouped entry source refused');
   return operationalWriteGroupSource(names);
  }
@@ -44,6 +48,53 @@ BEGIN
  END LOOP;
  IF counted<>${names.length} THEN RAISE EXCEPTION 'application read inventory incomplete';END IF;
 END;$build$;
+`;
+}
+
+/** SOURCE-time replacement of the existing closed router; no new function,
+ * generic runtime dispatcher or additional legacy enter_operation issuer. */
+function articleOfferGroupExtension():string{
+ const branches=`WHEN 'set_article_offer' THEN
+   IF NOT(payload?'p_row') OR payload-'p_row'<>'{}'::jsonb OR jsonb_typeof(payload->'p_row') IS DISTINCT FROM 'object'
+    OR (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(payload->'p_row') key) IS DISTINCT FROM ARRAY['content_version','created_at','expires_at','id','item_id','nonce','price_usdc6','signature','signer','source_id']::text[]
+    OR EXISTS(SELECT 1 FROM unnest(ARRAY['source_id','item_id','id','content_version','signer','nonce','signature','created_at']) k WHERE jsonb_typeof(payload->'p_row'->k) IS DISTINCT FROM 'string' OR octet_length(payload->'p_row'->>k)>8192)
+    OR EXISTS(SELECT 1 FROM unnest(ARRAY['price_usdc6','expires_at']) k WHERE jsonb_typeof(payload->'p_row'->k) IS DISTINCT FROM 'number')
+   THEN RAISE EXCEPTION 'native article offer packet refused';END IF;
+   IF EXISTS(SELECT 1 FROM unnest(ARRAY['price_usdc6','expires_at']) k WHERE abs((payload->'p_row'->>k)::numeric)>9007199254740991 OR (payload->'p_row'->>k)::numeric<>trunc((payload->'p_row'->>k)::numeric)) THEN RAISE EXCEPTION 'native article offer integer representation unavailable';END IF;
+   PERFORM keryx_storage.require_operation(expected,digest,'set_article_offer');
+   DECLARE next_order bigint;BEGIN
+    SELECT source_order INTO next_order FROM public.article_offers WHERE source_id=payload->'p_row'->>'source_id' AND item_id=payload->'p_row'->>'item_id';
+    IF NOT FOUND THEN
+     SELECT max(source_order) INTO next_order FROM public.article_offers;
+     IF next_order=9223372036854775807 THEN RAISE EXCEPTION 'native article offer rowid representation unavailable';END IF;
+     next_order:=coalesce(next_order+1,1);
+    END IF;
+    INSERT INTO public.article_offers(source_id,item_id,id,content_version,price_usdc6,expires_at,signer,nonce,signature,created_at,source_order)
+    VALUES(payload->'p_row'->>'source_id',payload->'p_row'->>'item_id',payload->'p_row'->>'id',payload->'p_row'->>'content_version',(payload->'p_row'->>'price_usdc6')::numeric::bigint,(payload->'p_row'->>'expires_at')::numeric::bigint,payload->'p_row'->>'signer',payload->'p_row'->>'nonce',payload->'p_row'->>'signature',payload->'p_row'->>'created_at',next_order)
+    ON CONFLICT(source_id,item_id) DO UPDATE SET id=excluded.id,content_version=excluded.content_version,price_usdc6=excluded.price_usdc6,expires_at=excluded.expires_at,signer=excluded.signer,nonce=excluded.nonce,signature=excluded.signature,created_at=excluded.created_at;
+   END;
+   PERFORM keryx_storage.leave_operation();result:=NULL;
+  WHEN 'delete_article_offer' THEN
+   IF (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(payload) key) IS DISTINCT FROM ARRAY['p_item_id','p_source_id']::text[]
+    OR EXISTS(SELECT 1 FROM unnest(ARRAY['p_source_id','p_item_id']) k WHERE jsonb_typeof(payload->k) IS DISTINCT FROM 'string' OR octet_length(payload->>k)>8192)
+   THEN RAISE EXCEPTION 'native article offer packet refused';END IF;
+   PERFORM keryx_storage.require_operation(expected,digest,'delete_article_offer');
+   DELETE FROM public.article_offers WHERE source_id=payload->>'p_source_id' AND item_id=payload->>'p_item_id';
+   PERFORM keryx_storage.leave_operation();result:=NULL;
+  `;
+ return `DO $offers$ DECLARE original record;body text;needle text:='ELSE RAISE EXCEPTION ''native application operational action refused'';';BEGIN
+ SELECT * INTO STRICT original FROM pg_proc WHERE oid='public.storage_application_operational_write(jsonb,text,text,jsonb)'::regprocedure;
+ IF original.proowner<>'keryx_owner'::regrole OR NOT original.prosecdef OR original.prorettype<>'jsonb'::regtype
+  OR original.proconfig IS DISTINCT FROM ARRAY['search_path=pg_catalog, pg_temp']::text[]
+  OR (length(original.prosrc)-length(replace(original.prosrc,needle,'')))/length(needle)<>1
+  OR position('WHEN ''set_article_offer''' IN original.prosrc)>0 OR position('WHEN ''delete_article_offer''' IN original.prosrc)>0
+ THEN RAISE EXCEPTION 'article offer router predecessor refused';END IF;
+ body:=replace(original.prosrc,needle,${quote(branches)}||needle);
+ IF octet_length(body)>32768 THEN RAISE EXCEPTION 'operational expanded SOURCE bound';END IF;
+ EXECUTE format('CREATE OR REPLACE FUNCTION public.storage_application_operational_write(expected jsonb,digest text,op text,payload jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS %L',body);
+ REVOKE ALL ON FUNCTION public.storage_application_operational_write(jsonb,text,text,jsonb) FROM PUBLIC,anon,authenticated,service_role,keryx_reader;
+ GRANT EXECUTE ON FUNCTION public.storage_application_operational_write(jsonb,text,text,jsonb) TO keryx_app;
+END;$offers$;
 `;
 }
 
