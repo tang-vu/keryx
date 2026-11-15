@@ -1,11 +1,17 @@
 -- Closed Source-aware ledger metadata only. These originals never authenticate
 -- Circle/provider evidence or admit a complete application writer.
 SET ROLE keryx_owner;
+DO $$ BEGIN
+ IF (SELECT mode FROM keryx_storage.control WHERE singleton) IS DISTINCT FROM 'held'
+  OR EXISTS(SELECT 1 FROM keryx_storage.identity) OR EXISTS(SELECT 1 FROM public.payment_events)
+ THEN RAISE EXCEPTION 'native payment Source requires a fresh empty target';END IF;
+END;$$;
 -- SQLite accepts arbitrary TEXT timestamps. An unprojected date is NULL in the
 -- native projection and its exact raw original holds every dependent operation.
 ALTER TABLE public.payment_events ALTER COLUMN created_at DROP NOT NULL;
 CREATE TABLE keryx_storage.payment_event_originals(
  payment_id text PRIMARY KEY REFERENCES public.payment_events(id) ON DELETE CASCADE,
+ identity_digest text NOT NULL CHECK(identity_digest ~ '^[a-f0-9]{64}$'),
  original_wire json NOT NULL,original_sha256 text NOT NULL,
  current_wire json NOT NULL,current_sha256 text NOT NULL,native_projection jsonb NOT NULL,
  unprojected_fields text[] NOT NULL CHECK(cardinality(unprojected_fields)<=15),
@@ -15,6 +21,56 @@ CREATE TABLE keryx_storage.payment_event_originals(
 );
 CREATE INDEX payment_event_unprojected ON keryx_storage.payment_event_originals((true)) WHERE cardinality(unprojected_fields)>0;
 REVOKE ALL ON keryx_storage.payment_event_originals FROM PUBLIC,keryx_app,keryx_reader;
+-- Fresh SOURCE constructor only. Extend the existing trigger identity without
+-- replacing any pre-existing public/private branch or adding a helper function.
+DO $payment_source$
+DECLARE original_body text;extended_body text;definition text;
+BEGIN
+ SELECT prosrc INTO STRICT original_body FROM pg_proc WHERE oid='keryx_storage.write_fence()'::regprocedure;
+ IF left(original_body,7) IS DISTINCT FROM E'\nBEGIN\n' OR strpos(original_body,'Native payment Source original fence v1')>0
+ THEN RAISE EXCEPTION 'native payment Source fence constructor refused';END IF;
+ extended_body:=left(original_body,7)||$payment_guard$
+ -- Native payment Source original fence v1
+ IF TG_TABLE_SCHEMA='keryx_storage' AND TG_TABLE_NAME='payment_event_originals' THEN
+  IF TG_OP='DELETE' THEN
+   IF session_user<>'postgres' OR (SELECT mode FROM keryx_storage.control WHERE singleton) IS DISTINCT FROM 'held'
+    OR EXISTS(SELECT 1 FROM public.payment_events WHERE id=OLD.payment_id)
+   THEN RAISE EXCEPTION 'native payment Source original retained';END IF;
+   RETURN OLD;
+  END IF;
+  IF TG_OP='UPDATE' AND(NEW.payment_id IS DISTINCT FROM OLD.payment_id OR NEW.identity_digest IS DISTINCT FROM OLD.identity_digest
+   OR NEW.original_wire::text IS DISTINCT FROM OLD.original_wire::text OR NEW.original_sha256 IS DISTINCT FROM OLD.original_sha256)
+  THEN RAISE EXCEPTION 'native payment Source original immutable';END IF;
+  IF NOT EXISTS(SELECT 1 FROM keryx_storage.identity i WHERE i.singleton AND i.identity_digest=NEW.identity_digest
+   AND i.identity_digest=keryx_storage.identity_digest(i.identity))
+  THEN RAISE EXCEPTION 'native payment Source identity refused';END IF;
+  IF TG_OP='INSERT' AND(NEW.current_wire::text IS DISTINCT FROM NEW.original_wire::text OR NEW.current_sha256 IS DISTINCT FROM NEW.original_sha256)
+  THEN RAISE EXCEPTION 'native payment Source initial current wire refused';END IF;
+  IF session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held' THEN
+   -- Trusted Source-only intake preflights this whole table empty at BEGIN and
+   -- streams bounded inserts, then checks exact readback before COMMIT. Existing
+   -- private rows cannot be adopted or updated through this owner exception.
+   IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'native payment Source intake insert only';END IF;
+   RETURN NEW;
+  END IF;
+  IF session_user<>'keryx_app' OR NOT EXISTS(SELECT 1 FROM keryx_storage.writer w JOIN keryx_storage.operations o ON o.operation=w.operation
+   JOIN keryx_storage.identity i ON i.identity_digest=w.identity_digest WHERE w.transaction_id=txid_current()
+    AND w.identity_digest=NEW.identity_digest AND NOT o.read_only AND 'payment_events'=ANY(o.relations) AND 'payment_event_originals'=ANY(o.relations))
+  THEN RAISE EXCEPTION 'native payment Source original writer required';END IF;
+  RETURN NEW;
+ END IF;
+$payment_guard$||substring(original_body FROM 8);
+ definition:=pg_get_functiondef('keryx_storage.write_fence()'::regprocedure);
+ IF (length(definition)-length(replace(definition,original_body,'')))/length(original_body)<>1
+ THEN RAISE EXCEPTION 'native payment Source fence definition refused';END IF;
+ EXECUTE replace(definition,original_body,extended_body);
+ IF (SELECT prosrc FROM pg_proc WHERE oid='keryx_storage.write_fence()'::regprocedure) IS DISTINCT FROM extended_body
+ THEN RAISE EXCEPTION 'native payment Source fence preservation refused';END IF;
+END;$payment_source$;
+CREATE TRIGGER native_payment_original_writer BEFORE INSERT OR UPDATE OR DELETE ON keryx_storage.payment_event_originals
+ FOR EACH ROW EXECUTE FUNCTION keryx_storage.write_fence();
+CREATE TRIGGER native_payment_original_no_truncate BEFORE TRUNCATE ON keryx_storage.payment_event_originals
+ FOR EACH STATEMENT EXECUTE FUNCTION keryx_storage.immutable();
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
  ('payment_event_record',ARRAY['payment_events','payment_event_originals'],true,false),
  ('payment_event_record_once',ARRAY['payment_events','payment_event_originals'],true,false),
@@ -45,7 +101,11 @@ BEGIN
   SELECT * INTO current_row FROM public.payment_events WHERE id=selected->>'id';has_payment:=FOUND;
   IF has_payment THEN
    SELECT * INTO raw_row FROM keryx_storage.payment_event_originals WHERE payment_id=current_row.id;
-   IF NOT FOUND OR raw_row.native_projection IS DISTINCT FROM to_jsonb(current_row) THEN RAISE EXCEPTION 'native payment raw original unavailable or projection changed';END IF;
+   IF NOT FOUND OR raw_row.identity_digest IS DISTINCT FROM keryx_storage.identity_digest(expected)
+    OR raw_row.original_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_row.original_wire::text,'UTF8')),'hex')
+    OR raw_row.current_sha256 IS DISTINCT FROM encode(sha256(convert_to(raw_row.current_wire::text,'UTF8')),'hex')
+    OR raw_row.native_projection IS DISTINCT FROM to_jsonb(current_row)
+   THEN RAISE EXCEPTION 'native payment raw original unavailable or projection changed';END IF;
    before_wire:=raw_row.current_wire::text;
    IF octet_length(before_wire)>1048576 THEN RAISE EXCEPTION 'native payment original bound';END IF;
   END IF;
@@ -139,7 +199,7 @@ BEGIN
    EXCEPTION WHEN not_null_violation OR check_violation THEN changed:=0;END;
   ELSE INSERT INTO public.payment_events SELECT (after_row).*;changed:=1;END IF;
   IF changed=1 THEN
-   INSERT INTO keryx_storage.payment_event_originals(payment_id,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields) VALUES(after_row.id,original_json,payload->>'sha256',original_json,payload->>'sha256',to_jsonb(after_row),unprojected);
+   INSERT INTO keryx_storage.payment_event_originals(payment_id,identity_digest,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields) VALUES(after_row.id,keryx_storage.identity_digest(expected),original_json,payload->>'sha256',original_json,payload->>'sha256',to_jsonb(after_row),unprojected);
   END IF;
   PERFORM keryx_storage.leave_operation();RETURN to_json(changed=1);
  END IF;
@@ -165,9 +225,10 @@ BEGIN
   UPDATE public.session_grants SET spent=greatest(0,round((spent::double precision-current_row.amount_usdc::double precision)::numeric,6)) WHERE grant_epoch=release_epoch AND lower(sess_addr)=lower(release_signer);GET DIAGNOSTICS changed=ROW_COUNT;released:=changed=1;
  END IF;
  SELECT * INTO after_row FROM public.payment_events WHERE id=current_row.id;
- INSERT INTO keryx_storage.payment_event_originals(payment_id,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields)
-  VALUES(current_row.id,before_json,encode(sha256(convert_to(before_wire,'UTF8')),'hex'),original_json,payload->>'sha256',to_jsonb(after_row),unprojected)
-  ON CONFLICT(payment_id) DO UPDATE SET current_wire=excluded.current_wire,current_sha256=excluded.current_sha256,native_projection=excluded.native_projection,unprojected_fields=excluded.unprojected_fields;
+ UPDATE keryx_storage.payment_event_originals SET current_wire=original_json,current_sha256=payload->>'sha256',native_projection=to_jsonb(after_row),unprojected_fields=unprojected
+  WHERE payment_id=current_row.id AND identity_digest=keryx_storage.identity_digest(expected) AND current_sha256=raw_row.current_sha256
+   AND current_wire::text=before_wire;
+ GET DIAGNOSTICS changed=ROW_COUNT;IF changed<>1 THEN RAISE EXCEPTION 'native payment Source current wire changed';END IF;
  DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();PERFORM keryx_storage.leave_operation();RETURN json_build_object('resolved',resolved,'reservationReleased',released);
 END;$$;
 REVOKE ALL ON FUNCTION public.storage_payment_events(jsonb,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
