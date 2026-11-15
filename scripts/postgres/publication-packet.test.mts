@@ -20,6 +20,11 @@ it('keeps the complete shared lexer bounded and the old JS/hosted token contract
  expect(scalarSource).toContain("RETURN result||jsonb_build_object('_rootKeys'");
  const privacy=readFileSync(new URL('../../ops/keryx-postgres/privacy.sql',import.meta.url),'utf8');expect(privacy).toContain("source_scalar_text(original_wire,'json1-question')");expect(privacy).toContain("source_scalar_text(tokens->>'question','scalar')");expect(privacy).toContain("decode(question_search_hex,'hex')");
 });
+it('keeps canonical JS string identity separate from SQL binding and JSON1 modes',()=>{
+ expect(scalarSource).toContain("mode='js-string'");expect(scalarSource).toContain("jsonb_build_object('wire','null','utf16Hex',NULL)");
+ expect(scalarSource).toContain("Source JS string token unavailable");expect(scalarSource).toContain("source_scalar_text(wire,'scalar')->>'jsonHex'");
+ expect(Buffer.byteLength(JSON.stringify(scalarSource))).toBeLessThanOrEqual(32768);
+});
 const base=():QueryRun=>({id:'synthetic-publication-packet',createdAt:'2026-11-13T00:00:00.000Z',question:'Question "unicode đ"',answer:'Answer',engine:'heuristic',budget:1,totalSpent:0.1,totalToCreators:0.05,subClaims:[],decisions:[],citations:[],trace:[],paymentMode:'offline'});
 function compare(run:QueryRun){
  const db=new DatabaseSync(':memory:');try{

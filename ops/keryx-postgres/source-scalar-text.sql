@@ -12,9 +12,33 @@ DECLARE raw bytea;scan bytea;scan_size integer;quote_at integer;slashes integer;
  value_kind text;number_parts text[];whole text;fraction text;exponent_wire text;negative boolean;coefficient numeric;decimal_power integer;digit integer;shift integer;binary_power integer;binary_exponent integer;float_value double precision;candidate double precision;
  power_index integer;power_binary integer;power_shift integer;power_high numeric;high_product numeric;decimal_digits text;decimal_point integer;round_digits integer;cut_at integer;rounded numeric;rendered text;compact_parts text[]:=ARRAY[]::text[];compact_chunk text:='';prefix_length integer;
 BEGIN
- IF wire IS NULL OR mode IS NULL OR mode NOT IN('tokens','scalar','json1-question','json1-value') OR octet_length(wire)>4000000
+ IF wire IS NULL OR mode IS NULL OR mode NOT IN('tokens','scalar','json1-question','json1-value','js-string') OR octet_length(wire)>4000000
  THEN RAISE EXCEPTION 'Source scalar token unavailable';END IF;
  raw:=convert_to(wire,'UTF8');size:=octet_length(raw);
+ IF mode='js-string' THEN
+  -- Canonical JSON.stringify STRING|NULL, distinct from both Source SQL binding
+  -- and JSON1 extraction. Reuse the validated WTF-8 scalar bytes so escaped
+  -- lone UTF-16 units survive; no PG JSON getter decodes an opaque original.
+  wire:=btrim(wire,E' \t\r\n');value_kind:=json_typeof(wire::json);
+  IF value_kind='null' THEN RETURN jsonb_build_object('wire','null','utf16Hex',NULL);
+  ELSIF value_kind IS DISTINCT FROM 'string' THEN RAISE EXCEPTION 'Source JS string token unavailable';END IF;
+  source_bytes:=decode(keryx_storage.source_scalar_text(wire,'scalar')->>'jsonHex','hex');size:=octet_length(source_bytes);pos:=0;
+  WHILE pos<size LOOP
+   code:=get_byte(source_bytes,pos);
+   IF code<128 THEN unit:=code;pos:=pos+1;
+   ELSIF code<224 THEN unit:=(code&31)*64+(get_byte(source_bytes,pos+1)&63);pos:=pos+2;
+   ELSIF code<240 THEN unit:=(code&15)*4096+(get_byte(source_bytes,pos+1)&63)*64+(get_byte(source_bytes,pos+2)&63);pos:=pos+3;
+   ELSE unit:=(code&7)*262144+(get_byte(source_bytes,pos+1)&63)*4096+(get_byte(source_bytes,pos+2)&63)*64+(get_byte(source_bytes,pos+3)&63);pos:=pos+4;END IF;
+   IF unit>65535 THEN
+    compact_chunk:=compact_chunk||lpad(to_hex(55296+((unit-65536)>>10)),4,'0')||lpad(to_hex(56320+((unit-65536)&1023)),4,'0');
+   ELSE compact_chunk:=compact_chunk||lpad(to_hex(unit),4,'0');END IF;
+   wire_chunk:=wire_chunk||CASE unit WHEN 8 THEN $js$\b$js$ WHEN 9 THEN $js$\t$js$ WHEN 10 THEN $js$\n$js$ WHEN 12 THEN $js$\f$js$ WHEN 13 THEN $js$\r$js$ WHEN 34 THEN $js$\"$js$ WHEN 92 THEN $js$\\$js$
+    ELSE CASE WHEN unit<32 OR unit BETWEEN 55296 AND 57343 THEN $js$\u$js$||lpad(to_hex(unit),4,'0') ELSE chr(unit) END END;
+   IF length(compact_chunk)>=4096 THEN compact_parts:=array_append(compact_parts,compact_chunk);compact_chunk:='';END IF;
+   IF octet_length(wire_chunk)>=4096 THEN wire_parts:=array_append(wire_parts,wire_chunk);wire_chunk:='';END IF;
+  END LOOP;
+  RETURN jsonb_build_object('wire','"'||array_to_string(array_append(wire_parts,wire_chunk),'')||'"','utf16Hex',array_to_string(array_append(compact_parts,compact_chunk),''));
+ END IF;
  IF mode IN('tokens','json1-question') THEN
   -- Casting validates JSON syntax without decoding any of its string values.
   IF json_typeof(wire::json) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Source scalar root unavailable';END IF;

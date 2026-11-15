@@ -23,4 +23,17 @@ describe('valid Source unknown question aliases',()=>{
   expect(()=>capturePostgresPublication({'question\0suffix':'Alias',...base()} as QueryRun)).not.toThrow();
   expect(()=>capturePostgresPublication({...base(),question:'mapped\0scalar'})).toThrow();
  });
+ it('retains distinct original UTF-16 string identities when SQLite bound scalars collide',()=>{
+  const db=new DatabaseSync(':memory:');try{
+   installSqliteApplicationSchema(db);
+   const values=['\ud800','\udc00','\ufffd'],originals:string[]=[];
+   for(const [index,question] of values.entries()){
+    const run={...base(),id:'utf16-collision-'+index,question};writeSqliteQueryRun(db,run,false);
+    const row=db.prepare('SELECT question,data FROM query_runs WHERE id=?').get(run.id)!;
+    expect(row.question).toBe('\ufffd');const packet=JSON.parse(capturePublicationSourcePacket(run).wire),original=Buffer.from(packet.originalHex,'hex').toString();expect(original).toBe(row.data);originals.push(original);
+    const selected=JSON.parse(original).question as string;expect(JSON.stringify(selected)).toBe(JSON.stringify(question));expect(Buffer.from(selected,'utf16le').swap16().toString('hex')).toBe(['d800','dc00','fffd'][index]);
+   }
+   expect(new Set(originals).size).toBe(3);
+  }finally{db.close();}
+ });
 });

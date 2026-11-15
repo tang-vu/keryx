@@ -71,6 +71,13 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
   }
   const rawRoot='{"\\u0063laim":{"id":"first"},"evidence":"\\u0000\\ud800","claim":{"id":"last"},"\\ud800":1,"":2}',root=JSON.parse(input.ownerSql(`SELECT keryx_storage.source_scalar_text(convert_from(decode(${q(Buffer.from(rawRoot).toString('hex'))},'hex'),'UTF8'),'tokens')::text;`));
   assert.equal(root.claim,'{"id":"last"}');assert.equal(root.evidence,'"\\u0000\\ud800"');assert.deepEqual(root._rootKeys,['636c61696d','65766964656e6365','636c61696d','eda080','']);vectors++;
+  // STRING|NULL canonical JS bytes must retain UTF-16 distinctions lost by
+  // the SQLite scalar binding (lone surrogate versus literal replacement).
+  const jsStringTokens=['null',' null ','""','"\\u0061"','"\\u0000\\b\\t\\n\\f\\r\\u001f\\\"\\\\\\/"','"\\ud800"','"\\udc00"','"\\ud800\\udc00"','"\\ud800a\\udc00"','"\\ud800\\ud800\\udc00"','"\\ufffd"','"\\ufeff\\u2028\\u2029"',JSON.stringify('éđ💡漢字'),JSON.stringify(('literal\0\ud800💡\\"\t').repeat(700))];
+  for(const token of jsStringTokens){
+   const decoded=JSON.parse(token) as string|null,expected={wire:JSON.stringify(decoded),utf16Hex:decoded===null?null:Buffer.from(decoded,'utf16le').swap16().toString('hex')},actual=JSON.parse(input.ownerSql(`SELECT keryx_storage.source_scalar_text(convert_from(decode(${q(Buffer.from(token).toString('hex'))},'hex'),'UTF8'),'js-string')::text;`));assert.deepEqual(actual,expected);vectors++;
+  }
+  for(const token of ['true','0','[]','{}']){assert.throws(()=>input.ownerSql(`SELECT keryx_storage.source_scalar_text(${q(token)},'js-string');`),/Source JS string token unavailable/);vectors++;}
   // Separate Source JSON1 selector/conversion. JS scalar/token consumers keep
   // exact keys and last-member semantics, including hosted additions.
   const json1Tokens=['null','true','false','0','-0','1.0','-0.0','1e0','0.30000000000000004','3.141592653589793','1.0000000000000002','49.47','1e20','9223372036854775807','9223372036854775808','-9223372036854775808','-9223372036854775809','5e-324','2.2250738585072014e-308','1.7976931348623157e308','1e309','1e-999','3500000000000000.2500001',JSON.stringify('NUL\0lone\ud800pair\ud83d\udca1\ufeff\u2028\u2029'),'{ "x": "\\ud800", "n":1e0, "nul":"\\u0000" }','[ 1, true, "\\u0061", null ]'];
