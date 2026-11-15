@@ -1,4 +1,5 @@
 import { encodeFunctionData, keccak256, parseTransaction, recoverTransactionAddress, recoverTypedDataAddress, type Hex, type TransactionReceipt, type TransactionSerializableEIP1559 } from "viem";
+import type { RegistrationSponsorChain,RegistrationSponsorContext } from "./registration-sponsor-context";
 import type { KeryxDB } from "../db/keryx-db";
 import { RegistrationSponsorError } from "../db/registration-sponsor";
 import { confirmsRegistration, registrationId } from "./registration-status";
@@ -9,21 +10,7 @@ import { REGISTRATION_SPONSOR_ABI, registrationContractRequest, registrationInte
   type ActiveRegistrationSponsorPolicy, type RegistrationSponsorFundingObservation, type RegistrationSponsorPolicy, type SponsoredRegistration } from "./registration-sponsor-protocol";
 import { registrationCreatorEligible, registrationWalletMayPrepare } from "./registration-sponsor-protocol";
 
-export interface RegistrationSponsorChain {
-  assertRegistry(): Promise<void>;
-  registrationNonce(creator: Hex): Promise<bigint>;
-  transactionNonce(): Promise<number>;
-  estimateGas(data: Hex): Promise<bigint>;
-  sign(transaction: TransactionSerializableEIP1559): Promise<Hex>;
-  broadcast(raw: Hex): Promise<Hex>;
-  receipt(hash: Hex): Promise<TransactionReceipt | null>;
-  hasExpiredDeadline?(deadline: number): Promise<boolean>;
-  fundingObservation?(): Promise<RegistrationSponsorFundingObservation>;
-}
-export interface RegistrationSponsorContext<P extends ActiveRegistrationSponsorPolicy = RegistrationSponsorPolicy> {
-  db: KeryxDB; policy: P; chain: RegistrationSponsorChain;
-  assertPolicy(): void; now?(): number;
-}
+export type { RegistrationSponsorChain,RegistrationSponsorContext } from "./registration-sponsor-context";
 function refused(message: string, code = "sponsorship_unavailable", status = 503): never { throw new RegistrationSponsorError(message, status, code); }
 function store(db: KeryxDB) {
   if (!db.admitRegistrationSponsor || !db.getRegistrationSponsor || !db.transitionRegistrationSponsor)

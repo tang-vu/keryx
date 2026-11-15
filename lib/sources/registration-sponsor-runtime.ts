@@ -12,7 +12,7 @@ import type { StorageIdentity } from "../db/storage-identity";
 import type { KeryxDB } from "../db/keryx-db";
 import { canonicalJson } from "../canonical-json";
 import { REGISTRATION_SPONSOR_ABI,registrationParamsSchema,registrationSponsorFundingObservationSchema,registrationTypedData,registrationPolicyDigest,registrationIntentDigest,registrationContractRequest,registrationPolicyExpired, activeRegistrationSponsorPolicySchema, type ActiveRegistrationSponsorPolicy,type RegistrationSponsorFundingObservation,type SponsoredRegistration } from "./registration-sponsor-protocol";
-import type { RegistrationSponsorChain, RegistrationSponsorContext } from "./registration-sponsor-service";
+import type { RegistrationSponsorChain, RegistrationSponsorContext } from "./registration-sponsor-context";
 import { getServerRegistryVersion } from "../registry/registry-version";
 import { configuredRegistrationRegistryAuthority } from "../registry/source-registry-authority";
 
