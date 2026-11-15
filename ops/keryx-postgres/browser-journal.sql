@@ -34,7 +34,7 @@ BEGIN
  PERFORM keryx_storage.require_operation(expected,digest,operation);
  IF packet_wire IS NULL OR octet_length(packet_wire)>8388608 THEN RAISE EXCEPTION 'native browser packet bound';END IF;packet:=packet_wire::jsonb;
  IF jsonb_typeof(packet) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'native browser packet refused';END IF;
- SELECT coalesce((SELECT active FROM public.browser_journal_control WHERE id=1),false),coalesce((SELECT active FROM public.browser_signing_v2_control WHERE id=1),false) INTO active,signing_active;
+ SELECT coalesce((SELECT c.active FROM public.browser_journal_control c WHERE c.id=1),false),coalesce((SELECT c.active FROM public.browser_signing_v2_control c WHERE c.id=1),false) INTO active,signing_active;
  IF action='control' THEN RETURN to_json(active);END IF;
  IF action='grant-expired' AND active THEN IF browser_writer THEN DELETE FROM public.browser_journal_writer WHERE transaction_id=txid_current();END IF;PERFORM keryx_storage.leave_operation();RETURN 'true'::json;END IF;
  IF action IN('grant-get','grant-add','grant-release','grant-delete','grant-revoke','grant-expired') THEN
@@ -247,7 +247,7 @@ BEGIN
  PERFORM keryx_storage.require_operation(expected,digest,operation);
  IF packet_wire IS NULL OR octet_length(packet_wire)>8388608 THEN RAISE EXCEPTION 'native browser packet bound';END IF;packet:=packet_wire::jsonb;
  IF jsonb_typeof(packet) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'native browser packet refused';END IF;
- SELECT coalesce((SELECT active FROM public.browser_journal_control WHERE id=1),false),coalesce((SELECT active FROM public.browser_signing_v2_control WHERE id=1),false) INTO active,signing_active;
+ SELECT coalesce((SELECT c.active FROM public.browser_journal_control c WHERE c.id=1),false),coalesce((SELECT c.active FROM public.browser_signing_v2_control c WHERE c.id=1),false) INTO active,signing_active;
  IF action IN('expose','submit','cancel','sign') THEN
   selected:=CASE WHEN action='state' THEN packet ELSE packet->'selector' END;
   IF (jsonb_typeof(selected)='object' AND selected-'sessionId'-'requestId'-'sourceSessionWire'-'sourceRequestWire'='{}'::jsonb AND jsonb_typeof(selected->'sessionId')='string' AND jsonb_typeof(selected->'requestId')='string' AND octet_length(selected->>'sessionId') BETWEEN 1 AND 1024 AND octet_length(selected->>'requestId') BETWEEN 1 AND 1024

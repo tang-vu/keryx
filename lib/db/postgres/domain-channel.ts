@@ -17,10 +17,25 @@ import { ACCOUNT_CALLS } from './accounts-calls';
 import { CHAT_LINK_CALLS } from './chat-links-calls';
 import { PUBLIC_PROFILE_CALLS } from './public-profiles-calls';
 import { OWNER_ASSIGNMENT_CALLS } from './owner-assignments-calls';
+import { SOURCE_OBSERVATION_CALLS } from './source-observation-calls';
+import { ARTICLE_OFFER_CALLS } from './article-offer-transport';
+import { OPERATOR_WITHDRAWAL_CALLS } from './operator-withdrawal-calls';
 
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
+  referenceArchiveFrame:{sql:"SELECT public.storage_reference_archive($1::jsonb,$2::text,'frame',$3::text) AS result",args:1,write:false,bytes:134225920,inputBytes:1048576,transaction:true},
+  referenceArchiveApply:{sql:"SELECT public.storage_reference_archive($1::jsonb,$2::text,'apply',$3::text) AS result",args:1,write:true,bytes:256,inputBytes:268443648},
+  referenceArchiveRead:{sql:"SELECT public.storage_reference_archive($1::jsonb,$2::text,$3::text,$4::text) AS result",args:2,write:false,bytes:67117056,inputBytes:262144,transaction:true},
+  paymentEventRecord:{sql:"SELECT public.storage_payment_events($1::jsonb,$2::text,'record',$3::text) AS result",args:1,write:true,bytes:64,inputBytes:16785408},
+  paymentEventRecordOnce:{sql:"SELECT public.storage_payment_events($1::jsonb,$2::text,'record-once',$3::text) AS result",args:1,write:true,bytes:64,inputBytes:16785408},
+  paymentEventSnapshot:{sql:"SELECT public.storage_payment_events($1::jsonb,$2::text,'snapshot',$3::text) AS result",args:1,write:false,bytes:6299648,inputBytes:32768,transaction:true},
+  paymentEventTerminal:{sql:"SELECT public.storage_payment_events($1::jsonb,$2::text,'terminal',$3::text) AS result",args:1,write:true,bytes:256,inputBytes:16785408},
+  browserJournalState:{sql:"SELECT public.storage_browser_journal_evidence($1::jsonb,$2::text,'state',$3::text) AS result",args:1,write:false,bytes:8396800,inputBytes:131072,transaction:true},
+  browserJournalFinish:{sql:"SELECT public.storage_browser_journal_evidence($1::jsonb,$2::text,'finish',$3::text) AS result",args:1,write:false,bytes:8396800,inputBytes:131072,transaction:true},
+  browserJournalControl:{sql:"SELECT public.storage_browser_journal_evidence($1::jsonb,$2::text,'control','{}') AS result",args:0,write:false,bytes:128,transaction:true},
+  browserJournalAction:{sql:"SELECT public.storage_browser_journal($1::jsonb,$2::text,$3::text,$4::text) AS result",args:2,write:true,bytes:8396800,inputBytes:16785408},
+  browserJournalReplay:{sql:"SELECT public.storage_browser_journal_evidence($1::jsonb,$2::text,$3::text,$4::text) AS result",args:2,write:false,bytes:8396800,inputBytes:16785408,transaction:true},
   a2aFulfillmentGet:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'get',$3::text,NULL) AS result",args:1,write:false,transaction:true,bytes:33562624,inputBytes:512},
   a2aFulfillmentSnapshot:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'snapshot',$3::text,NULL) AS result",args:1,write:false,transaction:true,bytes:67108864,inputBytes:512},
   a2aFulfillmentVerify:{sql:"SELECT public.storage_a2a_fulfillment($1::jsonb,$2::text,'verify',$3::text,$4::text) AS result",args:2,write:false,transaction:true,bytes:128,inputBytes:4096},
@@ -64,6 +79,9 @@ const CALLS = Object.freeze({
   ...CHAT_LINK_CALLS,
   ...PUBLIC_PROFILE_CALLS,
   ...OWNER_ASSIGNMENT_CALLS,
+  ...SOURCE_OBSERVATION_CALLS,
+  ...ARTICLE_OFFER_CALLS,
+  ...OPERATOR_WITHDRAWAL_CALLS,
   sourceItemByLink:{sql:'SELECT public.storage_source_item_by_link($1::jsonb,$2::text,$3::text,$4::text) AS result',args:2,write:false,bytes:4194304,transaction:true},
   ownershipHistoryList:{sql:"SELECT public.storage_ownership_history_list($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::jsonb,$7::integer,$8::jsonb,$9::jsonb) AS result",args:7,write:false,bytes:4198400,transaction:true},
   ownershipHistoryRead:{sql:"SELECT public.storage_ownership_history_read($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result",args:4,write:false,bytes:8008192,transaction:true},

@@ -74,9 +74,9 @@ export async function qualifyArticleOffers(input:{options:PostgresConnectionOpti
    const original=originalStatement.get(value.sourceId,value.itemId);assert(original);assert.equal(original.source_order,ordinal);
    pg(`INSERT INTO public.article_offers(${columns},source_order) VALUES(${columns.split(',').map(k=>typeof original[k]==='bigint'?String(original[k]):q(original[k] as string)).join(',')},${original.source_order});`);
   };
-  importRowid(-3n,'negative');await set(row({itemId:'auto-negative',id:prefix+'-auto-negative'}));assert.equal(input.ownerSql("SELECT source_order FROM public.article_offers WHERE item_id='auto-negative';"),'-2');vectors++;
-  importRowid(0n,'zero');await set(row({itemId:'auto-positive',id:prefix+'-auto-positive'}));assert.equal(input.ownerSql("SELECT source_order FROM public.article_offers WHERE item_id='auto-positive';"),'1');vectors++;
-  importRowid(9223372036854775807n,'max-rowid');const exhausted=state();await assert.rejects(native.setArticleOffer(row({itemId:'exhausted',id:prefix+'-exhausted'})),PostgresDomainWriteOutcomeUnknown);assert.equal(state(),exhausted);await compare();vectors++;
+  importRowid(BigInt(-3),'negative');await set(row({itemId:'auto-negative',id:prefix+'-auto-negative'}));assert.equal(input.ownerSql("SELECT source_order FROM public.article_offers WHERE item_id='auto-negative';"),'-2');vectors++;
+  importRowid(BigInt(0),'zero');await set(row({itemId:'auto-positive',id:prefix+'-auto-positive'}));assert.equal(input.ownerSql("SELECT source_order FROM public.article_offers WHERE item_id='auto-positive';"),'1');vectors++;
+  importRowid(BigInt('9223372036854775807'),'max-rowid');const exhausted=state();await assert.rejects(native.setArticleOffer(row({itemId:'exhausted',id:prefix+'-exhausted'})),PostgresDomainWriteOutcomeUnknown);assert.equal(state(),exhausted);await compare();vectors++;
   await del(prefix,'max-rowid');
   assert.equal(input.options.endpoint.kind,'loopback');const proxy=await startCommitAckLossProxy(input.options.endpoint.port),loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);
   try{proxy.arm();const value=row({itemId:'lost-ack',id:prefix+'-lost-ack'});await assert.rejects(composePostgresArticleOffers(loss,false).setArticleOffer(value),PostgresDomainWriteOutcomeUnknown);assert.deepEqual(proxy.observation(),{dropped:true,commands:1});await source.setArticleOffer(value);await compare();vectors++;}finally{await loss.close();await proxy.close();}

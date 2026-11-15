@@ -9,8 +9,12 @@ ALTER TABLE public.article_offers DROP CONSTRAINT article_offers_price_usdc6_che
 ALTER TABLE public.article_offers ALTER COLUMN created_at DROP DEFAULT;
 ALTER TABLE public.article_offers ALTER COLUMN created_at TYPE text COLLATE "C" USING NULL::text;
 ALTER TABLE public.article_offers ADD COLUMN source_order bigint NOT NULL UNIQUE;
-INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
- ('set_article_offer',ARRAY['article_offers'],false,false),('delete_article_offer',ARRAY['article_offers'],false,false);
+DO $$ BEGIN
+ IF (SELECT count(*) FROM keryx_storage.operations WHERE operation IN('set_article_offer','delete_article_offer'))<>2
+  OR EXISTS(SELECT 1 FROM keryx_storage.operations WHERE operation IN('set_article_offer','delete_article_offer')
+   AND(relations IS DISTINCT FROM ARRAY['article_offers']::text[] OR real_only OR read_only))
+ THEN RAISE EXCEPTION 'article offer Source operation inventory changed';END IF;
+END;$$;
 CREATE TRIGGER native_article_offer_writer BEFORE INSERT OR UPDATE OR DELETE ON public.article_offers FOR EACH ROW EXECUTE FUNCTION keryx_storage.write_fence();
 
 -- Replace existing private readers in place: no extra catalog functions. The

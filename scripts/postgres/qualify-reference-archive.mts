@@ -2,7 +2,7 @@
  * Synthetic public content only; no provider, private body, wallet, signature,
  * payment or job executes. Immutable native fixtures stay until target disposal. */
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync,type StatementSync } from 'node:sqlite';
 import { createHash,randomUUID } from 'node:crypto';
 import { mkdtempSync,existsSync,unlinkSync,rmdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -39,7 +39,7 @@ export async function qualifyReferenceArchive(input:{options:PostgresConnectionO
    let sql='';for(const table of tables)for(const row of seed.prepare('SELECT * FROM '+table).all()){const keys=Object.keys(row);assert(keys.every(k=>/^[a-z_]+$/.test(k)));sql+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(key=>row[key]===null?'NULL':typeof row[key]==='string'?q(row[key] as string):String(row[key])).join(',')});`;}held(sql);
   }finally{seed.close();}
   source=openVerifiedSqliteStorage(file,identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>{}});const core=SqliteAdapter.assembleConnectionCore(source.db,identity,()=>assert.deepEqual(assertVerifiedSqliteConnection(source!.db),identity));
-  const compareRows=()=>{for(const table of tables)assert.deepEqual(sorted(nativeRows(table)),sorted(source!.db.prepare('SELECT * FROM '+table).all()));};
+  const compareRows=()=>{for(const table of tables)assert.deepEqual(sorted(nativeRows(table)),sorted(source!.db.prepare('SELECT * FROM '+table).all().map(row=>({...row}))));};
   const compareRead=async()=>{assert.deepEqual(await native.getPublicReference(ref),await core.getPublicReference(ref));assert.deepEqual((await native.listPublicReferences()).filter(p=>p.id===ref||p.id===hidden),await core.listPublicReferences());const own=await core.publicReferenceArchiveStats(),actual=await native.publicReferenceArchiveStats(),oldest=[baselineStats.oldestPublishedAt,own.oldestPublishedAt].filter((s):s is string=>s!==undefined).sort()[0],newest=[baselineStats.newestPublishedAt,own.newestPublishedAt].filter((s):s is string=>s!==undefined).sort().at(-1);assert.deepEqual(actual,{articles:baselineStats.articles+own.articles,publishers:baselineStats.publishers+own.publishers,...(oldest?{oldestPublishedAt:oldest}:{}),...(newest?{newestPublishedAt:newest}:{})});};
   compareRows();await compareRead();vectors++;
   const query=async(options:PublicReferenceQuery)=>{const selected={...options,referenceId:ref};assert.deepEqual(await native.queryPublicReferenceItems(selected),await core.queryPublicReferenceItems(selected));};
@@ -59,7 +59,7 @@ export async function qualifyReferenceArchive(input:{options:PostgresConnectionO
   const numericItem=item(2).id,weightKey=`reference_id=${q(ref)} AND item_id=${q(numericItem)} AND term='alpha'`;
   const setWeight=(weight:number|bigint)=>{source!.db.prepare('UPDATE public_reference_article_terms SET weight=? WHERE reference_id=? AND item_id=? AND term=?').run(weight,ref,numericItem,'alpha');held(`UPDATE public.public_reference_article_terms SET weight=${String(weight)} WHERE ${weightKey};`);};
   for(const weight of [0.5,0.1,Number.MIN_VALUE,Number.MAX_VALUE]){
-   try{setWeight(weight);const typed=source.db.prepare('SELECT typeof(weight) kind,weight FROM public_reference_article_terms WHERE reference_id=? AND item_id=? AND term=?');typed.setReadBigInts(true);const cell=typed.get(ref,numericItem,'alpha')!;assert.equal(cell.kind,'real');assert(Object.is(cell.weight,weight));
+   try{setWeight(weight);const typed:StatementSync=source.db.prepare('SELECT typeof(weight) kind,weight FROM public_reference_article_terms WHERE reference_id=? AND item_id=? AND term=?');typed.setReadBigInts(true);const cell:Record<string,unknown>=typed.get(ref,numericItem,'alpha')!;assert.equal(cell.kind,'real');assert(Object.is(cell.weight,weight));
     const expectedBits=Buffer.alloc(8);expectedBits.writeDoubleBE(weight);assert.equal(input.ownerSql(`SELECT encode(float8send(weight::double precision),'hex') FROM public.public_reference_article_terms WHERE ${weightKey};`),expectedBits.toString('hex'));
     assert((await core.queryPublicReferenceItems({referenceId:ref,query:'alpha',limit:100})).total>0);await assert.rejects(native.queryPublicReferenceItems({referenceId:ref,query:'alpha',limit:100}));
     await query({sort:'recent',limit:100});await query({query:'beta',limit:100});await compareRead();vectors++;
@@ -69,12 +69,12 @@ export async function qualifyReferenceArchive(input:{options:PostgresConnectionO
    // Each operand can be safe while the grouped Source INTEGER result is not.
    await assert.rejects(core.queryPublicReferenceItems({referenceId:ref,query:'alpha beta'}));await assert.rejects(native.queryPublicReferenceItems({referenceId:ref,query:'alpha beta'}));vectors++;
   }finally{setWeight(99);}
-  try{setWeight(9007199254740993n);assert.equal(source.db.prepare('SELECT CAST(weight AS TEXT) wire FROM public_reference_article_terms WHERE reference_id=? AND item_id=? AND term=?').get(ref,numericItem,'alpha')!.wire,'9007199254740993');assert.equal(input.ownerSql(`SELECT weight::text FROM public.public_reference_article_terms WHERE ${weightKey};`),'9007199254740993');await assert.rejects(core.queryPublicReferenceItems({referenceId:ref,query:'alpha'}));await assert.rejects(native.queryPublicReferenceItems({referenceId:ref,query:'alpha'}));await query({limit:100});vectors++;}finally{setWeight(99);}
+  try{setWeight(BigInt('9007199254740993'));assert.equal(source.db.prepare('SELECT CAST(weight AS TEXT) wire FROM public_reference_article_terms WHERE reference_id=? AND item_id=? AND term=?').get(ref,numericItem,'alpha')!.wire,'9007199254740993');assert.equal(input.ownerSql(`SELECT weight::text FROM public.public_reference_article_terms WHERE ${weightKey};`),'9007199254740993');await assert.rejects(core.queryPublicReferenceItems({referenceId:ref,query:'alpha'}));await assert.rejects(native.queryPublicReferenceItems({referenceId:ref,query:'alpha'}));await query({limit:100});vectors++;}finally{setWeight(99);}
   // Source finalizes unscoped integer hit groups before filtering inactive
   // publishers. Keep that error transitive; a different reference stays usable.
   const hiddenLink='https://reference.example/inactive-overflow',hiddenItemId=publicReferenceItemId(hidden,hiddenLink),hiddenKey=`reference_id=${q(hidden)} AND item_id=${q(hiddenItemId)}`;
   source.db.prepare('INSERT INTO public_reference_articles(reference_id,item_id,canonical_url,current_revision,first_collected_at,last_collected_at,published_at,sort_at) VALUES(?,?,?,?,?,?,NULL,?)').run(hidden,hiddenItemId,hiddenLink,'cd'.repeat(32),at,at,at);
-  source.db.prepare('INSERT INTO public_reference_article_terms(term,reference_id,item_id,weight) VALUES(?,?,?,?)').run('alpha',hidden,hiddenItemId,9223372036854775807n);source.db.prepare('INSERT INTO public_reference_article_terms(term,reference_id,item_id,weight) VALUES(?,?,?,?)').run('beta',hidden,hiddenItemId,1);
+  source.db.prepare('INSERT INTO public_reference_article_terms(term,reference_id,item_id,weight) VALUES(?,?,?,?)').run('alpha',hidden,hiddenItemId,BigInt('9223372036854775807'));source.db.prepare('INSERT INTO public_reference_article_terms(term,reference_id,item_id,weight) VALUES(?,?,?,?)').run('beta',hidden,hiddenItemId,1);
   held(`INSERT INTO public.public_reference_articles(reference_id,item_id,canonical_url,current_revision,first_collected_at,last_collected_at,published_at,sort_at) VALUES(${q(hidden)},${q(hiddenItemId)},${q(hiddenLink)},${q('cd'.repeat(32))},${q(at)},${q(at)},NULL,${q(at)});INSERT INTO public.public_reference_article_terms(term,reference_id,item_id,weight) VALUES('alpha',${q(hidden)},${q(hiddenItemId)},9223372036854775807),('beta',${q(hidden)},${q(hiddenItemId)},1);`);
   try{await assert.rejects(core.queryPublicReferenceItems({query:'alpha beta'}),/overflow/);await assert.rejects(native.queryPublicReferenceItems({query:'alpha beta'}));await query({query:'alpha beta'});vectors++;}
   finally{source.db.prepare("UPDATE public_reference_article_terms SET weight=1 WHERE reference_id=? AND item_id=? AND term='alpha'").run(hidden,hiddenItemId);held(`UPDATE public.public_reference_article_terms SET weight=1 WHERE ${hiddenKey} AND term='alpha';`);}

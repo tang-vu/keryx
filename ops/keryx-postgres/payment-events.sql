@@ -209,8 +209,8 @@ BEGIN
    IF (CASE WHEN before_tokens->>field='null' THEN NULL ELSE (before_tokens->>field)::double precision END) IS DISTINCT FROM (CASE WHEN original_tokens->>field='null' THEN NULL ELSE (original_tokens->>field)::double precision END) THEN RAISE EXCEPTION 'native payment immutable numeric capture changed';END IF;
   ELSIF field<>ALL(ARRAY['settled','settlement_status','authorization_phase','tx_hash']) AND before_tokens->>field IS DISTINCT FROM original_tokens->>field THEN RAISE EXCEPTION 'native payment immutable capture changed';END IF;
  END LOOP;
- IF original_tokens->>'tx_hash' IS DISTINCT FROM transaction_raw::text OR after_row.settlement_status IS DISTINCT FROM CASE WHEN failed THEN 'failed' ELSE 'settled' END OR after_row.settled IS DISTINCT FROM (NOT failed)
-  OR after_row.authorization_phase IS DISTINCT FROM CASE WHEN dispatch IN('hosted','browser') THEN CASE WHEN failed THEN 'failed' ELSE 'settled' END ELSE current_row.authorization_phase END THEN RAISE EXCEPTION 'native payment terminal capture mismatch';END IF;
+ IF original_tokens->>'tx_hash' IS DISTINCT FROM transaction_raw::text OR after_row.settlement_status IS DISTINCT FROM (CASE WHEN failed THEN 'failed' ELSE 'settled' END) OR after_row.settled IS DISTINCT FROM (NOT failed)
+  OR after_row.authorization_phase IS DISTINCT FROM (CASE WHEN dispatch IN('hosted','browser') THEN CASE WHEN failed THEN 'failed' ELSE 'settled' END ELSE current_row.authorization_phase END) THEN RAISE EXCEPTION 'native payment terminal capture mismatch';END IF;
  INSERT INTO public.browser_journal_writer VALUES(txid_current());
  UPDATE public.payment_events SET settled=after_row.settled,settlement_status=after_row.settlement_status,tx_hash=after_row.tx_hash,authorization_phase=after_row.authorization_phase WHERE id=current_row.id;
  IF release_kind='retained' THEN

@@ -82,7 +82,7 @@ it('observes legal SQLite REAL weights without treating decimal SUM as Source IE
   }
   set(BigInt(Number.MAX_SAFE_INTEGER));expect(querySqlitePublicReferenceItems(db,{referenceId,query:'alpha'}).total).toBe(1);
   expect(()=>querySqlitePublicReferenceItems(db,{referenceId,query:'alpha beta'})).toThrow();
-  set(9007199254740993n);const raw=db.prepare("SELECT typeof(weight) AS kind,CAST(weight AS TEXT) AS wire FROM public_reference_article_terms WHERE reference_id=? AND item_id=? AND term='alpha'").get(referenceId,item(160).id)!;
+  set(BigInt('9007199254740993'));const raw=db.prepare("SELECT typeof(weight) AS kind,CAST(weight AS TEXT) AS wire FROM public_reference_article_terms WHERE reference_id=? AND item_id=? AND term='alpha'").get(referenceId,item(160).id)!;
   expect(raw).toEqual({kind:'integer',wire:'9007199254740993'});expect(()=>querySqlitePublicReferenceItems(db,{referenceId,query:'alpha'})).toThrow();
   // Searches can hold while Source non-search reads/stats still expose rows.
   expect(querySqlitePublicReferenceItems(db,{referenceId}).total).toBe(1);expect(readSqlitePublicReference(db,db.prepare('SELECT * FROM public_references WHERE id=?').get(referenceId)!)?.archivedItemCount).toBe(1);
@@ -116,7 +116,7 @@ it('observes Source inactive overflow evaluation before choosing numeric hold sc
   installMainnetApplicationSchema(db,{publicReferenceArchive:true});upsertSqlitePublicReference(db,publisher([item(180)]));
   const hiddenId='public:inactive-numeric',link='https://public.example/inactive-numeric',hiddenItem={...item(181),id:publicReferenceItemId(hiddenId,link),link};
   upsertSqlitePublicReference(db,{...publisher([hiddenItem],false),id:hiddenId});
-  db.prepare("UPDATE public_reference_article_terms SET weight=? WHERE reference_id=? AND term='alpha'").run(9223372036854775807n,hiddenId);
+  db.prepare("UPDATE public_reference_article_terms SET weight=? WHERE reference_id=? AND term='alpha'").run(BigInt('9223372036854775807'),hiddenId);
   db.prepare("UPDATE public_reference_article_terms SET weight=1 WHERE reference_id=? AND term='beta'").run(hiddenId);
   const outcome=(referenceId?:string)=>{try{querySqlitePublicReferenceItems(db,{referenceId,query:'alpha beta'});return 'success';}catch(e){return e instanceof Error&&e.message.includes('overflow')?'overflow':'other-error';}};
   expect({unscoped:outcome(),scoped:outcome(referenceId)}).toEqual({unscoped:'overflow',scoped:'success'});

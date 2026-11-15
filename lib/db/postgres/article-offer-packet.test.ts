@@ -58,7 +58,7 @@ it('matches actual Source ten-cell UPSERT/delete, raw TEXT ordering and SQLite b
   await source.setArticleOffer(offer({id:'surrogate',itemId:'surrogate',signature:'\uD800'}));expect((await source.getArticleOffer('orphan-source','surrogate'))!.signature).toBe('\uFFFD');
   db.exec('DELETE FROM article_offers');
   const insert=JSON.parse(captureArticleOfferSet(offer({id:'negative',itemId:'negative'}))).p_row;
-  db.prepare('INSERT INTO article_offers(rowid,source_id,item_id,id,content_version,price_usdc6,expires_at,signer,nonce,signature,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(-3n,...Object.values(insert) as (string|number)[]);
+  db.prepare('INSERT INTO article_offers(rowid,source_id,item_id,id,content_version,price_usdc6,expires_at,signer,nonce,signature,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(BigInt(-3),...Object.values(insert) as (string|number)[]);
   await source.setArticleOffer(offer({id:'auto-negative',itemId:'auto-negative'}));expect(db.prepare("SELECT rowid FROM article_offers WHERE id='auto-negative'").get()!.rowid).toBe(-2);
   db.exec("UPDATE article_offers SET rowid=0 WHERE id='negative'");
   await source.setArticleOffer(offer({id:'auto-positive',itemId:'auto-positive'}));expect(db.prepare("SELECT rowid FROM article_offers WHERE id='auto-positive'").get()!.rowid).toBe(1);

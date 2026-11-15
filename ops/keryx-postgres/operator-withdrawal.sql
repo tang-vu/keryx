@@ -159,7 +159,7 @@ $guard$);
     THEN readback:=false;END IF;
    ELSE
     INSERT INTO public.withdrawals(tx_hash,created_at,label,source_name,wallet,recipient,amount_usdc,network)
-     VALUES(c->>'tx_hash',shadows->>'created_at',shadows->>'label',shadows->>'source_name',c->>'wallet',c->>'recipient',(c->>'amount_usdc')::double precision,shadows->>'network') RETURNING * INTO saved;
+     VALUES(c->>'tx_hash',shadows->>'created_at',shadows->>'label',shadows->>'source_name',c->>'wallet',c->>'recipient',(c->>'amount_usdc')::numeric,shadows->>'network') RETURNING * INTO saved;
     INSERT INTO keryx_storage.withdrawal_source_originals VALUES(saved.tx_hash,keryx_storage.identity_digest(expected),original_wire,payload->>'sha256',c,to_jsonb(saved),unprojected);
    END IF;
    PERFORM keryx_storage.leave_operation();RETURN to_jsonb(readback);
@@ -170,8 +170,9 @@ $write$);
  EXECUTE replace(definition,body,extended);
 
  SELECT prosrc INTO STRICT body FROM pg_proc WHERE oid='public.storage_application_read_group_8(jsonb,text,text,jsonb)'::regprocedure;
- IF (length(body)-length(replace(body,'CASE selected_action','')))/length('CASE selected_action')<>1 THEN RAISE EXCEPTION 'operator read router constructor refused';END IF;
- extended:=replace(body,'CASE selected_action',$read$
+ anchor:=E'  CASE selected_action\n';
+ IF (length(body)-length(replace(body,anchor,'')))/length(anchor)<>1 THEN RAISE EXCEPTION 'operator read router constructor refused';END IF;
+ extended:=replace(body,anchor,$read$
  CASE selected_action WHEN 'operator_source_inventory' THEN
   IF arguments<>'{}'::jsonb THEN RAISE EXCEPTION 'operator inventory arguments refused';END IF;
   PERFORM keryx_storage.require_operation(expected,digest,'operator_source_inventory');

@@ -100,7 +100,13 @@ export async function qualifyHostedAdmission(input:{options:PostgresConnectionOp
   const retained=await fresh();await compare(retained,true);const unavailable=structuredClone(retained);unavailable.payload.message.nonce=nonce();unavailable.accounting=sqliteHostedAccounting(db,retained.policy.signer);unavailable.availableMicroUsdc='10';await compare(unavailable,false);
   const rollback=await fresh(),collisionId='x402:'+String(rollback.payload.message.nonce),foreignNonce=nonce();
   sqliteJournalTransaction(db,()=>db.prepare("INSERT INTO payment_events(id,kind,query_id,source_id,payer,payee,amount_usdc,network,settled,settlement_status,authorization_id) VALUES(?,'fetch','synthetic-collision','synthetic-source',?,?,0.000007,?,0,'pending',?)").run(collisionId,rollback.policy.signer,String(rollback.payload.message.to),profile.networkId,foreignNonce));
-  pg(`INSERT INTO public.payment_events(id,kind,query_id,source_id,payer,payee,amount_usdc,network,settled,settlement_status,authorization_id) VALUES(${q(collisionId)},'fetch','synthetic-collision','synthetic-source',${q(rollback.policy.signer)},${q(String(rollback.payload.message.to))},0.000007,${q(profile.networkId)},false,'pending',${q(foreignNonce)});`);
+  if(sourceOriginals){
+   const collision=captureObservedPaymentFixture(db,collisionId);assert(collision);
+   const projection={...collision.projection,settled:collision.projection.settled===1};
+   pg(`INSERT INTO public.payment_events SELECT * FROM jsonb_populate_record(NULL::public.payment_events,${q(JSON.stringify(projection))}::jsonb);
+    INSERT INTO keryx_storage.payment_event_originals(payment_id,identity_digest,original_wire,original_sha256,current_wire,current_sha256,native_projection,unprojected_fields)
+    SELECT id,${q(storageIdentityDigest(input.identity))},${q(collision.rowWire)}::json,${q(collision.sha256)},${q(collision.rowWire)}::json,${q(collision.sha256)},to_jsonb(p),ARRAY[${collision.unprojectedFields.map(q).join(',')}]::text[] FROM public.payment_events p WHERE id=${q(collisionId)};`);
+  }else pg(`INSERT INTO public.payment_events(id,kind,query_id,source_id,payer,payee,amount_usdc,network,settled,settlement_status,authorization_id) VALUES(${q(collisionId)},'fetch','synthetic-collision','synthetic-source',${q(rollback.policy.signer)},${q(String(rollback.payload.message.to))},0.000007,${q(profile.networkId)},false,'pending',${q(foreignNonce)});`);
   await compare(rollback,false);assert.equal(db.prepare('SELECT count(*) n FROM hosted_treasury_authorizations WHERE nonce=?').get(String(rollback.payload.message.nonce))?.n,0);
   // Torn/corrupt managed state remains managed. These fixtures do not fabricate
   // a valid claim or grant a registry owner/payout policy.

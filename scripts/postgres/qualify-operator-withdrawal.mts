@@ -11,7 +11,7 @@ import {installMainnetApplicationSchema} from '../../lib/db/mainnet-application-
 import {installNativeUserDomainSchema} from '../../lib/db/native-user-domain-schema';
 import {insertStorageIdentity,installStorageFences} from '../../lib/db/storage-identity-sqlite';
 import {createEnrolledSqliteAdapter,assertEnrolledSqliteAdapter} from '../../lib/db/enrolled-sqlite-adapter';
-import type {StorageIdentity} from '../../lib/db/storage-identity';
+import {validateStorageIdentity,type StorageIdentity} from '../../lib/db/storage-identity';
 import type {WithdrawalRecord} from '../../lib/types';
 import type {PostgresConnectionOptions} from '../../lib/db/postgres/connection';
 import {createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown} from '../../lib/db/postgres/domain-channel';
@@ -20,6 +20,7 @@ import {captureWithdrawalSource,heldWithdrawalSourceFixture,sourceCellText} from
 import {startCommitAckLossProxy} from './commit-ack-loss.mts';
 
 export async function qualifyOperatorWithdrawal(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string;contentionClient?:Client}){
+ input={...input,identity:validateStorageIdentity(input.identity)};
  // Root's current Source prerequisites, used only by the actual PG qualifier.
  const {sqliteA2aTimeProjection,heldA2aTimeProjectionSql,sqliteA2aOriginalCellProjection,heldA2aOriginalCellProjectionSql}=await import('./a2a-time-projection.mts');
  const {sqliteAcceptanceProjection,heldAcceptanceProjectionSql}=await import('./acceptance-projection.mts');
@@ -87,6 +88,7 @@ export async function qualifyOperatorWithdrawal(input:{options:PostgresConnectio
  * It uses the existing enrolled factory and real manifest/identity/fences;
  * no Object.create facade, registered fake proof or Node callback authority. */
 export async function qualifyOperatorWithdrawalSourceOnly(identity:StorageIdentity){
+ identity=validateStorageIdentity(identity);
  const root=process.platform==='linux'?resolve('.local/tmp/postgres-mainnet-migration-20261111/os-tmp'):resolve('D:/repos/server/Github/Hackathon/keryx/.local/tmp/postgres-mainnet-migration-20261111/agents/managed_policy');mkdirSync(root,{recursive:true});
  const folder=mkdtempSync(join(root,'operator-source-only-')),file=join(folder,'source.sqlite'),manifestPath=join(folder,'storage.json'),manifest=canonicalJson({format:'keryx-storage-deployment-v1',identity,backend:{kind:'sqlite',databasePath:file}}),names=['KERYX_STORAGE_MANIFEST','KERYX_SQLITE_PATH','KERYX_FORCE_OFFLINE','CONTENT_MASTER_KEY'] as const,previous=Object.fromEntries(names.map(name=>[name,process.env[name]]));
  let source:Awaited<ReturnType<typeof createEnrolledSqliteAdapter>>|undefined,owner:DatabaseSync|undefined,vectors=0;

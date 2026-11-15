@@ -168,10 +168,15 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
   await protocolSave(cases[0]);
   const race=base('erase-race');await protocolSave(race);const replacement={...race,answer:'PAID_BODY_NEW\0\ud800'},packet=capturePublicationSourcePacket(replacement),requestId=randomUUID();let held=false,pending:Promise<unknown>|undefined;
   try{
-   await input.contentionClient.query('BEGIN');held=true;await input.contentionClient.query('SELECT pg_advisory_xact_lock(634781904177022::bigint)');pending=channel.call('publicationSave',[packet.wire]);
+   await input.contentionClient.query('BEGIN');held=true;await input.contentionClient.query('SELECT pg_advisory_xact_lock(634781904177022::bigint)');
+   // Erase stays invisible until COMMIT. Starting the queued publication now
+   // still proves it rechecks privacy after the real writer wait, while only
+   // the observed wait and COMMIT consume the runtime's unchanged1s lock cap.
+   const erased=await input.contentionClient.query(PRIVACY_CALLS.privacyErase.sql,[canonicalJson(input.identity),input.digest,race.id,JSON.stringify(actor),JSON.stringify({revision:0,requestId}),true]);const raw=erased.rows[0].result,value=typeof raw==='string'?JSON.parse(raw):raw;assert.equal(value.state.erased,true);
+   pending=channel.call('publicationSave',[packet.wire]);
    let blocked=false,settled=false;void pending.then(()=>{settled=true;},()=>{settled=true;});const deadline=Date.now()+4000;
    while(Date.now()<deadline){await input.contentionClient.query('SELECT pg_stat_clear_snapshot()');const seen=await input.contentionClient.query('SELECT count(*) n FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND pg_backend_pid()=ANY(pg_blocking_pids(pid))');if(Number(seen.rows[0].n)>0){blocked=true;break;}assert(!settled,'publication terminated before reaching the writer lock');await new Promise(resolve=>setTimeout(resolve,10));}assert(blocked,'publication must wait behind the genuine writer lock');
-   const erased=await input.contentionClient.query(PRIVACY_CALLS.privacyErase.sql,[canonicalJson(input.identity),input.digest,race.id,JSON.stringify(actor),JSON.stringify({revision:0,requestId}),true]);const raw=erased.rows[0].result,value=typeof raw==='string'?JSON.parse(raw):raw;assert.equal(value.state.erased,true);await input.contentionClient.query('COMMIT');held=false;
+   await input.contentionClient.query('COMMIT');held=false;
    assert.deepEqual(await pending,{error:'privacy_unavailable'});pending=undefined;await privacy.erase(race.id,actor,{revision:0,requestId});assert.throws(()=>writeSqliteQueryRun(source!.db,replacement,true,{...creation,publication:{visibility:'public'}}));await same(()=>native.runPrivacy.read(race.id,actor),()=>privacy.read(race.id,actor));vectors++;
   }finally{if(held)await input.contentionClient.query('ROLLBACK');if(pending)await pending.catch(()=>{});}
   assert(input.options.endpoint.kind==='loopback');const proxy=await startCommitAckLossProxy(input.options.endpoint.port),loss=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);

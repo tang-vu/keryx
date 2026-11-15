@@ -1,4 +1,10 @@
 import type { PostgresA2aFulfillmentPort } from './postgres/a2a-fulfillment-transport';
+import type { PostgresPaymentEventsPort } from './postgres/payment-events-transport';
+import type { PostgresBrowserJournalPort } from './postgres/browser-journal-transport';
+import type { PostgresSourceObservationPort } from './postgres/source-observation-transport';
+import type { PostgresArticleOfferPort } from './postgres/article-offer-transport';
+import type {PostgresOperatorWithdrawalPort} from './postgres/operator-withdrawal-transport';
+import type {PostgresReferenceArchivePort} from './postgres/reference-archive-transport';
 
 import { PostgresDomainWriteOutcomeUnknown } from './postgres/domain-channel';
 import type { NativeFinancialApplicationPort } from './postgres/native-financial-application-port';
@@ -165,6 +171,12 @@ export interface NativePostgresBusinessCoreOptions {
   readonly verify:()=>Promise<void>;
   readonly sourceClaims?:PostgresSourceClaimsPort;
   readonly a2aFulfillment?:PostgresA2aFulfillmentPort;
+  readonly paymentEvents?:PostgresPaymentEventsPort;
+  readonly browserJournal?:PostgresBrowserJournalPort;
+  readonly sourceObservations?:PostgresSourceObservationPort;
+  readonly articleOffers?:PostgresArticleOfferPort;
+  readonly operatorWithdrawal?:PostgresOperatorWithdrawalPort;
+  readonly referenceArchive?:PostgresReferenceArchivePort;
 
   readonly financialApplication?:NativeFinancialApplicationPort;
   readonly sourceClaimWrites?:ReturnType<typeof composePostgresSourceClaimWrites>;
@@ -287,6 +299,33 @@ export class SupabaseAdapter implements KeryxDB {
         hasA2aFailedOriginalFulfillment:{value:(...args:Parameters<PostgresA2aFulfillmentPort['hasA2aFailedOriginalFulfillment']>)=>invoke(false,()=>port.hasA2aFailedOriginalFulfillment(...args)),configurable:true},
       });
     }
+    // Optional fixed data adapters confer no installed facade, signing or
+    // funding authority. Capture in the port before its first await; a result
+    // after terminal disposal keeps the submitted write outcome unknown.
+    const installNativeMethods=<T extends object>(port:T,methods:readonly(readonly[keyof T,boolean])[])=>{
+      for(const [name,write] of methods){
+        const method=port[name];if(typeof method!=='function')refuseStorage('adapter_not_initialized');
+        Object.defineProperty(this,name,{value:async(...args:unknown[])=>{
+          this.assertEntry();const result=await Reflect.apply(method,port,args);
+          try{this.assertEntry();}catch(error){if(write)throw new PostgresDomainWriteOutcomeUnknown();throw error;}
+          return result;
+        },configurable:true});
+      }
+    };
+    if(native?.paymentEvents)installNativeMethods(native.paymentEvents,[['recordPayment',true],['recordPaymentOnce',true],['settlePendingPayment',true],['failPendingPayment',true]]);
+    if(native?.sourceObservations)installNativeMethods(native.sourceObservations,[['verifySourceIfUnchanged',true]]);
+    if(native?.articleOffers)installNativeMethods(native.articleOffers,[['setArticleOffer',true],['deleteArticleOffer',true],['getArticleOffer',false],['listArticleOffers',false]]);
+    if(native?.operatorWithdrawal)installNativeMethods(native.operatorWithdrawal,[['recordWithdrawal',true],['operatorInventory',false],['operatorPublicSnapshot',false]]);
+    if(native?.referenceArchive)installNativeMethods(native.referenceArchive,[['listPublicReferences',false],['getPublicReference',false],['upsertPublicReference',true],['archivePublicReferenceItems',true],['queryPublicReferenceItems',false],['publicReferenceArchiveStats',false]]);
+    if(native?.browserJournal)installNativeMethods(native.browserJournal,[
+      ['browserJournalActive',false],['activateBrowserJournal',true],
+      ['upsertSessionGrant',true],['getSessionGrant',false],['addSessionGrantSpend',true],['releaseSessionGrantSpend',true],
+      ['deleteSessionGrant',true],['revokeSessionGrant',true],['deleteExpiredSessionGrants',true],['listSessionWithdrawalPayments',false],
+      ['admitBrowserAuthorization',true],['admitBrowserJournal',true],['getBrowserJournal',false],['exposeBrowserJournal',true],
+      ['submitBrowserJournal',true],['cancelPreparedBrowserJournal',true],['signBrowserJournal',true],['admitBrowserQueryPolicy',true],
+      ['admitBrowserSigningOriginal',true],['admitBrowserSourceSigningOriginal',true],['readBrowserSigningSnapshot',false],
+      ['readExposedBrowserSigningSnapshotForSigner',false],['signBrowserSigningOriginal',true],
+    ]);
     if(native?.financialApplication){
       const port=native.financialApplication;
       // Fixed internal composition grants no installed facade or financial
@@ -1130,6 +1169,15 @@ export class SupabaseAdapter implements KeryxDB {
 
   private async readEvidenceProvenance(lookup: EvidenceProvenanceLookup): Promise<ReadonlySet<string>> {
     const flags = new Set<string>();
+    if(this.#native?.sourceObservations){
+      this.assertEntry();const sources=[...lookup.sourceIds],items=[...lookup.itemIds];
+      for(let offset=0;offset<Math.max(sources.length,items.length);offset+=500){
+        const batch={sourceIds:sources.slice(offset,offset+500),itemIds:items.slice(offset,offset+500)};
+        const values=await this.#native.sourceObservations.readEvidenceProvenanceBatch(batch);this.assertEntry();
+        for(const flag of values)flags.add(flag);
+      }
+      return flags;
+    }
     for (let offset = 0; offset < Math.max(lookup.sourceIds.length, lookup.itemIds.length); offset += 500) {
       const p_source_ids = lookup.sourceIds.slice(offset, offset + 500), p_item_ids = lookup.itemIds.slice(offset, offset + 500);
       if ([...p_source_ids, ...p_item_ids].some(id => id.length > 256)) throw new Error("Invalid provenance lookup identity");

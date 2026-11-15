@@ -42,7 +42,10 @@ export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerT
   const db=new DatabaseSync(':memory:'),q=(v:string|number|null)=>v===null?'NULL':typeof v==='number'?String(v):`'${v.replaceAll("'","''")}'`;let vectors=0,sourceImportRefusals=0;
   const originals=new Map<string,{rowWire:string;sha256:string}>();
   const writersEmpty=()=>{for(const table of sourceOriginals?['public.browser_journal_writer','keryx_storage.writer']:['keryx_storage.writer'])assert.equal(input.ownerSql(`SELECT count(*) FROM ${table};`),'0');};
-  const t=new Proxy(input.transport,{get(target,key,receiver){const value=Reflect.get(target,key,receiver);if(typeof value!=='function'||!['admitHostedTreasuryPolicy','submitHostedAuthorization','confirmHostedAuthorization'].includes(String(key)))return value;return async(...args:unknown[])=>{try{return await Reflect.apply(value,target,args);}finally{writersEmpty();}};}});
+  const t=Object.create(input.transport) as PostgresHostedLedgerTransport;
+  for(const key of ['admitHostedTreasuryPolicy','submitHostedAuthorization','confirmHostedAuthorization'] as const){
+    const method=input.transport[key];Object.defineProperty(t,key,{value:async(...args:unknown[])=>{try{return await Reflect.apply(method,input.transport,args);}finally{writersEmpty();}}});
+  }
   const retain=(id:string)=>{
     const captured=captureObservedPaymentFixture(db,id);assert(captured);originals.set(id,{rowWire:captured.rowWire,sha256:captured.sha256});
     return captured;
@@ -54,10 +57,10 @@ export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerT
     assert.deepEqual(got,{identity:storageIdentityDigest(input.identity),original:original.rowWire,originalSha:original.sha256,current:captured.rowWire,currentSha:captured.sha256});
     assert.equal(paymentEventWireSha256(got.current),got.currentSha);
   };
-  const insert=(table:string,row:Row)=>{
+  const insert=(table:string,row:Row,malformedImportNegative=false)=>{
     const cols=Object.keys(row);assert(/^[a-z_]+$/.test(table)&&cols.every(c=>/^[a-z_]+$/.test(c)));
     db.prepare(`INSERT INTO ${table}(${cols.join(',')}) VALUES(${cols.map(()=>'?').join(',')})`).run(...cols.map(c=>row[c]));
-    if(sourceOriginals&&table==='payment_events'){
+    if(sourceOriginals&&table==='payment_events'&&!malformedImportNegative){
       const captured=retain(String(row.id)),physical=captured.projection,keys=Object.keys(physical);
       const value=(key:string)=>key==='settled'?(physical[key as keyof typeof physical]===1?'true':'false'):q(physical[key as keyof typeof physical]);
       return `INSERT INTO public.payment_events(${keys.join(',')}) VALUES(${keys.map(value).join(',')});`+
@@ -77,7 +80,9 @@ export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerT
     let sql="UPDATE keryx_storage.control SET mode='held';";
     sqliteJournalTransaction(db,()=>{
       sql+=insert('hosted_treasury_authorizations',o.authorization);
-      if(options.payment!==false)sql+=insert('payment_events',o.payment);
+      // Declared malformed-state negatives must reach the real native table
+      // constraint without fabricating a coherent private original for them.
+      if(options.payment!==false)sql+=insert('payment_events',o.payment,Boolean(options.refuseImport));
       if(options.proof||options.confirmation){
         sql+=insert('private_research_intents',{id:o.jobId,payer:o.context.privateJob!.owner,data:'{}'});
         sql+=insert('private_research_payment_attempts',{id:o.jobId});
@@ -130,7 +135,7 @@ export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerT
     if(sourceOriginals){
     // A legacy receipt shape cannot be interpreted by the new body. Assert
     // the actual semantic refusal, then restore the fixture session and tokens.
-    try{assert.throws(()=>input.ownerSql('BEGIN;SET LOCAL SESSION AUTHORIZATION keryx_app;'+`SELECT public.storage_hosted_confirm(${q(canonicalJson(input.identity))}::jsonb,${q(input.digest)},${q(p.signer)},${q(o.submission.authorizationId)},'synthetic-confirmed');`+'ROLLBACK;'),/hosted payment protocol mismatch/);}
+    try{assert.throws(()=>input.ownerSql('BEGIN;SET LOCAL SESSION AUTHORIZATION keryx_app;SET LOCAL statement_timeout=\'5s\';SET LOCAL lock_timeout=\'1s\';SET LOCAL TIME ZONE \'UTC\';'+`SELECT public.storage_hosted_confirm(${q(canonicalJson(input.identity))}::jsonb,${q(input.digest)},${q(p.signer)},${q(o.submission.authorizationId)},'synthetic-confirmed');`+'ROLLBACK;'),/hosted payment protocol mismatch/);}
     finally{input.ownerSql('ROLLBACK;RESET SESSION AUTHORIZATION;');}
     rawEqual(String(o.payment.id));writersEmpty();vectors++;
     // Source public receipts use scalar binding plus strict caller readback;
@@ -173,7 +178,7 @@ export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerT
         `SELECT public.storage_hosted_confirm(${expected},${digest},${q(p.signer)},${q(o.submission.authorizationId)},${q(HOSTED_PAYMENT_SOURCE_RECEIPT_PREFIX+JSON.stringify('synthetic-confirmed'))});`,
       ];
       for(const call of calls){
-        try{assert.throws(()=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+intake+"UPDATE keryx_storage.control SET mode='active';SET LOCAL SESSION AUTHORIZATION keryx_app;"+call+'ROLLBACK;'),/native payment raw original coverage or projection unavailable|native hosted payment original unavailable or changed/);}
+        try{assert.throws(()=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+intake+"UPDATE keryx_storage.control SET mode='active';SET LOCAL SESSION AUTHORIZATION keryx_app;SET LOCAL statement_timeout=\'5s\';SET LOCAL lock_timeout=\'1s\';SET LOCAL TIME ZONE \'UTC\';"+call+'ROLLBACK;'),/native payment raw original coverage or projection unavailable|native hosted payment original unavailable or changed/);}
         finally{input.ownerSql('ROLLBACK;RESET SESSION AUTHORIZATION;');}
         assert.equal(input.ownerSql('SELECT mode FROM keryx_storage.control WHERE singleton;'),'active');
         assert.equal(input.ownerSql(`SELECT count(*) FROM public.hosted_treasury_authorizations WHERE nonce=${q(o.submission.authorizationId)};`),'0');
