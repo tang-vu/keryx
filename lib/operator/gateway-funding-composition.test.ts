@@ -4,6 +4,59 @@ import { dirname, join, posix, relative, resolve } from "node:path";
 import ts from "typescript";
 import { createOperatorGatewayFundingComposition, OPERATOR_GATEWAY_FUNDING_ACTIVATION } from "./gateway-funding-composition";
 
+const preparedChild = "scripts/postgres/prepared-next-child.mts";
+const preparedHelperRoots = new Map<string, "source" | "metadata.source">([
+  ["scripts/immutable-release-public-profile.mjs", "source"],
+  ["scripts/immutable-release-staging.mjs", "source"],
+  ["scripts/next-public-server.mjs", "metadata.source"],
+]);
+function namedNodeImport(parsed: ts.SourceFile, module: string, name: string): boolean {
+  return parsed.statements.some(statement => ts.isImportDeclaration(statement)
+    && ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === module
+    && !statement.importClause?.isTypeOnly && statement.importClause?.namedBindings
+    && ts.isNamedImports(statement.importClause.namedBindings)
+    && statement.importClause.namedBindings.elements.some(element => !element.isTypeOnly
+      && !element.propertyName && element.name.text === name));
+}
+function loaderNamesAreUnshadowed(parsed: ts.SourceFile): boolean {
+  let shadowed = false;
+  const nameContainsLoader = (name: ts.BindingName): boolean => ts.isIdentifier(name)
+    ? name.text === "join" || name.text === "pathToFileURL"
+    : name.elements.some(element => !ts.isOmittedExpression(element) && nameContainsLoader(element.name));
+  const visit = (node: ts.Node) => {
+    if ((ts.isVariableDeclaration(node) || ts.isParameter(node)) && nameContainsLoader(node.name)) shadowed = true;
+    if ((ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isClassDeclaration(node)
+      || ts.isClassExpression(node) || ts.isEnumDeclaration(node)) && node.name && nameContainsLoader(node.name)) shadowed = true;
+    ts.forEachChild(node, visit);
+  };
+  visit(parsed);
+  return !shadowed;
+}
+/** This Source-owned child checks these exact helper bytes before loading an
+ * immutable prepared artifact. Map only its reviewed expression back to the
+ * repository source edge; the helper and all descendants are still inspected. */
+function preparedArtifactImport(node: ts.CallExpression, parsed: ts.SourceFile, file: string): string | null {
+  if (file !== preparedChild || node.expression.kind !== ts.SyntaxKind.ImportKeyword
+    || node.arguments.length !== 1 || node.typeArguments?.length) return null;
+  const argument = node.arguments[0];
+  if (!ts.isPropertyAccessExpression(argument) || argument.questionDotToken || argument.name.text !== "href") return null;
+  const url = argument.expression;
+  if (!ts.isCallExpression(url) || url.questionDotToken || url.typeArguments?.length
+    || !ts.isIdentifier(url.expression) || url.expression.text !== "pathToFileURL" || url.arguments.length !== 1) return null;
+  const path = url.arguments[0];
+  if (!ts.isCallExpression(path) || path.questionDotToken || path.typeArguments?.length
+    || !ts.isIdentifier(path.expression) || path.expression.text !== "join" || path.arguments.length !== 2) return null;
+  const [root, helper] = path.arguments;
+  if (!ts.isStringLiteral(helper)) return null;
+  const expectedRoot = preparedHelperRoots.get(helper.text);
+  if (!expectedRoot || !namedNodeImport(parsed, "node:path", "join") || !namedNodeImport(parsed, "node:url", "pathToFileURL")
+    || !loaderNamesAreUnshadowed(parsed)) return null;
+  const exactRoot = expectedRoot === "source" ? ts.isIdentifier(root) && root.text === "source"
+    : ts.isPropertyAccessExpression(root) && !root.questionDotToken && ts.isIdentifier(root.expression)
+      && root.expression.text === "metadata" && root.name.text === "source";
+  return exactRoot ? "../" + helper.text.slice("scripts/".length) : null;
+}
+
 function runtimeImports(source: string, file: string): string[] {
   const imports: string[] = [];
   // Import inspection never reads node.parent; avoid constructing the extra
@@ -23,8 +76,12 @@ function runtimeImports(source: string, file: string): string[] {
     } else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword
       || ts.isIdentifier(node.expression) && node.expression.text === "require")) {
       const argument = node.arguments[0];
-      if (!argument || !ts.isStringLiteralLike(argument)) throw new Error(`Unreviewed dynamic import: ${file}`);
-      imports.push(argument.text);
+      if (argument && ts.isStringLiteralLike(argument)) imports.push(argument.text);
+      else {
+        const reviewed = preparedArtifactImport(node, parsed, file);
+        if (!reviewed) throw new Error(`Unreviewed dynamic import: ${file}`);
+        imports.push(reviewed);
+      }
     }
     ts.forEachChild(node, visit);
   };
@@ -54,7 +111,8 @@ function assertDormantGraph(roots: string[], read: (file: string) => string,
     const watchConnection = chain.at(-1) === "lib/db/topic-watches-sqlite.ts" && file === "lib/db/storage-identity-connection.ts";
     const accountProfile = chain.at(-1) === "lib/accounts/sqlite-store.ts" && file === "lib/db/enrolled-sqlite-schema-profile.ts";
     const manifestObservation = file === "lib/db/runtime-storage-config.ts" && manifestObservationReaders.has(chain.at(-1) ?? "");
-    if (dormantRuntime.test(file) && !admittedStorage && !accountProfile && !watchConnection && !manifestObservation) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
+    if (file === preparedChild && chain.length > 0
+      || dormantRuntime.test(file) && !admittedStorage && !accountProfile && !watchConnection && !manifestObservation) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
     if (visited.has(file)) return;
     visited.add(file);
     for (const specifier of importsFor ? importsFor(file) : runtimeImports(read(file), file)) {
@@ -105,7 +163,7 @@ describe("dormant Operator funding release", () => {
       // Follow that source edge too; ignoring it would omit its authority graph.
       const target = [base, ...(base.endsWith(".mjs") ? [base.slice(0, -4) + ".mts"] : []),
         `${base}.ts`, `${base}.tsx`, `${base}.mts`, join(base, "index.ts"), join(base, "index.tsx")]
-        .find(candidate => existsSync(candidate) && /\.(?:ts|tsx|mts)$/.test(candidate));
+        .find(candidate => existsSync(candidate) && /\.(?:ts|tsx|mts|mjs)$/.test(candidate));
       if (!target && !existsSync(base)) throw new Error(`Unresolved application import: ${file}: ${specifier}`);
       const result = target ? name(target) : null; targets.set(base, result); return result;
     };
@@ -176,6 +234,10 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("scripts/postgres/qualify-publication.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-research-purchases.mts")).toBe(false);
     expect(visited.has("scripts/postgres/held-native-catchup-input.mts")).toBe(false);
+    expect(visited.has(preparedChild)).toBe(false);
+    const inspectedHelpers = assertDormantGraph([...preparedHelperRoots.keys()], file => readFileSync(join(cwd, file), "utf8"), resolveImport, importsFor);
+    for (const helper of preparedHelperRoots.keys()) expect(inspectedHelpers.has(helper)).toBe(true);
+    expect(inspectedHelpers.has("scripts/next-public-observation.mjs")).toBe(true);
     expect(visited.has("scripts/postgres/qualify-ledger.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-acceptance.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-native-runtime.mts")).toBe(false);
@@ -318,6 +380,88 @@ describe("dormant Operator funding release", () => {
       const target = posix.resolve("/", posix.dirname(file), specifier).slice(1);
       return target + (target === "scripts/postgres/held-native-catchup-input" ? ".mts" : ".ts");
     })).toThrow("Dormant runtime reachable");
+  });
+
+  const preparedLoaderImports = "import { join } from 'node:path'; import { pathToFileURL } from 'node:url';";
+  it.each([...preparedHelperRoots])("maps only reviewed prepared helper %s to an inspected source edge", (helper, root) => {
+    const source = `${preparedLoaderImports} void import(pathToFileURL(join(${root}, '${helper}')).href);`;
+    const edge = "../" + helper.slice("scripts/".length);
+    expect(runtimeImports(source, preparedChild)).toEqual(["node:path", "node:url", edge]);
+    const sources: Record<string, string> = {
+      [preparedChild]: source,
+      [helper]: "import './pure-prepared-metadata.mjs';",
+      "scripts/pure-prepared-metadata.mjs": "export const metadataOnly = true;",
+    };
+    const visited = assertDormantGraph([preparedChild], file => sources[file], (file, specifier) =>
+      specifier.startsWith(".") ? posix.resolve("/", posix.dirname(file), specifier).slice(1) : null);
+    expect([...visited]).toEqual([preparedChild, helper, "scripts/pure-prepared-metadata.mjs"]);
+  });
+
+  it.each([
+    "pathToFileURL(join(source, 'scripts/unreviewed-helper.mjs')).href",
+    "pathToFileURL(join(source, helper)).href",
+    "pathToFileURL(join(source, `scripts/immutable-release-staging.mjs`)).href",
+    "pathToFileURL(join(otherSource, 'scripts/immutable-release-staging.mjs')).href",
+    "pathToFileURL(join(metadata.source, 'scripts/immutable-release-staging.mjs')).href",
+    "pathToFileURL(join(source, 'scripts/next-public-server.mjs')).href",
+    "pathToFileURL(join(metadata.other, 'scripts/next-public-server.mjs')).href",
+    "pathToFileURL(join(source, 'scripts', 'immutable-release-staging.mjs')).href",
+    "pathToFileURL(resolve(source, 'scripts/immutable-release-staging.mjs')).href",
+    "pathToFileURL(path.join(source, 'scripts/immutable-release-staging.mjs')).href",
+    "pathToFileURL(join(source, 'scripts/immutable-release-staging.mjs'), extra).href",
+    "pathToFileURL(join(source, 'scripts/immutable-release-staging.mjs'))['href']",
+    "pathToFileURL(join(source, 'scripts/immutable-release-staging.mjs'))?.href",
+    "pathToFileURL?.(join(source, 'scripts/immutable-release-staging.mjs')).href",
+    "url.pathToFileURL(join(source, 'scripts/immutable-release-staging.mjs')).href",
+    "helperUrl",
+  ])("refuses a near-match or variable prepared import: %s", argument => {
+    expect(() => runtimeImports(`${preparedLoaderImports} void import(${argument});`, preparedChild)).toThrow("Unreviewed dynamic import");
+  });
+
+  it.each(["app/entry.ts", "scripts/postgres/prepared-next-child-extra.mts", "scripts/prepared-next-child.mts"])(
+    "rejects the same dynamic loader outside the exact reviewed child: %s", file => {
+      expect(() => runtimeImports(`${preparedLoaderImports} void import(pathToFileURL(join(source, 'scripts/immutable-release-staging.mjs')).href);`, file))
+        .toThrow("Unreviewed dynamic import");
+    });
+
+  it.each([
+    "const join = unreviewedJoin;",
+    "function unreviewed(join) { return join; }",
+    "const { pathToFileURL } = unreviewed;",
+    "function pathToFileURL() {}",
+  ])("rejects shadowed prepared loader bindings: %s", shadow => {
+    expect(() => runtimeImports(`${preparedLoaderImports} ${shadow} void import(pathToFileURL(join(source, 'scripts/immutable-release-staging.mjs')).href);`, preparedChild))
+      .toThrow("Unreviewed dynamic import");
+  });
+
+  it("rejects unbound/aliased functions and require instead of disguising an import", () => {
+    const expression = "pathToFileURL(join(source, 'scripts/immutable-release-staging.mjs')).href";
+    expect(() => runtimeImports(`void import(${expression});`, preparedChild)).toThrow("Unreviewed dynamic import");
+    expect(() => runtimeImports(`import { join } from 'other-path'; import { pathToFileURL } from 'other-url'; void import(${expression});`, preparedChild)).toThrow("Unreviewed dynamic import");
+    expect(() => runtimeImports(`${preparedLoaderImports} void require(${expression});`, preparedChild)).toThrow("Unreviewed dynamic import");
+    expect(() => runtimeImports(`${preparedLoaderImports} void import(${expression}, {with:{type:'json'}});`, preparedChild)).toThrow("Unreviewed dynamic import");
+  });
+
+  it.each([...preparedHelperRoots])("still rejects a dormant funding descendant of prepared helper %s", (helper, root) => {
+    const sources: Record<string, string> = {
+      [preparedChild]: `${preparedLoaderImports} void import(pathToFileURL(join(${root}, '${helper}')).href);`,
+      [helper]: "import '../lib/payments/gateway-funding-executor';",
+      "lib/payments/gateway-funding-executor.ts": "",
+    };
+    expect(() => assertDormantGraph([preparedChild], file => sources[file], (file, specifier) => {
+      if (!specifier.startsWith(".")) return null;
+      const target = posix.resolve("/", posix.dirname(file), specifier).slice(1);
+      return target.endsWith(".mjs") ? target : target + ".ts";
+    })).toThrow("Dormant runtime reachable");
+  });
+
+  it("keeps the prepared artifact loader unreachable from the application even through an ordinary helper", () => {
+    const read = vi.fn((file: string) => file === "app/entry.ts" ? "import './helper';" : "import '../scripts/postgres/prepared-next-child';");
+    expect(() => assertDormantGraph(["app/entry.ts"], read, (file, specifier) => {
+      const target = posix.resolve("/", posix.dirname(file), specifier).slice(1);
+      return target + (target === "scripts/postgres/prepared-next-child" ? ".mts" : ".ts");
+    })).toThrow("Dormant runtime reachable");
+    expect(read).not.toHaveBeenCalledWith(preparedChild);
   });
 
   it.each(["export { createEnrolledSupabaseAdapter } from '../lib/db/enrolled-supabase-adapter';",
