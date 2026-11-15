@@ -143,7 +143,11 @@ it.each(["postgres", "supabase"] as const)("keeps selected %s hosted provenance 
   let getters = 0; const forged = new Proxy({}, { get() { getters++; throw new Error("No caller methods as authority"); } }) as KeryxDB;
   for (const value of [{}, forged, Object.create(f.db)]) await expect(f.gatewayModule.createMainnetHostedGateway(value as KeryxDB)).rejects.toThrow();
   expect(getters).toBe(0); expect(f.signed).not.toHaveBeenCalled(); expect(f.http).not.toHaveBeenCalled();
-  await expect((await import("../db/postgres/runtime-adapter")).createPostgresRuntimeAdapter()).rejects.toThrow("adapter_not_initialized");
+  // Linux inspects the selected deployment before native admission. This fixture
+  // deliberately retains its SQLite path, so its changed backend is refused at
+  // that earlier boundary; other platforms retain the closed native factory.
+  await expect((await import("../db/postgres/runtime-adapter")).createPostgresRuntimeAdapter()).rejects.toThrow(
+    process.platform === "linux" ? "Storage deployment configuration unavailable" : "adapter_not_initialized");
 });
 it("uses explicit private-role accounting on both ensureFunded reads", async () => {
   const f = await fixture(), privateSigner = f.actualAccounts.privateKeyToAddress(privateKey).toLowerCase();
