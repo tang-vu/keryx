@@ -1,5 +1,6 @@
 -- Fresh SOURCE: retain the original text wire of feed dates and app timestamps.
--- Native scalar text cannot admit NUL/unpaired UTF-16; no original is rewritten.
+-- Native TEXT cannot retain NUL/unpaired UTF-16. SourceMeta below transports
+-- actual SQLite-bound scalar values (U+FFFD for lone input); no original is rewritten.
 DO $$ DECLARE entry text;relation_name text;column_name text;BEGIN
  FOREACH entry IN ARRAY ARRAY['sources.created_at','source_items.published_at','source_items.manifest_created_at','cache_items.updated_at',
   'source_meta.updated_at','source_notify.updated_at','source_notify_email.updated_at','source_notify_email.last_sent_at',
@@ -49,6 +50,14 @@ DECLARE item record;items jsonb:='[]'::jsonb;bytes bigint:=2;matching integer;se
     AND encode(convert_to(translate(s.wallet_address,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'UTF8'),'hex')=selection->>'walletHex'
     AND encode(convert_to(COALESCE(NULLIF(s.rss_url,''),s.url),'UTF8'),'hex')=selection->>'feedUrlHex';
    GET DIAGNOSTICS e_changed=ROW_COUNT;PERFORM keryx_storage.leave_operation();RETURN to_jsonb(e_changed=1);
+  END IF;
+  IF selection->>'operation'='source-meta-origin' THEN
+   IF current_setting('transaction_read_only')<>'on' OR jsonb_typeof(selection) IS DISTINCT FROM 'object' OR selection-'operation'-'onchainId'<>'{}'::jsonb OR jsonb_typeof(selection->'onchainId') IS DISTINCT FROM 'string' OR selection->>'onchainId' !~ '^0x[0-9a-f]{64}$' THEN RAISE EXCEPTION 'metadata origin selector refused';END IF;
+   PERFORM keryx_storage.require_operation(expected,digest,'source_policy_snapshot');
+   SELECT value INTO candidate_origin FROM public.sync_state WHERE key='keryx:source-registry-origin:v1:'||(selection->>'onchainId');
+   IF octet_length(candidate_origin)>8192 THEN RAISE EXCEPTION 'metadata origin snapshot bound';END IF;
+   source_wire:=jsonb_build_object('selector',selection,'originWire',candidate_origin)::text;
+   RETURN jsonb_build_object('wire',source_wire,'sha256',encode(sha256(convert_to(source_wire,'UTF8')),'hex'));
   END IF;
  END IF;
  IF selected_source IS NULL THEN
@@ -164,6 +173,59 @@ DECLARE r public.sources;row_wire text;row_data jsonb;capture jsonb;source_snaps
 END;$$;
 -- The only added write is the validated immutable registry-origin sidecar above.
 UPDATE keryx_storage.operations SET relations=ARRAY['sources','sync_state'] WHERE operation='upsert_source';
+-- Same existing function identity. Source metadata is not a catalog upsert or
+-- claim-policy mutation: only an explicitly requested origin is observed/CASed.
+CREATE OR REPLACE FUNCTION public.storage_set_source_meta(p_expected_identity jsonb,p_row jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+DECLARE row_data jsonb;capture jsonb;authority jsonb;retained jsonb;prior_authority jsonb;candidate_origin text;origin_key text;onchain_id text;snapshot_wire text;authority_wire text;binding_wire text;
+BEGIN
+ PERFORM keryx_storage.enter_operation(p_expected_identity,'set_source_meta');
+ IF jsonb_typeof(p_row) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'metadata packet refused';END IF;
+ IF p_row?'row' OR p_row?'origin' THEN
+  IF p_row-'row'-'origin'<>'{}'::jsonb OR NOT(p_row?'row' AND p_row?'origin') THEN RAISE EXCEPTION 'metadata packet fields refused';END IF;row_data:=p_row->'row';capture:=p_row->'origin';
+ ELSE
+  -- Unconfigured older native Core keeps its ordinary no-authority call.
+  -- updated_at is not caller authority; Source generates it after the lock.
+  IF p_row-ARRAY['id','name','description','url','rss_url','updated_at']<>'{}'::jsonb THEN RAISE EXCEPTION 'legacy metadata packet refused';END IF;row_data:=p_row-'updated_at';capture:='null'::jsonb;
+ END IF;
+ IF jsonb_typeof(row_data) IS DISTINCT FROM 'object' OR row_data-ARRAY['id','name','description','url','rss_url']<>'{}'::jsonb OR NOT(row_data?&ARRAY['id','name','description','url','rss_url'])
+  OR EXISTS(SELECT 1 FROM unnest(ARRAY['id','name','description','url']) field WHERE jsonb_typeof(row_data->field) IS DISTINCT FROM 'string')
+  OR row_data->'rss_url'<>'null'::jsonb AND jsonb_typeof(row_data->'rss_url') IS DISTINCT FROM 'string'
+  OR keryx_storage.a2a_utf16_length(row_data->>'id') NOT BETWEEN 1 AND 256 THEN RAISE EXCEPTION 'metadata row refused';END IF;
+ IF capture<>'null'::jsonb THEN
+  IF jsonb_typeof(capture) IS DISTINCT FROM 'object' OR capture-ARRAY['authority','beforeWire','snapshotSha256']<>'{}'::jsonb OR NOT(capture?&ARRAY['authority','beforeWire','snapshotSha256'])
+   OR capture->'beforeWire'<>'null'::jsonb AND jsonb_typeof(capture->'beforeWire') IS DISTINCT FROM 'string' OR octet_length(capture->>'beforeWire')>8192
+   OR jsonb_typeof(capture->'snapshotSha256') IS DISTINCT FROM 'string' OR capture->>'snapshotSha256' !~ '^[a-f0-9]{64}$' OR row_data->>'id' !~ '^0x[0-9a-fA-F]{64}$' THEN RAISE EXCEPTION 'metadata origin capture refused';END IF;
+  authority:=capture->'authority';
+  IF jsonb_typeof(authority) IS DISTINCT FROM 'object' OR authority-ARRAY['network','address','version','codeHash','deployBlock']<>'{}'::jsonb OR NOT(authority?&ARRAY['network','address','version','codeHash','deployBlock'])
+   OR authority->>'network' IS DISTINCT FROM p_expected_identity->>'network' OR jsonb_typeof(authority->'network') IS DISTINCT FROM 'string'
+   OR jsonb_typeof(authority->'address') IS DISTINCT FROM 'string' OR authority->>'address' !~ '^0x[0-9a-f]{40}$' OR authority->>'address' ~ '^0x0{40}$'
+   OR jsonb_typeof(authority->'codeHash') IS DISTINCT FROM 'string' OR authority->>'codeHash' !~ '^0x[0-9a-f]{64}$'
+   OR jsonb_typeof(authority->'version') IS DISTINCT FROM 'number' OR (authority->>'version')::numeric NOT IN(1,2,3)
+   OR jsonb_typeof(authority->'deployBlock') IS DISTINCT FROM 'string' OR authority->>'deployBlock' !~ '^(0|[1-9][0-9]{0,19})$' THEN RAISE EXCEPTION 'metadata authority refused';END IF;
+  onchain_id:=lower(row_data->>'id');origin_key:='keryx:source-registry-origin:v1:'||onchain_id;
+  SELECT value INTO candidate_origin FROM public.sync_state WHERE key=origin_key;
+  snapshot_wire:=jsonb_build_object('selector',jsonb_build_object('operation','source-meta-origin','onchainId',onchain_id),'originWire',candidate_origin)::text;
+  IF candidate_origin IS DISTINCT FROM capture->>'beforeWire' OR encode(sha256(convert_to(snapshot_wire,'UTF8')),'hex') IS DISTINCT FROM capture->>'snapshotSha256' THEN RAISE EXCEPTION 'metadata origin predecessor changed';END IF;
+  IF candidate_origin IS NOT NULL THEN
+   retained:=candidate_origin::jsonb;prior_authority:=retained->'authority';
+   IF jsonb_typeof(retained) IS DISTINCT FROM 'object' OR retained-ARRAY['format','onchainId','authority']<>'{}'::jsonb OR retained->>'format' IS DISTINCT FROM 'keryx-source-registry-origin-v1'
+    OR retained->>'onchainId' IS NULL OR retained->>'onchainId' !~ '^0x[0-9a-fA-F]{64}$' OR lower(retained->>'onchainId') IS DISTINCT FROM onchain_id
+    OR jsonb_typeof(prior_authority) IS DISTINCT FROM 'object' OR prior_authority-ARRAY['network','address','version','codeHash','deployBlock']<>'{}'::jsonb THEN RAISE EXCEPTION 'metadata retained origin refused';END IF;
+   prior_authority:=prior_authority||jsonb_build_object('address',lower(prior_authority->>'address'),'codeHash',lower(prior_authority->>'codeHash'));
+   IF prior_authority IS DISTINCT FROM authority THEN RAISE EXCEPTION 'metadata immutable origin differs';END IF;
+  ELSE
+   -- Source canonicalJson on this fixed ASCII DTO, never caller SQL/keys or a
+   -- rewritten retained original. No signing/event/funding proof is minted.
+   authority_wire:='{"address":'||to_json(authority->>'address')::text||',"codeHash":'||to_json(authority->>'codeHash')::text||',"deployBlock":'||to_json(authority->>'deployBlock')::text||',"network":'||to_json(authority->>'network')::text||',"version":'||((authority->>'version')::numeric::integer)::text||'}';
+   binding_wire:='{"authority":'||authority_wire||',"format":"keryx-source-registry-origin-v1","onchainId":'||to_json(onchain_id)::text||'}';
+   INSERT INTO public.sync_state(key,value,updated_at) VALUES(origin_key,binding_wire,to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
+  END IF;
+ END IF;
+ INSERT INTO public.source_meta(id,name,description,url,rss_url,updated_at) VALUES(row_data->>'id',row_data->>'name',row_data->>'description',row_data->>'url',row_data->>'rss_url',to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))
+  ON CONFLICT(id) DO UPDATE SET name=excluded.name,description=excluded.description,url=excluded.url,rss_url=excluded.rss_url,updated_at=excluded.updated_at;
+ PERFORM keryx_storage.leave_operation();RETURN NULL;
+END;$$;
+UPDATE keryx_storage.operations SET relations=ARRAY['source_meta','sync_state'] WHERE operation='set_source_meta';
 CREATE OR REPLACE FUNCTION public.storage_add_items(p_expected_identity jsonb,p_row jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE item jsonb;r public.source_items;prior_provenance text;BEGIN
  PERFORM keryx_storage.enter_operation(p_expected_identity,'add_items');
