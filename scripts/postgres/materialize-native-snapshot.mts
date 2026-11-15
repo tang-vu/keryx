@@ -106,16 +106,53 @@ function rendering(column:string,type:NativeMaterializationType){
 function rowKey(plan:Plan,values:readonly (string|null)[]){
  assert.equal(values.length,plan.types.length);return JSON.stringify(values.map((value,i)=>nativeMaterializationValueKey(plan.types[i],value)));
 }
+function freshSeeds(browser:boolean):Record<string,unknown[]>{return {browser_journal_control:[{id:1,active:false}],browser_signing_v2_control:[{id:1,active:false,min_original_version:2}],...(browser?{browser_signing_v2_barrier:[{id:1,ever_active:0,min_original_version:2}]}:{})};}
+/** Fresh-only census, shared with the fixed production B0 entry before staging.
+ * No connection, transaction, target, or authority is allocated here. */
+export async function compareFreshNativePublicTransaction(pg:Client,referenceWire:string,mode:NativeMaterializationProfileMode='observation505'){
+ const reference=exportNativePostgresSchemaContract(referenceWire);assert.equal(reference.sha256,nativeMaterializationProfile(mode).catalogSha256);
+ const sections=reference.metadata.sections;assert(sections&&typeof sections==='object'&&!Array.isArray(sections));const relations=sections.relations;assert(Array.isArray(relations));
+ const tables=relations.filter(r=>r!==null&&typeof r==='object'&&!Array.isArray(r)&&r.schema==='public'&&r.kind==='r');assert.equal(tables.length,94);const seeds=freshSeeds(supportsBrowserMaterialization(reference,mode));
+ for(const t of tables){assert(t!==null&&typeof t==='object'&&!Array.isArray(t)&&typeof t.name==='string');const rows=JSON.parse((await pg.query(`SELECT coalesce(jsonb_agg(t),'[]'::jsonb)::text wire FROM(SELECT * FROM public.${identifier(t.name)} LIMIT 2)t`)).rows[0].wire);assert.deepEqual(rows,seeds[t.name]??[]);}
+}
 export async function materializeNativeSnapshot(db:DatabaseSync,options:PostgresConnectionOptions,referenceWire:string,mode:NativeMaterializationProfileMode='observation505'){
  assertDevelopmentMaterializationContainment();assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(options.database,'native_materialized');assert.equal(options.role,'postgres');assert.deepEqual(options.endpoint,{kind:'loopback',port:5432});assert(/^[a-f0-9]{48}$/.test(options.password));
  const reference=exportNativePostgresSchemaContract(referenceWire);assert.equal(reference.sha256,nativeMaterializationProfile(mode).catalogSha256);
  const identity=readStorageIdentity(db);assert.equal(identity.authorityMode,'mainnet-real');assert.equal(identity.network,'eip155:5042');
- const pg=new Client(postgresPoolConfiguration(options)),staging=new Client(postgresPoolConfiguration({...options,database:'native_staging'}));pg.on('error',()=>{});staging.on('error',()=>{});let stage='connect',table:string|null=null,commit=false,started=false;
+ const pg=new Client(postgresPoolConfiguration(options)),staging=new Client(postgresPoolConfiguration({...options,database:'native_staging'}));pg.on('error',()=>{});staging.on('error',()=>{});
+ let started=false,commit=false;
  try{
   await pg.connect();const server=(await pg.query("SELECT current_database() name,session_user role,current_setting('server_version_num') version")).rows[0];assert.equal(server.name,'native_materialized');assert.equal(server.role,'postgres');assert.equal(server.version,'170012');
+  await staging.connect();await pg.query('BEGIN');started=true;
+  const result=await materializeNativeSnapshotTransaction(db,pg,staging,referenceWire,mode);
+  commit=true;await pg.query('COMMIT');started=false;
+  return {...result,typedStagingDatabase:'native_staging',productionChanged:false,paymentActions:0,jobActions:0};
+ }catch(error){
+  if(started)try{await pg.query('ROLLBACK');}catch{}
+  if(error instanceof NativeMaterializationUnavailable)throw error;
+  throw new NativeMaterializationUnavailable({stage:commit?'commit':'connect',table:null,pgCode:null,constraint:null,commitOutcome:commit?'unknown':'not_attempted'});
+ }finally{
+  const closed=await Promise.allSettled([pg.end(),staging.end()]);
+  if(closed.some(r=>r.status==='rejected'))throw new NativeMaterializationUnavailable({stage:'dispose',table:null,pgCode:null,constraint:null,commitOutcome:commit?'unknown':'not_attempted'});
+ }
+}
+/** Data-only fixed copy/readback kernels. Caller owns connections/transaction.
+ * They neither connect nor commit, and confer no runtime or target authority. */
+export function materializeNativeSnapshotTransaction(db:DatabaseSync,pg:Client,staging:Client,referenceWire:string,mode:NativeMaterializationProfileMode='observation505'){
+ return snapshotTransaction(db,pg,staging,referenceWire,mode,'copy');
+}
+export function compareNativeSnapshotTransaction(db:DatabaseSync,pg:Client,staging:Client,referenceWire:string,mode:NativeMaterializationProfileMode='observation505'){
+ return snapshotTransaction(db,pg,staging,referenceWire,mode,'compare');
+}
+async function snapshotTransaction(db:DatabaseSync,pg:Client,staging:Client,referenceWire:string,mode:NativeMaterializationProfileMode,action:'copy'|'compare'){
+ assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);
+ const reference=exportNativePostgresSchemaContract(referenceWire);assert.equal(reference.sha256,nativeMaterializationProfile(mode).catalogSha256);
+ const identity=readStorageIdentity(db);assert.equal(identity.authorityMode,'mainnet-real');assert.equal(identity.network,'eip155:5042');
+ let stage='pristine-catalog',table:string|null=null;
+ try{
   stage='pristine-catalog';assert.equal(exportNativePostgresSchemaContract((await pg.query('SELECT keryx_storage.catalog_contract()::text wire')).rows[0].wire).sha256,reference.sha256);
   assert.equal((await pg.query("SELECT mode FROM keryx_storage.control WHERE singleton")).rows[0]?.mode,'held');
-  assert.equal((await pg.query('SELECT count(*)::text n FROM keryx_storage.identity')).rows[0].n,'0');assert.equal((await pg.query('SELECT count(*)::text n FROM keryx_storage.source_contract')).rows[0].n,'0');
+  if(action==='copy'){assert.equal((await pg.query('SELECT count(*)::text n FROM keryx_storage.identity')).rows[0].n,'0');assert.equal((await pg.query('SELECT count(*)::text n FROM keryx_storage.source_contract')).rows[0].n,'0');}
   const metadata=(await pg.query(`SELECT coalesce(jsonb_agg(t ORDER BY t.name),'[]'::jsonb)::text wire FROM(SELECT c.relname name,
    (SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod)) ORDER BY a.attnum) FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped) columns,
    coalesce((SELECT jsonb_agg(a.attname ORDER BY k.position) FROM pg_constraint p CROSS JOIN LATERAL unnest(p.conkey) WITH ORDINALITY k(number,position) JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=k.number WHERE p.conrelid=c.oid AND p.contype='p'),'[]'::jsonb) primary_key,
@@ -124,12 +161,12 @@ export async function materializeNativeSnapshot(db:DatabaseSync,options:Postgres
   assert(typeof metadata==='string'&&Buffer.byteLength(metadata)<=262144);const native=JSON.parse(metadata) as NativeTable[];assert.equal(native.length,94);
   // The runtime rejects every extra namespace. Keep typed originals in a
   // separate operator database; do not add a catalog exception for staging.
-  stage='retained-staging';await staging.connect();const retained=await staging.query('SELECT name,row_count::text rows FROM keryx_migration.snapshot_tables ORDER BY name');assert.equal(retained.rowCount,94);
+  stage='retained-staging';const retained=await staging.query('SELECT name,row_count::text rows FROM keryx_migration.snapshot_tables ORDER BY name');assert.equal(retained.rowCount,94);
   const counts=new Map<string,number>(retained.rows.map(r=>[r.name,Number(r.rows)])),browser=supportsBrowserMaterialization(reference,mode),plans=planNativeMaterializationTables(db,native,counts,reference,mode);
-  stage='pristine-data';const seeds:Record<string,unknown[]>={browser_journal_control:[{id:1,active:false}],browser_signing_v2_control:[{id:1,active:false,min_original_version:2}],...(browser?{browser_signing_v2_barrier:[{id:1,ever_active:0,min_original_version:2}]}:{})};
-  for(const t of native){table=t.name;const rows=JSON.parse((await pg.query(`SELECT coalesce(jsonb_agg(t),'[]'::jsonb)::text wire FROM(SELECT * FROM public.${identifier(t.name)} LIMIT 2)t`)).rows[0].wire);assert.deepEqual(rows,seeds[t.name]??[]);}
-  await pg.query('BEGIN');started=true;await pg.query('SET CONSTRAINTS ALL DEFERRED');
-  if(browser){
+  stage='pristine-data';const seeds=freshSeeds(browser);
+  if(action==='copy')for(const t of native){table=t.name;const rows=JSON.parse((await pg.query(`SELECT coalesce(jsonb_agg(t),'[]'::jsonb)::text wire FROM(SELECT * FROM public.${identifier(t.name)} LIMIT 2)t`)).rows[0].wire);assert.deepEqual(rows,seeds[t.name]??[]);}
+  await pg.query('SET CONSTRAINTS ALL DEFERRED');
+  if(action==='copy'&&browser){
    // No writer token is minted. This owner-only transaction marker is set
    // solely after a second fresh-data census under locks. Trigger exceptions
    // require postgres + held + this exact current transaction, INSERT only.
@@ -141,13 +178,13 @@ export async function materializeNativeSnapshot(db:DatabaseSync,options:Postgres
   }
   const paymentOriginals=(await pg.query("SELECT to_regclass('keryx_storage.payment_event_originals') IS NOT NULL present")).rows[0].present;
   assert.equal(typeof paymentOriginals,'boolean');
-  if(paymentOriginals)assert.equal((await pg.query('SELECT count(*)::text n FROM keryx_storage.payment_event_originals')).rows[0].n,'0');
+  if(action==='copy'&&paymentOriginals)assert.equal((await pg.query('SELECT count(*)::text n FROM keryx_storage.payment_event_originals')).rows[0].n,'0');
   const projectedCells=(plan:Plan,row:SnapshotRow)=>paymentOriginals&&plan.source.name==='payment_events'
    ?nativeMaterializationPaymentCells(db,plan.source,row,plan.types)
    :row.map((cell,i)=>plan.source.name==='query_runs'?nativeMaterializationQueryCell(cell,plan.types[i],plan.source.columns[i]):nativeMaterializationCell(cell,plan.types[i]));
   stage='public-copy';let totalRows=0;const results:Array<{table:string;rows:number;semanticDigest:string;exactRawJsonRows:number}>=[];
   for(const plan of plans){
-   table=plan.source.name;let batch:Array<{cells:(string|null)[];source_order?:string}>=[],bytes=0,copied=0;
+   table=plan.source.name;let batch:Array<{cells:(string|null)[];source_order?:string}>=[],bytes=0,copied=0,yieldBytes=0;
    const projection=plan.types.map((type,i)=>`(r.cells->>${i})::${type}`).join(',')+(plan.sourceOrder?',r.source_order::bigint':''),columns=plan.source.columns.map(identifier).join(',')+(plan.sourceOrder?',"source_order"':''),recordColumns=plan.sourceOrder?',source_order text':'';
    const bootstrap=Object.hasOwn(seeds,table);if(bootstrap)assert.equal(plan.rows,1);
    // Independently verified fresh controls (and the new Source barrier) already
@@ -155,10 +192,11 @@ export async function materializeNativeSnapshot(db:DatabaseSync,options:Postgres
    // Update their existing id=1 cells; every other table uses plain INSERT.
    const statement=bootstrap?`UPDATE public.${identifier(table)} target SET ${plan.source.columns.map((c,i)=>`${identifier(c)}=(r.cells->>${i})::${plan.types[i]}`).join(',')} FROM jsonb_to_recordset($1::jsonb) r(cells jsonb) WHERE target.id=(r.cells->>${plan.source.columns.indexOf('id')})::integer`:`INSERT INTO public.${identifier(table)}(${columns}) SELECT ${projection} FROM jsonb_to_recordset($1::jsonb) r(cells jsonb${recordColumns})`;
    const flush=async()=>{if(!batch.length)return;const result=await pg.query(statement,[JSON.stringify(batch)]);assert.equal(result.rowCount,batch.length);batch=[];bytes=0;};
-   for(const row of snapshotRows(db,plan.source)){
+   if(action==='copy')for(const row of snapshotRows(db,plan.source)){
     const cells=projectedCells(plan,row),entry={cells,...(plan.sourceOrder?{source_order:articleOfferSourceOrder(db,plan.source,row)}:{})},size=Buffer.byteLength(JSON.stringify(plan.sourceOrder?entry:cells));
-    if(batch.length>=64||bytes+size>1048576)await flush();batch.push(entry);bytes+=size;copied++;
-   }await flush();assert.equal(copied,plan.rows);totalRows+=copied;
+    if(batch.length>=64||bytes+size>1048576)await flush();batch.push(entry);bytes+=size;copied++;yieldBytes+=size;
+    if(yieldBytes>=1048576){await new Promise<void>(done=>setImmediate(done));yieldBytes=0;}
+   }await flush();if(action==='compare')copied=plan.rows;assert.equal(copied,plan.rows);totalRows+=copied;
    // Re-read actual stored native cells in SOURCE primary-key order. A cursor
    // bounds pages and avoids OFFSET growth; neither entire table is held in JS.
    stage='public-re-read';const digest=createHash('sha256'),nativeDigest=createHash('sha256');let seen=0,page:(string|null)[][]=[],offset=0;
@@ -167,19 +205,20 @@ export async function materializeNativeSnapshot(db:DatabaseSync,options:Postgres
    for(const row of snapshotRows(db,plan.source,plan.keys)){
     if(offset>=page.length){const next=await pg.query('FETCH FORWARD 8 FROM materialized_rows');page=next.rows.map(r=>JSON.parse(r.wire));offset=0;}
     assert(offset<page.length);const expected=projectedCells(plan,row),stored=page[offset++],actual=plan.sourceOrder?materializedArticleOfferCells(db,plan.source,row,stored):stored;
-    const sourceKey=rowKey(plan,expected),targetKey=rowKey(plan,actual);assert.equal(targetKey,sourceKey);digest.update(sourceKey).update('\n');nativeDigest.update(targetKey).update('\n');seen++;
+    const sourceKey=rowKey(plan,expected),targetKey=rowKey(plan,actual);assert.equal(targetKey,sourceKey);digest.update(sourceKey).update('\n');nativeDigest.update(targetKey).update('\n');seen++;yieldBytes+=Buffer.byteLength(sourceKey);
+    if(yieldBytes>=1048576){await new Promise<void>(done=>setImmediate(done));yieldBytes=0;}
    }assert.equal(offset,page.length);assert.equal((await pg.query('FETCH FORWARD 1 FROM materialized_rows')).rowCount,0);await pg.query('CLOSE materialized_rows');assert.equal(seen,copied);
    const semanticDigest=digest.digest('hex');assert.equal(nativeDigest.digest('hex'),semanticDigest);results.push({table,rows:copied,semanticDigest,exactRawJsonRows:plan.types.includes('json')?copied:0});stage='public-copy';
   }
-  stage='identity-binding';await pg.query('INSERT INTO keryx_storage.identity VALUES(true,$1::jsonb,$2)',[canonicalJson(identity),storageIdentityDigest(identity)]);
+  stage='identity-binding';if(action==='copy'){await pg.query('INSERT INTO keryx_storage.identity VALUES(true,$1::jsonb,$2)',[canonicalJson(identity),storageIdentityDigest(identity)]);
   await pg.query('INSERT INTO keryx_storage.source_contract VALUES(true,$1::jsonb,$2)',[reference.canonicalJson,reference.sha256]);
+  }else{const bound=await pg.query('SELECT identity::text wire,identity_digest FROM keryx_storage.identity WHERE singleton');assert.equal(bound.rowCount,1);assert.equal(canonicalJson(JSON.parse(bound.rows[0].wire)),canonicalJson(identity));assert.equal(bound.rows[0].identity_digest,storageIdentityDigest(identity));assert.equal((await pg.query('SELECT source_digest FROM keryx_storage.source_contract WHERE singleton')).rows[0]?.source_digest,reference.sha256);}
+  for(const t of native){const plan=plans.find(p=>p.source.name===t.name);assert.equal((await pg.query('SELECT count(*)::text n FROM public.'+identifier(t.name))).rows[0].n,String(plan?.rows??0));}
   stage='final-catalog';assert.equal(exportNativePostgresSchemaContract((await pg.query('SELECT keryx_storage.catalog_contract()::text wire')).rows[0].wire).sha256,reference.sha256);
-  stage='commit';commit=true;await pg.query('COMMIT');started=false;
-  return {format:'keryx-native-public-materialization-v1',...(mode==='development-current510-data-only'?{profileMode:mode,dataIntakeOnly:true,genuineColdFactoryQualified:false}:{}),publicTables:93,emptyDifferentLayouts:browser?3:5,browserPermanentLayoutsMaterialized:browser,emptyDifferentPrimaryKeys:plans.filter(p=>p.emptyDifferentPrimaryKey).map(p=>p.source.name),copiedTables:plans.length,totalRows,tables:results,typedOriginalStagingRetained:true,typedStagingDatabase:'native_staging',logicalIdentityPreserved:true,sourceCatalogSha256:reference.sha256,writerMode:'held',publicApplicationTablesMaterialized:true,sourceDerivedProjectionsMaterialized:false,applicationMaterialized:false,applicationBackendSwitched:false,completeWriterQualified:false,productionChanged:false,paymentActions:0,jobActions:0};
+  return {format:'keryx-native-public-materialization-v1',...(mode==='development-current510-data-only'?{profileMode:mode,dataIntakeOnly:true,genuineColdFactoryQualified:false}:{}),publicTables:93,emptyDifferentLayouts:browser?3:5,browserPermanentLayoutsMaterialized:browser,emptyDifferentPrimaryKeys:plans.filter(p=>p.emptyDifferentPrimaryKey).map(p=>p.source.name),copiedTables:plans.length,totalRows,tables:results,typedOriginalStagingRetained:true,logicalIdentityPreserved:true,sourceCatalogSha256:reference.sha256,writerMode:'held',publicApplicationTablesMaterialized:true,sourceDerivedProjectionsMaterialized:false,applicationMaterialized:false,applicationBackendSwitched:false,completeWriterQualified:false};
  }catch(error){
-  if(started)try{await pg.query('ROLLBACK');}catch{}
   const field=(key:string)=>{const v=error&&typeof error==='object'?Reflect.get(error,key):null;return typeof v==='string'&&/^[a-zA-Z0-9_]{1,128}$/.test(v)?v:null;};
   if(error instanceof NativeMaterializationUnavailable)throw error;
-  throw new NativeMaterializationUnavailable({stage,table,pgCode:field('code'),constraint:field('constraint'),column:field('column'),commitOutcome:commit?'unknown':'not_attempted'});
- }finally{const closed=await Promise.allSettled([pg.end(),staging.end()]);if(closed.some(r=>r.status==='rejected'))throw new NativeMaterializationUnavailable({stage:'dispose',table:null,pgCode:null,constraint:null,commitOutcome:commit?'unknown':'not_attempted'});}
+  throw new NativeMaterializationUnavailable({stage,table,pgCode:field('code'),constraint:field('constraint'),column:field('column'),commitOutcome:'not_attempted'});
+ }
 }
