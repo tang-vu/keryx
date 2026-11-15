@@ -16,6 +16,18 @@ export const NATIVE_CURRENT_DATA_INTAKE_PROFILE=Object.freeze({
  catalogSha256:'6c5467e41bb119c5fe3b76a3b575c6715a723e5f3a55395a225586756db37e93',
  nativeFunctionCount:510,applicationFactoryApproved:false,genuineColdFactoryQualified:false,fullWriterQualified:false,
 });
+/** LOCAL UNMERGED runtime candidate only. These values follow the independent
+ * canonical DATA measurement; they do not approve the DATA artifact, installed
+ * admission, factory qualification, catchup, or production cutover. This branch
+ * must not merge/use until its genuine compiled factory and remaining gates pass. */
+export const NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE=Object.freeze({
+ format:'keryx-native-postgres-current-runtime-candidate-v1',
+ digestFormat:'keryx-postgres17-jsonb-text-sha256-v1',
+ sourceSqlSha256:NATIVE_CURRENT_DATA_INTAKE_PROFILE.sourceSqlSha256,
+ catalogSha256:NATIVE_CURRENT_DATA_INTAKE_PROFILE.catalogSha256,
+ nativeFunctionCount:510,localUnmergedCandidate:true,applicationFactoryApproved:false,
+ genuineColdFactoryQualified:false,fullWriterQualified:false,
+});
 export type NativeMaterializationProfileMode='observation505'|'development-current510-data-only';
 /** A finite explicit tool mode, never a supplied profile, digest or target. */
 export function nativeMaterializationProfile(mode:NativeMaterializationProfileMode='observation505'){
