@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { createRequire } from "node:module";
 import { patchLegacyZod } from "../../scripts/patch-legacy-zod.mjs";
 import manifest from "../../scripts/legacy-zod-patches.json";
 
@@ -27,4 +28,25 @@ it("refuses tampered vendor bytes before performing any pending patch", () => {
     expect(() => patchLegacyZod(temporary)).toThrow("Unexpected legacy validation bytes");
     expect(readFileSync(first, "utf8")).toBe(original);
   } finally { rmSync(temporary, { recursive: true, force: true }); }
+});
+
+it.each([
+  ["linux-contained-snapshot", ["scripts/test-storage-provenance-capacity.mts", "scripts/postgres/test-online-snapshot.mts"]],
+  ["development-offline-intake", ["scripts/postgres/qualify-offline-intake.mts"]],
+] as const)("requires the verified security patch before every bounded %s worker", (name, workers) => {
+  const yaml = createRequire(import.meta.url)("js-yaml") as { load: (wire: string) => unknown };
+  type Step = { run?: string; if?: string; "continue-on-error"?: boolean };
+  const workflow = yaml.load(readFileSync(new URL("../../.github/workflows/storage-provenance-capacity.yml", import.meta.url), "utf8")) as { jobs: Record<string, { steps: Step[] }> };
+  const steps = workflow.jobs[name].steps;
+  const install = steps.findIndex(step => step.run === "npm ci --ignore-scripts --no-audit --no-fund");
+  expect(install).toBeGreaterThanOrEqual(0);
+  const patches = steps.filter(step => step.run === "node scripts/patch-legacy-zod.mjs");
+  expect(patches).toHaveLength(1);
+  expect(steps[install + 1]).toBe(patches[0]);
+  expect(patches[0].if).toBeUndefined();
+  expect(patches[0]["continue-on-error"]).toBeUndefined();
+  for (const worker of workers) {
+    const index = steps.findIndex(step => step.run?.includes(worker));
+    expect(index).toBeGreaterThan(install + 1);
+  }
 });
