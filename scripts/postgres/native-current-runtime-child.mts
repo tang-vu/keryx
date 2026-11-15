@@ -77,11 +77,13 @@ async function main(){
     // Fresh read is evidence only; it is never an automatic write retry.
     assert.equal((await db.getUser('0x'+'e3'.repeat(20)))?.walletAddress,'0x'+'e3'.repeat(20));checks++;
    }else{
-    stage='actual-core-writes-and-reader-overrides';const wallet='0x'+'e1'.repeat(20),created=await db.upsertUser(wallet,'asker');assert.equal(created.created,true);assert.equal((await db.getUser(wallet))?.walletAddress,wallet);checks+=2;
+    stage='writer-user-roundtrip';const wallet='0x'+'e1'.repeat(20),created=await db.upsertUser(wallet,'asker');assert.equal(created.created,true);assert.equal((await db.getUser(wallet))?.walletAddress,wallet);checks+=2;
+    stage='writer-sync-roundtrip';
     await db.setSyncState('synthetic-current-key','line one\nline two');assert.equal(await db.getSyncState('synthetic-current-key'),'line one\nline two');assert.equal((await db.getSyncStates!(['synthetic-current-key'])).get('synthetic-current-key'),'line one\nline two');checks+=3;
-    const session={hash:'e1'.repeat(32),wallet,issuedAt:Date.now(),expiresAt:Date.now()+60000};await db.createWebSession(session);assert.deepEqual(await db.getWebSession(session.hash),session);await db.revokeWebSession(session.hash);assert.equal(await db.getWebSession(session.hash),null);checks+=2;
+    stage='writer-session-roundtrip';const now=Date.now(),session={hash:'e1'.repeat(32),wallet,issuedAt:now,expiresAt:now+60000};await db.createWebSession(session);assert.deepEqual(await db.getWebSession(session.hash),session);await db.revokeWebSession(session.hash);assert.equal(await db.getWebSession(session.hash),null);checks+=2;
+    stage='writer-cache-roundtrip';
     assert.equal(await db.getCached('synthetic-current-cache'),'Synthetic current-profile encrypted cache');await db.setCached('synthetic-current-written-cache','Fresh native writer encrypted text');assert.equal(await db.getCached('synthetic-current-written-cache'),'Fresh native writer encrypted text');checks+=2;
-    assert.deepEqual(await db.listRecentQueries(1),[]);assert.equal(await db.getQueryRun('synthetic-current-missing'),null);assert.deepEqual(await db.listFollowUps('synthetic-current-missing'),[]);checks+=3;
+    stage='writer-query-readers';assert.deepEqual(await db.listRecentQueries(1),[]);assert.equal(await db.getQueryRun('synthetic-current-missing'),null);assert.deepEqual(await db.listFollowUps('synthetic-current-missing'),[]);checks+=3;
     assert(appSql>0);assert.equal(readerSql,0);checks++;
    }
   }
@@ -92,4 +94,4 @@ async function main(){
  assert.equal(outbound,0);process.env.CONTENT_MASTER_KEY='';input.key='';
  console.log(JSON.stringify({passed:true,mode:input.mode,checks,outbound,genuineFactory:true,positiveWriterQualified:input.mode==='success',currentProfileFactorySmokeOnly:true,completeApplicationQualification:false,productionChanged:false}));
 }
-void main().catch(error=>{console.log(JSON.stringify({passed:false,stage,errorClass:error instanceof Error?error.constructor.name:'unknown',productionChanged:false}));process.exitCode=1;});
+void main().catch(error=>{const frames=error instanceof Error?(error.stack??'').split('\n').slice(1).map(line=>line.match(/\/child\.cjs:[0-9]+:[0-9]+/)?.[0]).filter(Boolean).slice(0,4):[];console.log(JSON.stringify({passed:false,stage,errorClass:error instanceof Error?error.constructor.name:'unknown',frames,productionChanged:false}));process.exitCode=1;});
