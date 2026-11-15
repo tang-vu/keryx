@@ -5,7 +5,7 @@ import type { StorageIdentity } from '../../lib/db/storage-identity';
 import type { Client } from 'pg';
 
 const model=vi.hoisted(()=>({files:new Map<string,Buffer>(),fds:new Map<number,string>(),next:20,closed:[] as number[],queries:[] as {database:string;sql:string}[],configs:[] as Record<string,unknown>[],ends:[] as string[],kernels:[] as string[],identity:{} as StorageIdentity,digest:'',
- catalog:'',sqlHash:'',fault:'',commit:0,rollback:0,openError:'',keepaliveFailure:false,delayKernel:false,privateRows:0,publicRows:0,stagingRows:0,journalWrites:0,fsyncs:0,
+ catalog:'',sqlHash:'',fault:'',commit:0,rollback:0,openError:'',keepaliveFailure:false,delayKernel:false,delayBegin:false,privateRows:0,publicRows:0,stagingRows:0,journalWrites:0,fsyncs:0,
  snapshotClosed:false,failDescriptorClose:false,failSqliteClose:false,failPgClose:false,failJournalSync:false,lateControlDrift:false,role:'postgres',held:true,allowConnect:true,sourceTables:94,stagingCount:94,domains:12,badPublic:false}));
 const base='/root/keryx-migration',b0=base+'/postgres-b0',prep=base+'/postgres17-server1-preparation.json',held=base+'/postgres17-server1-held-target.json',manifest='/root/.local/share/keryx-mainnet-runtime/production-v2/storage.json',audit='/root/.local/share/keryx-mainnet-runtime/production-v2/.business-operator-audit';
 const digest=(v:string|Buffer)=>createHash('sha256').update(v).digest('hex');
@@ -72,7 +72,7 @@ vi.mock('./materialize-native-snapshot.mts',()=>({
 }));
 vi.mock('./materialize-native-projections.mts',()=>({
  materializeNativeProjectionsTransaction:async()=>{
-  model.kernels.push('private');if(model.delayKernel)await new Promise(resolve=>setTimeout(resolve,1150));if(model.fault==='private')throw new Error('private');model.privateRows=1;return {domains:Array(model.domains).fill({})};
+  model.kernels.push('private');if(model.delayKernel||model.delayBegin)await new Promise(resolve=>setTimeout(resolve,model.delayKernel?1150:10));if(model.fault==='private')throw new Error('private');model.privateRows=1;return {domains:Array(model.domains).fill({})};
  },
  compareNativeProjectionsTransaction:async()=>{model.kernels.push('compare-private');return {domains:Array(model.domains).fill({})};},
 }));
@@ -84,6 +84,7 @@ vi.mock('pg',async importOriginal=>{
  on(){return this;}async connect(){if(this.config.user!=='postgres'&&model.fault!=='hba-success')throw Object.assign(new Error(model.fault==='hba-password'?'password authentication failed':`pg_hba.conf rejects connection for host "[local]", user "${this.config.user}", database "${this.database}", no encryption`),{code:'28000'});}
  async query(sql:string){
   model.queries.push({database:this.database,sql});const row=(v:unknown)=>({rowCount:1,rows:[v]});
+  if(model.delayBegin&&sql.startsWith('BEGIN'))await new Promise(resolve=>setTimeout(resolve,10));
   if(sql==='SELECT 1'){if(model.keepaliveFailure)throw Object.assign(new Error('secret fields not exposed'),{code:'08006'});return row({});}
   if(sql==='COMMIT'){model.commit++;if(model.fault==='ack-'+model.commit)throw Object.assign(new Error('raw private body not exposed'),{code:'08006'});if(model.lateControlDrift&&model.commit===1)model.identity={...model.identity,provenanceDigest:'f'.repeat(64)};return row({});}
   if(sql==='ROLLBACK'){model.rollback++;return row({});}
@@ -107,7 +108,7 @@ import { inspectServer1OnlineB0, runServer1OnlineB0, Server1B0Unavailable } from
 
 beforeEach(async()=>{
  model.files.clear();model.fds.clear();model.next=20;model.closed=[];model.queries=[];model.configs=[];model.ends=[];model.kernels=[];
- Object.assign(model,{fault:'',commit:0,rollback:0,openError:'',keepaliveFailure:false,delayKernel:false,privateRows:0,publicRows:0,stagingRows:0,journalWrites:0,fsyncs:0,snapshotClosed:false,failDescriptorClose:false,failSqliteClose:false,failPgClose:false,failJournalSync:false,lateControlDrift:false,role:'postgres',held:true,allowConnect:true,sourceTables:94,stagingCount:94,domains:12,badPublic:false});
+ Object.assign(model,{fault:'',commit:0,rollback:0,openError:'',keepaliveFailure:false,delayKernel:false,delayBegin:false,privateRows:0,publicRows:0,stagingRows:0,journalWrites:0,fsyncs:0,snapshotClosed:false,failDescriptorClose:false,failSqliteClose:false,failPgClose:false,failJournalSync:false,lateControlDrift:false,role:'postgres',held:true,allowConnect:true,sourceTables:94,stagingCount:94,domains:12,badPublic:false});
  const {STORAGE_MAINNET_PROFILE_DIGEST,storageIdentityDigest}=await import('../../lib/db/storage-identity');
  model.identity={format:'keryx-mainnet-storage-identity-v1',deploymentId:'11111111-1111-4111-8111-111111111111',storageId:'22222222-2222-4222-8222-222222222222',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,enrollmentId:'33333333-3333-4333-8333-333333333333',enrolledAt:'2026-11-11T00:00:00.000Z',provenanceDigest:'4'.repeat(64)};
  model.digest=storageIdentityDigest(model.identity);model.catalog='9'.repeat(64);model.sqlHash=digest('fixed-sql');
@@ -125,6 +126,19 @@ const events=()=>model.files.get(b0+'/intake.jsonl')?.toString().trim().split('\
 async function refusal(){try{await runServer1OnlineB0();throw new Error('expected refusal');}catch(error){expect(error).toBeInstanceOf(Server1B0Unavailable);return (error as Server1B0Unavailable).diagnostic;}}
 
 describe('fixed server1 B0 recording lifecycle (not actual PG qualification)',()=>{
+ it('keeps real timer heartbeats behind first locks even when BEGIN is delayed',async()=>{
+  const interval=globalThis.setInterval;
+  const timer=vi.spyOn(globalThis,'setInterval').mockImplementation(((callback:()=>void)=>interval(callback,1)) as typeof setInterval);
+  model.delayBegin=true;
+  try{
+   await runServer1OnlineB0();
+   expect(model.queries.some(q=>q.sql==='SELECT 1')).toBe(true);
+   for(let i=0;i<model.queries.length;i++)if(model.queries[i].sql.startsWith('BEGIN')){
+    expect(model.queries[i+1].sql).not.toBe('SELECT 1');
+    if(model.queries[i].sql==='BEGIN ISOLATION LEVEL REPEATABLE READ')expect(model.queries[i+1].sql).toMatch(/^LOCK TABLE /);
+   }
+  }finally{timer.mockRestore();}
+ });
  it('uses only fixed peer clients, locks before RR reads and independently compares all domains',async()=>{
   const result=await runServer1OnlineB0().catch(error=>{throw new Error(JSON.stringify(error.diagnostic));}) as {phases:Record<string,string>;writerMode:string;applicationAuthority:boolean};
   expect(result.phases).toEqual({'typed-staging':'acknowledged','public-cells':'acknowledged','private-projections':'acknowledged'});expect(result.writerMode).toBe('held');expect(result.applicationAuthority).toBe(false);

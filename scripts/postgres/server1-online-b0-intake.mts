@@ -181,23 +181,28 @@ async function intake(inspect:boolean){
   const {inspectTypedDeltaSnapshot}=await import('./typed-snapshot-delta.mts');const typedCensus=await inspectTypedDeltaSnapshot({path:paths.snapshot,sha256:sourceHash});assert.equal(typedCensus.tables,94);assert.equal(typedCensus.identityDigest,identityDigest);controls(c);
   const make=async(database:'keryx_source'|'keryx_mainnet')=>{const pg=peer(database);clients.push(pg);await pg.connect();await actual(pg,database,c!);return pg;};
   const sourcePg=await make('keryx_source'),targetPg=await make('keryx_mainnet');startKeepalive();
+  // Drain the timer's queued SELECTs before BEGIN. Otherwise a heartbeat queued
+  // behind an in-flight BEGIN can acquire the RR snapshot before our locks.
+  const beginLocked=async(pg:Client,begin:string,lock:()=>Promise<unknown>)=>{
+   await stopKeepalive();await pg.query(begin);active=pg;await lock();startKeepalive();
+  };
   const commit=async(pg:Client,phase:Phase)=>{await stopKeepalive();controls(c!);stage=phase+'-commit';emit({event:'commit-intent',phase});outcomes[phase]='unknown';await pg.query('COMMIT');active=undefined;outcomes[phase]='acknowledged';emit({event:'phase',phase,outcome:'acknowledged'});controls(c!);startKeepalive();};
   if(!inspect){
-   stage='fresh-target';await target(targetPg,c,true);await targetPg.query('BEGIN ISOLATION LEVEL REPEATABLE READ');active=targetPg;await lockTarget(targetPg,c);await target(targetPg,c,true);await publicCells.compareFreshNativePublicTransaction(targetPg,c.referenceWire,mode);await targetPg.query('ROLLBACK');active=undefined;
-   stage='typed-staging';await sourcePg.query('BEGIN');active=sourcePg;await actual(sourcePg,'keryx_source',c);
+   stage='fresh-target';await target(targetPg,c,true);await beginLocked(targetPg,'BEGIN ISOLATION LEVEL REPEATABLE READ',()=>lockTarget(targetPg,c!));await target(targetPg,c,true);await publicCells.compareFreshNativePublicTransaction(targetPg,c.referenceWire,mode);await targetPg.query('ROLLBACK');active=undefined;
+   stage='typed-staging';await stopKeepalive();await sourcePg.query('BEGIN');active=sourcePg;await actual(sourcePg,'keryx_source',c);
    assert.equal((await sourcePg.query("SELECT count(*)::text n FROM pg_namespace WHERE nspname !~ '^pg_' AND nspname NOT IN('information_schema','public')")).rows[0].n,'0');
    assert.equal((await sourcePg.query("SELECT count(*)::text n FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind IN('r','p','v','m','S','f')")).rows[0].n,'0');
    await typed.stageSnapshotTransaction(db,sourcePg);await actual(sourcePg,'keryx_source',c);await commit(sourcePg,'typed-staging');
-   stage='public-cells';await targetPg.query('BEGIN ISOLATION LEVEL REPEATABLE READ');active=targetPg;await lockTarget(targetPg,c);await target(targetPg,c,true);await publicCells.materializeNativeSnapshotTransaction(db,targetPg,sourcePg,c.referenceWire,mode);await target(targetPg,c,false);await commit(targetPg,'public-cells');
-   stage='private-projections';await targetPg.query('BEGIN ISOLATION LEVEL REPEATABLE READ');active=targetPg;await lockTarget(targetPg,c);await target(targetPg,c,false);const copied=await privateCells.materializeNativeProjectionsTransaction(db,targetPg,mode);assert.equal(copied.domains.length,12);await target(targetPg,c,false);await commit(targetPg,'private-projections');
+   stage='public-cells';await beginLocked(targetPg,'BEGIN ISOLATION LEVEL REPEATABLE READ',()=>lockTarget(targetPg,c!));await target(targetPg,c,true);await publicCells.materializeNativeSnapshotTransaction(db,targetPg,sourcePg,c.referenceWire,mode);await target(targetPg,c,false);await commit(targetPg,'public-cells');
+   stage='private-projections';await beginLocked(targetPg,'BEGIN ISOLATION LEVEL REPEATABLE READ',()=>lockTarget(targetPg,c!));await target(targetPg,c,false);const copied=await privateCells.materializeNativeProjectionsTransaction(db,targetPg,mode);assert.equal(copied.domains.length,12);await target(targetPg,c,false);await commit(targetPg,'private-projections');
   }
   // Close producer connections before using independent owner sessions. All
   // cleanup is retried only as disposal; no SQL write is ever repeated.
   await stopKeepalive();for(const pg of clients)await pg.end();clients.length=0;
-  stage='independent-census';const readSource=await make('keryx_source'),readTarget=await make('keryx_mainnet');startKeepalive();await readSource.query('BEGIN');active=readSource;
-  await readSource.query('LOCK TABLE keryx_migration.snapshot_manifest,keryx_migration.snapshot_tables,keryx_migration.snapshot_rows IN SHARE MODE');
+  stage='independent-census';const readSource=await make('keryx_source'),readTarget=await make('keryx_mainnet');startKeepalive();
+  await beginLocked(readSource,'BEGIN',()=>readSource.query('LOCK TABLE keryx_migration.snapshot_manifest,keryx_migration.snapshot_tables,keryx_migration.snapshot_rows IN SHARE MODE'));
   const staging=await typed.compareStagedSnapshotTransaction(db,readSource);assert.equal(staging.tables.length,94);
-  await target(readTarget,c,false);await readTarget.query('BEGIN ISOLATION LEVEL REPEATABLE READ');active=readTarget;await lockTarget(readTarget,c);await target(readTarget,c,false);
+  await target(readTarget,c,false);await beginLocked(readTarget,'BEGIN ISOLATION LEVEL REPEATABLE READ',()=>lockTarget(readTarget,c!));await target(readTarget,c,false);
   const publicCensus=await publicCells.compareNativeSnapshotTransaction(db,readTarget,readSource,c.referenceWire,mode),projections=await privateCells.compareNativeProjectionsTransaction(db,readTarget,mode);assert.equal(projections.domains.length,12);await target(readTarget,c,false);
   controls(c);await stopKeepalive();await readTarget.query('ROLLBACK');active=readSource;await readSource.query('ROLLBACK');active=undefined;assert.equal(await fileSha(paths.snapshot,source),sourceHash);
   const heldBaseline={format:'keryx-native-held-data-baseline-metadata-v1',profileMode:mode,catalogSha256:profile.catalogSha256,targetState:'held',sequence:0,snapshotSha256:sourceHash,schemaSha256:typedCensus.schemaSha256,identityDigest,dataDigest:typedCensus.dataDigest};
