@@ -30,6 +30,7 @@ import {createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown} from '../
 import {composePostgresUserDomainTransport} from '../../lib/db/postgres/user-domain-transport';
 import {PRIVACY_CALLS} from '../../lib/db/postgres/privacy-calls';
 import {startCommitAckLossProxy} from './commit-ack-loss.mts';
+import {sqliteOwnershipHistoryProjection} from './ownership-history-projection.mts';
 
 export async function qualifyPublication(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string}){
  const tempRoot=process.platform==='linux'?resolve('.local/tmp/postgres-mainnet-migration-20261111/os-tmp'):resolve('D:/repos/server/Github/Hackathon/keryx/.local/tmp/postgres-mainnet-migration-20261111/agents/managed_policy');mkdirSync(tempRoot,{recursive:true});
@@ -58,6 +59,7 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
    const packet=capturePublicationSourcePacket(run,{visibility}),sha=createHash('sha256').update(Buffer.from(JSON.parse(packet.wire).originalHex,'hex')).digest('hex'),started=performance.now(),result=await channel.call('publicationSave',[packet.wire]);writeTimes.push(performance.now()-started);
    assert.deepEqual(result,{id:run.id,originalSha256:sha});writeSqliteQueryRun(source!.db,run,true,{...creation,publication:{visibility}});ids.push(run.id);
    assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(run.id)};`),db.prepare('SELECT data FROM query_runs WHERE id=?').get(run.id)!.data);vectors++;
+   const questionHex=sqliteOwnershipHistoryProjection(db,run.id).questionHex,nativeQuestion=JSON.parse(input.ownerSql(`SELECT jsonb_build_object('hex',encode(question_search,'hex'))::text FROM keryx_storage.run_ownership_projection WHERE run_id=${q(run.id)};`));assert.equal(nativeQuestion.hex,questionHex);vectors++;
    return packet;
   };
   // Exercise the shared lexer itself, including string boundaries at4096 bytes,
@@ -69,6 +71,16 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
   }
   const rawRoot='{"\\u0063laim":{"id":"first"},"evidence":"\\u0000\\ud800","claim":{"id":"last"},"\\ud800":1,"":2}',root=JSON.parse(input.ownerSql(`SELECT keryx_storage.source_scalar_text(convert_from(decode(${q(Buffer.from(rawRoot).toString('hex'))},'hex'),'UTF8'),'tokens')::text;`));
   assert.equal(root.claim,'{"id":"last"}');assert.equal(root.evidence,'"\\u0000\\ud800"');assert.deepEqual(root._rootKeys,['636c61696d','65766964656e6365','636c61696d','eda080','']);vectors++;
+  // Separate Source JSON1 selector/conversion. JS scalar/token consumers keep
+  // exact keys and last-member semantics, including hosted additions.
+  const json1Tokens=['null','true','false','0','-0','1.0','-0.0','1e0','0.30000000000000004','3.141592653589793','1.0000000000000002','49.47','1e20','9223372036854775807','9223372036854775808','-9223372036854775808','-9223372036854775809','5e-324','2.2250738585072014e-308','1.7976931348623157e308','1e309','1e-999','3500000000000000.2500001',JSON.stringify('NUL\0lone\ud800pair\ud83d\udca1\ufeff\u2028\u2029'),'{ "x": "\\ud800", "n":1e0, "nul":"\\u0000" }','[ 1, true, "\\u0061", null ]'];
+  for(const token of json1Tokens){
+   const wire='{"question\\u0000suffix":'+token+',"evidence":"\\u0000\\ud800","question":"JS exact question","transaction":"preserved","submission":{"request":1}}',sqlWire=`convert_from(decode(${q(Buffer.from(wire).toString('hex'))},'hex'),'UTF8')`,actual=JSON.parse(input.ownerSql(`SELECT keryx_storage.source_scalar_text(${sqlWire},'json1-question')::text;`)),expected=db.prepare("SELECT CASE WHEN json_extract(?,'$.question') IS NULL THEN NULL ELSE lower(hex(CAST(json_extract(?,'$.question') AS BLOB))) END h").get(wire,wire)!;
+   assert.equal(actual.hex,expected.h,'Source JSON1 question token '+token);const js=JSON.parse(input.ownerSql(`SELECT keryx_storage.source_scalar_text(${sqlWire},'tokens')::text;`));assert.equal(js.question,'"JS exact question"');assert.equal(js.transaction,'"preserved"');assert.equal(js.submission,'{"request":1}');vectors++;
+  }
+  for(const wire of ['{"question":"first","question\\u0000suffix":"later"}','{"\\u0071uestion":"first","question":"last"}','{"question\\u0000a":"first","question\\u0000b":"second","question":"last"}','{"\\ud800":1,"evidence":"\\u0000","question":"normal"}','{"unknown":1}']){
+   const actual=JSON.parse(input.ownerSql(`SELECT keryx_storage.source_scalar_text(convert_from(decode(${q(Buffer.from(wire).toString('hex'))},'hex'),'UTF8'),'json1-question')::text;`)),expected=db.prepare("SELECT CASE WHEN json_extract(?,'$.question') IS NULL THEN NULL ELSE lower(hex(CAST(json_extract(?,'$.question') AS BLOB))) END h").get(wire,wire)!;assert.equal(actual.hex,expected.h);vectors++;
+  }
   const cases:QueryRun[]=[base('plain'),{...base('nul'),question:'nul before\0after-nul',answer:'PAID_BODY_NUL\0\ud800',retained:{wire:'\0\udc00'}} as unknown as QueryRun,
    {...base('high'),question:'high \ud800 after-high',answer:'PAID_BODY_HIGH\udc00'}, {...base('low'),question:'low \udc00 after-low'},
    {...base('replacement'),question:'literal \ufffd'}, {...base('engine'),engine:'engine\0\ud800'},
@@ -83,6 +95,11 @@ export async function qualifyPublication(input:{options:PostgresConnectionOption
    for(const field of fields)assert.equal(field==='answer'?stored.answer:stored.cells[field].boundHex,observed[field]===null?null:Buffer.from(observed[field] as string).toString('hex'));
    assert(!Object.hasOwn(stored.cells,'answer'));assert.equal(stored.identity,input.ownerSql('SELECT identity_digest FROM keryx_storage.identity;'));vectors++;
   }
+  const questionAliases=[null,'Alias needle only','NUL\0lone\ud800',.30000000000000004,Math.PI,Number.MIN_VALUE,Number.MAX_VALUE,true,false,{nested:'\0\ud800',number:.30000000000000004},['string',2,false]],aliasRuns:QueryRun[]=[];
+  for(const [index,value] of questionAliases.entries()){const run={'question\0suffix':value,...base('json1-'+index)} as QueryRun;aliasRuns.push(run);await protocolSave(run);assert.equal(Object.keys(JSON.parse(String(db.prepare('SELECT data FROM query_runs WHERE id=?').get(run.id)!.data)))[0],'question\0suffix');}
+  await same(()=>native.runOwnershipHistory.list(owner,{binding,filters:{search:'json1-'},take:51}),()=>ownership.list(owner,{binding,filters:{search:'json1-'},take:51}));
+  await same(()=>native.runOwnershipHistory.list(owner,{binding,filters:{search:'Alias needle'},take:51}),()=>ownership.list(owner,{binding,filters:{search:'Alias needle'},take:51}));
+  const aliasErase=aliasRuns[1],aliasEraseRequest={revision:0,requestId:randomUUID()};await same(()=>native.runPrivacy.erase(aliasErase.id,actor,aliasEraseRequest),()=>privacy.erase(aliasErase.id,actor,aliasEraseRequest));assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(aliasErase.id)};`),db.prepare('SELECT data FROM query_runs WHERE id=?').get(aliasErase.id)!.data);assert(!Object.hasOwn(JSON.parse(String(db.prepare('SELECT data FROM query_runs WHERE id=?').get(aliasErase.id)!.data)),'question\0suffix'));vectors++;
   for(const search of ['after-nul','after-high','after-low','\ufffd','not-present'])await same(()=>native.personalHistory.list(owner,{filters:{search},take:51}),()=>history.list(owner,{filters:{search},take:51}));
   await same(()=>native.runOwnershipHistory.list(owner,{binding,filters:{search:'\ufffd'},take:51}),()=>ownership.list(owner,{binding,filters:{search:'\ufffd'},take:51}));
   await same(()=>native.runPrivacy.sourceHistory!(),()=>privacy.sourceHistory!());await same(()=>native.runPrivacy.learningPage!({take:32}),()=>privacy.learningPage!({take:32}));await same(()=>native.runPrivacy.archivePage!({take:32}),()=>privacy.archivePage!({take:32}));

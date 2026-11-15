@@ -217,7 +217,7 @@ BEGIN
  RETURN NULL;
 END;$$;
 CREATE FUNCTION keryx_storage.install_run_projection(selected_id text,packet jsonb,include_erasure boolean) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE h jsonb;o jsonb;p jsonb;tokens jsonb;question_scalar jsonb;answer_scalar jsonb;original_wire text;
+DECLARE h jsonb;o jsonb;p jsonb;tokens jsonb;question_scalar jsonb;answer_scalar jsonb;question_search_hex text;original_wire text;
 BEGIN
  IF packet IS NULL OR jsonb_typeof(packet)<>'object' OR octet_length(packet::text)>16777216 THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
  IF packet-ARRAY['history','ownership','privacy']<>'{}'::jsonb THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
@@ -227,6 +227,7 @@ BEGIN
  IF original_wire IS NULL OR encode(sha256(convert_to(original_wire,'UTF8')),'hex') IS DISTINCT FROM p->>'sha256' THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
  tokens:=keryx_storage.source_scalar_text(original_wire,'tokens');
  question_scalar:=keryx_storage.source_scalar_text(tokens->>'question','scalar');answer_scalar:=keryx_storage.source_scalar_text(tokens->>'answer','scalar');
+ question_search_hex:=keryx_storage.source_scalar_text(original_wire,'json1-question')->>'hex';
  -- Body scalar cells are derived here from the already installed exact original.
  -- No caller omission/flag can claim a validated body, and held observed-column
  -- mismatches use their distinct direct SOURCE producer, never this fresh path.
@@ -237,7 +238,7 @@ BEGIN
  INSERT INTO keryx_storage.run_history_projection(run_id,original_sha256,original_created_at,recorded_owner,owner_invalid,funded,provenance,anonymous_claim_eligible)
   VALUES(selected_id,h->>'sha256',h->>'originalCreatedAt',h->>'recordedOwner',(h->>'ownerInvalid')::boolean,(h->>'funded')::boolean,nullif(h->'provenance','null'::jsonb),(h->>'anonymousClaimEligible')::boolean);
  INSERT INTO keryx_storage.run_ownership_projection(run_id,original_sha256,question_search,history_eligible,recorded_valid,claimed_valid,summary)
-  VALUES(selected_id,o->>'sha256',decode(question_scalar->>'jsonHex','hex'),(o->>'historyEligible')::boolean,(o->>'recordedValid')::boolean,(o->>'claimedValid')::boolean,nullif(o->'summary','null'::jsonb));
+  VALUES(selected_id,o->>'sha256',decode(question_search_hex,'hex'),(o->>'historyEligible')::boolean,(o->>'recordedValid')::boolean,(o->>'claimedValid')::boolean,nullif(o->'summary','null'::jsonb));
  INSERT INTO keryx_storage.run_privacy_projection(run_id,original_sha256,data_bytes,original_valid,scalar_identity_sha256,scalar_cells,answer_scalar,erase_wire,original_fulfillment,question_fields,history_fields,history_references,learning_fields,archive_wire,erase_projection,profile_fields,payment_offline,funding_offline,funding_treasury)
   VALUES(selected_id,p->>'sha256',(p->>'dataBytes')::integer,(p->>'valid')::boolean,(SELECT identity_digest FROM keryx_storage.identity WHERE singleton),p->'scalarCells',decode(answer_scalar->>'sourceHex','hex'),CASE WHEN include_erasure THEN p->>'eraseWire' END,(p->>'originalFulfillment')::boolean,p->>'questionFields',p->>'historyFields',p->'historyReferences',p->>'learningFields',p->>'archiveWire',CASE WHEN include_erasure THEN nullif(p->'eraseProjection','null'::jsonb) END,p->'publicProfile'->>'profileFields',(p->'publicProfile'->>'paymentOffline')::boolean,(p->'publicProfile'->>'fundingOffline')::boolean,(p->'publicProfile'->>'fundingTreasury')::boolean);
 END;$$;

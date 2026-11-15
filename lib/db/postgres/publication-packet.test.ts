@@ -1,0 +1,26 @@
+import {DatabaseSync} from 'node:sqlite';
+import {describe,it,expect} from 'vitest';
+import {installSqliteApplicationSchema} from '../sqlite-application-schema';
+import {writeSqliteQueryRun} from '../query-run-record';
+import {capturePostgresPublication,capturePublicationSourcePacket} from './publication-packet';
+import type {QueryRun} from '../../types';
+
+const base=():QueryRun=>({id:'synthetic-json1-question',createdAt:'2026-11-15T00:00:00.000Z',question:'Actual visible question',answer:'SYNTHETIC_PAID_BODY',engine:'heuristic',budget:1,totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[],paymentMode:'offline'});
+describe('valid Source unknown question aliases',()=>{
+ it.each([null,'Alias needle','NUL\0lone\ud800','\ufeffBOM\u2028\u2029',true,false,0,1.0000000000000002,.30000000000000004,Number.MIN_VALUE,Number.MAX_VALUE,{nested:'\0\ud800',number:.30000000000000004},['x',true,null]])('preserves Source original/scalar bytes for alias value %s',value=>{
+  const run={'question\0suffix':value,...base()} as QueryRun,db=new DatabaseSync(':memory:');
+  try{
+   installSqliteApplicationSchema(db);writeSqliteQueryRun(db,run,false);
+   const packet=JSON.parse(capturePostgresPublication(run).wire),pure=JSON.parse(capturePublicationSourcePacket(run).wire),row=db.prepare("SELECT question,data,lower(hex(CAST(json_extract(data,'$.question') AS BLOB))) question_hex,json_extract(data,'$.question') IS NULL question_null FROM query_runs").get()!;
+   expect(Object.keys(JSON.parse(row.data as string))[0]).toBe('question\0suffix');expect(row.question).toBe(run.question);
+   expect(Buffer.from(packet.originalHex,'hex').toString()).toBe(row.data);expect(packet).toEqual(pure);
+   expect(packet.ownership).not.toHaveProperty('questionHex');expect(packet.privacy.scalarCells).not.toHaveProperty('question');
+   expect(packet.privacy.questionFields).toContain('Actual visible question');expect(packet.privacy.eraseWire).not.toContain('question\\u0000suffix');
+   if(row.question_null===1)expect(row.question_hex).toBe('');else expect(row.question_hex).not.toBe(Buffer.from(run.question).toString('hex'));
+  }finally{db.close();}
+ });
+ it('keeps the mapped scalar acceptance gate while allowing unrelated valid raw keys',()=>{
+  expect(()=>capturePostgresPublication({'question\0suffix':'Alias',...base()} as QueryRun)).not.toThrow();
+  expect(()=>capturePostgresPublication({...base(),question:'mapped\0scalar'})).toThrow();
+ });
+});

@@ -1,4 +1,5 @@
 import { describe,it,expect } from 'vitest';
+import {readFileSync} from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { installSqliteApplicationSchema } from '../../lib/db/sqlite-application-schema';
 import { writeSqliteQueryRun } from '../../lib/db/query-run-record';
@@ -11,6 +12,14 @@ import {publicationScalarCells,decodePublicationOriginalRead} from '../../lib/db
 import type { QueryRun } from '../../lib/types';
 
 const owner='0x'+'ab'.repeat(20);
+const scalarSource=readFileSync(new URL('../../ops/keryx-postgres/source-scalar-text.sql',import.meta.url),'utf8').replaceAll('\r\n','\n');
+it('keeps the complete shared lexer bounded and the old JS/hosted token contracts distinct',()=>{
+ expect(Buffer.byteLength(scalarSource)).toBeLessThanOrEqual(32768);
+ expect(scalarSource).toContain("mode='json1-question'");expect(scalarSource).toContain("RETURN keryx_storage.source_scalar_text(value_wire,'json1-value')");
+ expect(scalarSource).toContain("WHEN '7472616e73616374696f6e' THEN 'transaction'");expect(scalarSource).toContain("WHEN '7375626d697373696f6e' THEN 'submission'");
+ expect(scalarSource).toContain("RETURN result||jsonb_build_object('_rootKeys'");
+ const privacy=readFileSync(new URL('../../ops/keryx-postgres/privacy.sql',import.meta.url),'utf8');expect(privacy).toContain("source_scalar_text(original_wire,'json1-question')");expect(privacy).toContain("source_scalar_text(tokens->>'question','scalar')");expect(privacy).toContain("decode(question_search_hex,'hex')");
+});
 const base=():QueryRun=>({id:'synthetic-publication-packet',createdAt:'2026-11-13T00:00:00.000Z',question:'Question "unicode đ"',answer:'Answer',engine:'heuristic',budget:1,totalSpent:0.1,totalToCreators:0.05,subClaims:[],decisions:[],citations:[],trace:[],paymentMode:'offline'});
 function compare(run:QueryRun){
  const db=new DatabaseSync(':memory:');try{

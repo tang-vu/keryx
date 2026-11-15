@@ -9,11 +9,13 @@ DECLARE raw bytea;scan bytea;scan_size integer;quote_at integer;slashes integer;
  result jsonb:='{}'::jsonb;source_bytes bytea:=''::bytea;json_bytes bytea:=''::bytea;
  source_chunk bytea:=''::bytea;json_chunk bytea:=''::bytea;source_parts bytea[]:=ARRAY[]::bytea[];json_parts bytea[]:=ARRAY[]::bytea[];
  wire_parts text[]:=ARRAY[]::text[];wire_chunk text:='';encoded bytea;source_encoded bytea;json_encoded bytea;scalar_wire text;
+ value_kind text;number_parts text[];whole text;fraction text;exponent_wire text;negative boolean;coefficient numeric;decimal_power integer;digit integer;shift integer;binary_power integer;binary_exponent integer;float_value double precision;candidate double precision;
+ power_index integer;power_binary integer;power_shift integer;power_high numeric;high_product numeric;decimal_digits text;decimal_point integer;round_digits integer;cut_at integer;rounded numeric;rendered text;compact_parts text[]:=ARRAY[]::text[];compact_chunk text:='';prefix_length integer;
 BEGIN
- IF wire IS NULL OR mode IS NULL OR mode NOT IN('tokens','scalar') OR octet_length(wire)>4000000
+ IF wire IS NULL OR mode IS NULL OR mode NOT IN('tokens','scalar','json1-question','json1-value') OR octet_length(wire)>4000000
  THEN RAISE EXCEPTION 'Source scalar token unavailable';END IF;
  raw:=convert_to(wire,'UTF8');size:=octet_length(raw);
- IF mode='tokens' THEN
+ IF mode IN('tokens','json1-question') THEN
   -- Casting validates JSON syntax without decoding any of its string values.
   IF json_typeof(wire::json) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Source scalar root unavailable';END IF;
   pos:=0;WHILE pos<size AND get_byte(raw,pos) IN(9,10,13,32) LOOP pos:=pos+1;END LOOP;
@@ -61,6 +63,16 @@ BEGIN
    -- Unicode keys remain opaque hex; no PG getter or UTF-8 conversion touches
    -- them. Known escaped ASCII keys select exactly the same raw value token.
    key_hex:=keryx_storage.source_scalar_text(key_wire,'scalar')->>'jsonHex';
+   IF mode='json1-question' THEN
+    -- JSON1 compares decoded labels up to their first NUL and takes the FIRST
+    -- match. This is deliberately separate from JS exact/last-key tokens.
+    encoded:=decode(key_hex,'hex');prefix_length:=position(decode('00','hex') IN encoded);
+    IF prefix_length>0 THEN encoded:=substring(encoded FROM 1 FOR prefix_length-1);END IF;
+    IF encode(encoded,'hex')='7175657374696f6e' THEN
+     value_wire:=btrim(convert_from(substring(raw FROM start_at+1 FOR pos-start_at),'UTF8'),E' \t\r\n');
+     RETURN keryx_storage.source_scalar_text(value_wire,'json1-value');
+    END IF;
+   ELSE
    root_key_chunk:=root_key_chunk||CASE WHEN root_key_count=0 THEN '' ELSE ',' END||to_json(key_hex)::text;root_key_count:=root_key_count+1;
    IF octet_length(root_key_chunk)>=4096 THEN root_key_parts:=array_append(root_key_parts,root_key_chunk);root_key_chunk:='';END IF;
    key_wire:=CASE key_hex
@@ -203,11 +215,110 @@ BEGIN
     -- every decoded key in source order for callers with a strict allowlist.
     result:=result||jsonb_build_object(key_wire,value_wire);
    END IF;
+   END IF;
    IF get_byte(raw,pos)=125 THEN EXIT;END IF;
    IF get_byte(raw,pos)<>44 THEN RAISE EXCEPTION 'Source scalar member unavailable';END IF;pos:=pos+1;
   END LOOP;
+  IF mode='json1-question' THEN RETURN jsonb_build_object('hex',NULL);END IF;
   root_key_parts:=array_append(root_key_parts,root_key_chunk);
   RETURN result||jsonb_build_object('_rootKeys',('['||array_to_string(root_key_parts,'')||']')::jsonb);
+ END IF;
+ IF mode='json1-value' THEN
+  -- CAST(json_extract(original,'$.question') AS BLOB), SQLite3.53.4 default
+  -- connection. Inspect only the selected token, never a PG JSON getter.
+  wire:=btrim(wire,E' \t\r\n');raw:=convert_to(wire,'UTF8');size:=octet_length(raw);value_kind:=json_typeof(wire::json);
+  IF value_kind='null' THEN RETURN jsonb_build_object('hex',NULL);
+  ELSIF value_kind='string' THEN RETURN jsonb_build_object('hex',keryx_storage.source_scalar_text(wire,'scalar')->>'jsonHex');
+  ELSIF value_kind='boolean' THEN RETURN jsonb_build_object('hex',CASE WHEN wire='true' THEN '31' ELSE '30' END);
+  ELSIF value_kind IN('array','object') THEN
+   -- JSON1 compacts containers but retains string escapes and numeric tokens.
+   -- Quote scanning stays chunked, including multi-megabyte paid extensions.
+   pos:=0;
+   WHILE pos<size LOOP
+    code:=get_byte(raw,pos);
+    IF code=34 THEN
+     start_at:=pos;pos:=pos+1;
+     WHILE pos<size LOOP
+      scan:=substring(raw FROM pos+1 FOR 4096);scan_size:=octet_length(scan);quote_at:=position(decode('22','hex') IN scan);
+      IF quote_at>0 THEN scan:=substring(scan FROM 1 FOR quote_at-1);END IF;
+      slashes:=CASE WHEN octet_length(scan)=0 THEN 0 WHEN get_byte(scan,octet_length(scan)-1)=92 THEN (octet_length(scan)*2-length(regexp_replace(encode(scan,'hex'),'(5c)+$','')))/2 ELSE 0 END;
+      IF quote_at>0 AND slashes%2=0 THEN pos:=pos+quote_at-1;EXIT;
+      ELSIF quote_at>0 THEN pos:=pos+quote_at;
+      ELSE pos:=pos+scan_size-slashes%2;IF scan_size=1 AND slashes%2=1 THEN pos:=pos+2;END IF;END IF;
+     END LOOP;
+     compact_parts:=array_append(compact_parts,compact_chunk||convert_from(substring(raw FROM start_at+1 FOR pos-start_at+1),'UTF8'));compact_chunk:='';
+    ELSIF code NOT IN(9,10,13,32) THEN compact_chunk:=compact_chunk||chr(code);
+    END IF;
+    IF octet_length(compact_chunk)>=4096 THEN compact_parts:=array_append(compact_parts,compact_chunk);compact_chunk:='';END IF;pos:=pos+1;
+   END LOOP;
+   RETURN jsonb_build_object('hex',encode(convert_to(array_to_string(array_append(compact_parts,compact_chunk),''),'UTF8'),'hex'));
+  ELSIF value_kind<>'number' THEN RAISE EXCEPTION 'Source JSON1 value unavailable';END IF;
+
+  IF wire ~ '^-?[0-9]+$' AND length(ltrim(wire,'-'))<=19 THEN
+   coefficient:=wire::numeric;
+   IF coefficient BETWEEN -9223372036854775808 AND 9223372036854775807 THEN
+    RETURN jsonb_build_object('hex',encode(convert_to((coefficient::bigint)::text,'UTF8'),'hex'));
+   END IF;
+  END IF;
+  -- SQLite AtoF retains its bounded unsigned64 mantissa before converting to
+  -- binary64. Do not parse an arbitrarily precise decimal as a PG numeric.
+  number_parts:=regexp_match(wire,'^-?([0-9]+)(?:\.([0-9]+))?(?:[eE]([+-]?[0-9]+))?$');
+  IF number_parts IS NULL THEN RAISE EXCEPTION 'Source JSON1 number unavailable';END IF;
+  whole:=number_parts[1];fraction:=coalesce(number_parts[2],'');negative:=left(wire,1)='-';coefficient:=0;decimal_power:=0;
+  FOR pos IN 1..length(whole) LOOP
+   coefficient:=coefficient*10+ascii(substring(whole FROM pos FOR 1))-48;
+   IF coefficient>=1844674407370955160 THEN decimal_power:=length(whole)-pos;EXIT;END IF;
+  END LOOP;
+  IF coefficient=0 THEN shift:=length(fraction)-length(ltrim(fraction,'0'));fraction:=substring(fraction FROM shift+1);decimal_power:=decimal_power-shift;END IF;
+  IF length(fraction)>0 THEN FOR pos IN 1..length(fraction) LOOP
+   EXIT WHEN coefficient>=1844674407370955160;
+   coefficient:=coefficient*10+ascii(substring(fraction FROM pos FOR 1))-48;decimal_power:=decimal_power-1;
+  END LOOP;END IF;
+  exponent_wire:=ltrim(coalesce(number_parts[3],'0'),'+-');exponent_wire:=ltrim(exponent_wire,'0');
+  binary_exponent:=CASE WHEN exponent_wire='' THEN 0 WHEN length(exponent_wire)>5 THEN 10000 ELSE exponent_wire::integer END;
+  decimal_power:=decimal_power+CASE WHEN left(coalesce(number_parts[3],''),1)='-' THEN -binary_exponent ELSE binary_exponent END;
+  BEGIN float_value:=(coefficient::text||'e'||decimal_power::text)::double precision;
+  EXCEPTION WHEN numeric_value_out_of_range THEN float_value:=CASE WHEN decimal_power<0 THEN 0::double precision ELSE 'Infinity'::double precision END;END;
+  IF float_value='Infinity'::double precision THEN RETURN jsonb_build_object('hex',encode(convert_to(CASE WHEN negative THEN '-Inf' ELSE 'Inf' END,'UTF8'),'hex'));
+  ELSIF float_value=0 THEN RETURN jsonb_build_object('hex','302e30');END IF;
+
+  -- SQLite3.53.4 util.c FpDecode/printf %!.17g. Derive the normalized 64-bit
+  -- power coefficient arithmetically instead of embedding platform tables.
+  -- Primary reference: sqlite/sqlite version-3.53.4 src/{util,printf,vdbemem}.c.
+  encoded:=float8send(float_value);binary_exponent:=(get_byte(encoded,0)&127)*16+(get_byte(encoded,1)>>4);coefficient:=get_byte(encoded,1)&15;
+  FOR pos IN 2..7 LOOP coefficient:=coefficient*256+get_byte(encoded,pos);END LOOP;
+  IF binary_exponent=0 THEN shift:=0;WHILE coefficient<9223372036854775808 LOOP coefficient:=coefficient*2;shift:=shift+1;END LOOP;binary_power:=-1074-shift;
+  ELSE coefficient:=(coefficient+4503599627370496)*2048;binary_power:=binary_exponent-1086;END IF;
+  power_index:=17-floor((binary_power+63)*78913::numeric/262144)::integer;power_binary:=floor(power_index*108853::numeric/32768)::integer;power_shift:=63-power_binary;
+  IF power_index>=0 THEN
+   IF power_shift>=0 THEN power_high:=power(10::numeric,power_index)*power(2::numeric,power_shift);
+   ELSE power_high:=div(power(10::numeric,power_index),power(2::numeric,-power_shift));END IF;
+  ELSE power_high:=div(power(2::numeric,power_shift),power(10::numeric,-power_index));END IF;
+  high_product:=div(coefficient*power_high,18446744073709551616);shift:=-(binary_power+power_binary+2);
+  decimal_digits:=div(div(high_product,power(2::numeric,shift))+1,2)::text;decimal_point:=length(decimal_digits)-power_index;round_digits:=17;
+  IF length(decimal_digits)>17 THEN
+   IF substring(decimal_digits FROM 15 FOR 2)='99' THEN
+    cut_at:=14;WHILE cut_at>0 AND substring(decimal_digits FROM cut_at FOR 1)='9' LOOP cut_at:=cut_at-1;END LOOP;
+    rounded:=CASE WHEN cut_at=0 THEN 1 ELSE substring(decimal_digits FROM 1 FOR cut_at)::numeric+1 END;
+    BEGIN candidate:=(rounded::text||'e'||(decimal_point-cut_at)::text)::double precision;
+    EXCEPTION WHEN numeric_value_out_of_range THEN candidate:=CASE WHEN decimal_point-cut_at<0 THEN 0::double precision ELSE 'Infinity'::double precision END;END;
+    IF candidate=float_value THEN round_digits:=cut_at+1;END IF;
+   ELSIF decimal_point>=length(decimal_digits) OR substring(decimal_digits FROM 14 FOR 3)='000' THEN
+    cut_at:=13;WHILE cut_at>0 AND substring(decimal_digits FROM cut_at FOR 1)='0' LOOP cut_at:=cut_at-1;END LOOP;
+    BEGIN candidate:=(substring(decimal_digits FROM 1 FOR cut_at)||'e'||(decimal_point-cut_at)::text)::double precision;
+    EXCEPTION WHEN numeric_value_out_of_range THEN candidate:=CASE WHEN decimal_point-cut_at<0 THEN 0::double precision ELSE 'Infinity'::double precision END;END;
+    IF candidate=float_value THEN round_digits:=cut_at+1;END IF;
+   END IF;
+   rounded:=substring(decimal_digits FROM 1 FOR round_digits)::numeric+CASE WHEN substring(decimal_digits FROM round_digits+1 FOR 1)>='5' THEN 1 ELSE 0 END;
+   decimal_digits:=rounded::text;IF length(decimal_digits)>round_digits THEN decimal_point:=decimal_point+1;END IF;
+  END IF;
+  decimal_digits:=rtrim(decimal_digits,'0');binary_exponent:=decimal_point-1;
+  IF binary_exponent< -4 OR binary_exponent>16 THEN
+   rendered:=left(decimal_digits,1)||'.'||coalesce(nullif(substring(decimal_digits FROM 2),''),'0')||'e'||CASE WHEN binary_exponent<0 THEN '-' ELSE '+' END||CASE WHEN abs(binary_exponent)<10 THEN '0' ELSE '' END||abs(binary_exponent)::text;
+  ELSIF decimal_point<=0 THEN rendered:='0.'||repeat('0',-decimal_point)||decimal_digits;
+  ELSIF decimal_point>=length(decimal_digits) THEN rendered:=decimal_digits||repeat('0',decimal_point-length(decimal_digits))||'.0';
+  ELSE rendered:=substring(decimal_digits FROM 1 FOR decimal_point)||'.'||substring(decimal_digits FROM decimal_point+1);END IF;
+  RETURN jsonb_build_object('hex',encode(convert_to(CASE WHEN negative THEN '-' ELSE '' END||rendered,'UTF8'),'hex'));
  END IF;
  IF json_typeof(wire::json) IS DISTINCT FROM 'string' OR size<2 OR get_byte(raw,0)<>34 OR get_byte(raw,size-1)<>34
  THEN RAISE EXCEPTION 'Source scalar string unavailable';END IF;
