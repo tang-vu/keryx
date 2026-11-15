@@ -1,8 +1,9 @@
 /** Real helper / mechanical driver controls only: no PG or runtime authority. */
 import type { Client } from 'pg';
+import { EventEmitter } from 'node:events';
 import { afterEach,expect,it,vi } from 'vitest';
 import { createOwnerSessionHeartbeat,OwnerSessionHeartbeatUnavailable } from './owner-session-heartbeat.mts';
-const session=(query:()=>Promise<unknown>)=>({query} as unknown as Client);
+const session=(query:()=>Promise<unknown>)=>Object.assign(new EventEmitter(),{query}) as unknown as Client;
 const gate=()=>{let release!:()=>void;const promise=new Promise<void>(done=>{release=done;});return {promise,release};};
 afterEach(()=>vi.useRealTimers());
 
@@ -25,6 +26,19 @@ it('captures clients and methods once and refuses an uncaptured client or reuse 
 it('retains every failed probe and the actual first PG code while draining all owned work',async()=>{
  vi.useFakeTimers();const one=Object.assign(new Error('private driver detail'),{code:'08006'}),two=Object.assign(new Error('second detail'),{code:'57P01'});const held=gate();const a=session(async()=>{await held.promise;throw one;}),b=session(async()=>{await held.promise;throw two;});const h=createOwnerSessionHeartbeat([a,b]);h.start();await vi.advanceTimersByTimeAsync(1000);let settled=false;const drain=h.stopAndDrain().catch(e=>{settled=true;return e;});await vi.advanceTimersByTimeAsync(2000);expect(settled).toBe(false);held.release();const error=await drain;expect(error).toBeInstanceOf(OwnerSessionHeartbeatUnavailable);expect(error.failures).toEqual([one,two]);expect(error.cause).toBe(one);expect(error.code).toBe('08006');expect(h.failure?.code).toBe('08006');
 });
-it('does not retry a failed client but keeps a healthy sibling alive until disposal',async()=>{
- vi.useFakeTimers();let bad=0,good=0;const a=session(async()=>{bad++;throw Object.assign(Error('refused'),{code:'08006'});}),b=session(async()=>{good++;});const h=createOwnerSessionHeartbeat([a,b]);h.start();await vi.advanceTimersByTimeAsync(3000);expect(bad).toBe(1);expect(good).toBe(3);await expect(h.stopAndDrain()).rejects.toMatchObject({code:'08006'});
+it.each(['query','event'] as const)('does not retry a failed client but keeps a healthy sibling alive until disposal (%s)',async kind=>{
+ vi.useFakeTimers();let bad=0,good=0;const a=session(async()=>{bad++;throw Object.assign(Error('refused'),{code:'08006'});}),b=session(async()=>{good++;});const h=createOwnerSessionHeartbeat([a,b]);if(kind==='event')a.emit('error',Object.assign(Error('idle'),{code:'08006'}));h.start();await vi.advanceTimersByTimeAsync(3000);expect(bad).toBe(kind==='query'?1:0);expect(good).toBe(3);await expect(h.stopAndDrain()).rejects.toMatchObject({code:'08006'});
+});
+
+it('retains an actual idle error event and removes only its own listeners after pending work drains',async()=>{
+ vi.useFakeTimers();const held=gate();const idle=Object.assign(Error('private idle backend detail'),{code:'25P03'});let good=0;const a=session(async()=>{}),b=session(async()=>{good++;await held.promise;});const original=()=>{};a.on('error',original);b.on('error',original);const h=createOwnerSessionHeartbeat([a,b]);h.start();await vi.advanceTimersByTimeAsync(1000);a.emit('error',idle);expect(h.failure?.cause).toBe(idle);expect(h.failure?.code).toBe('25P03');
+ let drained=false;const closing=h.stopAndDrain().catch(e=>{drained=true;return e;});await vi.advanceTimersByTimeAsync(2000);expect(drained).toBe(false);expect(a.listenerCount('error')).toBe(2);held.release();const failure=await closing;expect(failure.code).toBe('25P03');expect(failure.failures).toEqual([idle]);expect(good).toBe(1);expect(a.listeners('error')).toEqual([original]);expect(b.listeners('error')).toEqual([original]);
+});
+it('deduplicates the same actual error object from event and query but retains distinct errors with the same code',async()=>{
+ vi.useFakeTimers();const first=Object.assign(Error('one'),{code:'08006'}),second=Object.assign(Error('two'),{code:'08006'});let a:Client;a=session(async()=>{a.emit('error',first);throw first;});const b=session(async()=>{b.emit('error',second);throw second;});const h=createOwnerSessionHeartbeat([a,b]);h.start();await vi.advanceTimersByTimeAsync(1000);await expect(h.stopAndDrain()).rejects.toMatchObject({code:'08006',failures:[first,second]});expect(a.listenerCount('error')).toBe(0);expect(b.listenerCount('error')).toBe(0);
+});
+it('validates all captured methods before registering and cleans only successfully registered owned listeners',()=>{
+ const a=session(async()=>{}),b=session(async()=>{});const peer=()=>{};a.on('error',peer);b.on('error',peer);const malformed=Object.assign(new EventEmitter(),{query:async()=>{},removeListener:undefined}) as unknown as Client;
+ expect(()=>createOwnerSessionHeartbeat([a,malformed])).toThrow();expect(a.listeners('error')).toEqual([peer]);
+ const denied=Object.assign(Error('registration refused'),{code:'08006'});b.on=(()=>{throw denied;}) as Client['on'];expect(()=>createOwnerSessionHeartbeat([a,b])).toThrow(OwnerSessionHeartbeatUnavailable);expect(a.listeners('error')).toEqual([peer]);expect(b.listeners('error')).toEqual([peer]);
 });

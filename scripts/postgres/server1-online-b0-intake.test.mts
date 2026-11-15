@@ -105,7 +105,7 @@ vi.mock('pg',async importOriginal=>{
  return {...real,Client:class{
  database:string;ended=false;
  constructor(readonly config:Record<string,unknown>){this.database=String(config.database);model.configs.push(config);}
- on(){return this;}async connect(){if(this.config.user!=='postgres'&&model.fault!=='hba-success')throw Object.assign(new Error(model.fault==='hba-password'?'password authentication failed':`pg_hba.conf rejects connection for host "[local]", user "${this.config.user}", database "${this.database}", no encryption`),{code:'28000'});}
+ on(){return this;}removeListener(){return this;}async connect(){if(this.config.user!=='postgres'&&model.fault!=='hba-success')throw Object.assign(new Error(model.fault==='hba-password'?'password authentication failed':`pg_hba.conf rejects connection for host "[local]", user "${this.config.user}", database "${this.database}", no encryption`),{code:'28000'});}
  async query(sql:string){
   if(model.catalogTimerProbe)expect(model.catalogTimerPending).toBe(false);model.queries.push({database:this.database,sql});const row=(v:unknown)=>({rowCount:1,rows:[v]});
   if(model.delayBegin&&sql.startsWith('BEGIN')){model.targetBeginWaiting=this.database==='keryx_mainnet';await new Promise(resolve=>setTimeout(resolve,10));model.targetBeginWaiting=false;}
