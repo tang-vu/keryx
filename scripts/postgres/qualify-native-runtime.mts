@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { buildSync } from 'esbuild';
 import { sealEnrolledCacheText } from '../../lib/sources/enrolled-content-cache';
 import { validateStorageIdentity,type StorageIdentity } from '../../lib/db/storage-identity';
+import {heldQueryRunFixture} from './held-query-run-fixture.mts';
+import type {NativeRuntimeMode} from './native-runtime-child.mts';
 import { heldHistoryProjectionSql,sqliteOriginalHistoryProjection } from './run-history-projection.mts';
 import { heldOwnershipHistoryProjectionSql,sqliteOwnershipHistoryProjection } from './ownership-history-projection.mts';
 import { DatabaseSync } from 'node:sqlite';
@@ -69,7 +71,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
  const paymentOriginals=input.ownerSql("SELECT (to_regclass('keryx_storage.payment_event_originals') IS NOT NULL)::integer;")==='1';
  const created=await createTopicWatch({store:{async read(){return null;},async compareAndSwap(_key,_revision,next){watch=next;return true;}},now:()=>now,isOwnerCurrent:wallet=>wallet===owner,metadata:{async read(){throw new Error('Synthetic native factory does not run metadata checks');}}},owner,{watchId:'synthetic-runtime-watch',question:'Synthetic metadata',keywords:['term'],authors:[],venues:[],cadenceMs:60000,periodMs:86400000,maximumChecksPerPeriod:4,maximumRowsPerCheck:32,maximumDigestItems:16,expiresAtMs:now+86400000,requestedCaps:{perCheckMicroUsdc:0,perPeriodMicroUsdc:0},consent:{manualMetadata:true,emptyHeartbeat:false}});
  assert.equal(created.status,'created');assert(watch);const watchWire=canonicalJson(watch);
- const run=(mode:string)=>{
+ const run=(mode:NativeRuntimeMode)=>{
   const name='keryx-postgres-runtime-'+randomUUID();containers.add(name);
   const startedAt=performance.now();process.stderr.write(JSON.stringify({fixtureMode:mode,event:'started'})+'\n');
   try{
@@ -188,9 +190,9 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   const ownerAssignmentsPositive=run('owner-assignments');assert.equal(ownerAssignmentsPositive.ownerAssignmentsPositiveProtocol,true);
   const remainingPositive=run('remaining-ports');assert.equal(remainingPositive.remainingPositiveProtocolsAndTerminalDrain,true);
   const queryPositive=run('query-readers');assert.equal(queryPositive.genuineFiveQueryReadersAndPrivacyProjection,true);
-  for(const mode of ['held-during-provenance','credential-during-provenance','close-during-provenance','query-iterator-guards']){const observed=run(mode);assert.equal(mode==='query-iterator-guards'?observed.perYieldHeldCredentialAndCloseGuards:observed.committedProvenanceThenAuthorityChangeRefused,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);}
+  for(const mode of ['held-during-provenance','credential-during-provenance','close-during-provenance','query-iterator-guards'] as const){const observed=run(mode);assert.equal(mode==='query-iterator-guards'?observed.perYieldHeldCredentialAndCloseGuards:observed.committedProvenanceThenAuthorityChangeRefused,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);}
   assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
-  for(const mode of ['wrong-identity','wrong-source','wrong-key','missing-key','wrong-credential-role']){run(mode);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);}
+  for(const mode of ['wrong-identity','wrong-source','wrong-key','missing-key','wrong-credential-role'] as const){run(mode);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);}
   const withdrawnUsage=run('withdrawn-before-usage-body');assert.equal(withdrawnUsage.finalNativeBodyReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const withdrawnLedger=run('withdrawn-before-ledger-read');assert.equal(withdrawnLedger.finalNativeLedgerReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const withdrawnAcceptance=run('withdrawn-before-acceptance-read');assert.equal(withdrawnAcceptance.finalNativeAcceptanceReadAfterAuthorityAwait,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
@@ -202,6 +204,31 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   const withdrawnOwnerAssignments=run('withdrawn-before-owner-assignment-reply');assert.equal(withdrawnOwnerAssignments.finalNativeAssignmentReplyAfterAllRequestAwaits,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const withdrawnAccountHistory=run('withdrawn-before-account-history');assert.equal(withdrawnAccountHistory.finalNativeHistoryReadAfterAllRequestAwaits,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   const beforeCrypto=run('held-before-cache-crypto');assert.equal(beforeCrypto.asyncAuthorityBeforeCacheCrypto,true);assert(beforeCrypto.positiveControlDecryptionCalls>0);assert.equal(beforeCrypto.decipherCalls,0);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
+  // This one fresh, free synthetic Source original is introduced only after
+  // the ordinary positive modes. Never derive its physical/scalar cells from PG.
+  const terminalId='synthetic-runtime-profile-terminal',terminalOrigin='web-terminal-invalid';
+  assert.equal(input.ownerSql(`SELECT count(*) FROM public.query_runs WHERE id=${q(terminalId)};`),'0');
+  const terminalSource=openVerifiedSqliteStorage(acceptanceFile,input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(canonicalJson(inspectStorageDeploymentManifest({KERYX_STORAGE_MANIFEST:acceptanceManifestPath})),acceptanceManifest)});
+  let terminalFixture:ReturnType<typeof heldQueryRunFixture>;
+  try{
+   terminalSource.db.exec('BEGIN IMMEDIATE');
+   writeSqliteQueryRun(terminalSource.db,{...JSON.parse(original),id:terminalId,parentId:undefined,origin:terminalOrigin} as QueryRun,false);
+   terminalFixture=heldQueryRunFixture(terminalSource.db,terminalId);
+   assert.equal(terminalSource.db.prepare('SELECT origin FROM query_runs WHERE id=?').get(terminalId)?.origin,terminalOrigin);
+   terminalSource.db.exec('COMMIT');
+  }finally{terminalSource.close();}
+  let terminalRetirement:Record<string,unknown>;
+  try{
+   pg(terminalFixture.physicalSql+terminalFixture.scalarSql);
+   terminalRetirement=run('private-profile-terminal-retirement');
+   assert.equal(terminalRetirement.nativeFacadeTerminalRetirementQualified,true);
+   assert.equal(terminalRetirement.canonicalDisposalDrainedReaders,true);
+   assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
+  }finally{
+   // Exact owned offline row only; Source original stays in its private temp DB
+   // until the existing fixture teardown. No retained original is rewritten.
+   pg(`DELETE FROM public.query_runs WHERE id=${q(terminalId)};`);
+  }
   pg(`UPDATE public.cache_items SET text=${q(seal(cacheId,{...input.identity,storageId:randomUUID()}))} WHERE source_id=${q(cacheId)};`);run('foreign-cache-identity');
   pg(`UPDATE public.cache_items SET text=${q(seal(cacheId+'-foreign',input.identity))} WHERE source_id=${q(cacheId)};`);run('foreign-cache-source');
   pg(`UPDATE public.cache_items SET text='unbound legacy plaintext' WHERE source_id=${q(cacheId)};`);run('plaintext-cache');
@@ -210,11 +237,11 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   // restoration, qualify a fresh cold factory/current reads/drain without
   // replaying every unchanged financial/history/permission assertion again.
   pg(`UPDATE public.cache_items SET text=${q(envelope)} WHERE source_id=${q(cacheId)};`);const restoredColdFactory=run('restored-cold-factory');assert.equal(restoredColdFactory.restoredAuthenticatedColdCache,true);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
-  return {vectors,image,compiledDependenciesInOwnedImage:true,genuineLinuxCompiledFactory:true,actualPrivateFilePermissions:true,sourceAndIdentityPinned:true,cacheCiphertextAuthenticated:true,cacheSourceAndIdentityBound:true,asyncAuthorityBeforeCacheCrypto:true,actualCommittedColdReadThenAuthorityHold:true,heldBeforeCrypto:beforeCrypto,finalUsageBodyAfterAuthorityAwait:withdrawnUsage,finalLedgerReadAfterAuthorityAwait:withdrawnLedger,finalAcceptanceReadAfterAuthorityAwait:withdrawnAcceptance,finalAccountReadAfterAuthorityAwait:withdrawnAccount,finalChatReadAfterAuthorityAwait:withdrawnChat,finalPublicProfileReadAfterAuthorityAwait:withdrawnPublicProfile,publicProfilesDisabled:profileOff,publicProfilesWithClaimIssuanceDisabled:issuanceOff,finalAccountHistoryAfterAllRequestAwaits:withdrawnAccountHistory,missingAndWrongKeysRefused:true,plaintextAndOversizedCacheRefused:true,validColdFactoryRestored:true,restoredColdFactory,completeSuccessProtocolRunOnce:true,positiveProtocolsSplitWithoutTimeoutChange:true,ownerAssignmentsPositive,finalOwnerAssignmentReplyAfterAllRequestAwaits:withdrawnOwnerAssignments,publicProfilesPositive,remainingPositive,actualReaderConnectionsDrained:true,noFallback:true,observation:success,selectedApplicationWriter:false,productionData:false,paidOperations:0};
+  return {vectors,image,nativeFacadeTerminalRetirement:terminalRetirement,nativeFacadeTerminalRetirementQualified:true,compiledDependenciesInOwnedImage:true,genuineLinuxCompiledFactory:true,actualPrivateFilePermissions:true,sourceAndIdentityPinned:true,cacheCiphertextAuthenticated:true,cacheSourceAndIdentityBound:true,asyncAuthorityBeforeCacheCrypto:true,actualCommittedColdReadThenAuthorityHold:true,heldBeforeCrypto:beforeCrypto,finalUsageBodyAfterAuthorityAwait:withdrawnUsage,finalLedgerReadAfterAuthorityAwait:withdrawnLedger,finalAcceptanceReadAfterAuthorityAwait:withdrawnAcceptance,finalAccountReadAfterAuthorityAwait:withdrawnAccount,finalChatReadAfterAuthorityAwait:withdrawnChat,finalPublicProfileReadAfterAuthorityAwait:withdrawnPublicProfile,publicProfilesDisabled:profileOff,publicProfilesWithClaimIssuanceDisabled:issuanceOff,finalAccountHistoryAfterAllRequestAwaits:withdrawnAccountHistory,missingAndWrongKeysRefused:true,plaintextAndOversizedCacheRefused:true,validColdFactoryRestored:true,restoredColdFactory,completeSuccessProtocolRunOnce:true,positiveProtocolsSplitWithoutTimeoutChange:true,ownerAssignmentsPositive,finalOwnerAssignmentReplyAfterAllRequestAwaits:withdrawnOwnerAssignments,publicProfilesPositive,remainingPositive,actualReaderConnectionsDrained:true,noFallback:true,observation:success,selectedApplicationWriter:false,productionData:false,paidOperations:0};
  }finally{
   for(const name of containers){try{docker(['rm','-f',name]);}catch{}}
   if(candidateImage){assert.equal(docker(['image','inspect',candidateImage,'--format','{{index .Config.Labels "keryx.native-runtime-fixture"}}']),staging);docker(['image','rm',candidateImage]);assert.equal(docker(['image','ls','-q','--filter','label=keryx.native-runtime-fixture='+staging]),'');}
-  pg(`DELETE FROM public.cache_items WHERE source_id=${q(cacheId)};DELETE FROM public.query_runs WHERE id='synthetic-runtime-run';DELETE FROM keryx_storage.topic_watch_projection WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.topic_watches WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.private_bibliographies WHERE id=${q(bibliographyId)};DELETE FROM public.web_sessions WHERE wallet=${q(owner)};`);
+  pg(`DELETE FROM public.cache_items WHERE source_id=${q(cacheId)};DELETE FROM public.query_runs WHERE id IN('synthetic-runtime-run','synthetic-runtime-profile-terminal');DELETE FROM keryx_storage.topic_watch_projection WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.topic_watches WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.private_bibliographies WHERE id=${q(bibliographyId)};DELETE FROM public.web_sessions WHERE wallet=${q(owner)};`);
   pg(`DELETE FROM public.source_items WHERE id='synthetic-runtime-flagged-item';DELETE FROM public.sources WHERE id IN('synthetic-runtime-source','synthetic-runtime-item-source');DELETE FROM public.source_meta WHERE id='0x${'a1'.repeat(32)}';DELETE FROM public.sync_state WHERE key IN(${sourceClaimKeys.length?sourceClaimKeys.map(q).join(','):"''"});`);
   // Only this fixture's one generated bundle, then its empty unique directory.
   assert.equal(realpathSync(folder).toLowerCase(),resolve(folder).toLowerCase());assert.equal(dirname(folder).toLowerCase(),resolve(fixtureRoot).toLowerCase());
