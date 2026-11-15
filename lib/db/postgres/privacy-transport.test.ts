@@ -1,4 +1,8 @@
 import { describe,it,expect,vi } from 'vitest';
+import {DatabaseSync} from 'node:sqlite';
+import {installSqliteApplicationSchema} from '../sqlite-application-schema';
+import {writeSqliteQueryRun} from '../query-run-record';
+import {RUN_PRIVACY_SQL,createSqliteRunPrivacy} from '../run-privacy-sqlite';
 import { composePostgresPrivacy } from './privacy-transport';
 import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
 const wallet='0x'+'a1'.repeat(20),binding={network:'eip155:5042' as const,origin:'https://keryx.cc'},actor={wallet,binding,sessionHash:'11'.repeat(32)},id='synthetic-private-run',requestId='12345678-1234-4234-8234-123456789abc';
@@ -11,6 +15,19 @@ describe('native privacy protocol boundary',()=>{
   f.call.mockResolvedValue({item:financial});expect(await f.privacy.settlement(id)).toEqual({...run,engine:'engine\0\ufffd',question:'',answer:''});
   f.call.mockResolvedValue({item:{...financial,answer:'PRIVATE_BODY'}});await expect(f.privacy.settlement(id)).rejects.toThrow('privacy_unavailable');
   f.call.mockResolvedValue({item:{...financial,engine:'old shadow'}});await expect(f.privacy.settlement(id)).rejects.toThrow('privacy_unavailable');
+ });
+ it.each(['\ufeff','\ufeffengine\0\ud800','\ufeff\ufeffengine'])('matches actual Source settlement with leading BOM engine %j',async engine=>{
+  const db=new DatabaseSync(':memory:');try{
+   installSqliteApplicationSchema(db);db.exec(RUN_PRIVACY_SQL);writeSqliteQueryRun(db,{...run,engine},false);
+   const source=await createSqliteRunPrivacy(db).settlement(id);expect(source).not.toBeNull();const {engine:bound,...metadata}=source!;
+   const f=fixture();f.call.mockResolvedValue({item:{...metadata,engineHex:Buffer.from(bound).toString('hex')}});
+   expect(await f.privacy.settlement(id)).toEqual(source);expect(bound.startsWith('\ufeff')).toBe(true);expect(db.prepare('SELECT data FROM query_runs WHERE id=?').get(id)!.data).toBe(JSON.stringify({...run,engine}));
+  }finally{db.close();}
+ });
+ it('keeps strict UTF8/HEX/byte bounds and does not erase a BOM before raw JSON',async()=>{
+  const f=fixture(),{engine:_,...metadata}={...run,question:'',answer:''};void _;
+  for(const engineHex of ['ff','efbbbfedb080','0','zz','61'.repeat(16385)]){f.call.mockResolvedValue({item:{...metadata,engineHex}});await expect(f.privacy.settlement(id)).rejects.toThrow('privacy_unavailable');}
+  f.call.mockResolvedValue({exists:true,item:{...item(),originalHex:Buffer.from('\ufeff'+JSON.stringify(run)).toString('hex')}});await expect(f.privacy.read(id,actor)).rejects.toThrow('privacy_unavailable');
  });
  it('refuses readonly effects before parsing or native I/O',async()=>{const f=fixture(true);await expect(f.privacy.creationReady()).rejects.toThrow('privacy_unavailable');await expect(f.privacy.erase(id,actor,{revision:0,requestId})).rejects.toThrow('privacy_unavailable');await expect(f.privacy.export(id,actor,requestId)).rejects.toThrow('privacy_unavailable');expect(f.call).not.toHaveBeenCalled();});
  it('retains unchanged private originals and refuses malformed or hidden responses',async()=>{const f=fixture();f.call.mockResolvedValue({exists:true,item:item()});expect((await f.privacy.read(id,actor)).item?.run).toEqual(run);await expect(f.privacy.read(id)).rejects.toThrow('privacy_unavailable');f.call.mockResolvedValue({exists:false,item:item()});await expect(f.privacy.read(id,actor)).rejects.toThrow('privacy_unavailable');f.call.mockResolvedValue({exists:true,item:{...item(),originalHex:'ff'}});await expect(f.privacy.read(id,actor)).rejects.toThrow('privacy_unavailable');});

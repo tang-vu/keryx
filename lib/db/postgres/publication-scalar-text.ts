@@ -87,7 +87,8 @@ const metricTextFields=['origin','asker','payment_mode','confidence_level','mcp_
 const metricValueFields=['id','duration_ms','payment_attempts','settled_payments','evidence_claim_count','grounded_claim_count','rewarded_citation_count','economics_data'] as const;
 function boundHex(value:unknown,maximum:number):string{
  if(typeof value!=='string'||value.length>maximum*2||value.length%2||/[^a-f0-9]/.test(value))throw Error('Source scalar bytes unavailable');
- return new TextDecoder('utf-8',{fatal:true}).decode(Buffer.from(value,'hex'));
+ // This is a Source TEXT value, so an initial U+FEFF is data, not a BOM to strip.
+ return new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(Buffer.from(value,'hex'));
 }
 /** Fixed native metric DTO only. The five scalar fields are independent of
  * answer/question/original bytes; accepting a legacy TEXT shadow is forbidden.

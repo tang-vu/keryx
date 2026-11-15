@@ -7,7 +7,7 @@ import {slimPrivacyHistoryFields} from './privacy-metadata';
 
 const strings=['','plain','left\0right','\0suffix','prefix\0','a\ud800b','a\udc00b',
  'a\ud800\ud800b','a\ud800\udc00b','a\udc00\ud800b','\u00e9\0Z','e\u0301',
- '\\u0000','quote"slash\\\n\t','\u{1f512}'];
+ '\\u0000','quote"slash\\\n\t','\u{1f512}','\ufeff','\ufeff\0high\ud800 low\udc00','\ufeff\ufeffprefix'];
 function sqlite<T>(read:(db:DatabaseSync)=>T):T{
  const db=new DatabaseSync(':memory:');try{return read(db);}finally{db.close();}
 }
@@ -106,6 +106,9 @@ describe('fixed native original and financial scalar envelopes',()=>{
   expect(()=>decodePublicationOriginalRead('get_query_run',{data:JSON.parse(source)})).toThrow();
   expect(()=>decodePublicationOriginalRead('get_query_run',{...envelope,answer:'PRIVATE_BODY'})).toThrow();
   expect(()=>decodePublicationOriginalRead('get_query_run',{nativeOriginalHex:'ff'})).toThrow();
+  // A BOM before a JSON document is not JSON.stringify output. Do not strip it
+  // to turn a malformed retained original into an apparently valid document.
+  expect(()=>decodePublicationOriginalRead('get_query_run',{nativeOriginalHex:Buffer.from('\ufeff'+source).toString('hex')})).toThrow();
  });
 
  it('decodes only actual scalar-bound financial metadata, with no answer/question map',()=>sqlite(db=>{
@@ -118,5 +121,14 @@ describe('fixed native original and financial scalar envelopes',()=>{
   expect(()=>decodePublicationMetricRows([{...values,...source}])).toThrow();
   expect(()=>decodePublicationMetricRows([{...values,nativeScalarHex:{...nativeScalarHex,answer:'00'}}])).toThrow();
   expect(()=>decodePublicationMetricRows([{...values,nativeScalarHex:{...nativeScalarHex,origin:'ff'}}])).toThrow();
+ }));
+ it('preserves leading U+FEFF in every raw metric TEXT cell against actual SQLite bindings',()=>sqlite(db=>{
+  db.exec('CREATE TABLE q(id TEXT,origin TEXT,asker TEXT,payment_mode TEXT,confidence_level TEXT,mcp_client TEXT)');
+  const fields=['origin','asker','payment_mode','confidence_level','mcp_client'],text='\ufeff\0high\ud800 low\udc00';
+  db.prepare('INSERT INTO q VALUES(?,?,?,?,?,?)').run('synthetic-bom',...fields.map(()=>text));
+  const source=db.prepare('SELECT * FROM q').get()!,values={id:source.id,duration_ms:null,payment_attempts:0,settled_payments:0,evidence_claim_count:0,grounded_claim_count:0,rewarded_citation_count:0,economics_data:null};
+  const nativeScalarHex=Object.fromEntries(fields.map(key=>[key,Buffer.from(source[key] as string).toString('hex')]));
+  expect(decodePublicationMetricRows([{...values,nativeScalarHex}])).toEqual([{...values,...Object.fromEntries(fields.map(key=>[key,source[key]]))}]);
+  for(const bad of ['ff','efbbbfedb080','0','zz'])expect(()=>decodePublicationMetricRows([{...values,nativeScalarHex:{...nativeScalarHex,origin:bad}}])).toThrow();
  }));
 });
