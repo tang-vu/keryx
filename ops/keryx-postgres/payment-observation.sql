@@ -25,8 +25,23 @@ BEGIN
    OR EXISTS(SELECT 1 FROM keryx_storage.payment_event_originals r LEFT JOIN public.payment_events p ON p.id=r.payment_id WHERE p.id IS NULL)
   THEN RAISE EXCEPTION 'native payment raw original coverage or projection unavailable';END IF;
   IF selected=ANY(ARRAY[{{LEGACY_PAYMENT_OPERATIONS}}]::text[])
-   AND EXISTS(SELECT 1 FROM keryx_storage.payment_event_originals WHERE cardinality(unprojected_fields)>0)
+   AND EXISTS(SELECT 1 FROM keryx_storage.payment_event_originals r WHERE cardinality(r.unprojected_fields)>0 AND(
+    -- Exactly five proven consumers may ignore presentation-only gaps. This
+    -- is a per-operation field check, never a Source-aware blanket exemption.
+    -- Unknown/NULL/unsupported flags cannot silently become "not consumed".
+    (r.unprojected_fields <@ ARRAY[{{KNOWN_PAYMENT_UNPROJECTED_FIELDS}}]::text[]) IS NOT TRUE
+    OR CASE selected
+     {{LEGACY_PAYMENT_CONSUMED_FIELDS}}
+     ELSE true END))
   THEN RAISE EXCEPTION 'native payment raw observation unavailable to legacy observer';END IF;
+  -- Representability alone is not receipt evidence. Keep the five consumers
+  -- closed when Source String.trim() is empty but Native's existing default
+  -- btrim() would count the text. Exact closed ECMAScript whitespace set;
+  -- no receipt rewrite or relaxation of the existing financial helpers.
+  IF selected=ANY(ARRAY[{{CONSUMED_PAYMENT_OPERATIONS}}]::text[])
+   AND EXISTS(SELECT 1 FROM public.payment_events p WHERE p.tx_hash IS NOT NULL AND btrim(p.tx_hash)<>''
+    AND btrim(p.tx_hash,U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF')='')
+  THEN RAISE EXCEPTION 'native payment receipt whitespace outside qualified financial scope';END IF;
  END IF;
 $observation$);
  -- The second occurrence above is intentionally one identical literal list;
@@ -34,6 +49,9 @@ $observation$);
  definition:=pg_get_functiondef('keryx_storage.require_operation(jsonb,text,text)'::regprocedure);
  IF (length(definition)-length(replace(definition,original_body,'')))/length(original_body)<>1
  THEN RAISE EXCEPTION 'native payment observation definition refused';END IF;
+ IF octet_length(replace(definition,original_body,extended_body))>32768
+  OR octet_length(to_jsonb(replace(definition,original_body,extended_body))::text)>32768
+ THEN RAISE EXCEPTION 'native payment observation complete quoted definition bound';END IF;
  EXECUTE replace(definition,original_body,extended_body);
  IF (SELECT prosrc FROM pg_proc WHERE oid='keryx_storage.require_operation(jsonb,text,text)'::regprocedure) IS DISTINCT FROM extended_body
  THEN RAISE EXCEPTION 'native payment observation preservation refused';END IF;

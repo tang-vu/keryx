@@ -25,6 +25,22 @@ export const SOURCE_PAYMENT_OBSERVERS=Object.freeze([
  'browser_source_read','browser_source_activate','browser_source_grant','browser_source_intent','browser_source_admit','browser_source_transition','browser_source_query',
 ] as const);
 export const HOSTED_SOURCE_PAYMENT_OBSERVERS=Object.freeze(['hosted_admit_authorization','hosted_submit','hosted_confirm','hosted_accounting'] as const);
+// These remain LEGACY observers, with a finite consumed-field check instead of
+// a blanket raw exemption. All original/cap/SIG/micro/baseline checks remain.
+// r.created_at in session_funding_totals is the browser INTENT's timestamp;
+// payment.created_at and payment presentation metadata do not feed these totals.
+const fundingPaymentColumns=Object.freeze(['id','network','authorization_id','grant_epoch','payer','payee','amount_usdc','settled','settlement_status','authorization_phase','tx_hash'] as const);
+export const LEGACY_PAYMENT_CONSUMED_FIELDS=Object.freeze({
+ session_funding_accounting:fundingPaymentColumns,
+ session_withdrawal_accounting:fundingPaymentColumns,
+ reserve_session_withdrawal:fundingPaymentColumns,
+ creator_owner_accounting:fundingPaymentColumns,
+ creator_owner_admit:fundingPaymentColumns,
+});
+// The current Source capture can mark ONLY these twelve fields unprojected.
+// Unknown/future flags, NULL entries and unsupported authority/numeric flags
+// stay held, even when a new column might look unrelated to one consumer.
+export const KNOWN_PAYMENT_UNPROJECTED_FIELDS=Object.freeze(['created_at','source_name','rationale','tx_hash','authorization_expires_at','origin','item_id','item_title','item_url','content_version','item_published_at','offer_id'] as const);
 const quote=(s:string)=>{if(!/^[a-z][a-z0-9_]+$/.test(s))throw Error('Payment observer Source name refused');return "'"+s+"'";};
 export function nativePaymentBrowserSource(hostedPaymentOriginals=false){
  if(typeof hostedPaymentOriginals!=='boolean')throw Error('Hosted payment Source selection refused');
@@ -47,6 +63,15 @@ export function nativePaymentBrowserSource(hostedPaymentOriginals=false){
  for(const [token,values] of [['{{LEGACY_PAYMENT_OPERATIONS}}',legacy],['{{SOURCE_PAYMENT_OPERATIONS}}',sourceAware]] as const){
   if(observation.split(token).length!==(token==='{{LEGACY_PAYMENT_OPERATIONS}}'?3:2))throw Error('Payment observer Source constructor refused');observation=observation.replaceAll(token,values.map(quote).join(','));
  }
+ if(observation.split('{{KNOWN_PAYMENT_UNPROJECTED_FIELDS}}').length!==2||observation.split('{{LEGACY_PAYMENT_CONSUMED_FIELDS}}').length!==2||observation.split('{{CONSUMED_PAYMENT_OPERATIONS}}').length!==2)throw Error('Payment consumed fields Source constructor refused');
+ const consumed=Object.entries(LEGACY_PAYMENT_CONSUMED_FIELDS).map(([operation,columns])=>{
+  if(!legacy.some(name=>name===operation)||columns.length!==11||new Set(columns).size!==11)throw Error('Payment consumed operation Source inventory refused');
+  return `WHEN ${quote(operation)} THEN r.unprojected_fields && ARRAY[${columns.map(quote).join(',')}]::text[]`;
+ }).join('\n     ');
+ observation=observation.replace('{{KNOWN_PAYMENT_UNPROJECTED_FIELDS}}',KNOWN_PAYMENT_UNPROJECTED_FIELDS.map(quote).join(','))
+  .replace('{{LEGACY_PAYMENT_CONSUMED_FIELDS}}',consumed)
+  .replace('{{CONSUMED_PAYMENT_OPERATIONS}}',Object.keys(LEGACY_PAYMENT_CONSUMED_FIELDS).map(quote).join(','));
+ if(Buffer.byteLength(observation)>16384)throw Error('Expanded payment observation Source part bound');
  sql+='\n'+parts.join('\n')+'\n'+observation;
  if(hostedPaymentOriginals)sql+='\n'+read('hosted-payment-events.sql',32768);
  return Object.freeze({sql,sha256:createHash('sha256').update(sql).digest('hex'),limitations:'Closed payment/browser metadata protocols only. Exact Source intake, every producer and observer, complete writer and production cutover require separate acceptance.'});
