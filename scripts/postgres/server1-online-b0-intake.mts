@@ -161,8 +161,9 @@ async function target(pg:Client,c:Context,fresh:boolean){
  await actual(pg,'keryx_mainnet',c);
  assert.equal((await pg.query('SELECT mode FROM keryx_storage.control WHERE singleton FOR SHARE')).rows[0]?.mode,'held');
  const catalog=await pg.query("WITH observed AS MATERIALIZED(SELECT keryx_storage.catalog_contract()::text wire) SELECT CASE WHEN octet_length(wire)<=8388608 THEN wire END wire FROM observed");controls(c);
- assert.equal(exportNativePostgresSchemaContract(catalog.rows[0].wire).sha256,profile.catalogSha256);c.referenceWire=catalog.rows[0].wire;
- const sections=record(exportNativePostgresSchemaContract(c.referenceWire).metadata.sections);const relations=sections.relations;assert(Array.isArray(relations));
+ const contract=exportNativePostgresSchemaContract(catalog.rows[0].wire);
+ assert.equal(contract.sha256,profile.catalogSha256);c.referenceWire=catalog.rows[0].wire;
+ const sections=record(contract.metadata.sections);const relations=sections.relations;assert(Array.isArray(relations));
  const names=relations.map(record).filter(r=>(r.schema==='public'||r.schema==='keryx_storage')&&r.kind==='r').map(r=>quoted(String(r.schema))+'.'+quoted(String(r.name))).sort();assert(names.length>=108&&names.length<=256);
  const lockSql='LOCK TABLE '+names.join(',')+' IN SHARE ROW EXCLUSIVE MODE';if(c.lockSql)assert.equal(c.lockSql,lockSql);else c.lockSql=lockSql;
  for(const name of ['writer','browser_journal_writer','browser_signing_v2_writer','browser_signing_v3_writer']){

@@ -29,6 +29,35 @@ describe('source-owned PostgreSQL17 schema export',()=>{
     b.sections.sequences[0]={name:'a',maximum:9223372036854775807};
     expect(()=>exportPostgres17SchemaContract(b)).toThrow('schema contract refused');
   });
+  it('retains the pre-optimization golden bytes across Unicode/key/row permutations and duplicate rows',()=>{
+    const input=contract();
+    const row=(name:string,source:string)=>({source,settings:['search_path=pg_catalog, pg_temp'],name});
+    input.sections.functions=[row('\u{10000}',"select 'e';\n"),row('\uE000',"select 'e';\n"),row('\u00e9',"select '\u6f22';\n"),row('\u00e9',"select '\u6f22';\n"),row('a',"\tselect '\\\"';\n")];
+    const rows=input.sections.functions;
+    const variants=[rows,[...rows].reverse(),[...rows.slice(2),...rows.slice(0,2)]
+      .map(value=>Object.fromEntries(Object.entries(value as Record<string,unknown>).reverse()))];
+    for(const functions of variants){
+      input.sections.functions=functions;const before=JSON.stringify(input);
+      const result=exportPostgres17SchemaContract(input);
+      // Captured from the previous exporter, before the ordering-key optimization.
+      expect(result.sha256).toBe('b8cf200079a6e8412ece178bc144d0ecd24f1969a4bf60a91fe50f5c5fb272ea');
+      expect(JSON.parse(result.canonicalJson).sections.functions.map((value:{name:string})=>value.name))
+        .toEqual(['a','\u00e9','\u00e9','\uE000','\u{10000}']);
+      expect(JSON.stringify(input)).toBe(before);
+      expect(Object.isFrozen(result)).toBe(true);expect(Object.isFrozen(result.metadata)).toBe(true);
+      expect(Object.isFrozen(result.metadata.sections)).toBe(true);
+    }
+  });
+  it('preserves observable input order for equal JSON ordering keys and freezes every copied duplicate',()=>{
+    const input=contract();input.sections.columns=[{position:-0},{position:0},{position:-0}];
+    const result=exportPostgres17SchemaContract(input),copied=result.metadata.sections;
+    if(copied===null||Array.isArray(copied)||typeof copied!=='object'||!Array.isArray(copied.columns))throw new Error('missing columns');
+    const positions=copied.columns.map(value=>{
+      if(value===null||Array.isArray(value)||typeof value!=='object')throw new Error('missing position');
+      expect(Object.isFrozen(value)).toBe(true);return Object.is(value.position,-0);
+    });
+    expect(positions).toEqual([true,false,true]);expect(Object.isFrozen(copied.columns)).toBe(true);
+  });
   it('rejects over-budget and accessor/sparse/symbol metadata without invoking accessors',()=>{
     const a=contract();a.sections.functions=Array.from({length:513},()=>({name:'f'}));
     expect(()=>exportPostgres17SchemaContract(a)).toThrow();
