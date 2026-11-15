@@ -1,5 +1,6 @@
 import {beforeEach,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
+import {EventEmitter} from 'node:events';
 import {STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity} from '../storage-identity';
 import {canonicalJson} from '../../canonical-json';
 import {composePostgresOnramp} from './onramp-transport';
@@ -16,8 +17,8 @@ const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',netwo
 const options={endpoint:{kind:'loopback' as const,port:5432},database:'synthetic',role:'keryx_app',password:'synthetic-not-a-live-secret'};
 const reply={rows:[[null]],fields:[{name:'result',dataTypeID:3802}]};
 const failure=(code:string)=>Object.assign(Error('private database details'),{code});
-const client={query:(...args:unknown[])=>state.query(...args),release:state.release};
-beforeEach(()=>{vi.clearAllMocks();state.query.mockReset();state.connect.mockReset();state.connect.mockResolvedValue(client);state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(reply);});
+const client=Object.assign(new EventEmitter(),{query:(...args:unknown[])=>state.query(...args),release:state.release});
+beforeEach(()=>{vi.clearAllMocks();client.removeAllListeners();state.release.mockReset();state.query.mockReset();state.connect.mockReset();state.connect.mockResolvedValue(client);state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(reply);});
 it('keeps a recognized read lock failure nonterminal without retry or leaked details',async()=>{
  const c=createPostgresDomainChannel(options,identity,'22'.repeat(32));
  state.query.mockResolvedValueOnce(reply).mockRejectedValueOnce(failure('55P03'));
@@ -113,4 +114,38 @@ it('does not classify a failed write acquisition as a submitted statement',async
  const c=createPostgresDomainChannel(options,identity,'22'.repeat(32));
  await expect(c.call('privateProfileDelete',['0x'+'a1'.repeat(20)])).rejects.toThrow(/^PostgreSQL storage unavailable$/);
  expect(state.query).not.toHaveBeenCalled();expect(state.release).not.toHaveBeenCalled();expect(state.connect).toHaveBeenCalledOnce();await c.close();
+});
+it.each([false,true])('handles a client error before SQL without unknown submission (write=%s)',async write=>{
+ let checks=0;const c=createPostgresDomainChannel(options,identity,'22'.repeat(32),()=>{if(++checks===2)client.emit('error',failure('08006'));});
+ const work=write?c.call('privateProfileDelete',['0x'+'a1'.repeat(20)]):c.call('privateProfileGet',['0x'+'a1'.repeat(20),identity.network]);
+ await expect(work).rejects.toBeInstanceOf(PostgresStorageUnavailable);expect(state.query).not.toHaveBeenCalled();expect(state.release).toHaveBeenCalledExactlyOnceWith(true);expect(client.listenerCount('error')).toBe(0);await c.close();
+});
+it('handles an asynchronous active write error once without an unhandled emitter event',async()=>{
+ let emitted=false,releaseListeners=0;
+ state.query.mockImplementationOnce(()=>new Promise((_resolve,reject)=>queueMicrotask(()=>{client.emit('error',failure('08006'));emitted=true;reject(failure('08006'));})));
+ state.release.mockImplementationOnce(()=>{releaseListeners=client.listenerCount('error');});
+ const c=createPostgresDomainChannel(options,identity,'22'.repeat(32));await expect(c.call('privateProfileDelete',['0x'+'a1'.repeat(20)])).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);
+ expect(emitted).toBe(true);expect(state.query).toHaveBeenCalledOnce();expect(state.release).toHaveBeenCalledExactlyOnceWith(true);expect(releaseListeners).toBe(1);expect(client.listenerCount('error')).toBe(0);await c.close();
+});
+it('refuses an errored active read even if its query resolves and sends no COMMIT',async()=>{
+ let emitted=false;state.query.mockResolvedValueOnce(reply).mockImplementationOnce(()=>new Promise(resolve=>queueMicrotask(()=>{client.emit('error',failure('55P03'));emitted=true;resolve(reply);})));
+ const c=createPostgresDomainChannel(options,identity,'22'.repeat(32));await expect(c.call('privateProfileGet',['0x'+'a1'.repeat(20),identity.network])).rejects.toBeInstanceOf(PostgresStorageUnavailable);
+ expect(emitted).toBe(true);expect(state.query).toHaveBeenCalledTimes(2);expect(state.query.mock.calls.some(([query])=>query==='COMMIT')).toBe(false);expect(state.release).toHaveBeenCalledExactlyOnceWith(true);expect(client.listenerCount('error')).toBe(0);await c.close();
+});
+it('keeps the listener through release and does not report success after release emits an error',async()=>{
+ let listeners=0;state.release.mockImplementationOnce(()=>{listeners=client.listenerCount('error');client.emit('error',failure('08006'));});
+ const c=createPostgresDomainChannel(options,identity,'22'.repeat(32));await expect(c.call('privateProfileDelete',['0x'+'a1'.repeat(20)])).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);
+ expect(listeners).toBe(1);expect(state.query).toHaveBeenCalledOnce();expect(state.release).toHaveBeenCalledOnce();expect(client.listenerCount('error')).toBe(0);await c.close();
+});
+it('removes only its checkout listener on healthy reuse and on a throwing release',async()=>{
+ const existing=vi.fn();client.on('error',existing);const c=createPostgresDomainChannel(options,identity,'22'.repeat(32));
+ for(let i=0;i<3;i++){await c.call('privateProfileGet',['0x'+'a1'.repeat(20),identity.network]);expect(client.listeners('error')).toEqual([existing]);}
+ state.release.mockImplementationOnce(()=>{throw Error('private release failure');});await expect(c.call('privateProfileDelete',['0x'+'a1'.repeat(20)])).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);
+ expect(client.listeners('error')).toEqual([existing]);client.removeListener('error',existing);await c.close();expect(client.listenerCount('error')).toBe(0);
+});
+it('drains an errored checked-out write on close and removes its listener',async()=>{
+ let finish!:(value:typeof reply)=>void;state.query.mockReturnValueOnce(new Promise(resolve=>{finish=resolve;}));
+ const c=createPostgresDomainChannel(options,identity,'22'.repeat(32)),work=c.call('privateProfileDelete',['0x'+'a1'.repeat(20)]),denied=expect(work).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);
+ await Promise.resolve();expect(client.listenerCount('error')).toBe(1);const closing=c.close();client.emit('error',failure('08006'));finish(reply);await denied;await closing;
+ expect(state.query).toHaveBeenCalledOnce();expect(state.release).toHaveBeenCalledExactlyOnceWith(true);expect(client.listenerCount('error')).toBe(0);expect(state.end).toHaveBeenCalledOnce();
 });

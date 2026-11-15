@@ -1,3 +1,4 @@
+import {EventEmitter} from 'node:events';
 import { afterEach,beforeEach,describe,expect,it,vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from "../storage-identity";
@@ -8,7 +9,7 @@ import { PostgresStorageBusy,PostgresStorageUnavailable } from './connection';
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',network:'eip155:5042',authorityMode:'mainnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-12T00:00:00.000Z',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,provenanceDigest:'11'.repeat(32)};
 const options={endpoint:{kind:'loopback' as const,port:5432},database:'synthetic',role:'keryx_app',password:'synthetic-not-a-live-secret'};
 const response=(v:unknown)=>({rows:[[v===null?null:JSON.stringify(v)]],fields:[{name:'result',dataTypeID:3802}]});
-const client=()=>({query:state.clientQuery,release:state.release});
+const client=()=>Object.assign(new EventEmitter(),{query:state.clientQuery,release:state.release});
 const make=()=>createPostgresApplicationReadTransport(options,identity,'22'.repeat(32));
 beforeEach(()=>{vi.clearAllMocks();state.pools=0;state.query.mockResolvedValue(response(0));state.connect.mockResolvedValue(client());state.clientQuery.mockImplementation(async (q:unknown)=>typeof q==='string'?{}:response((q as {text:string}).text.includes('storage_browser_signer_retained_spend')?0:[]));state.end.mockResolvedValue(undefined);});
 describe('native application read composition',()=>{

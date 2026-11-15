@@ -1,3 +1,4 @@
+import {EventEmitter} from 'node:events';
 import { afterEach,beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "../storage-identity";
@@ -18,7 +19,7 @@ const options = { endpoint: { kind: "loopback" as const, port: 5432 }, database:
 const digest = "22".repeat(32), signer = `0x${"ab".repeat(20)}`, after = "2026-11-12T00:00:00.000Z";
 const totals = { hasAuthorityHistory: true, confirmedSpentMicroUsdc: "3", retainedSpentMicroUsdc: "7", postBaselineConfirmedDebitMicroUsdc: "2" };
 const response = (value: unknown) => ({ rows: [[JSON.stringify(value)]], fields: [{ name: "result", dataTypeID: 3802 }] });
-beforeEach(() => { vi.clearAllMocks(); state.connect.mockResolvedValue({query:state.query,release:state.release}); state.configurations.length = 0; state.end.mockResolvedValue(undefined); });
+beforeEach(() => { vi.clearAllMocks(); state.connect.mockResolvedValue(Object.assign(new EventEmitter(),{query:state.query,release:state.release})); state.configurations.length = 0; state.end.mockResolvedValue(undefined); });
 describe("composed native session accounting", () => {
   it("uses fixed calls and only one pool for both domain ports", async () => {
     const t = createPostgresSessionTransport(options, identity, digest);

@@ -1,3 +1,4 @@
+import {EventEmitter} from 'node:events';
 import { afterEach,beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "../storage-identity";
@@ -20,7 +21,7 @@ const digest = "22".repeat(32), sig = `0x${"33".repeat(65)}`;
 const consent: SessionGrantConsent = { format: "keryx-session-grant-consent-v1", network: "eip155:5042", origin: "https://keryx.cc",
   ownerAddr: `0x${"11".repeat(20)}`, sessAddr: `0x${"22".repeat(20)}`, grantEpoch: randomUUID(), capMicroUsdc: "10", expirySeconds: "2000000000" };
 const response = (wire: string | null) => ({ rows: [[wire]], fields: [{ name: "result", dataTypeID: 3802 }] });
-beforeEach(() => { vi.clearAllMocks(); state.connect.mockResolvedValue({query:state.query,release:state.release}); state.configurations.length = 0; state.query.mockResolvedValue(response(null)); state.end.mockResolvedValue(undefined); });
+beforeEach(() => { vi.clearAllMocks(); state.connect.mockResolvedValue(Object.assign(new EventEmitter(),{query:state.query,release:state.release})); state.configurations.length = 0; state.query.mockResolvedValue(response(null)); state.end.mockResolvedValue(undefined); });
 
 describe("closed PostgreSQL consent transport", () => {
   it("binds expected identity, source contract and canonical original to fixed writes", async () => {

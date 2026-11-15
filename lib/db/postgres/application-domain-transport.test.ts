@@ -1,3 +1,4 @@
+import {EventEmitter} from 'node:events';
 import { afterEach,beforeEach,describe,expect,it,vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from "../storage-identity";
@@ -10,7 +11,7 @@ import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',network:'eip155:5042',authorityMode:'mainnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-12T00:00:00.000Z',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,provenanceDigest:'11'.repeat(32)};
 const options={endpoint:{kind:'loopback' as const,port:5432},database:'synthetic',role:'keryx_app',password:'synthetic-not-a-live-secret'};
 const make=()=>createPostgresApplicationDomainTransport(options,identity,'22'.repeat(32));
-beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue({query:state.query,release:state.release});state.pools=0;state.query.mockResolvedValue({rows:[[null]],fields:[{name:'result',dataTypeID:3802}]});state.end.mockResolvedValue(undefined);});
+beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue(Object.assign(new EventEmitter(),{query:state.query,release:state.release}));state.pools=0;state.query.mockResolvedValue({rows:[[null]],fields:[{name:'result',dataTypeID:3802}]});state.end.mockResolvedValue(undefined);});
 describe('native application writes',()=>{
  it('captures a fixed auth write and shares the financial pool',async()=>{
   const t=make(),args={p_hash:'original',p_issued_at:1,p_expires_at:2},request=t.applicationWrite('create_auth_challenge',args);args.p_hash='changed';await request;

@@ -1,3 +1,4 @@
+import {EventEmitter} from 'node:events';
 import { afterEach,beforeEach,describe,expect,it,vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { installMainnetApplicationSchema } from "../mainnet-application-schema";
@@ -20,7 +21,7 @@ const policy=():HostedTreasuryPolicy=>({format:'keryx-hosted-treasury-policy-v1'
   lifetimeCapMicroUsdc:'100',queryCapMicroUsdc:'10',expiresAtSeconds:Math.floor(Date.now()/1000)+60});
 const response=(v:unknown)=>({rows:[[v===null?null:JSON.stringify(v)]],fields:[{name:'result',dataTypeID:3802}]});
 const make=(protocol:'legacy-v1'|'source-payment-originals-v1'='legacy-v1')=>createPostgresHostedLedgerTransport(options,identity,'22'.repeat(32),protocol);
-beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue({query:state.query,release:state.release});state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(null));});
+beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue(Object.assign(new EventEmitter(),{query:state.query,release:state.release}));state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(null));});
 describe('closed native hosted ledger',()=>{
   it('binds policy identity/digest and composes one bounded pool',async()=>{
     const t=make(),p=policy();expect(await t.admitHostedTreasuryPolicy(p,'public')).toBe(hostedTreasuryPolicyDigest(p));expect(state.pools).toBe(1);

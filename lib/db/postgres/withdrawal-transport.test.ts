@@ -1,3 +1,4 @@
+import {EventEmitter} from 'node:events';
 import { afterEach,beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "../storage-identity";
@@ -17,7 +18,7 @@ const response=(v:unknown)=>({rows:[[v===null?null:JSON.stringify(v)]],fields:[{
 const snapshot=()=>({preparation:p,phase:"prepared",abort:null,completion:null});
 const make=()=>createPostgresWithdrawalTransport(options,identity,"22".repeat(32));
 beforeAll(async()=>{p=await sessionWithdrawalFixture();});
-beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue({query:state.query,release:state.release});state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(snapshot()));});
+beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue(Object.assign(new EventEmitter(),{query:state.query,release:state.release}));state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(snapshot()));});
 describe("original-bound native withdrawal transport",()=>{
   it("validates retained signatures and exact owner/request while sharing one pool",async()=>{
     const t=make();expect(await t.getSessionWithdrawal(p.requestId,p.ownerAddr)).toEqual(p);expect(state.pools).toBe(1);

@@ -1,3 +1,4 @@
+import {EventEmitter} from 'node:events';
 import { afterEach,beforeAll,beforeEach,describe,expect,it,vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from '../storage-identity';
@@ -15,7 +16,7 @@ const response=(v:unknown)=>({rows:[[v===null?null:JSON.stringify(v)]],fields:[{
 const make=()=>createPostgresOwnerWithdrawalTransport(options,identity,'22'.repeat(32));
 let record:Awaited<ReturnType<typeof nativeCreatorWithdrawalFixture>>;
 beforeAll(async()=>{record=await nativeCreatorWithdrawalFixture();});
-beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue({query:state.query,release:state.release});state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(null));});
+beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue(Object.assign(new EventEmitter(),{query:state.query,release:state.release}));state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(null));});
 describe('native creator owner liability boundary',()=>{
   it('checks exact integer liability fields over the composed single pool',async()=>{
     const t=make();state.query.mockResolvedValue(response(totals));expect(await t.creatorOwnerWithdrawalAccounting(record.owner)).toEqual(totals);

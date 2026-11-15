@@ -1,3 +1,4 @@
+import {EventEmitter} from 'node:events';
 import { afterEach,beforeAll,beforeEach,describe,expect,it,vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { privateKeyToAccount } from "viem/accounts";
@@ -18,7 +19,7 @@ const response=(v:unknown)=>({rows:[[v===null?null:JSON.stringify(v)]],fields:[{
 const snapshot=()=>({record:fixture.completion.record,createdAt:stamp,claim:null,attestation:null});
 const make=()=>createPostgresCreatorWithdrawalTransport(options,identity,digest);
 beforeAll(async()=>{const p=await sessionWithdrawalFixture();fixture=await headlessCashoutCompletion(p,await privateKeyToAccount(`0x${"22".repeat(32)}`).signTypedData(withdrawTypedData(p.burnIntent)));});
-beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue({query:state.query,release:state.release});state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(snapshot()));});
+beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue(Object.assign(new EventEmitter(),{query:state.query,release:state.release}));state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(snapshot()));});
 describe("native creator withdrawal original/claim transport",()=>{
   it("verifies exact signed original and exposes no pool while composing all ports",async()=>{
     const t=make(),r=fixture.completion.record;expect(await t.getCreatorWithdrawal(r.id,r.owner)).toEqual(r);expect(state.pools).toBe(1);

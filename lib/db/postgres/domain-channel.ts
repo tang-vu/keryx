@@ -186,19 +186,33 @@ export function createPostgresDomainChannel(options: PostgresConnectionOptions, 
         // context check. Pool.query would dispatch after an unchecked acquisition.
         const query = (async () => {
           const client = await pool.connect();
-          let complete = false;
+          // Pool.query normally listens while a client is checked out. Explicit
+          // checkout must retain its own listener: pg can emit `error` BEFORE
+          // rejecting the active query, and an unhandled event would terminate
+          // the process instead of reporting an unknown submitted write.
+          let complete = false, failed = false;
+          const onClientError = () => { failed = true; };
+          client.on('error', onClientError);
+          const usable = () => { if (failed) unavailable(); current(); if (failed) unavailable(); };
           try {
-            current();
+            usable();
             const transaction = "transaction" in selected && selected.transaction;
-            if (transaction) { await client.query("BEGIN READ ONLY"); current(); }
+            if (transaction) { await client.query("BEGIN READ ONLY"); usable(); }
             // No await or caller code occurs between the current check and SQL.
             submitted = selected.write;
             const result = await client.query(statement);
-            current();
-            if (transaction) { await client.query("COMMIT"); current(); }
+            usable();
+            if (transaction) { await client.query("COMMIT"); usable(); }
             complete = true;
             return result;
-          } finally { client.release(!complete); }
+          } finally {
+            try {
+              // Keep the listener through synchronous pool handoff/destruction;
+              // pg reinstalls its idle listener on an ordinary healthy release.
+              client.release(!complete || failed);
+              if (failed) unavailable();
+            } finally { client.removeListener('error', onClientError); }
+          }
         })();
         request = query; inFlight.add(query);
         const result = await query;
