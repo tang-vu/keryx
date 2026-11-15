@@ -64,3 +64,12 @@ it("refuses absent selected storage and uses exit 0 only for a complete empty ob
   expect(JSON.parse(log.mock.calls[0][0])).toMatchObject({ scanned: 0, attentionNeeded: false });
   expect(storage.close).toHaveBeenCalledExactlyOnceWith(db);
 });
+
+it('does not complete the CLI import until selected native reader disposal drains',async()=>{
+  let entered!:()=>void,release!:()=>void;
+  const closing=new Promise<void>(resolve=>{entered=resolve;}),drain=new Promise<void>(resolve=>{release=resolve;});
+  storage.open.mockResolvedValue({listUnfinishedA2aOrders:vi.fn().mockResolvedValue({orders:[],unreadable:0,truncated:false})});
+  storage.close.mockImplementationOnce(()=>{entered();return drain;});
+  let settled=false;const pending=run([]).then(value=>{settled=true;return value;});
+  await closing;expect(settled).toBe(false);release();await pending;expect(process.exitCode).toBe(0);
+});

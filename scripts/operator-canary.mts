@@ -7,7 +7,6 @@ import {
   assertCanaryOriginalReserved, closeVerifiedBusinessCanary, configuredBusinessCanary, readPreparedBusinessCanaryIntent,
   closeVerifiedFailedBusinessCanary, retainedBusinessCanaryClosure, verifyFailedBusinessCanary,
 } from "../lib/business-operator/canary-policy.ts";
-import type { KeryxDB } from "../lib/db/keryx-db.ts";
 
 const usage = `Finite business canary (private operator only)
   npm run operator:canary -- host
@@ -58,14 +57,14 @@ export async function runOperatorCanary(argv: string[]) {
     const { getDb } = await import("../lib/db/index.ts");
     await closeVerifiedBusinessCanary(await getDb());
   } else if ((command === "verify-failed" || command === "close-failed") && args.length === 0) {
-    const { createReadonlyApplicationStorage } = await import("../lib/db/application-storage.ts");
+    const { createReadonlyApplicationStorage,closeReadonlyApplicationStorage } = await import("../lib/db/application-storage.ts");
     const db = await createReadonlyApplicationStorage();
     if (!db) throw new Error("Selected enrolled readonly proof unavailable");
     try {
       const proof = command === "verify-failed" ? await verifyFailedBusinessCanary(db) : await closeVerifiedFailedBusinessCanary(db);
       console.log(JSON.stringify({ command, readOnly: command === "verify-failed", verified: true,
         closed: command === "close-failed", ...proof, signatures: 0, payments: 0, providerRequests: 0 }));
-    } finally { (db as KeryxDB & { close?: () => void }).close?.(); }
+    } finally { await closeReadonlyApplicationStorage(db); }
     return;
   } else throw new Error("Unknown canary command");
   console.log(JSON.stringify({ command, completed: true, signatures: 0, payments: 0, providerRequests: 0 }));

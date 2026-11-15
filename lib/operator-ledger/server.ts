@@ -7,5 +7,5 @@ export async function readSelectedOperatorLedger(days = 7) {
   const reader = await createReadonlyApplicationStorage();
   if (!reader) throw new Error("Public ledger storage unavailable");
   try { return await readOperatorLedger(reader, config.networkId, days); }
-  finally { closeReadonlyApplicationStorage(reader); }
+  finally { await closeReadonlyApplicationStorage(reader); }
 }

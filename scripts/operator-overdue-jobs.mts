@@ -36,7 +36,7 @@ if (args.length === 1 && (args[0] === "--help" || args[0] === "-h")) {
       const queue = await paidJobEscalationQueue(db, Date.now(), limit);
       console.log(JSON.stringify(queue, null, 2));
       process.exitCode = queue.attentionNeeded ? 2 : 0;
-    } finally { closeReadonlyApplicationStorage(db); }
+    } finally { await closeReadonlyApplicationStorage(db); }
   } catch {
     // Storage errors can carry connection detail; an unavailable observation is never "no overdue jobs".
     console.error("Overdue paid-job observation unavailable. No conclusion about unfinished jobs can be drawn.");

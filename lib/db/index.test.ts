@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ selector: vi.fn(), sqlite: vi.fn(), supabase: vi.fn() }));
+const mocks = vi.hoisted(() => ({ selector: vi.fn(), sqlite: vi.fn(), supabase: vi.fn(), admitted:vi.fn() }));
 vi.mock("../config", async () => ({ hasSupabase: mocks.selector,
   config: { profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE } }));
 vi.mock("./sqlite-adapter", () => ({ SqliteAdapter: mocks.sqlite }));
 vi.mock("./supabase-adapter", () => ({ SupabaseAdapter: mocks.supabase }));
-vi.mock("./application-storage", () => ({ createApplicationStorage: async () => undefined }));
+vi.mock("./application-storage", () => ({ createApplicationStorage:mocks.admitted }));
 
 function deferred() {
   let resolve!: () => void;
@@ -14,7 +14,7 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-beforeEach(() => { vi.resetModules(); vi.resetAllMocks(); });
+beforeEach(() => { vi.resetModules(); vi.resetAllMocks(); mocks.admitted.mockResolvedValue(undefined); });
 
 describe.each([false, true])("getDb initialization (Supabase: %s)", (useSupabase) => {
   it("holds every concurrent caller until the single selected adapter is ready", async () => {
@@ -93,4 +93,18 @@ it("preserves init failure and allows fresh retry even when SQLite cleanup throw
   await expect(getDb()).rejects.toBe(failure);
   expect(close).toHaveBeenCalledTimes(1);
   expect(await getDb()).toBe(ready);
+});
+
+it.each([false,true])("waits for admitted adapter drain before retry and preserves init failure (drain rejects:%s)",async rejects=>{
+  const failure=Error('initialization failure'),started=deferred(),drain=deferred();
+  const partial={init:vi.fn(async()=>{throw failure;}),close:vi.fn(()=>{started.resolve();return drain.promise;})},ready={init:vi.fn(async()=>{})};
+  mocks.admitted.mockResolvedValueOnce(partial).mockResolvedValue(ready);
+  const {getDb}=await import('./index');
+  const first=getDb();const firstResult=first.catch(error=>error);await started.promise;
+  let settled=false;const second=getDb().then(()=>{settled=true;return null;},error=>{settled=true;return error;});
+  await Promise.resolve();expect(settled).toBe(false);expect(mocks.admitted).toHaveBeenCalledTimes(1);
+  if(rejects)drain.reject(Error('drain failure'));else drain.resolve();
+  expect(await firstResult).toBe(failure);expect(await second).toBe(failure);expect(partial.close).toHaveBeenCalledOnce();
+  expect(await getDb()).toBe(ready);expect(mocks.admitted).toHaveBeenCalledTimes(2);
+  expect(mocks.sqlite).not.toHaveBeenCalled();expect(mocks.supabase).not.toHaveBeenCalled();
 });
