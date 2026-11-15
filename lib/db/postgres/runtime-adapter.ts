@@ -148,7 +148,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  const ownership:RunOwnershipHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.runOwnershipHistory.list(owner,query)),read:(owner,binding,id)=>read(()=>transport.runOwnershipHistory.read(owner,binding,id))} satisfies RunOwnershipHistoryStore);
  const privacy:RunPrivacyStore=Object.freeze({
   creationReady:readonly,
-  read(rawId,rawActor){
+  async read(rawId,rawActor){
    entry();const id=privacyId.parse(rawId),actor:PrivacyActor|undefined=rawActor?{wallet:privacyWallet.parse(rawActor.wallet),binding:runClaimBindingSchema.parse(rawActor.binding)}:undefined;
    return guardedRead(async()=>{const value=await transport.runPrivacy.read(id,actor);entry();return value.item?{...value,item:{...value.item,run:await projectRecordedEvidenceProvenance(evidence,value.item.run)}}:value;});
   },owner:(id,actor)=>read(()=>transport.runPrivacy.owner(id,actor)),
@@ -165,10 +165,10 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  const text=(value:string)=>{entry();if(typeof value!=='string')refuseStorage('invalid_operation');return value;};
  const count=(value:number)=>{entry();if(typeof value!=='number')refuseStorage('invalid_operation');return value;};
  const queries=Object.freeze({
-  getQueryRun(raw:string){const id=text(raw);return guardedRead(()=>core.adapter.getQueryRun(id));},
-  listRecentQueries(raw:number){const limit=count(raw);return guardedRead(()=>core.adapter.listRecentQueries(limit));},
-  listQueryRunsByAsker(raw:string,take:number){const wallet=text(raw),limit=count(take);return guardedRead(()=>core.adapter.listQueryRunsByAsker(wallet,limit));},
-  listFollowUps(raw:string){const id=text(raw);return guardedRead(()=>core.adapter.listFollowUps(id));},
+  async getQueryRun(raw:string){const id=text(raw);return guardedRead(()=>core.adapter.getQueryRun(id));},
+  async listRecentQueries(raw:number){const limit=count(raw);return guardedRead(()=>core.adapter.listRecentQueries(limit));},
+  async listQueryRunsByAsker(raw:string,take:number){const wallet=text(raw),limit=count(take);return guardedRead(()=>core.adapter.listQueryRunsByAsker(wallet,limit));},
+  async listFollowUps(raw:string){const id=text(raw);return guardedRead(()=>core.adapter.listFollowUps(id));},
   iterateRecentQueries(raw:number){
    const limit=count(raw);
    return(async function*(){
