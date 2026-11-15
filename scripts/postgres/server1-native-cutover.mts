@@ -22,6 +22,7 @@ import {parsePlannedWindow,readWindowControl,maintenanceStatus} from '../../lib/
 import {exportNativePostgresSchemaContract} from './native-contract.mts';
 import {snapshotRows,snapshotRowWire,snapshotTables,type SnapshotRow,type SnapshotValue} from './typed-snapshot.mts';
 import {nativeMaterializationCell,nativeMaterializationValueKey} from './native-materialization-codec.mts';
+import {createOwnerSessionHeartbeat} from './owner-session-heartbeat.mts';
 
 const root='/root/keryx-migration',archive='/root/.local/share/keryx-private-release-archives/postgres-mainnet-cutover-20261116';
 export const SERVER1_CUTOVER=Object.freeze({
@@ -373,6 +374,31 @@ async function child(mode:'verify-native-only'|'verify-artifact-only'){
  }finally{try{if(store&&closeStore)await closeStore();}finally{for(const p of held)p.close();}}
 }
 
+function cutoverOwnerSessions(clients:readonly Client[],transactions:Set<Client>,cleanupFailures:string[]){
+ const heartbeat=createOwnerSessionHeartbeat(clients);let started=false;
+ return Object.freeze({
+  get failure(){return heartbeat.failure;},
+  start(){heartbeat.start();started=true;},
+  pauseAndDrain:heartbeat.pauseAndDrain,
+  resume:heartbeat.resume,
+  async beginLocked(pg:Client,lock:string){
+   await heartbeat.pauseAndDrain(pg);transactions.add(pg);
+   await pg.query('BEGIN ISOLATION LEVEL REPEATABLE READ');await pg.query(lock);
+   heartbeat.resume(pg);
+  },
+  async dispose(){
+   // Retire one session at a time: a sibling transaction remains live while
+   // this client's pending probe, ROLLBACK and connection close drain.
+   for(const pg of clients){
+    if(started)try{await heartbeat.pauseAndDrain(pg);}catch{cleanupFailures.push('heartbeat');}
+    if(transactions.has(pg))try{await pg.query('ROLLBACK');transactions.delete(pg);}catch{cleanupFailures.push('transaction-disposal');}
+    try{await pg.end();}catch{cleanupFailures.push('postgres-close');}
+   }
+   try{await heartbeat.stopAndDrain();}catch{cleanupFailures.push('heartbeat');}
+  },
+ });
+}
+
 export class Server1CutoverUnavailable extends Error{
  constructor(readonly diagnostic:Readonly<{stage:Stage;activationOutcome:Outcome;sourceSwitchOutcome:Outcome;runtimeHbaOutcome:Outcome;roleStartOutcome:Outcome;maintenanceHeld:boolean;cleanupFailures:readonly string[]}>){super('Server1 native cutover unavailable; retain owned maintenance and journal');}
 }
@@ -385,10 +411,8 @@ export async function runServer1NativeCutover(){if(arguments.length)refuse('argu
 async function cutover(apply:boolean){
  let stage:Stage='preflight',activationOutcome:Outcome='not_attempted',runtimeHbaOutcome:Outcome='not_attempted',roleStartOutcome:Outcome='not_attempted',sourceSwitchOutcome:Outcome='not_attempted',maintenanceHeld=false;
  let c:Inputs|undefined,db:DatabaseSync|undefined,finalDb:DatabaseSync|undefined,ownedJournal:ReturnType<typeof journal>|undefined,source:ReturnType<typeof pm2Source>|undefined,lease:Lease|undefined;
- const clients:Client[]=[],transactions=new Set<Client>(),cleanupFailures:string[]=[],extraPins:Pin[]=[];let timer:ReturnType<typeof setInterval>|undefined,inFlight:Promise<void>|undefined,heartbeatFailure:unknown,failure:unknown,result:unknown;const started=performance.now();let windowPin:Pin|undefined,activeEnvironment:Pin|undefined,activeManifest:Pin|undefined;
- const frame=()=>{assert(c);assert(performance.now()-started<1790000);c.frame();for(const p of extraPins)p.frame();source?.frame();if(heartbeatFailure)refuse('heartbeat');checkSnapshotSidecars(SERVER1_CUTOVER.snapshot);assert(db?.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(canonicalJson(readStorageIdentity(db)),canonicalJson(c.identity));if(activeEnvironment)activeEnvironment.frame();else c.activeEnvironment.frame();if(activeManifest)activeManifest.frame();else c.activeManifest.frame();if(windowPin){windowPin.frame();const status=maintenanceStatus(readWindowControl(SERVER1_CUTOVER.maintenance),Date.now());assert(status.admissionClosed&&status.window?.id===c.intent.windowId&&status.state==='draining');}};
- const startKeepalive=()=>{assert(!timer);timer=setInterval(()=>{if(!inFlight&&!heartbeatFailure)inFlight=Promise.allSettled(clients.map(pg=>pg.query('SELECT 1'))).then(all=>{const bad=all.find(r=>r.status==='rejected');if(bad?.status==='rejected')heartbeatFailure=bad.reason;}).finally(()=>{inFlight=undefined;});},1000);};
- const stopKeepalive=async()=>{if(timer){clearInterval(timer);timer=undefined;}await inFlight;if(heartbeatFailure)refuse('heartbeat');};
+ const clients:Client[]=[],transactions=new Set<Client>(),cleanupFailures:string[]=[],extraPins:Pin[]=[];let sessions:ReturnType<typeof cutoverOwnerSessions>|undefined,failure:unknown,result:unknown;const started=performance.now();let windowPin:Pin|undefined,activeEnvironment:Pin|undefined,activeManifest:Pin|undefined;
+ const frame=()=>{assert(c);assert(performance.now()-started<1790000);c.frame();for(const p of extraPins)p.frame();source?.frame();const heartbeatError=sessions?.failure;if(heartbeatError)throw heartbeatError;checkSnapshotSidecars(SERVER1_CUTOVER.snapshot);assert(db?.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(canonicalJson(readStorageIdentity(db)),canonicalJson(c.identity));if(activeEnvironment)activeEnvironment.frame();else c.activeEnvironment.frame();if(activeManifest)activeManifest.frame();else c.activeManifest.frame();if(windowPin){windowPin.frame();const status=maintenanceStatus(readWindowControl(SERVER1_CUTOVER.maintenance),Date.now());assert(status.admissionClosed&&status.window?.id===c.intent.windowId&&status.state==='draining');}};
  const emit=(event:Json)=>{assert(ownedJournal);ownedJournal.emit({stage,...event});};
  try{
   containment();c=await inputs();
@@ -401,13 +425,14 @@ async function cutover(apply:boolean){
   await pm2Service(frame);await privateWorker(frame);await preparedRuntime(c,frame);
   const beforeBoot=properties(await command('/usr/bin/systemctl',['show','keryx-public-roles.service','--all','--property=DropInPaths,Type,RemainAfterExit,WorkingDirectory,TimeoutStopUSec,SendSIGKILL,ExecStop,ExecStopPost']));frame();assert.deepEqual(beforeBoot,{DropInPaths:'',Type:'oneshot',RemainAfterExit:'yes',WorkingDirectory:'/root/keryx',TimeoutStopUSec:'infinity',SendSIGKILL:'no',ExecStop:'',ExecStopPost:''});
   if(apply){ownedJournal=journal();emit({event:'intent',format:'keryx-server1-native-cutover-journal-v1',intentSha256:sha(bytes(c.byPath.get(SERVER1_CUTOVER.intent)!)),sourceSqlSha256:SERVER1_CUTOVER.sourceSqlSha256,catalogSha256:SERVER1_CUTOVER.catalogSha256,automaticRetry:false});}
-  const connect=async(database:'keryx_source'|'keryx_mainnet')=>{const pg=peer(database);clients.push(pg);pg.on('error',error=>{heartbeatFailure=error;});frame();await pg.connect();frame();await pgGuard(pg,database,c!,frame,'initial');return pg;};
-  const sourcePg=await connect('keryx_source'),targetPg=await connect('keryx_mainnet');assert.equal((await targetPg.query('SELECT pg_try_advisory_lock(634781904177029::bigint) acquired')).rows[0].acquired,true);frame();const target=await targetGuard(targetPg,c,frame);startKeepalive();
+  const sourcePg=peer('keryx_source');clients.push(sourcePg);const targetPg=peer('keryx_mainnet');clients.push(targetPg);sessions=cutoverOwnerSessions(clients,transactions,cleanupFailures);
+  const connect=async(pg:Client,database:'keryx_source'|'keryx_mainnet')=>{frame();await pg.connect();frame();await pgGuard(pg,database,c!,frame,'initial');};
+  await connect(sourcePg,'keryx_source');await connect(targetPg,'keryx_mainnet');assert.equal((await targetPg.query('SELECT pg_try_advisory_lock(634781904177029::bigint) acquired')).rows[0].acquired,true);frame();const target=await targetGuard(targetPg,c,frame);sessions.start();
   stage='online-census';
-  // Timer drained across BOTH BEGIN/first LOCK pairs: no queued SELECT can
-  // establish an RR snapshot before the complete target relations are locked.
-  await stopKeepalive();await targetPg.query('BEGIN ISOLATION LEVEL REPEATABLE READ');transactions.add(targetPg);await targetPg.query(target.lock);startKeepalive();frame();
-  await stopKeepalive();await sourcePg.query('BEGIN ISOLATION LEVEL REPEATABLE READ');transactions.add(sourcePg);await sourcePg.query('LOCK TABLE keryx_migration.snapshot_manifest,keryx_migration.snapshot_tables,keryx_migration.snapshot_rows IN SHARE MODE');startKeepalive();frame();
+  // Pause only the transitioning client through BEGIN/first LOCK. The other
+  // owner transaction stays alive without a queued SELECT taking an RR snapshot.
+  await sessions.beginLocked(targetPg,target.lock);frame();
+  await sessions.beginLocked(sourcePg,'LOCK TABLE keryx_migration.snapshot_manifest,keryx_migration.snapshot_tables,keryx_migration.snapshot_rows IN SHARE MODE');frame();
   const checked=(pg:Client)=>new Proxy(pg,{get(object,key){if(key!=='query')return Reflect.get(object,key,object);return (...args:unknown[])=>{frame();return Promise.resolve(Reflect.apply(object.query,object,args)).then(value=>{frame();return value;});};}}) as Client;
   const typed=await import('./rehearse-snapshot.mts'),publicCells=await import('./materialize-native-snapshot.mts'),privateCells=await import('./materialize-native-projections.mts');frame();const staging=await typed.compareStagedSnapshotTransaction(db,checked(sourcePg));frame();assert.equal(staging.tables.length,94);
   const publicCensus=await publicCells.compareNativeSnapshotTransaction(db,checked(targetPg),checked(sourcePg),target.wire,sourceMode),projections=await privateCells.compareNativeProjectionsTransaction(db,checked(targetPg),sourceMode);frame();assert.equal(projections.domains.length,12);assert.equal(canonicalJson(staging),canonicalJson(c.baseline.staging));assert.equal(canonicalJson(publicCensus),canonicalJson(c.baseline.publicCensus));assert.equal(canonicalJson(projections),canonicalJson(c.baseline.projections));assert.equal(sha(canonicalJson({staging,publicCensus,projections})),c.baseline.nativeCensusSha256);await targetGuard(targetPg,c,frame);
@@ -434,8 +459,8 @@ async function cutover(apply:boolean){
    stage='source-retirement';emit({event:'source-retirement-intent'});sourceSwitchOutcome='unknown';activeEnvironment=installFile(SERVER1_CUTOVER.activeEnvironment,bytes(c.byPath.get(SERVER1_CUTOVER.environment)!),SERVER1_CUTOVER.archive+'/source.env.original',emit,c.activeEnvironment);extraPins.push(activeEnvironment);
    activeManifest=installFile(SERVER1_CUTOVER.activeManifest,bytes(c.byPath.get(SERVER1_CUTOVER.manifest)!),SERVER1_CUTOVER.archive+'/source.storage.original.json',emit,c.activeManifest);extraPins.push(activeManifest);
    if(!existsSync(dirname(SERVER1_CUTOVER.bootDropin))){parentFrame(dirname(SERVER1_CUTOVER.bootDropin));emit({event:'native-boot-directory-intent'});mkdirSync(dirname(SERVER1_CUTOVER.bootDropin),{mode:0o755});syncParent(dirname(SERVER1_CUTOVER.bootDropin));}const boot=installFile(SERVER1_CUTOVER.bootDropin,bytes(c.byPath.get(SERVER1_CUTOVER.dropin)!),undefined,emit,undefined,0o644);extraPins.push(boot);frame();await command('/usr/bin/systemctl',['daemon-reload']);frame();const bootState=properties(await command('/usr/bin/systemctl',['show','keryx-public-roles.service','--property=DropInPaths,ExecStart,WorkingDirectory,Requires,After']));frame();assert.equal(bootState.DropInPaths,SERVER1_CUTOVER.bootDropin);assert.equal(bootState.WorkingDirectory,'/root/keryx');assert(bootState.Requires.split(' ').includes(pgUnit)&&bootState.After.split(' ').includes(pgUnit));assert(bootState.ExecStart.includes('argv[]='+bootWire(String(c.intent.targetCommit),rolesSha).trim().split('\n').at(-1)!.slice('ExecStart='.length)+' ;'));sourceSwitchOutcome='acknowledged';emit({event:'source-startup-and-manifest-retired'});
-   stage='activation';await privateWorker(frame);await preparedRuntime(c,frame);await targetGuard(targetPg,c,frame);frame();const activated=await targetPg.query("UPDATE keryx_storage.control SET mode='active' WHERE singleton AND mode='held' RETURNING mode");assert.deepEqual(activated.rows,[{mode:'active'}]);frame();await stopKeepalive();emit({event:'activation-commit-intent'});activationOutcome='unknown';
-   await targetPg.query('COMMIT');transactions.delete(targetPg);activationOutcome='acknowledged';emit({event:'activation-acknowledged'});frame();startKeepalive();await targetGuard(targetPg,c,frame,'active');
+   stage='activation';await privateWorker(frame);await preparedRuntime(c,frame);await targetGuard(targetPg,c,frame);frame();const activated=await targetPg.query("UPDATE keryx_storage.control SET mode='active' WHERE singleton AND mode='held' RETURNING mode");assert.deepEqual(activated.rows,[{mode:'active'}]);frame();await sessions.pauseAndDrain(targetPg);frame();emit({event:'activation-commit-intent'});activationOutcome='unknown';
+   await targetPg.query('COMMIT');transactions.delete(targetPg);activationOutcome='acknowledged';emit({event:'activation-acknowledged'});frame();sessions.resume(targetPg);await targetGuard(targetPg,c,frame,'active');
    stage='runtime-hba';emit({event:'runtime-hba-install-intent'});runtimeHbaOutcome='unknown';const oldHba=c.byPath.get(SERVER1_CUTOVER.activeHba)!;const newHba=installFile(SERVER1_CUTOVER.activeHba,bytes(c.byPath.get(SERVER1_CUTOVER.runtimeHba)!),SERVER1_CUTOVER.archive+'/source.pg_hba.original.conf',emit,oldHba,0o640);c.pins.splice(c.pins.indexOf(oldHba),1,newHba);c.byPath.set(SERVER1_CUTOVER.activeHba,newHba);oldHba.close();frame();emit({event:'runtime-hba-reload-intent'});assert.equal((await targetPg.query('SELECT pg_reload_conf() reloaded')).rows[0].reloaded,true);frame();
    // The loaded rules are witnessed by actual SCRAM negotiations for BOTH new
    // fixed credentials. File views/reload ACK alone never establish admission.
@@ -449,7 +474,7 @@ async function cutover(apply:boolean){
  }catch(error){failure=error;try{ownedJournal?.emit({event:'held-failure',stage,activationOutcome,runtimeHbaOutcome,roleStartOutcome,sourceSwitchOutcome,maintenanceHeld});}catch{cleanupFailures.push('failure-journal');}}
  // No rollback/fallback of acknowledged activation or filesystem switches.
  // SQL ROLLBACK below disposes only an uncommitted owned transaction.
- try{await stopKeepalive();}catch{cleanupFailures.push('heartbeat');}for(const pg of transactions)try{await pg.query('ROLLBACK');}catch{cleanupFailures.push('transaction-disposal');}for(const pg of clients)try{await pg.end();}catch{cleanupFailures.push('postgres-close');}if(lease)try{closeRpc(lease);}catch{cleanupFailures.push('rpc-close');}try{source?.close();}catch{cleanupFailures.push('pm2-source-close');}
+ if(sessions)await sessions.dispose();else for(const pg of clients)try{await pg.end();}catch{cleanupFailures.push('postgres-close');}if(lease)try{closeRpc(lease);}catch{cleanupFailures.push('rpc-close');}try{source?.close();}catch{cleanupFailures.push('pm2-source-close');}
  for(const sqlite of [finalDb,db])if(sqlite)try{if(sqlite.isTransaction)sqlite.exec('ROLLBACK');sqlite.close();}catch{cleanupFailures.push('sqlite-close');}for(const p of extraPins)try{p.close();}catch{cleanupFailures.push('descriptor-close');}try{c?.close();}catch{cleanupFailures.push('input-close');}try{ownedJournal?.close();}catch{cleanupFailures.push('journal-close');}
  if(failure||cleanupFailures.length)throw new Server1CutoverUnavailable(Object.freeze({stage,activationOutcome,sourceSwitchOutcome,runtimeHbaOutcome,roleStartOutcome,maintenanceHeld,cleanupFailures:Object.freeze([...cleanupFailures])}));return result;
 }

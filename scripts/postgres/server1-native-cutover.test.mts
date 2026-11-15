@@ -2,6 +2,10 @@ import {describe,it,expect,vi} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {hostname} from 'node:os';
 import {DatabaseSync} from 'node:sqlite';
+import {EventEmitter} from 'node:events';
+import type {Client} from 'pg';
+import ts from 'typescript';
+import {createOwnerSessionHeartbeat} from './owner-session-heartbeat.mts';
 import {SERVER1_CUTOVER,Server1CutoverUnavailable,inspectServer1NativeCutover,runServer1NativeCutover,parseServer1CutoverMode,parseServer1CutoverIntent,parseServer1CutoverReceiptTemplate,parseServer1SourceRoles,replaceServer1HashToken,validateServer1WorkerStop,validateServer1OperatorClock} from './server1-native-cutover.mts';
 import {snapshotRows,snapshotTables,type SnapshotRow} from './typed-snapshot.mts';
 import {publishOperatorHeartbeat} from '../../lib/business-operator/status';
@@ -16,6 +20,23 @@ const stopped=()=>({workerId,status:'stopped',updatedAt:new Date(from+100).toISO
 function row(value:unknown,column:string):SnapshotRow{return [text('a2aWorker'),text(JSON.stringify(value)),text(column)];}
 const before=()=>row(original(),at),after=()=>row(stopped(),new Date(from+101).toISOString());
 const source=readFileSync(new URL('./server1-native-cutover.mts',import.meta.url),'utf8');
+// Execute the private integration's actual Source bytes with the real helper.
+// These are mechanical owned-client recordings, never host/native admission.
+const sessionSource=source.slice(source.indexOf('function cutoverOwnerSessions('),source.indexOf('export class Server1CutoverUnavailable'));
+const sessionWire=ts.transpileModule(sessionSource,{compilerOptions:{target:ts.ScriptTarget.ES2017,module:ts.ModuleKind.None}}).outputText;
+type CutoverSessions={readonly failure:unknown;start():void;pauseAndDrain(client:Client):Promise<void>;resume(client:Client):void;beginLocked(client:Client,lock:string):Promise<void>;dispose():Promise<void>};
+const composeSessions=new Function('createOwnerSessionHeartbeat',sessionWire+';return cutoverOwnerSessions;')(createOwnerSessionHeartbeat) as (clients:readonly Client[],transactions:Set<Client>,cleanup:string[])=>CutoverSessions;
+function deferred(){let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done;});return {promise,resolve};}
+class RecordingOwner extends EventEmitter{
+ readonly sql:string[]=[];readonly gates=new Map<string,ReturnType<typeof deferred>>();readonly errors=new Map<string,Error>();ended=0;endGate:ReturnType<typeof deferred>|undefined;endError:Error|undefined;activePings=0;maxActivePings=0;
+ constructor(){super();this.on('error',()=>{});}
+ gate(sql:string){const gate=deferred();this.gates.set(sql,gate);return gate;}
+ release(){for(const gate of this.gates.values())gate.resolve();this.endGate?.resolve();}
+ async query(sql:string){this.sql.push(sql);if(sql==='SELECT 1'){this.activePings++;this.maxActivePings=Math.max(this.maxActivePings,this.activePings);}try{await this.gates.get(sql)?.promise;const error=this.errors.get(sql);if(error)throw error;return {rowCount:0,rows:[]};}finally{if(sql==='SELECT 1')this.activePings--;}}
+ async end(){this.ended++;await this.endGate?.promise;if(this.endError)throw this.endError;}
+ client(){return this as unknown as Client;}
+}
+function recordingSessions(){const first=new RecordingOwner(),second=new RecordingOwner(),transactions=new Set<Client>(),cleanup:string[]=[];const sessions=composeSessions([first.client(),second.client()],transactions,cleanup);sessions.start();return {first,second,transactions,cleanup,sessions};}
 const operatorDecision=()=>({action:'hold' as const,reason:'acceptance-paused' as const,liquidity:'not-needed' as const,observedAt:at});
 const operatorValue=(observedAt=at)=>({version:1,network:'eip155:5042',observedAt,decision:operatorDecision(),auditRecorded:true,state:'held'});
 function operatorRow(value:unknown,column=at):SnapshotRow{return [text('businessOperator'),text(JSON.stringify(value)),text(column)];}
@@ -127,7 +148,7 @@ describe('Source PM2 frame and irreversible ordering',()=>{
   const paths=[...source.matchAll(/import\(pathToFileURL\(join\(releaseSource\(commit\),'([^']+)'\)\)\.href\)/g)].map(match=>match[1]);expect(paths.sort()).toEqual(['scripts/redeploy-reviewed-roles.mjs','lib/db/application-storage.ts','lib/config.ts','lib/payments/hosted-treasury-policy.ts','lib/research/research-allowance.ts','lib/db/runtime-storage-config.ts'].sort());expect(source.match(/import\(pathToFileURL\('\/root\/keryx\/scripts\/immutable-release-staging\.mjs'\)\.href\)/g)).toHaveLength(1);expect(source).not.toMatch(/\bimport\(\s*[a-zA-Z_$][\w$]*\s*\)/);
  });
  it('keeps the real lock/census/CAS/retirement/ACK/publication/start sequence explicit',()=>{
-  const main=source.slice(source.indexOf('async function cutover(')),ordered=['targetPg.query(target.lock)','typed.compareStagedSnapshotTransaction','publicCells.compareNativeSnapshotTransaction','privateCells.compareNativeProjectionsTransaction',"stage='maintenance'",'drainSource(lease','copyFinal(c','typedInventory(finalDb','UPDATE public.sync_state SET','lateBind(c',"stage='source-retirement'","stage='activation'","activationOutcome='unknown'","targetPg.query('COMMIT')","activationOutcome='acknowledged'","stage='runtime-hba'",'await scram(c',"stage='native-verification'","stage='publication'",'exclusive(SERVER1_CUTOVER.receipt',"stage='role-start'"];let previous=-1;for(const marker of ordered){const next=main.indexOf(marker);expect(next,marker).toBeGreaterThan(previous);previous=next;}
+  const main=source.slice(source.indexOf('async function cutover(')),ordered=['sessions.beginLocked(targetPg,target.lock)','typed.compareStagedSnapshotTransaction','publicCells.compareNativeSnapshotTransaction','privateCells.compareNativeProjectionsTransaction',"stage='maintenance'",'drainSource(lease','copyFinal(c','typedInventory(finalDb','UPDATE public.sync_state SET','lateBind(c',"stage='source-retirement'","stage='activation'","activationOutcome='unknown'","targetPg.query('COMMIT')","activationOutcome='acknowledged'","stage='runtime-hba'",'await scram(c',"stage='native-verification'","stage='publication'",'exclusive(SERVER1_CUTOVER.receipt',"stage='role-start'"];let previous=-1;for(const marker of ordered){const next=main.indexOf(marker);expect(next,marker).toBeGreaterThan(previous);previous=next;}
   expect(main).toContain('normalizedDataDigest,b0.dataDigest');for(const key of ['a2aWorker','businessOperator'])expect(main).toContain("UPDATE public.sync_state SET value=$1,updated_at=$2 WHERE key='"+key+"' AND value IS NOT DISTINCT FROM $3 AND updated_at IS NOT DISTINCT FROM $4 RETURNING key,value,updated_at");expect(main.match(/UPDATE public\./g)).toHaveLength(2);expect(main).toContain('sourceOperatorClock(b0.operatorClock)');expect(source).toContain('assert(worker&&operatorClock)');expect(main).toContain("sourceDelta:'a2aWorker-stop-and-businessOperator-clock-only'");expect(main).toContain("await targetPg.query('COMMIT');transactions.delete(targetPg);activationOutcome='acknowledged'");
  });
  it('checks predecessor boot readiness with its installed TypeScript loader before maintenance',()=>{
@@ -136,5 +157,42 @@ describe('Source PM2 frame and irreversible ordering',()=>{
  });
  it('contains no force-stop/retry/target reopening or receipt-derived authority shortcut',()=>{
   expect(source).not.toMatch(/process\.kill\([^\n]*['"]SIGKILL|\.Client\.start\(|\.connect\(.*PM2|--force|allowProduction|register.*Facade|mint.*Provenance|executeRemote/i);expect(source).toContain("lease.rpc.call('notifyKillPM2',{},()=>{})");expect(source).toContain("sock.set('retry timeout',0);sock.retry=0");expect(source).toContain("new Set<Client>()");expect(source).toContain("assert.equal(sha(canonicalJson({staging,publicCensus,projections})),c.baseline.nativeCensusSha256)"); // No acceptance claim is inferred from this static contract test.
+ });
+});
+
+describe('actual private cutover owner-session integration (recording only)',()=>{
+ it('keeps a healthy owner pulsing while its sibling probe is stalled, without overlapping that probe',async()=>{
+  vi.useFakeTimers();const r=recordingSessions();r.second.gate('SELECT 1');
+  try{await vi.advanceTimersByTimeAsync(4000);expect(r.first.sql).toEqual(Array(4).fill('SELECT 1'));expect(r.second.sql).toEqual(['SELECT 1']);expect(r.second.maxActivePings).toBe(1);expect(r.sessions.failure).toBeUndefined();}
+  finally{r.first.release();r.second.release();await r.sessions.dispose();vi.useRealTimers();}
+  expect(r.first.listenerCount('error')).toBe(1);expect(r.second.listenerCount('error')).toBe(1);
+ });
+ it('drains only the transitioning owner and sends first LOCK before any RR heartbeat or snapshot query',async()=>{
+  vi.useFakeTimers();const r=recordingSessions(),probe=r.second.gate('SELECT 1'),begin=r.second.gate('BEGIN ISOLATION LEVEL REPEATABLE READ'),lock=r.second.gate('LOCK TABLE owned IN SHARE MODE');let transition:Promise<void>|undefined;
+  try{
+   await vi.advanceTimersByTimeAsync(1000);transition=r.sessions.beginLocked(r.second.client(),'LOCK TABLE owned IN SHARE MODE');await vi.advanceTimersByTimeAsync(2000);
+   expect(r.second.sql).toEqual(['SELECT 1']);expect(r.first.sql).toHaveLength(3);probe.resolve();await vi.advanceTimersByTimeAsync(0);
+   expect(r.transactions.has(r.second.client())).toBe(true);expect(r.second.sql).toEqual(['SELECT 1','BEGIN ISOLATION LEVEL REPEATABLE READ']);await vi.advanceTimersByTimeAsync(2000);expect(r.first.sql).toHaveLength(5);expect(r.second.sql).toHaveLength(2);
+   begin.resolve();await vi.advanceTimersByTimeAsync(0);expect(r.second.sql).toEqual(['SELECT 1','BEGIN ISOLATION LEVEL REPEATABLE READ','LOCK TABLE owned IN SHARE MODE']);await vi.advanceTimersByTimeAsync(2000);expect(r.first.sql).toHaveLength(7);expect(r.second.sql).toHaveLength(3);
+   lock.resolve();await transition;await vi.advanceTimersByTimeAsync(1000);expect(r.second.sql.at(-1)).toBe('SELECT 1');
+  }finally{r.first.release();r.second.release();await transition;await r.sessions.dispose();vi.useRealTimers();}
+  expect(r.second.sql.indexOf('ROLLBACK')).toBeGreaterThan(r.second.sql.indexOf('LOCK TABLE owned IN SHARE MODE'));expect(r.cleanup).toEqual([]);
+ });
+ it('keeps the sibling alive across a paused COMMIT and preserves its transaction until its own disposal',async()=>{
+  vi.useFakeTimers();const r=recordingSessions(),commit=r.second.gate('COMMIT');let submitted:Promise<unknown>|undefined;
+  try{await r.sessions.beginLocked(r.first.client(),'LOCK TABLE source IN SHARE MODE');await r.sessions.beginLocked(r.second.client(),'LOCK TABLE target IN SHARE ROW EXCLUSIVE MODE');await r.sessions.pauseAndDrain(r.second.client());submitted=r.second.query('COMMIT');await vi.advanceTimersByTimeAsync(4000);expect(r.first.sql.filter(v=>v==='SELECT 1')).toHaveLength(4);expect(r.second.sql.filter(v=>v==='SELECT 1')).toHaveLength(0);expect(r.transactions.size).toBe(2);commit.resolve();await submitted;r.transactions.delete(r.second.client());r.sessions.resume(r.second.client());}
+  finally{r.first.release();r.second.release();await submitted;await r.sessions.dispose();vi.useRealTimers();}
+  expect(r.first.sql.filter(v=>v==='ROLLBACK')).toHaveLength(1);expect(r.second.sql.filter(v=>v==='ROLLBACK')).toHaveLength(0);
+ });
+ it('tracks an unacknowledged BEGIN for rollback and never resumes a client whose first LOCK failed',async()=>{
+  vi.useFakeTimers();const r=recordingSessions();r.first.errors.set('BEGIN ISOLATION LEVEL REPEATABLE READ',Object.assign(new Error('begin acknowledgement lost'),{code:'08006'}));r.second.errors.set('LOCK TABLE target IN SHARE MODE',Object.assign(new Error('lock timeout'),{code:'55P03'}));
+  try{await expect(r.sessions.beginLocked(r.first.client(),'LOCK TABLE source IN SHARE MODE')).rejects.toMatchObject({code:'08006'});await expect(r.sessions.beginLocked(r.second.client(),'LOCK TABLE target IN SHARE MODE')).rejects.toMatchObject({code:'55P03'});expect(r.transactions.size).toBe(2);await vi.advanceTimersByTimeAsync(2000);expect(r.first.sql).not.toContain('SELECT 1');expect(r.second.sql).not.toContain('SELECT 1');}
+  finally{r.first.release();r.second.release();await r.sessions.dispose();vi.useRealTimers();}
+  expect(r.first.sql).toEqual(['BEGIN ISOLATION LEVEL REPEATABLE READ','ROLLBACK']);expect(r.second.sql).toEqual(['BEGIN ISOLATION LEVEL REPEATABLE READ','LOCK TABLE target IN SHARE MODE','ROLLBACK']);expect(r.cleanup).toEqual([]);
+ });
+ it('keeps the second owner alive through first rollback/end and attempts BOTH rollback/end failures before stopping listeners',async()=>{
+  vi.useFakeTimers();const r=recordingSessions();r.transactions.add(r.first.client());r.transactions.add(r.second.client());const rollback=r.first.gate('ROLLBACK'),end=deferred();r.first.endGate=end;for(const pg of [r.first,r.second]){pg.errors.set('ROLLBACK',new Error('rollback failed'));pg.endError=new Error('close failed');}let disposal:Promise<void>|undefined;
+  try{disposal=r.sessions.dispose();await vi.advanceTimersByTimeAsync(2000);expect(r.first.sql).toEqual(['ROLLBACK']);expect(r.first.ended).toBe(0);expect(r.second.sql).toEqual(['SELECT 1','SELECT 1']);rollback.resolve();await vi.advanceTimersByTimeAsync(2000);expect(r.first.ended).toBe(1);expect(r.second.sql).toEqual(Array(4).fill('SELECT 1'));end.resolve();await disposal;expect(r.first.ended).toBe(1);expect(r.second.ended).toBe(1);expect(r.second.sql.at(-1)).toBe('ROLLBACK');expect(r.cleanup).toEqual(['transaction-disposal','postgres-close','transaction-disposal','postgres-close']);const counts=[r.first.sql.length,r.second.sql.length];await vi.advanceTimersByTimeAsync(2000);expect([r.first.sql.length,r.second.sql.length]).toEqual(counts);expect(r.first.listenerCount('error')).toBe(1);expect(r.second.listenerCount('error')).toBe(1);}
+  finally{r.first.release();r.second.release();await disposal;vi.useRealTimers();}
  });
 });
