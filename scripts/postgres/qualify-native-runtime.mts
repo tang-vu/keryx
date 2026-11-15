@@ -40,7 +40,7 @@ import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourc
 import type { Source } from '../../lib/types';
 import type { SourceMeta } from '../../lib/db/keryx-db';
 import type { SourceClaim,SourceClaimChallenge } from '../../lib/sources/public-source-claim';
-import { createReadonlyEnrolledSqliteAdapter } from '../../lib/db/enrolled-sqlite-adapter';
+import { projectRecordedEvidenceProvenance } from '../../lib/research/evidence-provenance';
 import { captureObservedPaymentSource } from './payment-original-source.mts';
 import { storageIdentityDigest } from '../../lib/db/storage-identity';
 export async function qualifyNativeRuntime(input:{postgresContainer:string;password:string;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
@@ -163,15 +163,21 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
    ownershipProjection=heldOwnershipHistoryProjectionSql('synthetic-runtime-run',sqliteOwnershipHistoryProjection(oracle,'synthetic-runtime-run'));
    privacyProjection=heldPrivacyProjectionSql('synthetic-runtime-run',sqlitePrivacyProjection(oracle,'synthetic-runtime-run'));oracle.exec('COMMIT');
   }finally{oracleConnection.close();}
-  const previous=Object.fromEntries(['KERYX_STORAGE_MANIFEST','CONTENT_MASTER_KEY','KERYX_RUN_PRIVACY_ENABLED','KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED','KERYX_PUBLIC_PROFILES_ENABLED'].map(name=>[name,process.env[name]]));let sourceReader:Awaited<ReturnType<typeof createReadonlyEnrolledSqliteAdapter>>|undefined;
-  try{
-   process.env.KERYX_STORAGE_MANIFEST=acceptanceManifestPath;process.env.CONTENT_MASTER_KEY=key;process.env.KERYX_RUN_PRIVACY_ENABLED='true';process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='true';process.env.KERYX_PUBLIC_PROFILES_ENABLED='true';
-   sourceReader=await createReadonlyEnrolledSqliteAdapter();const projected=await sourceReader.getQueryRun('synthetic-runtime-run');assert(projected);assert.notEqual(projected.answer,'Original answer');
-   const equal=(value:unknown)=>assert.equal(canonicalJson(value),canonicalJson([projected]));equal(await sourceReader.listRecentQueries(1));equal(await sourceReader.listQueryRunsByAsker(owner,1));equal(await sourceReader.listFollowUps('synthetic-runtime-parent'));const streamed=[];for await(const row of sourceReader.iterateRecentQueries(1))streamed.push(row);equal(streamed);
-   assert.equal(canonicalJson((await sourceReader.runPrivacy!.read(projected.id)).item!.run),canonicalJson(projected));const owned=await sourceReader.runPrivacy!.owner(projected.id,{wallet:owner,binding:{network:'eip155:5042',origin:'https://keryx.cc'}});assert(owned);assert.equal(canonicalJson(owned.run),canonicalJson(JSON.parse(original)));
-   queryReads={projected:JSON.parse(JSON.stringify(projected)),sourceHistory:await sourceReader.runPrivacy!.sourceHistory!()};
-  }finally{sourceReader?.close();for(const[name,value]of Object.entries(previous)){if(value===undefined)delete process.env[name];else process.env[name]=value;}}
-  const sourceCopy=new DatabaseSync(acceptanceFile,{readOnly:true});try{sourceCopy.exec('PRAGMA query_only=ON');assert.equal(sourceCopy.prepare('SELECT data FROM query_runs WHERE id=?').get('synthetic-runtime-run')!.data,original);for(const table of ['sources','source_items'])for(const row of sourceCopy.prepare('SELECT * FROM '+table+(table==='sources'?" WHERE id='synthetic-runtime-item-source'":" WHERE id='synthetic-runtime-flagged-item'")).all()){const keys=Object.keys(row);runInsert+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(k=>{const v=row[k];if(v===null)return 'NULL';if(['active','verified'].includes(k))return v===1?'true':'false';if(typeof v==='number'||typeof v==='bigint')return String(v);assert(typeof v==='string');return q(v)+(table==='sources'&&['tags','authors'].includes(k)?'::jsonb':'');}).join(',')});`;}}finally{sourceCopy.close();}
+  const sourceInput=JSON.stringify({format:'keryx-native-runtime-source-oracle-v1',manifestPath:acceptanceManifestPath,key,owner,original,identity:input.identity});assert(Buffer.byteLength(sourceInput)<=16384,'Synthetic Source oracle input bound');
+  const sourceOutput=execFileSync(process.execPath,['--max-old-space-size=256','--import',new URL('../../node_modules/tsx/dist/loader.mjs',import.meta.url).href,fileURLToPath(new URL('./native-runtime-source-oracle.mts',import.meta.url))],{
+   input:sourceInput,encoding:'utf8',windowsHide:true,timeout:60000,maxBuffer:16384,stdio:['pipe','pipe','pipe'],env:{...process.env,TSX_DISABLE_CACHE:'1',TEMP:fixtureRoot,TMP:fixtureRoot,TMPDIR:fixtureRoot},
+  });
+  const observation=JSON.parse(sourceOutput);assert.equal(Object.keys(observation).sort().join(','),'format,identity,outbound,queryReads');assert.equal(observation.format,'keryx-native-runtime-source-oracle-v1');assert.equal(canonicalJson(validateStorageIdentity(observation.identity)),canonicalJson(input.identity));assert.equal(observation.outbound,0);
+  assert.equal(Object.keys(observation.queryReads).sort().join(','),'projected,sourceHistory');queryReads=observation.queryReads;assert(queryReads);assert.equal(queryReads.projected.id,'synthetic-runtime-run');assert.notEqual(queryReads.projected.answer,'Original answer');assert(Array.isArray(queryReads.sourceHistory));assert.deepEqual(queryReads.sourceHistory.map(row=>row.id),['synthetic-runtime-run']);
+  const sourceCopy=new DatabaseSync(acceptanceFile,{readOnly:true});try{sourceCopy.exec('PRAGMA query_only=ON');assert.equal(sourceCopy.prepare('SELECT data FROM query_runs WHERE id=?').get('synthetic-runtime-run')!.data,original);
+   const expected=await projectRecordedEvidenceProvenance(async lookup=>{
+    const flags=new Set<string>();for(const [table,ids]of [['sources',lookup.sourceIds],['source_items',lookup.itemIds]] as const)for(let offset=0;offset<ids.length;offset+=500){
+     const batch=ids.slice(offset,offset+500);assert(batch.every(id=>id.length<=256));
+     for(const row of sourceCopy.prepare(`SELECT id${table==='source_items'?',source_id':''} FROM ${table} WHERE evidence_provenance='synthetic-demo' AND id IN (${batch.map(()=>'?').join(',')})`).all(...batch))flags.add(table==='sources'?`source:${row.id}`:`item:${row.source_id}:${row.id}`);
+    }return flags;
+   },JSON.parse(original));assert.equal(canonicalJson(queryReads.projected),canonicalJson(expected));
+   for(const table of ['sources','source_items'])for(const row of sourceCopy.prepare('SELECT * FROM '+table+(table==='sources'?" WHERE id='synthetic-runtime-item-source'":" WHERE id='synthetic-runtime-flagged-item'")).all()){const keys=Object.keys(row);runInsert+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(k=>{const v=row[k];if(v===null)return 'NULL';if(['active','verified'].includes(k))return v===1?'true':'false';if(typeof v==='number'||typeof v==='bigint')return String(v);assert(typeof v==='string');return q(v)+(table==='sources'&&['tags','authors'].includes(k)?'::jsonb':'');}).join(',')});`;}
+  }finally{sourceCopy.close();}
   pg(runInsert+
    historyProjection+ownershipProjection+privacyProjection+`INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});
    INSERT INTO public.private_bibliographies(id,wallet,token_hash,title,content,reference_count,revision,created_at,updated_at) VALUES(${q(bibliographyId)},${q(owner)},${q(createHash('sha256').update('keryx-private-bib-v1:'+bibliographyToken).digest('hex'))},'Synthetic bibliography','Synthetic bibliography content',0,1,'2026-01-02T03:04:05.000Z','2026-01-02T03:04:05.000Z');
