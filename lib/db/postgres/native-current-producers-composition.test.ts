@@ -70,7 +70,8 @@ describe('closed current producer composition',()=>{
  });
  it.each([...privateMethods,...onrampMethods,...purchaseMethods,...originalMethods,...sponsorMethods].filter(([,write])=>write).map(([name])=>name))('refuses readonly %s before input getters or dispatch',async name=>{
   const f=fixture(true);await f.core.adapter.init();const inspected=vi.fn(()=>{throw Error('Caller input inspected');}),poison=new Proxy({},{get:inspected,ownKeys:inspected});
-  await expect(Reflect.apply(Reflect.get(f.core.adapter,name),f.core.adapter,[poison,poison,poison,poison])).rejects.toThrow();
+  const method=Reflect.get(f.core.adapter,name);if(typeof method!=='function')throw Error('Expected composed native method');
+  await expect(Reflect.apply(method,f.core.adapter,[poison,poison,poison,poison])).rejects.toThrow();
   expect(inspected).not.toHaveBeenCalled();expect(f.call).not.toHaveBeenCalled();expect(f.rpc).not.toHaveBeenCalled();
  });
  it('keeps readonly expected-original claims and scholarly Source refusals ahead of getters',async()=>{

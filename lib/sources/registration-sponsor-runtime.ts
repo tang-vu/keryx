@@ -6,7 +6,7 @@ import { chainForProfile } from "../chains";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { attestedArcAuthorityHttp } from "../arc-rpc-attestation";
 import { getDb } from "../db";
-import { assertEnrolledSqliteAdapter } from "../db/enrolled-sqlite-adapter";
+import { applicationSqliteIdentity } from "../db/application-storage";
 import { readRuntimeStorageDeployment } from "../db/runtime-storage-config";
 import type { StorageIdentity } from "../db/storage-identity";
 import type { KeryxDB } from "../db/keryx-db";
@@ -34,7 +34,7 @@ function bindingLocal(binding:SponsorBinding){
 async function assertBinding(binding:SponsorBinding){
  bindingLocal(binding);const deployment=readRuntimeStorageDeployment();let identity:Readonly<StorageIdentity>;
  if(deployment.backend.kind==='postgres'){const {assertPostgresRuntimeIdentity}=await import('../db/postgres/runtime-adapter');bindingLocal(binding);identity=await assertPostgresRuntimeIdentity(binding.db,binding.purpose==='new-exposure'?'write':'read');}
- else if(deployment.backend.kind==='sqlite')identity=assertEnrolledSqliteAdapter(binding.db,binding.purpose==='new-exposure'?'write':'read');else unavailableObservation();
+ else if(deployment.backend.kind==='sqlite')identity=applicationSqliteIdentity(binding.db,binding.purpose==='new-exposure'?'write':'read');else unavailableObservation();
  bindingLocal(binding);if(canonicalJson(identity)!==canonicalJson(binding.identity)||canonicalJson(identity)!==canonicalJson(deployment.identity)||identity.network!==binding.policy.network)unavailableObservation();
  if(binding.original){const original=await binding.db.getRegistrationSponsor?.(binding.original);bindingLocal(binding);if(!original||original.policyDigest!==registrationPolicyDigest(binding.policy)||original.registryAddress!==binding.policy.registryAddress||original.registryCodeHash!==binding.policy.registryCodeHash||original.relayer!==binding.policy.sponsorAddress||`eip155:${original.chainId}`!==binding.policy.network)unavailableObservation();}
 }
