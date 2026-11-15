@@ -205,9 +205,9 @@ export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBui
   const publicNetwork = mainnetPublicBuild ? 'arc' : 'arcTestnet';
   const buildEnv = preparationEnvironment({ commit: staged.commit, scratch, publicNetwork, inherited });
   const toolchain = { nodeSha256: hash(fs.readFileSync(process.execPath)), npmCliSha256: hash(fs.readFileSync(npmCli)) };
-  const call = (args, heap, outputFd, nodeEnv = 'production', publicBuild = false) => run(process.execPath, [npmCli, ...args], {
+  const call = (args, heap, outputFd, nodeEnv = 'production', publicBuild = false, timeout = 30 * 60 * 1000) => run(process.execPath, [npmCli, ...args], {
     cwd: staged.source, env: { ...(publicBuild ? buildEnv : env), NODE_ENV: nodeEnv, NODE_OPTIONS: `--max-old-space-size=${heap}` },
-    encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, timeout: 30 * 60 * 1000, windowsHide: true,
+    encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, timeout, windowsHide: true,
     ...(outputFd !== undefined ? { stdio: ['ignore', outputFd, outputFd] } : {}),
   });
   const version = call(['--version'], 1536);
@@ -225,18 +225,33 @@ export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBui
     const nodeEnv = name === 'tests' ? 'test' : 'production';
     const startedAt = new Date().toISOString(), started = performance.now();
     const logFile = path.join(staged.candidate, `${name}.log`), fd = fs.openSync(logFile, 'wx', 0o600);
-    let result;
+    let result; const commandResults = [];
     try {
-      // The complete TypeScript graph exceeds a 2.5 GiB heap on the isolated Linux builder.
-      result = call(args, name === 'typecheck' ? 4096 : 1536, fd, nodeEnv, name === 'build');
-      // Injectable processes may return captured output; native processes write
-      // directly to the retained log even if the controller exits mid-check.
-      fs.writeSync(fd, (result.stdout ?? '') + (result.stderr ?? ''));
-      fs.fsyncSync(fd);
+      // The same three complete Vitest file shards as CI avoid retaining the
+      // entire suite graph in one long-lived pool. They run sequentially in
+      // this independently copied source, with no shared concurrent outputs.
+      const commands = name === 'tests' ? [1, 2, 3].map(shard =>
+        [...args, '--', `--shard=${shard}/3`, '--maxWorkers=3']) : [args];
+      const deadline = started + 30 * 60 * 1000;
+      for (const command of commands) {
+        const remaining = Math.floor(deadline - performance.now());
+        if (remaining <= 0) { result = { status: null, signal: null, error: { code: 'ETIMEDOUT' } }; break; }
+        const began = performance.now();
+        // Keep the original per-stage deadline and typecheck heap unchanged.
+        result = call(command, name === 'typecheck' ? 4096 : 1536, fd, nodeEnv, name === 'build', remaining);
+        commandResults.push({ command: [process.execPath, npmCli, ...command],
+          elapsedMs: Math.round(performance.now() - began), exitCode: result.status,
+          signal: result.signal ?? null, processError: result.error?.code ?? null });
+        // Native processes stream to this same private aggregate log; injected
+        // processes may return captured output. Failed shards never retry.
+        fs.writeSync(fd, (result.stdout ?? '') + (result.stderr ?? ''));
+        fs.fsyncSync(fd);
+        if (result.error || result.signal || result.status !== 0) break;
+      }
     } finally { fs.closeSync(fd); }
     if (fs.statSync(logFile).size > 32 * 1024 * 1024) refuse();
     const output = fs.readFileSync(logFile);
-    const receipt = { name, command: [process.execPath, npmCli, ...args], nodeEnv, startedAt,
+    const receipt = { name, command: commandResults[0]?.command ?? [process.execPath, npmCli, ...args], commands: commandResults, nodeEnv, startedAt,
       elapsedMs: Math.round(performance.now() - started), exitCode: result.status,
       signal: result.signal ?? null, outputSha256: hash(output), processError: result.error?.code ?? null };
     exclusiveReceipt(path.join(staged.candidate, `${name}.json`), receipt);

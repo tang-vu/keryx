@@ -104,7 +104,7 @@ test('mainnet public build refuses missing or malformed connector IDs before exe
 test('mainnet preparation changes only the public build profile; tests stay testnet and failures retain refusal', t => {
   const f = fixture(t), calls = [];
   const checks = runPreparationChecks({ ...f, mainnetPublicBuild: true, inherited: mainnetPublic, run(_command, args, options) {
-    const name = args.at(-1); calls.push({ name, env: options.env });
+    const name = (args[1] === 'test' ? 'test' : args.at(-1)); calls.push({ name, env: options.env });
     assert.equal(options.cwd, f.source);
     assert.equal(options.env.KERYX_FORCE_OFFLINE, name === 'build' ? '0' : '1');
     assert.equal(options.env.KERYX_NETWORK, name === 'build' ? 'arc' : 'arcTestnet');
@@ -118,7 +118,7 @@ test('mainnet preparation changes only the public build profile; tests stay test
     if (name === 'build') writePrivateHeaders(f.source);
     return { status: 0, stdout: name === '--version' ? '11.19.0\n' : 'synthetic checked command output', stderr: '' };
   } });
-  assert.deepEqual(calls.map(x => x.name), ['--version', 'typecheck', 'test', 'build']);
+  assert.deepEqual(calls.map(x => x.name), ['--version', 'typecheck', 'test', 'test', 'test', 'build']);
   const publicConfigSha256 = createHash('sha256').update(JSON.stringify(publicCircle) + '\n').digest('hex');
   assert.deepEqual(checks.publicBuildSettings, { network: 'arc', forceOffline: false,
     mainnetPublicConfigSha256: mainnetPublicBuildProfileSha256(mainnetPublic),
@@ -132,7 +132,7 @@ test('mainnet preparation changes only the public build profile; tests stay test
       run: () => assert.fail('invalid profile executed a command') }));
   const failed = fixture(t), seen = [];
   assert.throws(() => runPreparationChecks({ ...failed, mainnetPublicBuild: true, inherited: mainnetPublic, run(_command, args) {
-    const name = args.at(-1); seen.push(name);
+    const name = (args[1] === 'test' ? 'test' : args.at(-1)); seen.push(name);
     return { status: name === 'test' ? 9 : 0, stdout: name === '--version' ? '11.19.0\n' : '', stderr: '' };
   } }));
   assert.deepEqual(seen, ['--version', 'typecheck', 'test']);
@@ -145,12 +145,12 @@ test('successful commands cannot admit missing or weakened compiled private head
     const f = fixture(t);
     assert.throws(() => runPreparationChecks({ ...f, mainnetPublicBuild: true, inherited: mainnetPublic,
       run(_command, args) {
-        if (args.at(-1) === 'build' && weaken) {
+        if ((args[1] === 'test' ? 'test' : args.at(-1)) === 'build' && weaken) {
           writePrivateHeaders(f.source);
           const file = path.join(f.source, '.next', 'routes-manifest.json'), routes = JSON.parse(fs.readFileSync(file));
           routes.headers[0].headers[1].value = 'strict-origin-when-cross-origin'; fs.writeFileSync(file, JSON.stringify(routes));
         }
-        return { status: 0, stdout: args.at(-1) === '--version' ? '11.19.0\n' : '', stderr: '' };
+        return { status: 0, stdout: (args[1] === 'test' ? 'test' : args.at(-1)) === '--version' ? '11.19.0\n' : '', stderr: '' };
       } }));
     assert.equal(fs.existsSync(path.join(f.root, 'build.json')), true);
     assert.equal(fs.existsSync(path.join(f.root, 'preparation.json')), false);
@@ -164,12 +164,12 @@ test('failed typecheck/test/build retains the real failure and cannot reach late
     const candidate = path.join(f.root, failed); fs.mkdirSync(candidate); f.staged.candidate = candidate;
     const run = (_command, args, options) => {
       assert.equal(options.env.KERYX_FORCE_OFFLINE, '1'); assert.equal(options.cwd, f.source);
-      const name = args.at(-1); commands.push(name);
+      const name = (args[1] === 'test' ? 'test' : args.at(-1)); commands.push(name);
       assert.equal(options.env.NODE_ENV, name === 'test' ? 'test' : 'production');
       return { status: name === failed ? 7 : 0, stdout: name === '--version' ? '11.19.0\n' : 'actual synthetic command output', stderr: '' };
     };
     assert.throws(() => runPreparationChecks({ ...f, run }));
-    const expected = ['--version', 'typecheck', 'test', 'build'];
+    const expected = ['--version', 'typecheck', 'test', 'test', 'test', 'build'];
     assert.deepEqual(commands, expected.slice(0, expected.indexOf(failed) + 1));
     const receiptName = failed === 'test' ? 'tests' : failed;
     assert.equal(JSON.parse(fs.readFileSync(path.join(candidate, `${receiptName}.json`))).exitCode, 7);
@@ -312,4 +312,46 @@ test('build aliases cannot import external runtime paths and headroom failure pr
     assert.throws(() => materializePreparationBuildAliases(f));
   } finally { fs.statfsSync = original; }
   assert.equal(fs.lstatSync(alias).isSymbolicLink(), true);
+});
+
+test('all three fixed test shards succeed under the original shared stage deadline', t => {
+  const f = fixture(t), calls = [];
+  const checks = runPreparationChecks({ ...f, run(_command, args, options) {
+    calls.push({ args: args.slice(1), timeout: options.timeout });
+    assert(options.timeout > 0 && options.timeout <= 30 * 60 * 1000);
+    return { status: 0, stdout: args[1] === '--version' ? '11.19.0\n' : '', stderr: '' };
+  } });
+  assert.deepEqual(calls.filter(x => x.args[0] === 'test').map(x => x.args),
+    [1, 2, 3].map(i => ['test', '--', `--shard=${i}/3`, '--maxWorkers=3']));
+  assert.deepEqual(checks.results.map(x => x.name), ['typecheck', 'tests', 'build']);
+  assert.equal(checks.results[1].commands.length, 3);
+  assert.equal(checks.results[1].command[3], '--');
+});
+test('each failed test shard retains its phase and prevents every later command', t => {
+  for (const failed of [1, 2, 3]) {
+    const f = fixture(t), calls = [];
+    assert.throws(() => runPreparationChecks({ ...f, run(_command, args) {
+      calls.push(args.slice(1));
+      return { status: args.includes(`--shard=${failed}/3`) ? 7 : 0,
+        stdout: args[1] === '--version' ? '11.19.0\n' : '', stderr: '' };
+    } }));
+    assert.deepEqual(calls.filter(x => x[0] === 'test'),
+      Array.from({ length: failed }, (_, i) => ['test', '--', `--shard=${i+1}/3`, '--maxWorkers=3']));
+    const receipt = JSON.parse(fs.readFileSync(path.join(f.root, 'tests.json')));
+    assert.equal(receipt.exitCode, 7); assert.equal(receipt.commands.length, failed);
+    assert.equal(fs.existsSync(path.join(f.root, 'build.json')), false);
+    assert.equal(fs.existsSync(path.join(f.root, 'preparation.json')), false);
+  }
+});
+test('elapsed shared test budget refuses before another shard without extending the deadline', t => {
+  const f = fixture(t); let now = 0, tests = 0;
+  t.mock.method(performance, 'now', () => now);
+  assert.throws(() => runPreparationChecks({ ...f, run(_command, args) {
+    if (args[1] === 'test') { tests++; now += 30 * 60 * 1000; }
+    return { status: 0, stdout: args[1] === '--version' ? '11.19.0\n' : '', stderr: '' };
+  } }));
+  assert.equal(tests, 1);
+  const receipt = JSON.parse(fs.readFileSync(path.join(f.root, 'tests.json')));
+  assert.equal(receipt.processError, 'ETIMEDOUT'); assert.equal(receipt.commands.length, 1);
+  assert.equal(fs.existsSync(path.join(f.root, 'build.json')), false);
 });
