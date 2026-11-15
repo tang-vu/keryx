@@ -8,7 +8,7 @@ INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VA
 CREATE FUNCTION public.storage_registration_sponsor(expected jsonb,digest text,phase text,request_wire text) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE request jsonb;s jsonb;i jsonb;op text;selection_wire text;retained jsonb;wire text;sha text;claim_id text;raw text;
- count_rows bigint;wire_bytes bigint;n numeric;wall_now numeric:=floor(extract(epoch FROM clock_timestamp())*1000);meta jsonb;corpus jsonb;item jsonb;stored json;part json;root jsonb;other_root jsonb;field text;record_key text;
+ count_rows bigint;wire_bytes bigint;n numeric;wall_now numeric:=floor(extract(epoch FROM clock_timestamp())*1000);meta jsonb;corpus jsonb;item jsonb;stored jsonb;root jsonb;other_root jsonb;field text;record_key text;
  policies jsonb:='{}'::jsonb;entries jsonb:='{}'::jsonb;p jsonb;cohort text;policy_digest text;requested jsonb;change_request jsonb;target jsonb;latest jsonb;current_root jsonb;original_root jsonb;
  wanted jsonb:='{}'::jsonb;new_policy jsonb;new_policy_key text;expected_result text;change jsonb;planned jsonb;next_root jsonb;next_execution text;requires_claim boolean:=false;requires_funds boolean:=false;
  creator text;id text;policy_rows integer;entry_rows integer;active_count integer:=0;txs text[]:=ARRAY[]::text[];nonces text[]:=ARRAY[]::text[];nonce_key text;held numeric:=0;balance numeric;spendable numeric;observation jsonb;observation_wire text;funding_identity jsonb;new_hold boolean:=false;
@@ -37,11 +37,12 @@ BEGIN
  IF op='admit' THEN
   IF i-'policyWire'-'rowWire'-'now'-'observationWire'<>'{}'::jsonb OR jsonb_typeof(i->'policyWire') IS DISTINCT FROM 'string' OR jsonb_typeof(i->'rowWire') IS DISTINCT FROM 'string'
    OR NOT(i?'observationWire') OR i->'observationWire'<>'null'::jsonb AND jsonb_typeof(i->'observationWire')<>'string' THEN RAISE EXCEPTION 'admit tuple refused';END IF;
-  claim_id:=(i->>'rowWire')::json->>'claimId';
+  claim_id:=keryx_storage.registration_sponsor_corpus(jsonb_build_object('kind','row','wire',i->>'rowWire'))->>'claimId';
  ELSIF op='transition' THEN
   IF i-'changeWire'-'now'<>'{}'::jsonb OR jsonb_typeof(i->'changeWire') IS DISTINCT FROM 'string' THEN RAISE EXCEPTION 'transition tuple refused';END IF;
   change_request:=(i->>'changeWire')::jsonb;IF change_request-'wallet'-'id'-'expectedState'-'nextState'-'transactionNonce'-'transactionHash'-'actualGasWei'-'creatorSignature'-'signedTransaction'-'expiredResolution'-'fundingObservation'-'now'<>'{}'::jsonb OR change_request->'now' IS DISTINCT FROM i->'now' OR change_request->>'wallet' IS NULL OR change_request->>'wallet' !~ '^0x[0-9a-f]{40}$' OR change_request->>'id' IS NULL OR change_request->>'id' !~ '^0x[0-9a-f]{64}$' THEN RAISE EXCEPTION 'transition shape or clock differs';END IF;
-  SELECT value::json#>>'{current,claimId}' INTO claim_id FROM public.sync_state WHERE sync_state.key='keryx:registration-sponsor:v1:row:'||(change_request->>'id');
+  SELECT value INTO raw FROM public.sync_state WHERE sync_state.key='keryx:registration-sponsor:v1:row:'||(change_request->>'id');
+  IF raw IS NOT NULL THEN stored:=keryx_storage.registration_sponsor_corpus(jsonb_build_object('kind','journal','wire',raw));claim_id:=keryx_storage.registration_sponsor_corpus(jsonb_build_object('kind','row','wire',stored->>'current'))->>'claimId';END IF;
  ELSIF op='funding' THEN
   IF i-'policyWire'-'observationWire'-'now'<>'{}'::jsonb OR jsonb_typeof(i->'policyWire') IS DISTINCT FROM 'string' OR jsonb_typeof(i->'observationWire') IS DISTINCT FROM 'string' THEN RAISE EXCEPTION 'funding tuple refused';END IF;
  ELSE
@@ -62,7 +63,7 @@ BEGIN
  wire:=jsonb_build_object('selector',s,'rows',retained)::text;IF octet_length(wire)>16777216 THEN RAISE EXCEPTION 'snapshot wire bound';END IF;
  sha:=encode(sha256(convert_to(wire,'UTF8')),'hex');IF phase='snapshot' THEN RETURN jsonb_build_object('wire',wire,'sha256',sha);END IF;
  IF request->>'snapshotSha256' IS DISTINCT FROM sha THEN RAISE EXCEPTION 'current corpus changed';END IF;
- meta:=request->'metadata';corpus:=keryx_storage.registration_sponsor_corpus(meta);policies:=corpus->'policies';entries:=corpus->'entries';policy_rows:=(corpus->>'policyCount')::integer;entry_rows:=(corpus->>'entryCount')::integer;active_count:=(corpus->>'activeCount')::integer;
+ meta:=request->'metadata';corpus:=keryx_storage.registration_sponsor_corpus(jsonb_build_object('kind','corpus','metadata',meta));policies:=corpus->'policies';entries:=corpus->'entries';policy_rows:=(corpus->>'policyCount')::integer;entry_rows:=(corpus->>'entryCount')::integer;active_count:=(corpus->>'activeCount')::integer;
  SELECT coalesce(array_agg(value),ARRAY[]::text[]) INTO txs FROM jsonb_array_elements_text(corpus->'transactions');SELECT coalesce(array_agg(value),ARRAY[]::text[]) INTO nonces FROM jsonb_array_elements_text(corpus->'nonces');
  expected_result:='null';
  IF op IN('get','execution') THEN
@@ -73,8 +74,8 @@ BEGIN
  ELSE
   IF op='admit' THEN
    requested:=meta->'requested';p:=(i->>'policyWire')::jsonb;current_root:=requested->'root';policy_digest:=requested->>'policyDigest';cohort:=requested->>'cohortDigest';creator:=current_root->>'creator';id:=current_root->>'id';
-   part:=(i->>'rowWire')::json;SELECT jsonb_object_agg(j.key,j.value::jsonb) INTO root FROM json_each(part) j WHERE j.key NOT IN('params','sourceId');
-   IF root IS DISTINCT FROM current_root-'paramsWire'-'sourceIdWire' OR(part->'params')::text IS DISTINCT FROM current_root->>'paramsWire' OR(part->'sourceId')::text IS DISTINCT FROM current_root->>'sourceIdWire' THEN RAISE EXCEPTION 'requested root differs';END IF;
+   root:=keryx_storage.registration_sponsor_corpus(jsonb_build_object('kind','row','wire',i->>'rowWire'));
+   IF root IS DISTINCT FROM current_root THEN RAISE EXCEPTION 'requested root differs';END IF;
    IF requested->>'policyWire' IS DISTINCT FROM i->>'policyWire' OR requested->>'computedIntentId' IS DISTINCT FROM id OR requested->>'computedOnchainId' IS DISTINCT FROM current_root->>'onchainId' OR current_root->>'policyDigest' IS DISTINCT FROM policy_digest OR current_root->>'state' IS DISTINCT FROM 'prepared' OR current_root->>'reservedWei' IS DISTINCT FROM p->>'maxTransactionWei' THEN RAISE EXCEPTION 'requested parser differs';END IF;
    IF current_root->>'registryAddress' IS DISTINCT FROM p->>'registryAddress' OR current_root->>'registryCodeHash' IS DISTINCT FROM p->>'registryCodeHash' OR current_root->>'relayer' IS DISTINCT FROM p->>'sponsorAddress' OR'eip155:'||(current_root->>'chainId') IS DISTINCT FROM p->>'network' OR(current_root->>'deadline')::numeric*1000<=((current_root->>'createdAt')::numeric) OR p->>'protocol'='keryx-registration-sponsor-v1' AND(current_root->>'deadline')::numeric*1000>(p->>'expiresAt')::numeric OR p->>'protocol'='keryx-registration-sponsor-v2' AND(current_root->>'deadline')::numeric*1000>(current_root->>'createdAt')::numeric+600000 THEN RAISE EXCEPTION 'requested policy tuple differs';END IF;
    SELECT value INTO target FROM jsonb_each(policies) e WHERE e.value->>'cohortDigest'=cohort LIMIT 1;IF target IS NOT NULL AND target->>'policyDigest'<>policy_digest THEN RAISE EXCEPTION 'original policy cannot change';END IF;
@@ -136,11 +137,11 @@ BEGIN
    proof_meta:=corpus->'claims'->('keryx:source-claims:v1:claim:'||(current_root->>'claimId'));proof_root:=proof_meta->'root';
    IF proof_root IS NULL OR proof_root='null'::jsonb THEN RAISE EXCEPTION 'current proof missing';END IF;
    IF proof_root->>'id' IS DISTINCT FROM current_root->>'claimId' OR proof_root->>'ownerWallet' IS DISTINCT FROM current_root->>'creator' OR proof_root->'revision' IS DISTINCT FROM current_root->'claimRevision' OR proof_root->'canonicalUrl' IS DISTINCT FROM current_root->'canonicalUrl' OR proof_root->'rssUrl' IS DISTINCT FROM current_root->'rssUrl'
-    ORproof_meta->>'sourceIdWire' IS DISTINCT FROM current_root->>'sourceIdWire' OR lower(proof_root->>'onchainId') IS DISTINCT FROM current_root->>'onchainId' OR proof_root->>'registryAddress' IS DISTINCT FROM current_root->>'registryAddress' OR proof_root->>'network' IS DISTINCT FROM p->>'network' OR proof_root->>'deploymentOrigin' IS DISTINCT FROM p->>'deploymentOrigin'
+    OR proof_meta->>'sourceIdWire' IS DISTINCT FROM current_root->>'sourceIdWire' OR lower(proof_root->>'onchainId') IS DISTINCT FROM current_root->>'onchainId' OR proof_root->>'registryAddress' IS DISTINCT FROM current_root->>'registryAddress' OR proof_root->>'network' IS DISTINCT FROM p->>'network' OR proof_root->>'deploymentOrigin' IS DISTINCT FROM p->>'deploymentOrigin'
     OR proof_root->>'proofMethod' IS NULL OR proof_root->>'proofMethod' NOT IN('website-file','rss-channel') OR extract(epoch FROM(proof_root->>'verifiedAt')::timestamptz)*1000>greatest(n,wall_now) OR greatest(n,wall_now)-extract(epoch FROM(proof_root->>'verifiedAt')::timestamptz)*1000>86400000 THEN RAISE EXCEPTION 'current proof changed';END IF;
   END IF;
   IF requires_funds THEN
-   observation_wire:=CASE WHEN op='transition' THEN((i->>'changeWire')::json->'fundingObservation')::text ELSE i->>'observationWire' END;observation:=observation_wire::jsonb;funding_identity:=request->'observationIdentity';
+   observation_wire:=CASE WHEN op='transition' THEN keryx_storage.source_scalar_text(i->>'changeWire','tokens')->>'fundingObservation' ELSE i->>'observationWire' END;observation:=observation_wire::jsonb;funding_identity:=request->'observationIdentity';
    IF p->>'network' IS DISTINCT FROM expected->>'network' OR jsonb_typeof(observation->'observedAt') IS DISTINCT FROM 'number' OR jsonb_typeof(observation->'blockTimestamp') IS DISTINCT FROM 'number' OR jsonb_typeof(observation->'latestTransactionNonce') IS DISTINCT FROM 'number' OR observation->>'blockHash' IS NULL OR observation->>'blockHash' !~ '^0x[0-9a-f]{64}$' OR observation->>'blockNumber' IS NULL OR observation->>'blockNumber' !~ '^(0|[1-9][0-9]{0,77})$' OR observation->>'nativeBalanceWei' IS NULL OR observation->>'nativeBalanceWei' !~ '^(0|[1-9][0-9]{0,77})$' THEN RAISE EXCEPTION 'funding observation shape differs';END IF;
    IF jsonb_typeof(observation) IS DISTINCT FROM 'object' OR observation-'network'-'sponsorAddress'-'blockNumber'-'blockHash'-'blockTimestamp'-'observedAt'-'nativeBalanceWei'-'latestTransactionNonce'<>'{}'::jsonb OR observation->>'network' IS DISTINCT FROM p->>'network' OR observation->>'sponsorAddress' IS DISTINCT FROM p->>'sponsorAddress'
     OR(observation->>'observedAt')::numeric>least(n,wall_now) OR greatest(n,wall_now)-(observation->>'observedAt')::numeric>5000 OR(observation->>'blockTimestamp')::numeric*1000>least(n,wall_now)+5000 OR(observation->>'blockTimestamp')::numeric*1000<greatest(n,wall_now)-60000 THEN RAISE EXCEPTION 'fresh funding unavailable';END IF;
@@ -165,15 +166,15 @@ BEGIN
  END IF;
  IF expected_result IS NOT NULL AND request->>'resultWire' IS DISTINCT FROM expected_result THEN RAISE EXCEPTION 'result differs';END IF;
  IF op='funding' AND jsonb_array_length(request->'changes')<>0 THEN RAISE EXCEPTION 'funding read mutation';END IF;
- IF jsonb_array_length(request->'changes')<>(SELECT count(*) FROM jsonb_object_keys(wanted))+CASE WHEN new_policy_key IS NULL THEN 0 ELSE 1 END THEN RAISE EXCEPTION 'incomplete mutation';END IF;
+ IF jsonb_array_length(request->'changes')<>(SELECT count(*) FROM jsonb_object_keys(wanted))+(CASE WHEN new_policy_key IS NULL THEN 0 ELSE 1 END) THEN RAISE EXCEPTION 'incomplete mutation';END IF;
  FOR change IN SELECT value FROM jsonb_array_elements(request->'changes') LOOP
   record_key:=change->>'key';IF record_key=ANY(seen) OR change-'key'-'value'-'updatedAt'<>'{}'::jsonb OR jsonb_typeof(change->'value') IS DISTINCT FROM 'string' OR octet_length(change->>'value')>262144 OR extract(epoch FROM(change->>'updatedAt')::timestamptz)*1000<>n THEN RAISE EXCEPTION 'mutation shape differs';END IF;seen:=array_append(seen,record_key);
   IF record_key=new_policy_key THEN IF(change->>'value')::jsonb IS DISTINCT FROM new_policy OR EXISTS(SELECT 1 FROM public.sync_state WHERE sync_state.key=record_key) THEN RAISE EXCEPTION 'policy replacement refused';END IF;
   ELSE
-   planned:=wanted->record_key;stored:=(change->>'value')::json;part:=stored->'current';SELECT jsonb_object_agg(j.key,j.value::jsonb) INTO root FROM json_each(part) j WHERE j.key NOT IN('params','sourceId');root:=root||jsonb_build_object('paramsWire',(part->'params')::text,'sourceIdWire',(part->'sourceId')::text);
-   IF planned IS NULL OR root IS DISTINCT FROM planned->'root' OR planned->'originalWire'<>'null'::jsonb AND(stored->'original')::text IS DISTINCT FROM planned->>'originalWire' OR(stored->'execution')::jsonb IS DISTINCT FROM(planned->>'executionWire')::jsonb THEN RAISE EXCEPTION 'exact original mutation differs';END IF;
-   IF planned->'originalWire'='null'::jsonb THEN IF(stored->'original')::text IS DISTINCT FROM(stored->'current')::text THEN RAISE EXCEPTION 'initial original differs';END IF;END IF;
-   IF expected_result IS NULL AND op IN('admit','transition') AND root->>'id'=current_root->>'id' AND request->>'resultWire' IS DISTINCT FROM(stored->'current')::text THEN RAISE EXCEPTION 'mutation result differs';END IF;
+   planned:=wanted->record_key;stored:=keryx_storage.registration_sponsor_corpus(jsonb_build_object('kind','journal','wire',change->>'value'));root:=keryx_storage.registration_sponsor_corpus(jsonb_build_object('kind','row','wire',stored->>'current'));
+   IF planned IS NULL OR root IS DISTINCT FROM planned->'root' OR planned->'originalWire'<>'null'::jsonb AND stored->>'original' IS DISTINCT FROM planned->>'originalWire' OR(stored->>'execution')::jsonb IS DISTINCT FROM(planned->>'executionWire')::jsonb THEN RAISE EXCEPTION 'exact original mutation differs';END IF;
+   IF planned->'originalWire'='null'::jsonb THEN IF stored->>'original' IS DISTINCT FROM stored->>'current' THEN RAISE EXCEPTION 'initial original differs';END IF;END IF;
+   IF expected_result IS NULL AND op IN('admit','transition') AND root->>'id'=current_root->>'id' AND request->>'resultWire' IS DISTINCT FROM stored->>'current' THEN RAISE EXCEPTION 'mutation result differs';END IF;
   END IF;
   INSERT INTO public.sync_state(key,value,updated_at) VALUES(record_key,change->>'value',change->>'updatedAt') ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at;
  END LOOP;
