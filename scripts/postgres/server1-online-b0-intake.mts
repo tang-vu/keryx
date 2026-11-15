@@ -17,12 +17,13 @@ import { NATIVE_CURRENT_DATA_INTAKE_PROFILE as profile } from '../../lib/db/post
 import { checkSnapshotSidecars, configureSnapshotConnection, validateSnapshotHeader } from '../../lib/db/storage-provenance-snapshot';
 import { OFFLINE_SNAPSHOT_LIMITS } from '../../lib/db/storage-provenance';
 import { exportNativePostgresSchemaContract } from './native-contract.mts';
+import { createOwnerSessionHeartbeat } from './owner-session-heartbeat.mts';
 
 const ROOT='/root/keryx-migration', B0=ROOT+'/postgres-b0';
 const paths={preparation:ROOT+'/postgres17-server1-preparation.json',held:ROOT+'/postgres17-server1-held-target.json',
  manifest:'/root/.local/share/keryx-mainnet-runtime/production-v2/storage.json',audit:'/root/.local/share/keryx-mainnet-runtime/production-v2/.business-operator-audit',
- snapshot:B0+'/source.sqlite',copy:B0+'/snapshot.json',sql:B0+'/source.sql',bundle:B0+'/intake.cjs',journal:B0+'/intake.jsonl',inspector:B0+'/inspect.cjs',inspectionIntent:B0+'/inspection-invocation-intent.json'} as const;
-const socket='/run/postgresql-keryx',unit='keryx-postgres-online-b0.service',inspectionUnit='keryx-postgres-online-b0-inspect.service',serviceDropIn='/etc/systemd/system/postgresql@17-keryx.service.d/20-keryx-preparation.conf',mode='development-current510-data-only' as const;
+ snapshot:B0+'/source.sqlite',copy:B0+'/snapshot.json',sql:B0+'/source.sql',bundle:B0+'/intake.cjs',journal:B0+'/intake.jsonl',inspector:B0+'/inspect-v2.cjs',inspectionIntent:B0+'/inspection-v2-invocation-intent.json',priorInspector:B0+'/inspect.cjs',priorInspectionIntent:B0+'/inspection-invocation-intent.json'} as const;
+const socket='/run/postgresql-keryx',unit='keryx-postgres-online-b0.service',inspectionUnit='keryx-postgres-online-b0-inspect-v2.service',serviceDropIn='/etc/systemd/system/postgresql@17-keryx.service.d/20-keryx-preparation.conf',mode='development-current510-data-only' as const;
 const phaseNames=['typed-staging','public-cells','private-projections'] as const;
 type Phase=typeof phaseNames[number];type Outcome='not_attempted'|'unknown'|'acknowledged';
 type Outcomes=Record<Phase,Outcome>;
@@ -94,11 +95,11 @@ async function deniedByLoadedHba(database:'keryx_source'|'keryx_mainnet',role:'k
 export class Server1B0Unavailable extends Error{
  constructor(readonly diagnostic:Readonly<{stage:string;phases:Outcomes;cleanupFailures:readonly string[];pgCode:string|null}>){super('Server1 online B0 unavailable');}
 }
-type Context={preparation:ReturnType<typeof pinnedJson>;held:ReturnType<typeof pinnedJson>;manifest:ReturnType<typeof pinnedJson>;copy:ReturnType<typeof pinnedJson>;source:ReturnType<typeof pin>;sql:ReturnType<typeof pin>;bundle:ReturnType<typeof pin>;service:ReturnType<typeof pin>;db:DatabaseSync;identityDigest:string;identityWire:string;referenceWire:string;lockSql:string;sourceHash:string;auditToken:string;started:number;inspection?:{intent:ReturnType<typeof pinnedJson>;bundle:ReturnType<typeof pin>;sha256:string;sourceCommit:string;journalBeforeSha256:string};keepaliveFailure?:unknown};
+type Context={preparation:ReturnType<typeof pinnedJson>;held:ReturnType<typeof pinnedJson>;manifest:ReturnType<typeof pinnedJson>;copy:ReturnType<typeof pinnedJson>;source:ReturnType<typeof pin>;sql:ReturnType<typeof pin>;bundle:ReturnType<typeof pin>;service:ReturnType<typeof pin>;db:DatabaseSync;identityDigest:string;identityWire:string;referenceWire:string;lockSql:string;sourceHash:string;auditToken:string;started:number;inspection?:{intent:ReturnType<typeof pinnedJson>;bundle:ReturnType<typeof pin>;priorIntent:ReturnType<typeof pinnedJson>;priorBundle:ReturnType<typeof pin>;sha256:string;sourceCommit:string;journalBeforeSha256:string};heartbeat?:ReturnType<typeof createOwnerSessionHeartbeat>};
 function controls(c:Context){
  assert(performance.now()-c.started<1790000);for(const p of [c.preparation,c.held,c.manifest,c.copy,c.source,c.sql,c.bundle,c.service])p.verify();checkSnapshotSidecars(paths.snapshot);
- if(c.inspection){c.inspection.intent.verify();c.inspection.bundle.verify();}
- if(c.keepaliveFailure)refuse();
+ if(c.inspection){for(const file of [c.inspection.intent,c.inspection.bundle,c.inspection.priorIntent,c.inspection.priorBundle])file.verify();}
+ const heartbeatFailure=c.heartbeat?.failure;if(heartbeatFailure)throw heartbeatFailure;
  assert.equal(location(privateDirectory(paths.audit)),c.auditToken);
  assert(c.db.isTransaction&&c.db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(canonicalJson(readStorageIdentity(c.db)),c.identityWire);
 }
@@ -188,12 +189,12 @@ export async function runServer1OnlineB0(){if(arguments.length)refuse();return i
 export async function inspectServer1OnlineB0(){if(arguments.length)refuse();return intake(true);}
 async function intake(inspect:boolean){
  const started=performance.now();
- let stage='containment',journal:number|undefined,c:Context|undefined,db:DatabaseSync|undefined,active:Client|undefined;
+ let stage='containment',journal:number|undefined,c:Context|undefined,db:DatabaseSync|undefined;
  const outcomes:Outcomes={'typed-staging':'not_attempted','public-cells':'not_attempted','private-projections':'not_attempted'};
- const cleanupFailures:string[]=[],pins:Array<ReturnType<typeof pin>>=[],clients:Client[]=[];let result:unknown,failure:unknown;
- let timer:ReturnType<typeof setInterval>|undefined,inFlight:Promise<void>|undefined;
- const startKeepalive=()=>{assert(!timer);timer=setInterval(()=>{if(!inFlight&&!c?.keepaliveFailure){inFlight=Promise.allSettled(clients.map(pg=>pg.query('SELECT 1'))).then(results=>{const failed=results.find(r=>r.status==='rejected');if(c&&failed?.status==='rejected')c.keepaliveFailure=failed.reason;}).finally(()=>{inFlight=undefined;});}},1000);};
- const stopKeepalive=async()=>{if(timer){clearInterval(timer);timer=undefined;}await inFlight;if(c?.keepaliveFailure)refuse();};
+ const cleanupFailures:string[]=[],cleanupErrors:unknown[]=[],pins:Array<ReturnType<typeof pin>>=[],clients:Client[]=[],transactions=new Set<Client>();let result:unknown,failure:unknown;
+ let heartbeat:ReturnType<typeof createOwnerSessionHeartbeat>|undefined;
+ const startKeepalive=()=>{assert(!heartbeat);heartbeat=createOwnerSessionHeartbeat(clients);c!.heartbeat=heartbeat;heartbeat.start();};
+ const stopKeepalive=async()=>{if(heartbeat)await heartbeat.stopAndDrain();};
  const emit=(event:Json)=>{assert(journal!==undefined);privateDirectory(B0);assert.equal(location(fstatSync(journal,{bigint:true})),location(pathStat(paths.journal)));const wire=JSON.stringify(event)+'\n';assert(Buffer.byteLength(wire)<=131072&&fstatSync(journal).size+Buffer.byteLength(wire)<=1048576);const b=Buffer.from(wire);let n=0;while(n<b.length){const written=writeSync(journal,b,n,b.length-n);assert(written>0);n+=written;}fsyncSync(journal);const directory=openSync(B0,constants.O_RDONLY|constants.O_DIRECTORY);try{fsyncSync(directory);}finally{closeSync(directory);}};
  try{
   containment(inspect);stage='controls';
@@ -213,7 +214,12 @@ async function intake(inspect:boolean){
    assert.equal(value.format,'keryx-server1-online-b0-inspection-invocation-v1');assert.equal(value.producerSourceCommit,'9f7a689eee36f658bf9b05d4ee98b5843ed78996');assert(typeof value.inspectorSourceCommit==='string'&&/^[a-f0-9]{40}$/.test(value.inspectorSourceCommit));
    const selfSha=await fileSha(paths.inspector,self);assert.equal(selfSha,hash(value.inspectorSha256));
    for(const [key,expected] of Object.entries({intakeSha256:h.intakeSha256,heldControlSha256:held.sha256,sourceSnapshotSha256:sourceHash,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256,identityDigest:h.identityDigest,systemIdentifier:p.systemIdentifier,sourceDatabaseOid:h.sourceDatabaseOid,targetDatabaseOid:h.targetDatabaseOid}))assert.equal(value[key],expected);
-   inspection={intent,bundle:self,sha256:selfSha,sourceCommit:value.inspectorSourceCommit,journalBeforeSha256:hash(value.journalBeforeSha256)};
+   const priorIntent=pinnedJson(paths.priorInspectionIntent);pins.push(priorIntent);const priorBundle=pin(paths.priorInspector,4194304);pins.push(priorBundle);
+   for(const file of [priorIntent,priorBundle])assert(file.initial.gid===BigInt(0)&&(file.initial.mode&BigInt(0o777))===BigInt(0o600));
+   assert.deepEqual(Object.keys(priorIntent.value).sort(),Object.keys(value).sort());assert.equal(priorIntent.value.format,value.format);assert.equal(priorIntent.value.producerSourceCommit,value.producerSourceCommit);assert.equal(priorIntent.value.inspectorSourceCommit,'92ddbf13578e94486e24319b30f6c4f10175fd36');
+   assert.equal(await fileSha(paths.priorInspector,priorBundle),hash(priorIntent.value.inspectorSha256));hash(priorIntent.value.journalBeforeSha256);
+   for(const key of ['intakeSha256','heldControlSha256','sourceSnapshotSha256','sourceSqlSha256','catalogSha256','identityDigest','systemIdentifier','sourceDatabaseOid','targetDatabaseOid'])assert.equal(priorIntent.value[key],value[key]);
+   inspection={intent,bundle:self,priorIntent,priorBundle,sha256:selfSha,sourceCommit:value.inspectorSourceCommit,journalBeforeSha256:hash(value.journalBeforeSha256)};
   }
   stage='source';db=new DatabaseSync(paths.snapshot,{readOnly:true,allowExtension:false,timeout:1000});configureSnapshotConnection(db,OFFLINE_SNAPSHOT_LIMITS);db.exec('BEGIN');
   const identity=readStorageIdentity(db),identityWire=canonicalJson(identity),identityDigest=storageIdentityDigest(identity);assert.equal(identity.network,'eip155:5042');assert.equal(identity.authorityMode,'mainnet-real');assert.equal(identityDigest,h.identityDigest);assert.equal(canonicalJson(manifest.value.identity),identityWire);assert.equal(record(manifest.value.backend).kind,'sqlite');assert.notEqual(record(manifest.value.backend).databasePath,paths.snapshot);
@@ -223,10 +229,11 @@ async function intake(inspect:boolean){
   stage='receipt';if(inspect){
    assert(inspection);const previous=pin(paths.journal,1048576);try{
     const wire=readFileSync(previous.descriptor,'utf8');assert.equal(sha(wire),inspection.journalBeforeSha256);assert(wire.endsWith('\n'));
-    const lines=wire.trim().split('\n').map(v=>record(JSON.parse(v)));assert.equal(lines.length,8);
+    const lines=wire.trim().split('\n').map(v=>record(JSON.parse(v)));assert.equal(lines.length,9);assert.equal(sha(wire.split('\n').slice(0,8).join('\n')+'\n'),inspection.priorIntent.value.journalBeforeSha256);
     assert.deepEqual(lines[0],{event:'intent',format:'keryx-server1-online-b0-journal-v1',sourceSha256:sourceHash,preparationSha256:preparation.sha256,heldSha256:held.sha256,manifestSha256:manifest.sha256,identityDigest,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256});
     for(const [index,phase] of phaseNames.entries()){assert.deepEqual(lines[1+index*2],{event:'commit-intent',phase});assert.deepEqual(lines[2+index*2],{event:'phase',phase,outcome:'acknowledged'});outcomes[phase]='acknowledged';}
     assert.deepEqual(lines[7],{event:'refused',stage:'independent-census',phases:{...outcomes},cleanupFailures:['keepalive','control_stability']});
+    assert.deepEqual(lines[8],lines[7]);
     previous.verify();journal=openSync(paths.journal,constants.O_WRONLY|constants.O_APPEND|constants.O_NOFOLLOW);assert.equal(fingerprint(fstatSync(journal,{bigint:true})),fingerprint(previous.initial));
    }finally{previous.close();}
   }
@@ -243,12 +250,12 @@ async function intake(inspect:boolean){
   // Drain the timer's queued SELECTs before BEGIN. Otherwise a heartbeat queued
   // behind an in-flight BEGIN can acquire the RR snapshot before our locks.
   const beginLocked=async(pg:Client,begin:string,lock:()=>Promise<unknown>)=>{
-   await stopKeepalive();await pg.query(begin);active=pg;await lock();startKeepalive();
+   await heartbeat!.pauseAndDrain(pg);transactions.add(pg);await pg.query(begin);await lock();heartbeat!.resume(pg);
   };
-  const commit=async(pg:Client,phase:Phase)=>{if(!timer)startKeepalive();stage=phase+'-resource-precommit';await verifyPreparedRuntime(c!);await stopKeepalive();controls(c!);stage=phase+'-commit';emit({event:'commit-intent',phase});outcomes[phase]='unknown';await pg.query('COMMIT');active=undefined;outcomes[phase]='acknowledged';emit({event:'phase',phase,outcome:'acknowledged'});controls(c!);startKeepalive();};
+  const commit=async(pg:Client,phase:Phase)=>{stage=phase+'-resource-precommit';await verifyPreparedRuntime(c!);await heartbeat!.pauseAndDrain(pg);controls(c!);stage=phase+'-commit';emit({event:'commit-intent',phase});outcomes[phase]='unknown';await pg.query('COMMIT');transactions.delete(pg);outcomes[phase]='acknowledged';emit({event:'phase',phase,outcome:'acknowledged'});controls(c!);heartbeat!.resume(pg);};
   if(!inspect){
-   stage='fresh-target';await target(targetPg,c,true);await beginLocked(targetPg,'BEGIN ISOLATION LEVEL REPEATABLE READ',()=>lockTarget(targetPg,c!));await target(targetPg,c,true);await publicCells.compareFreshNativePublicTransaction(targetPg,c.referenceWire,mode);await targetPg.query('ROLLBACK');active=undefined;
-   stage='typed-staging';await stopKeepalive();await sourcePg.query('BEGIN');active=sourcePg;await actual(sourcePg,'keryx_source',c);
+   stage='fresh-target';await target(targetPg,c,true);await beginLocked(targetPg,'BEGIN ISOLATION LEVEL REPEATABLE READ',()=>lockTarget(targetPg,c!));await target(targetPg,c,true);await publicCells.compareFreshNativePublicTransaction(targetPg,c.referenceWire,mode);await heartbeat!.pauseAndDrain(targetPg);await targetPg.query('ROLLBACK');transactions.delete(targetPg);heartbeat!.resume(targetPg);
+   stage='typed-staging';await heartbeat!.pauseAndDrain(sourcePg);transactions.add(sourcePg);await sourcePg.query('BEGIN');await actual(sourcePg,'keryx_source',c);heartbeat!.resume(sourcePg);
    assert.equal((await sourcePg.query("SELECT count(*)::text n FROM pg_namespace WHERE nspname !~ '^pg_' AND nspname NOT IN('information_schema','public')")).rows[0].n,'0');
    assert.equal((await sourcePg.query("SELECT count(*)::text n FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind IN('r','p','v','m','S','f')")).rows[0].n,'0');
    await typed.stageSnapshotTransaction(db,sourcePg);await actual(sourcePg,'keryx_source',c);await commit(sourcePg,'typed-staging');
@@ -257,25 +264,28 @@ async function intake(inspect:boolean){
   }
   // Close producer connections before using independent owner sessions. All
   // cleanup is retried only as disposal; no SQL write is ever repeated.
-  await stopKeepalive();for(const pg of clients)await pg.end();clients.length=0;
+  await stopKeepalive();for(const pg of clients)await pg.end();clients.length=0;heartbeat=undefined;c.heartbeat=undefined;
   stage='independent-census';const readSource=await make('keryx_source'),readTarget=await make('keryx_mainnet');startKeepalive();
   await beginLocked(readSource,'BEGIN',()=>readSource.query('LOCK TABLE keryx_migration.snapshot_manifest,keryx_migration.snapshot_tables,keryx_migration.snapshot_rows IN SHARE MODE'));
   const staging=await typed.compareStagedSnapshotTransaction(db,readSource);assert.equal(staging.tables.length,94);
   await target(readTarget,c,false);await beginLocked(readTarget,'BEGIN ISOLATION LEVEL REPEATABLE READ',()=>lockTarget(readTarget,c!));await target(readTarget,c,false);
   const publicCensus=await publicCells.compareNativeSnapshotTransaction(db,readTarget,readSource,c.referenceWire,mode),projections=await privateCells.compareNativeProjectionsTransaction(db,readTarget,mode);assert.equal(projections.domains.length,12);await target(readTarget,c,false);
-  stage='resource-final';await verifyPreparedRuntime(c);controls(c);await stopKeepalive();await readTarget.query('ROLLBACK');active=readSource;await readSource.query('ROLLBACK');active=undefined;assert.equal(await fileSha(paths.snapshot,source),sourceHash);
+  stage='resource-final';await verifyPreparedRuntime(c);controls(c);await heartbeat!.pauseAndDrain(readTarget);await readTarget.query('ROLLBACK');transactions.delete(readTarget);await heartbeat!.pauseAndDrain(readSource);await readSource.query('ROLLBACK');transactions.delete(readSource);await stopKeepalive();assert.equal(await fileSha(paths.snapshot,source),sourceHash);
   const heldBaseline={format:'keryx-native-held-data-baseline-metadata-v1',profileMode:mode,catalogSha256:profile.catalogSha256,targetState:'held',sequence:0,snapshotSha256:sourceHash,schemaSha256:typedCensus.schemaSha256,identityDigest,dataDigest:typedCensus.dataDigest};
   result={format:'keryx-server1-online-b0-receipt-v1',inspectionOnly:inspect,...(inspection?{inspectorSha256:inspection.sha256,inspectorSourceCommit:inspection.sourceCommit,inspectionInvocationSha256:inspection.intent.sha256,priorJournalSha256:inspection.journalBeforeSha256}:{}),phases:{...outcomes},sourceSnapshotSha256:sourceHash,sourceSchemaSha256:typedCensus.schemaSha256,dataDigest:typedCensus.dataDigest,identity:JSON.parse(identityWire),identityDigest,sourceSqlSha256:profile.sourceSqlSha256,catalogSha256:profile.catalogSha256,preparationSha256:preparation.sha256,heldControlSha256:held.sha256,sourceManifestSha256:manifest.sha256,intakeSha256:h.intakeSha256,systemIdentifier:p.systemIdentifier,sourceDatabaseOid:h.sourceDatabaseOid,targetDatabaseOid:h.targetDatabaseOid,staging,publicCensus,projections,nativeCensusSha256:sha(canonicalJson({staging,publicCensus,projections})),heldBaseline,writerMode:'held',applicationBackendSwitched:false,sourceRetired:false,financialCatchupQualified:false,privateAuditRootPreserved:true,applicationAuthority:false,paymentActions:0,jobActions:0};
  }catch(error){failure=error;}
  // Every owned disposal is attempted, including after acknowledged COMMIT.
- try{await stopKeepalive();}catch{cleanupFailures.push('keepalive');}
- if(active)try{await active.query('ROLLBACK');}catch{cleanupFailures.push('rollback');}
- for(const pg of clients)try{await pg.end();}catch{cleanupFailures.push('postgres');}
+ for(const pg of transactions){
+  try{await heartbeat?.pauseAndDrain(pg);}catch(error){cleanupErrors.push(error);}
+  try{await pg.query('ROLLBACK');}catch(error){cleanupFailures.push('rollback');cleanupErrors.push(error);}
+ }
+ try{await stopKeepalive();}catch(error){cleanupFailures.push('keepalive');cleanupErrors.push(error);}
+ for(const pg of clients)try{await pg.end();}catch(error){cleanupFailures.push('postgres');cleanupErrors.push(error);}
  if(c)try{controls(c);}catch{cleanupFailures.push('control_stability');}
  if(db){try{if(db.isTransaction)db.exec('ROLLBACK');}catch{cleanupFailures.push('sqlite_rollback');}try{db.close();}catch{cleanupFailures.push('sqlite_close');}}
  for(const held of pins)try{held.close();}catch{cleanupFailures.push('descriptor');}
  if(journal!==undefined){try{emit(failure||cleanupFailures.length?{event:'refused',stage,phases:{...outcomes},cleanupFailures:[...cleanupFailures]}:{event:'held-census',receipt:result});}catch{cleanupFailures.push('receipt');}try{closeSync(journal);}catch{cleanupFailures.push('receipt_close');}}
- if(failure||cleanupFailures.length){const code=failure&&typeof failure==='object'?Reflect.get(failure,'code'):null;throw new Server1B0Unavailable({stage,phases:{...outcomes},cleanupFailures,pgCode:typeof code==='string'&&/^[A-Z0-9]{5}$/.test(code)?code:null});}
+ if(failure||cleanupFailures.length){const code=[failure,...cleanupErrors].map(error=>error&&typeof error==='object'?Reflect.get(error,'code'):null).find(value=>typeof value==='string'&&/^[A-Z0-9]{5}$/.test(value));throw new Server1B0Unavailable({stage,phases:{...outcomes},cleanupFailures,pgCode:typeof code==='string'?code:null});}
  return result;
 }
 if(process.argv[1]===paths.bundle||process.argv[1]===paths.inspector||typeof import.meta.url==='string'&&process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
