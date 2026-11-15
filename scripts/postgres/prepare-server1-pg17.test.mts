@@ -84,7 +84,7 @@ describe('exact package binding to signed Packages metadata', () => {
     expect(() => assertServer1PackageIndex(indexWire({ Architecture: 'all' }), pin)).not.toThrow();
     expect(() => assertServer1PackageIndex(indexWire() + '\n' + indexWire({ Version: '17.11-1' }), pin)).not.toThrow();
   });
-  it.each([
+  it.each<Record<string, string>>([
     { SHA256: 'b'.repeat(64) }, { Size: '999' }, { Architecture: 'arm64' },
     { Filename: 'pool/malicious.deb' }, { Version: '17.13-1.pgdg24.04+1' },
   ])('refuses drift: %j', values => { expect(() => assertServer1PackageIndex(indexWire(values), pin)).toThrow('server1_pg17_preparation_refused'); });
