@@ -51,7 +51,7 @@ describe('closed guarded nested stores',()=>{
  });
  it('denies readonly mutations before caller or target method getters and SQL',async()=>{
   const f=fixture();let inspected=0;const raw=new Proxy({},{get(){inspected++;throw Error('inspected');}}) as never;
-  for(const work of [()=>f.stores.privateProfiles!.update(raw,raw),()=>f.stores.privateProfiles!.delete(raw),()=>f.stores.runPrivacy!.creationReady(),()=>f.stores.runPrivacy!.change(raw,raw),()=>f.stores.accountMembership!.resume(raw,raw,raw,raw),()=>f.stores.deliverableAcceptance!.submit(raw,raw,raw,raw,raw),()=>f.stores.runClaims!.issue(raw)])await expect(work()).rejects.toThrow('readonly_operation');
+  for(const work of [()=>f.stores.privateProfiles!.update(raw,raw),()=>f.stores.privateProfiles!.delete(raw),()=>f.stores.runPrivacy!.creationReady(),()=>f.stores.runPrivacy!.change(raw,raw,raw),()=>f.stores.accountMembership!.resume(raw,raw,raw,raw),()=>f.stores.deliverableAcceptance!.submit(raw,raw,raw,raw,raw),()=>f.stores.runClaims!.issue(raw)])await expect(work()).rejects.toThrow('readonly_operation');
   expect(()=>f.stores.pendingJobOwners!.assertAdmission(raw)).toThrow('readonly_operation');expect(inspected).toBe(0);expect(f.call).not.toHaveBeenCalled();
   const hostile=new Proxy(f.transport.privateProfiles,{get(target,key){if(key==='update'){inspected++;throw Error('target getter');}return Reflect.get(target,key);}});const stores=composePostgresRuntimeStores({...f.options,transport:{...f.transport,privateProfiles:hostile}});await expect(stores.privateProfiles!.update(raw,raw)).rejects.toThrow('readonly_operation');expect(inspected).toBe(0);
  });
