@@ -1,6 +1,15 @@
 /** Recording fixed protocol only, never an installed writer or payment proof.
  * EOA data signatures use a public test key, fake merchants and no network. */
 import { beforeAll,afterAll,expect,it,vi } from 'vitest';
+// Match the genuine mainnet Source validators before any sticky import while
+// keeping every network request trapped and spending keys absent.
+const fetchTrap=vi.hoisted(()=>{
+ vi.stubEnv('KERYX_NETWORK','arc');vi.stubEnv('NEXT_PUBLIC_KERYX_NETWORK','arc');vi.stubEnv('KERYX_FORCE_OFFLINE','0');
+ for(const key of ['KERYX_REGISTRY_ADDRESS','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS','KERYX_REGISTRY_READ_ADDRESS','NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS'])vi.stubEnv(key,'0x'+'ef'.repeat(20));
+ for(const key of ['AGENT_FUNDER_PRIVATE_KEY','BUYER_PRIVATE_KEY','DEPLOYER_PRIVATE_KEY','KERYX_PRIVATE_TREASURY_PRIVATE_KEY','NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','CONTENT_MASTER_KEY','KERYX_REGISTRY_ORIGINS','NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS'])vi.stubEnv(key,'');
+ for(const key of ['KERYX_STORAGE_MANIFEST','KERYX_SQLITE_PATH','KERYX_USDC_ADDRESS','KERYX_GATEWAY_WALLET','KERYX_GATEWAY_MINTER','KERYX_MAX_TIMEOUT_SECONDS'])vi.stubEnv(key,undefined);
+ const fetch=vi.fn(()=>{throw Error('Network forbidden in private Source fixture');});vi.stubGlobal('fetch',fetch);vi.resetModules();return fetch;
+});
 import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
 import type { PostgresDomainChannel } from './domain-channel';
 import type { QueryRun } from '../../types';
@@ -18,8 +27,13 @@ async function signedFixture(question='Synthetic offline private storage protoco
  const intent=await preparePrivateResearchIntent({request:fresh.request,salt:fresh.salt,payment:{authorization:fresh.authorization,signature}},requirement,merchants);
  return {intent,payer:owner.address.toLowerCase(),confirmation:{source:'circle-facilitator-success' as const,transaction:'synthetic-no-payment-observation',network:profile.networkId,payer:owner.address.toLowerCase(),payee:merchants.privatePayee,amountMicros:'50000',authorizationId:fresh.authorization.nonce}};
 }
-beforeAll(async()=>{vi.stubEnv('KERYX_NETWORK','arc');vi.stubEnv('NEXT_PUBLIC_KERYX_NETWORK','arc');vi.stubGlobal('fetch',vi.fn(()=>{throw Error('Network forbidden');}));vi.resetModules();transport=await import('./private-research-transport');packets=await import('./private-research-packet');Unknown=(await import('./domain-channel')).PostgresDomainWriteOutcomeUnknown;fixture=await signedFixture();});
-afterAll(()=>{vi.unstubAllEnvs();vi.unstubAllGlobals();});
+beforeAll(async()=>{
+ vi.resetModules();transport=await import('./private-research-transport');packets=await import('./private-research-packet');Unknown=(await import('./domain-channel')).PostgresDomainWriteOutcomeUnknown;fixture=await signedFixture();
+ // Prepare cold Source imports in setup, outside each bounded fixture's work.
+ // Each enrolled case still resets modules and opens its own verified store.
+ await import('../enrolled-sqlite-adapter');
+});
+afterAll(()=>{try{expect(fetchTrap).not.toHaveBeenCalled();}finally{vi.unstubAllEnvs();vi.unstubAllGlobals();}});
 const setup=()=>{
  const intent=structuredClone(fixture.intent),id=intent.id,payer=fixture.payer,workerId='f3a21383-c192-411b-8dd9-34a96d01b32b',at='2026-09-09T07:00:00.123+07:00';
  const wire={intentRowWire:JSON.stringify({id,payer,data:JSON.stringify(intent),created_at:at}),paymentRowWire:JSON.stringify({id,started_at:at,confirmation:JSON.stringify(fixture.confirmation),settled_at:at}),executionRowWire:JSON.stringify({id,worker_id:workerId,started_at:at}) as string|null,resultRowWire:null as string|null,interruptionRowWire:null as string|null,reservationRowWire:null as string|null,releaseRowWire:null as string|null,submissionsWire:'[]',confirmationsWire:'[]'};
@@ -121,7 +135,7 @@ it.each(['Synthetic\0\ud800 high','Synthetic\udfff low','Synthetic\uFEFF\u2028\u
  let source:Awaited<ReturnType<typeof createEnrolledSqliteAdapter>>|undefined;
  try{
   const seed=new DatabaseSync(file);try{seed.exec('BEGIN');installMainnetApplicationSchema(seed,{publicReferenceArchive:true});installNativeUserDomainSchema(seed);seed.prepare('INSERT INTO private_research_intents VALUES(?,?,?,?)').run(f.intent.id,f.payer,raw,'2026-09-09T07:00:00.123456789+07:00');insertStorageIdentity(seed,identity);installStorageFences(seed,identity);seed.exec('COMMIT');}finally{seed.close();}
-  writeFileSync(manifest,canonicalJson({format:'keryx-storage-deployment-v1',identity,backend:{kind:'sqlite',databasePath:file}}));vi.stubEnv('KERYX_STORAGE_MANIFEST',manifest);vi.stubEnv('KERYX_SQLITE_PATH',file);vi.stubEnv('KERYX_FORCE_OFFLINE','0');vi.stubEnv('CONTENT_MASTER_KEY','11'.repeat(32));
+  writeFileSync(manifest,canonicalJson({format:'keryx-storage-deployment-v1',identity,backend:{kind:'sqlite',databasePath:file}}));vi.stubEnv('KERYX_STORAGE_MANIFEST',manifest);vi.stubEnv('KERYX_SQLITE_PATH',file);vi.stubEnv('CONTENT_MASTER_KEY','11'.repeat(32));
   source=await createEnrolledSqliteAdapter();expect(assertEnrolledSqliteAdapter(source)).toEqual(identity);
   expect((await source.reservePrivateResearchIntent(f.intent)).submission.request.question).toBe(question);
   expect(await source.reservePrivateTreasury(f.intent.id,f.payer,{signer:'0x'+'44'.repeat(20),capacityMicros:'100000'})).toBe(true);

@@ -3,7 +3,16 @@
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { beforeEach,expect,it,vi } from 'vitest';
+import { afterAll,beforeEach,expect,it,vi } from 'vitest';
+// These genuine Source codecs require mainnet schemas, never the offline
+// payment bypass. Pin before static imports capture config/profile constants.
+const fetchTrap=vi.hoisted(()=>{
+ vi.stubEnv('KERYX_NETWORK','arc');vi.stubEnv('NEXT_PUBLIC_KERYX_NETWORK','arc');vi.stubEnv('KERYX_FORCE_OFFLINE','0');
+ for(const key of ['KERYX_REGISTRY_ADDRESS','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS','KERYX_REGISTRY_READ_ADDRESS','NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS'])vi.stubEnv(key,'0x'+'ef'.repeat(20));
+ for(const key of ['AGENT_FUNDER_PRIVATE_KEY','BUYER_PRIVATE_KEY','DEPLOYER_PRIVATE_KEY','KERYX_PRIVATE_TREASURY_PRIVATE_KEY','NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','CONTENT_MASTER_KEY','KERYX_REGISTRY_ORIGINS','NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS'])vi.stubEnv(key,'');
+ for(const key of ['KERYX_STORAGE_MANIFEST','KERYX_SQLITE_PATH','KERYX_USDC_ADDRESS','KERYX_GATEWAY_WALLET','KERYX_GATEWAY_MINTER','KERYX_MAX_TIMEOUT_SECONDS'])vi.stubEnv(key,undefined);
+ const fetch=vi.fn(()=>{throw Error('Network forbidden in Source materialization fixture');});vi.stubGlobal('fetch',fetch);vi.resetModules();return fetch;
+});
 import { canonicalJson } from '../../lib/canonical-json';
 import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
 import { installNativeUserDomainSchema } from '../../lib/db/native-user-domain-schema';
@@ -37,6 +46,7 @@ vi.mock('pg',()=>({Client:class{
  }
 }}));
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',deploymentId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',storageId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,enrollmentId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',enrolledAt:'2026-10-01T00:00:00.000Z',provenanceDigest:'dd'.repeat(32)};
+afterAll(()=>{try{expect(fetchTrap).not.toHaveBeenCalled();}finally{vi.unstubAllEnvs();vi.unstubAllGlobals();}});
 beforeEach(()=>{state.present=true;state.payment=true;state.bad='';state.rows.clear();state.saved.clear();state.public.clear();state.queries=[];state.identity=identity;state.drift='';state.hook=undefined;});
 async function fixture(work:(db:DatabaseSync,id:string,rawIntent:string,run:string)=>Promise<void>,mutate?:(db:DatabaseSync,id:string)=>void){
  const {privateKeyToAccount}=await import('viem/accounts'),{createPrivateAuthorization}=await import('../../lib/buyer/private-request-commitment'),{buyerTypedData}=await import('../../lib/buyer/protocol'),{preparePrivateResearchIntent}=await import('../../lib/a2a/private-research-intent');
