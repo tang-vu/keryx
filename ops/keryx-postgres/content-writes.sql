@@ -13,8 +13,44 @@ DO $$ DECLARE entry text;relation_name text;column_name text;BEGIN
  END LOOP;
 END;$$;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES('source_item_by_link',ARRAY['source_items'],false,true);
+INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES('source_verify_if_unchanged',ARRAY['sources'],false,false);
 CREATE FUNCTION public.storage_source_item_by_link(expected jsonb,digest text,selected_source text,selected_link text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE item record;items jsonb:='[]'::jsonb;bytes bigint:=2;matching integer;selection jsonb;candidate_origin text;source_snapshot jsonb;source_wire text;source_data jsonb;BEGIN
+DECLARE item record;items jsonb:='[]'::jsonb;bytes bigint:=2;matching integer;selection jsonb;candidate_origin text;source_snapshot jsonb;source_wire text;source_data jsonb;e_field text;e_hex text;e_bytes bytea;e_units integer;e_offset integer;e_lead integer;e_width integer;e_index integer;e_next integer;e_changed integer;BEGIN
+ -- A fixed NULL-source sentinel shares this bounded router without colliding
+ -- with any catalog source ID or changing the ordinary item lookup signature.
+ IF selected_source IS NULL AND selected_link IS NOT NULL AND octet_length(selected_link)<=26624 THEN
+  selection:=selected_link::jsonb;
+  IF selection->>'operation'='verify-if-unchanged' THEN
+   IF session_user<>'keryx_app' OR current_setting('transaction_read_only')<>'off' OR jsonb_typeof(selection) IS DISTINCT FROM 'object' OR selection-ARRAY['operation','sourceIdHex','walletHex','feedUrlHex']<>'{}'::jsonb OR selection->>'walletHex' !~ '^3078(3[0-9]|6[1-6]){40}$' THEN RAISE EXCEPTION 'Source verification tuple refused';END IF;
+   FOREACH e_field IN ARRAY ARRAY['sourceIdHex','walletHex','feedUrlHex'] LOOP
+    e_hex:=selection->>e_field;IF jsonb_typeof(selection->e_field) IS DISTINCT FROM 'string' OR e_hex IS NULL OR length(e_hex) NOT BETWEEN 2 AND (CASE WHEN e_field='feedUrlHex' THEN 24576 WHEN e_field='sourceIdHex' THEN 1536 ELSE 84 END) OR e_hex !~ '^([a-f0-9]{2})+$' THEN RAISE EXCEPTION 'Source verification HEX refused';END IF;e_bytes:=decode(e_hex,'hex');
+ e_units:=0;e_offset:=0;
+ WHILE e_offset<octet_length(e_bytes) LOOP
+  e_lead:=get_byte(e_bytes,e_offset);
+  IF e_lead<128 THEN e_width:=1;
+  ELSIF e_lead BETWEEN 194 AND 223 THEN e_width:=2;
+  ELSIF e_lead BETWEEN 224 AND 239 THEN e_width:=3;
+  ELSIF e_lead BETWEEN 240 AND 244 THEN e_width:=4;
+  ELSE RAISE EXCEPTION 'Source observation UTF8 refused';END IF;
+  IF e_offset+e_width>octet_length(e_bytes) THEN RAISE EXCEPTION 'Source observation UTF8 refused';END IF;
+  IF e_width>1 THEN
+   FOR e_index IN 1..e_width-1 LOOP
+    IF get_byte(e_bytes,e_offset+e_index) NOT BETWEEN 128 AND 191 THEN RAISE EXCEPTION 'Source observation UTF8 refused';END IF;
+   END LOOP;
+   e_next:=get_byte(e_bytes,e_offset+1);
+   IF e_lead=224 AND e_next<160 OR e_lead=237 AND e_next>=160 OR e_lead=240 AND e_next<144 OR e_lead=244 AND e_next>143 THEN RAISE EXCEPTION 'Source observation UTF8 refused';END IF;
+  END IF;
+  e_units:=e_units+CASE WHEN e_width=4 THEN 2 ELSE 1 END;e_offset:=e_offset+e_width;
+ END LOOP;
+    IF e_units>(CASE WHEN e_field='feedUrlHex' THEN 4096 WHEN e_field='sourceIdHex' THEN 256 ELSE 42 END) THEN RAISE EXCEPTION 'Source verification identity refused';END IF;
+   END LOOP;
+   PERFORM keryx_storage.require_operation(expected,digest,'source_verify_if_unchanged');
+   UPDATE public.sources s SET verified=true WHERE encode(convert_to(s.id,'UTF8'),'hex')=selection->>'sourceIdHex'
+    AND encode(convert_to(translate(s.wallet_address,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'UTF8'),'hex')=selection->>'walletHex'
+    AND encode(convert_to(COALESCE(NULLIF(s.rss_url,''),s.url),'UTF8'),'hex')=selection->>'feedUrlHex';
+   GET DIAGNOSTICS e_changed=ROW_COUNT;PERFORM keryx_storage.leave_operation();RETURN to_jsonb(e_changed=1);
+  END IF;
+ END IF;
  IF selected_source IS NULL THEN
   IF current_setting('transaction_read_only')<>'on' OR selected_link IS NULL OR octet_length(selected_link)>2048 THEN RAISE EXCEPTION 'source upsert snapshot unavailable';END IF;
   selection:=selected_link::jsonb;
