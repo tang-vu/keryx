@@ -31,7 +31,7 @@ export interface PostgresRuntimeFacadeOptions {
  /** Bound/standalone fixed observations only; no arbitrary method or SQL router. */
  readonly overrides?:PostgresRuntimeFacadeOverrides;
 }
-const refuse=():never=>refuseStorage('invalid_operation');
+const refuse:()=>never=()=>refuseStorage('invalid_operation');
 function record(value:unknown):asserts value is Record<string,unknown>{
  if(!value||typeof value!=='object'||Array.isArray(value)||![Object.prototype,null].includes(Object.getPrototypeOf(value))
   ||Object.getOwnPropertySymbols(value).length||Object.values(Object.getOwnPropertyDescriptors(value)).some(d=>!d.enumerable||!('value'in d)))refuse();
@@ -56,11 +56,12 @@ export function composePostgresRuntimeFacade(options:PostgresRuntimeFacadeOption
  };
  const fresh=async()=>{current();await guard();current();};
  current();
- const supplied=options.overrides??{};record(supplied);
+ const supplied:unknown=options.overrides??{};record(supplied);
  const overrides:Record<string,Function>=Object.create(null);
  for(const name of Object.keys(supplied)){
-  if(!(overrideNames as readonly string[]).includes(name)||typeof supplied[name]!=='function')refuse();
-  overrides[name]=supplied[name] as Function;
+  const method=supplied[name];
+  if(!(overrideNames as readonly string[]).includes(name)||typeof method!=='function')refuse();
+  overrides[name]=method;
  }
  Object.freeze(overrides);
  record(options.stores);
@@ -77,7 +78,7 @@ export function composePostgresRuntimeFacade(options:PostgresRuntimeFacadeOption
  if(core.runPrivacyActive!==surface.privacyActive)refuse();
  const methods:Record<string,Readonly<{method:Function;receiver:unknown;write:boolean}>>=Object.create(null);
  for(const name of Object.keys(POSTGRES_SOURCE_METHOD_ACCESS) as PostgresSourceMethod[]){
-  const overridden=Object.hasOwn(overrides,name),method=overridden?overrides[name]:Reflect.get(core,name);
+  const overridden=Object.hasOwn(overrides,name),method:unknown=overridden?overrides[name]:Reflect.get(core,name);
   if(typeof method!=='function')refuse();
   const access=POSTGRES_SOURCE_METHOD_ACCESS[name];
   methods[name]=Object.freeze({method,receiver:overridden?undefined:core,write:access==='write'||access==='mainnet-write'});

@@ -39,7 +39,7 @@ const owner='0x'+'ab'.repeat(20),monthly='monthly_'+'11'.repeat(32);
 const run=():QueryRun=>({id:'synthetic-current-factory',createdAt:'2026-11-15T00:00:00.000Z',question:'Synthetic question',answer:'Synthetic answer',engine:'heuristic',budget:0,totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[]});
 const deferred=<T>()=>{let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r;});return {promise,resolve};};
 const response=(value:unknown)=>({rows:[[JSON.stringify(value)]],fields:[{name:'result',dataTypeID:3802}]});
-function manifest(digest=candidate.catalogSha256):Readonly<StorageDeploymentManifest>{
+function manifest(digest:string=candidate.catalogSha256):Readonly<StorageDeploymentManifest>{
  const identity:Readonly<StorageIdentity>=Object.freeze({format:'keryx-mainnet-storage-identity-v1',network:'eip155:5042',authorityMode:'mainnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-15T00:00:00.000Z',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,provenanceDigest:'ab'.repeat(32)});
  const backend:PostgresStorageBackend=Object.freeze({kind:'postgres',database:'native_target',sourceDigest:digest,endpoint:Object.freeze({kind:'loopback',port:5432}),credentialPaths:Object.freeze({application:'/run/synthetic/application.json',reader:'/run/synthetic/reader.json'})});
  return Object.freeze({format:'keryx-storage-deployment-v1',identity,backend});
