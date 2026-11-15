@@ -3,26 +3,35 @@ import type { KeryxDB } from "../db/keryx-db";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "../db/storage-identity";
 import { OBLIGATION_FIXTURE_OWNER as READER, OBLIGATION_FIXTURE_TIME as NOW } from "../../test-support/operator-obligations";
 
-const mocks = vi.hoisted(() => ({ open: vi.fn(), identity: vi.fn(), policy: vi.fn() }));
-vi.mock("../db/application-storage", () => ({ createReadonlyApplicationStorage: mocks.open, applicationSqliteIdentity: mocks.identity }));
+const mocks = vi.hoisted(() => ({ open: vi.fn(), identity: vi.fn(), local: vi.fn(), close: vi.fn(), policy: vi.fn(), selection: vi.fn(), config: { baseUrl: "https://inspection.example" } }));
+vi.mock("../db/application-storage", () => ({ createReadonlyApplicationStorage: mocks.open, applicationStorageIdentity: mocks.identity,
+  assertApplicationStorageCurrentLocal: mocks.local, closeReadonlyApplicationStorage: mocks.close }));
 vi.mock("../payments/hosted-treasury-policy", () => ({ configuredHostedTreasuryPolicy: mocks.policy }));
-vi.mock("../config", () => ({ config: { baseUrl: "https://inspection.example" } }));
+vi.mock("../config", () => ({ config: mocks.config }));
+vi.mock("../db/runtime-storage-config", () => ({ readRuntimeStorageDeployment: mocks.selection }));
 import { inspectOperatorObligations } from "./inspection";
 
 const identity: StorageIdentity = { format: "keryx-mainnet-storage-identity-v1", network: "eip155:5042", authorityMode: "mainnet-real",
   deploymentId: "11111111-1111-4111-8111-111111111111", storageId: "22222222-2222-4222-8222-222222222222",
   enrollmentId: "33333333-3333-4333-8333-333333333333", enrolledAt: "2026-10-04T00:00:00.000Z", profileDigest: STORAGE_MAINNET_PROFILE_DIGEST, provenanceDigest: "b".repeat(64) };
 function fixture() {
-  const db = { close: vi.fn(), operatorInventory: vi.fn(async () => ({ observedAt: new Date(NOW).toISOString(), network: "eip155:5042",
+  const db = { operatorInventory: vi.fn(async () => ({ observedAt: new Date(NOW).toISOString(), network: "eip155:5042",
     queuedJobs: 1, processingJobs: 1, reviewRequiredJobs: 0, invalidJobs: 0, queuedCreatorMicroUsdc: "1000", unfinishedCreatorMicroUsdc: "2000",
     prepaidCreatorMicroUsdc: "500", prepaidRequests: 1, largestCreatorMicroUsdc: "2000" })),
     hostedTreasuryAccounting: vi.fn(async () => ({ retainedMicroUsdc: "300", confirmedMicroUsdc: "50" })) };
-  mocks.open.mockResolvedValue(db); mocks.identity.mockReturnValue(identity);
+  // Explicit dependency recordings, not an installed native facade or proof.
+  mocks.open.mockResolvedValue(db); mocks.identity.mockResolvedValue(identity); mocks.close.mockResolvedValue(undefined);
+  mocks.selection.mockReturnValue({ format: "keryx-storage-deployment-v1", identity, backend: { kind: "sqlite", databasePath: "recording-only.sqlite" } });
   mocks.policy.mockReturnValue({ signer: `0x${"2".repeat(40)}`, lifetimeCapMicroUsdc: "1000000", expiresAtSeconds: Math.floor(NOW / 1000) + 3600 });
   return db;
 }
-describe("readonly native observation port", () => {
-  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); vi.resetAllMocks(); });
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(done => { resolve = done; });
+  return { promise, resolve };
+}
+describe("selected readonly observation dependency controls", () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); vi.resetAllMocks(); mocks.config.baseUrl = "https://inspection.example"; });
   afterEach(() => { vi.useRealTimers(); });
   it("binds actual custody separately, keeps aggregate overlap partial, and closes the selected reader", async () => {
     const db = fixture(), value = await inspectOperatorObligations({ wallet: READER, role: "public" });
@@ -30,7 +39,7 @@ describe("readonly native observation port", () => {
     expect(value.projection.protectedMicroUsdc).toBe("3750"); expect(value.projection.liquidMicroUsdc).toBeNull(); expect(value.projection.safeNewSpendMicroUsdc).toBe("0");
     expect(value.projection.advisorySurplusMicroUsdc).toBe("0"); expect(value.projection.remainingOriginalCapacityMicroUsdc).toBe("999700");
     expect(value.projection.reasons).toEqual(expect.arrayContaining(["missing-domain", "cash-unverified", "overlap-unresolved", "native-complete-unavailable", "missing-policy"]));
-    expect(db.hostedTreasuryAccounting).toHaveBeenCalledWith(`0x${"2".repeat(40)}`, "public"); expect(db.close).toHaveBeenCalledOnce();
+    expect(db.hostedTreasuryAccounting).toHaveBeenCalledWith(`0x${"2".repeat(40)}`, "public"); expect(mocks.close).toHaveBeenCalledExactlyOnceWith(db);
     expect(mocks.policy).toHaveBeenCalledWith(identity, "https://inspection.example", "public");
   });
   it("never imports public prepaid books into a private custody role", async () => {
@@ -48,16 +57,89 @@ describe("readonly native observation port", () => {
     if (mode === "cap-overrun") db.hostedTreasuryAccounting.mockResolvedValue({ retainedMicroUsdc: "1000001", confirmedMicroUsdc: "0" });
     if (mode === "changed-policy") { const p = mocks.policy(); mocks.policy.mockReturnValueOnce(p).mockReturnValue({ ...p, signer: `0x${"3".repeat(40)}` }); }
     if (mode === "unavailable-book") db.hostedTreasuryAccounting.mockRejectedValue(new Error("private original/path/detail"));
-    await expect(inspectOperatorObligations({ wallet: READER, role: "public" })).rejects.toThrow("Operator obligation inspection unavailable"); expect(db.close).toHaveBeenCalledOnce();
+    await expect(inspectOperatorObligations({ wallet: READER, role: "public" })).rejects.toThrow("Operator obligation inspection unavailable"); expect(mocks.close).toHaveBeenCalledExactlyOnceWith(db);
   });
   it("never treats caller-shaped JSON as an installed native facade", async () => {
     const db = fixture(); const actual = await vi.importActual<typeof import("../db/application-storage")>("../db/application-storage");
-    mocks.identity.mockImplementationOnce((value: KeryxDB) => actual.applicationSqliteIdentity(value, "read"));
+    mocks.local.mockImplementationOnce((value: KeryxDB) => { actual.applicationSqliteIdentity(value, "read"); });
     await expect(inspectOperatorObligations({ wallet: READER, role: "public" })).rejects.toThrow("Operator obligation inspection unavailable");
-    expect(mocks.policy).not.toHaveBeenCalled(); expect(db.hostedTreasuryAccounting).not.toHaveBeenCalled(); expect(db.operatorInventory).not.toHaveBeenCalled(); expect(db.close).toHaveBeenCalledOnce();
+    expect(mocks.identity).not.toHaveBeenCalled(); expect(mocks.policy).not.toHaveBeenCalled(); expect(db.hostedTreasuryAccounting).not.toHaveBeenCalled(); expect(db.operatorInventory).not.toHaveBeenCalled(); expect(mocks.close).toHaveBeenCalledExactlyOnceWith(db);
   });
   it("unsupported storage has no fallback, alternate hydration or zero-complete result", async () => {
     mocks.open.mockResolvedValue(undefined);
     await expect(inspectOperatorObligations({ wallet: READER, role: "public" })).rejects.toThrow("Operator obligation inspection unavailable"); expect(mocks.open).toHaveBeenCalledOnce(); expect(mocks.identity).not.toHaveBeenCalled();
+  });
+  it("waits for selected identity before accounting and captures the delegated role before its first await", async () => {
+    const db = fixture(), gate = deferred<StorageIdentity>(), entered = deferred<void>();
+    mocks.identity.mockImplementationOnce(() => { entered.resolve(); return gate.promise; });
+    const reader = { wallet: READER, role: "public" as "public" | "private" }, pending = inspectOperatorObligations(reader);
+    await entered.promise; reader.role = "private";
+    expect(db.operatorInventory).not.toHaveBeenCalled(); expect(db.hostedTreasuryAccounting).not.toHaveBeenCalled(); expect(mocks.policy).not.toHaveBeenCalled();
+    gate.resolve(identity); const value = await pending;
+    expect(value.projection.scope.custodyRole).toBe("public-hosted"); expect(db.operatorInventory).toHaveBeenCalledOnce();
+    expect(db.hostedTreasuryAccounting).toHaveBeenCalledWith(`0x${"2".repeat(40)}`, "public");
+    expect(mocks.identity).toHaveBeenCalledTimes(3); expect(mocks.identity.mock.calls.every(call => call[0] === db && call[1] === "read")).toBe(true);
+  });
+  it("refuses a changed identity after inventory before starting the next book read", async () => {
+    const db = fixture(), gate = deferred<StorageIdentity>(), entered = deferred<void>();
+    mocks.identity.mockResolvedValueOnce(identity).mockImplementationOnce(() => { entered.resolve(); return gate.promise; });
+    const pending = inspectOperatorObligations({ wallet: READER, role: "public" });
+    await entered.promise; expect(db.operatorInventory).toHaveBeenCalledOnce(); expect(db.hostedTreasuryAccounting).not.toHaveBeenCalled();
+    gate.resolve({ ...identity, provenanceDigest: "c".repeat(64) });
+    await expect(pending).rejects.toThrow("Operator obligation inspection unavailable"); expect(mocks.close).toHaveBeenCalledExactlyOnceWith(db);
+  });
+  it("refuses terminal retirement during the accounting await and still awaits canonical disposal", async () => {
+    const db = fixture(), gate = deferred<{ retainedMicroUsdc: string; confirmedMicroUsdc: string }>(), entered = deferred<void>();
+    db.hostedTreasuryAccounting.mockImplementationOnce(() => { entered.resolve(); return gate.promise; });
+    const pending = inspectOperatorObligations({ wallet: READER, role: "public" }); await entered.promise;
+    mocks.local.mockImplementation(() => { throw new Error("terminal reader"); }); gate.resolve({ retainedMicroUsdc: "300", confirmedMicroUsdc: "50" });
+    await expect(pending).rejects.toThrow("Operator obligation inspection unavailable"); expect(mocks.close).toHaveBeenCalledExactlyOnceWith(db);
+  });
+  it.each(["identity", "inventory", "accounting", "close"])("rejects protected origin/policy changes during %s await", async phase => {
+    const db = fixture(), gate = deferred<void>(), entered = deferred<void>();
+    const change = async () => { entered.resolve(); await gate.promise; };
+    if (phase === "identity") mocks.identity.mockImplementationOnce(async () => { await change(); return identity; });
+    if (phase === "inventory") { const inventory = await db.operatorInventory(); db.operatorInventory.mockClear(); db.operatorInventory.mockImplementationOnce(async () => { await change(); return inventory; }); }
+    if (phase === "accounting") db.hostedTreasuryAccounting.mockImplementationOnce(async () => { await change(); return { retainedMicroUsdc: "300", confirmedMicroUsdc: "50" }; });
+    if (phase === "close") mocks.close.mockImplementationOnce(change);
+    const pending = inspectOperatorObligations({ wallet: READER, role: "public" }); await entered.promise;
+    mocks.config.baseUrl = "https://changed.example"; gate.resolve();
+    await expect(pending).rejects.toThrow("Operator obligation inspection unavailable"); expect(mocks.close).toHaveBeenCalledExactlyOnceWith(db);
+  });
+  it("does not publish before disposal settles, and sanitizes a disposal refusal", async () => {
+    const db = fixture(), gate = deferred<void>(), entered = deferred<void>();
+    mocks.close.mockImplementationOnce(() => { entered.resolve(); return gate.promise; });
+    let settled = false; const pending = inspectOperatorObligations({ wallet: READER, role: "private" }).finally(() => { settled = true; });
+    await entered.promise; expect(settled).toBe(false); gate.resolve(); await pending; expect(settled).toBe(true);
+    fixture(); mocks.close.mockRejectedValueOnce(new Error("private connection detail"));
+    await expect(inspectOperatorObligations({ wallet: READER, role: "private" })).rejects.toThrow(/^Operator obligation inspection unavailable$/);
+    expect(mocks.close.mock.calls[0][0]).toBe(db);
+  });
+  it("uses canonical disposal without probing a facade close getter", async () => {
+    const db = fixture(), probe = vi.fn(() => { throw new Error("Facade method probing is forbidden"); });
+    Object.defineProperty(db, "close", { get: probe });
+    await inspectOperatorObligations({ wallet: READER, role: "private" });
+    expect(probe).not.toHaveBeenCalled(); expect(mocks.close).toHaveBeenCalledOnce(); expect(mocks.close.mock.calls[0][0] === db).toBe(true);
+  });
+  it("refuses policy expiry during the final disposal await", async () => {
+    fixture(); const policy = mocks.policy(), entered = deferred<void>(), gate = deferred<void>();
+    mocks.policy.mockImplementation(() => { if (Date.now() >= policy.expiresAtSeconds * 1000) throw new Error("Expired protected policy"); return policy; });
+    mocks.close.mockImplementationOnce(() => { entered.resolve(); return gate.promise; });
+    const pending = inspectOperatorObligations({ wallet: READER, role: "private" }); await entered.promise;
+    vi.setSystemTime(policy.expiresAtSeconds * 1000); gate.resolve();
+    await expect(pending).rejects.toThrow(/^Operator obligation inspection unavailable$/);
+  });
+  it("refuses a changed selected manifest during final disposal without asking the retired reader for new proof", async () => {
+    fixture(); const entered = deferred<void>(), gate = deferred<void>();
+    mocks.close.mockImplementationOnce(() => { entered.resolve(); return gate.promise; });
+    const pending = inspectOperatorObligations({ wallet: READER, role: "private" }); await entered.promise;
+    const calls = mocks.identity.mock.calls.length;
+    mocks.selection.mockReturnValue({ ...mocks.selection(), identity: { ...identity, provenanceDigest: "c".repeat(64) } }); gate.resolve();
+    await expect(pending).rejects.toThrow(/^Operator obligation inspection unavailable$/); expect(mocks.identity).toHaveBeenCalledTimes(calls);
+  });
+  it.each(["Supabase", "ordinary", "forged"])("keeps %s outside the local SQLite/native boundary before identity or books", async backend => {
+    const db = fixture(); mocks.local.mockImplementationOnce(() => { throw new Error(`${backend} refused`); });
+    await expect(inspectOperatorObligations({ wallet: READER, role: "public" })).rejects.toThrow("Operator obligation inspection unavailable");
+    expect(mocks.identity).not.toHaveBeenCalled(); expect(db.operatorInventory).not.toHaveBeenCalled(); expect(db.hostedTreasuryAccounting).not.toHaveBeenCalled();
   });
 });
