@@ -60,6 +60,8 @@ const PACKAGE_NAMES = new Set([
 const VERSION = /^[A-Za-z0-9.+:~_-]{1,128}$/;
 const BUNDLE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._+%~-]{0,180}$/;
 const LIMITS = Object.freeze({ pin: 128 * 1024, receipt: 128 * 1024, release: 4 * 1024 * 1024, index: 32 * 1024 * 1024, package: 256 * 1024 * 1024, packages: 64, command: 4 * 1024 * 1024, timeoutMs: 15 * 60 * 1000 });
+const VERIFICATION_WORK = '/root/keryx-migration/pg17-verification-work';
+const TERMINAL_STAGES = Object.freeze(['signed_bundle_verification_started', 'signed_bundle_verified', 'package_startup_guards_installed', 'package_configuration_acknowledged', 'fresh_checksummed_cluster_initialized', 'dedicated_service_start_submitted', 'actual_persistent_service_verified', 'prepared_unenrolled_receipt_fsynced']);
 
 export type ConfigHashes = Readonly<Record<keyof typeof CONFIG_PATHS, string>>;
 type Repository = Readonly<{ kind: 'pgdg' | 'ubuntu'; inRelease: string; keyringSha256: string; indexes: readonly { file: string; releasePath: string; sha256: string; size: number }[] }>;
@@ -207,8 +209,8 @@ async function writeExclusive(path: string, wire: string | Buffer, mode: number)
   try { await h.chmod(mode); await h.writeFile(wire); await h.sync(); } finally { await h.close(); }
   await syncDirectory(dirname(path));
 }
-async function removeOwned(path: string, expected: string): Promise<void> {
-  if (digest(await readFile(path, LIMITS.receipt)) !== expected) refuse('cleanup_ownership');
+async function removeOwned(path: string, expected: string, maxBytes = LIMITS.receipt): Promise<void> {
+  if (digest(await readFile(path, maxBytes)) !== expected) refuse('cleanup_ownership');
   await fs.unlink(path); await syncDirectory(dirname(path));
 }
 async function directoryNew(path: string, mode: number, uid = 0, gid = 0): Promise<void> { await fs.mkdir(path, { mode }); await fs.chown(path, uid, gid); await fs.chmod(path, mode); await syncDirectory(dirname(path)); }
@@ -312,9 +314,8 @@ async function verifyPreparedState(expected: { configHashes: ConfigHashes; packa
 /** Fixed readonly inspection, safe to import from a compiled CJS operator child.
  * Later enrollment/intake still rechecks actual SQL under its own transaction.
  */
-export async function inspectServer1PreparedPostgres(): Promise<Server1PreparedPostgres> {
+async function inspectPreparedFilesAndService(): Promise<Server1PreparedPostgres> {
   const host = await hostGuard();
-  if (await exists(SERVER1_PG17.journal)) refuse('unfinished_or_unknown_apply');
   const receiptWire = await readFile(SERVER1_PG17.receipt, LIMITS.receipt, 0o600);
   const r = boundedJson(receiptWire, 'preparation_receipt') as Server1PreparationReceipt;
   exactKeys(r, ['format', 'phase', 'cluster', 'service', 'socketDirectory', 'port', 'serverVersionNum', 'dataDirectory', 'systemIdentifier', 'approvedPinSha256', 'packageInventorySha256', 'configHashes', 'vendorUnitSha256', 'runtimeHbaTemplateSha256', 'preparedAt', 'observations'], 'receipt_shape');
@@ -327,8 +328,108 @@ export async function inspectServer1PreparedPostgres(): Promise<Server1PreparedP
   if (!sameConfigHashes(pin.configHashes, r.configHashes) || r.runtimeHbaTemplateSha256 !== pin.runtimeHbaTemplateSha256 || await hashFile(SERVER1_PG17.runtimeHbaTemplate, 32768, 0o600) !== r.runtimeHbaTemplateSha256) refuse('receipt_pin_configs');
   const actual = await verifyPreparedState(r);
   if (hashRecord(actual.observations) !== hashRecord(r.observations)) refuse('receipt_observations_changed');
-  if (digest(await readFile(SERVER1_PG17.receipt, LIMITS.receipt, 0o600)) !== digest(receiptWire) || (await hostGuard()).controlSha256 !== host.controlSha256 || await exists(SERVER1_PG17.journal)) refuse('inspection_changed');
+  if (digest(await readFile(SERVER1_PG17.receipt, LIMITS.receipt, 0o600)) !== digest(receiptWire) || (await hostGuard()).controlSha256 !== host.controlSha256) refuse('inspection_changed');
   return frozen({ receipt: r, fingerprints: { receiptSha256: digest(receiptWire), approvedPinSha256: r.approvedPinSha256, packageInventorySha256: r.packageInventorySha256, configHashes: r.configHashes, vendorUnitSha256: actual.vendorUnitSha256, ...host }, observations: actual.observations, targetVerified: false, applicationAuthority: false });
+}
+
+export async function inspectServer1PreparedPostgres(): Promise<Server1PreparedPostgres> {
+  await hostGuard();
+  if (await exists(SERVER1_PG17.journal)) refuse('unfinished_or_unknown_apply');
+  const observed = await inspectPreparedFilesAndService();
+  if (await exists(SERVER1_PG17.journal)) refuse('unfinished_or_unknown_apply');
+  return observed;
+}
+
+/** Pure terminal-log parser; returned metadata is not an execution capability. */
+export function parseServer1TerminalCleanupJournal(wire: Uint8Array, approvedPinSha256: string): Readonly<{ sha256: string; startedAt: string; serviceVerifiedAt: string; receiptFsyncedAt: string }> {
+  if (!SHA.test(approvedPinSha256) || wire.byteLength > LIMITS.receipt) refuse('terminal_journal_bound_or_pin');
+  const text = Buffer.from(wire).toString('utf8');
+  if (!text.endsWith('\n')) refuse('terminal_journal_incomplete');
+  const lines = text.slice(0, -1).split('\n');
+  if (lines.length !== TERMINAL_STAGES.length + 1 || lines.some(line => !line)) refuse('terminal_journal_sequence');
+  const header = boundedJson(Buffer.from(lines[0]), 'terminal_journal_json');
+  exactKeys(header, ['format', 'approvedPinSha256', 'startedAt', 'outcome', 'automaticRetry'], 'terminal_journal_header');
+  if (JSON.stringify(header) !== lines[0]) refuse('terminal_journal_noncanonical');
+  if (header.format !== 'keryx-server1-postgres17-apply-in-progress-v1' || header.approvedPinSha256 !== approvedPinSha256 || header.outcome !== 'UNKNOWN_UNTIL_PREPARED_RECEIPT' || header.automaticRetry !== false) refuse('terminal_journal_header');
+  function instant(value: unknown): string {
+    if (typeof value !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString() !== value) refuse('terminal_journal_time');
+    return value;
+  }
+  const startedAt = instant(header.startedAt); let previous = startedAt; const times: string[] = [];
+  for (let n = 0; n < TERMINAL_STAGES.length; n++) {
+    const event = boundedJson(Buffer.from(lines[n + 1]), 'terminal_journal_json');
+    exactKeys(event, ['stage', 'observedAt'], 'terminal_journal_event');
+    if (JSON.stringify(event) !== lines[n + 1]) refuse('terminal_journal_noncanonical');
+    const at = instant(event.observedAt);
+    if (event.stage !== TERMINAL_STAGES[n] || at < previous) refuse('terminal_journal_sequence');
+    previous = at; times.push(at);
+  }
+  return frozen({ sha256: digest(wire), startedAt, serviceVerifiedAt: times[6], receiptFsyncedAt: times[7] });
+}
+
+async function signatureBoundRelease(repository: Repository): Promise<Buffer> {
+  const key = repository.kind === 'pgdg' ? `${SERVER1_PG17.bundle}/pgdg.gpg` : '/usr/share/keyrings/ubuntu-archive-keyring.gpg';
+  if (await hashFile(await fs.realpath(key), LIMITS.release) !== repository.keyringSha256) refuse('cleanup_repository_keyring');
+  const signedPath = `${SERVER1_PG17.bundle}/${repository.inRelease}`;
+  const signedWire = await readFile(signedPath, LIMITS.release, 0o600);
+  // Separate channels: signed plaintext goes to stdout, gpgv status to stderr.
+  // No output file, package/configuration command or database mutation occurs.
+  const release = await new Promise<Buffer>((resolveRelease, reject) => {
+    execFile('/usr/bin/gpgv', ['--keyring', key, '--status-fd', '2', '--output', '-', signedPath], { encoding: 'utf8', timeout: LIMITS.timeoutMs, maxBuffer: LIMITS.release, env: { PATH: '/usr/sbin:/usr/bin:/sbin:/bin', LANG: 'C', LC_ALL: 'C', HOME: '/root' } }, (error, stdout, stderr) => {
+      const signatures = stderr.split('\n').filter(line => line.startsWith('[GNUPG:] VALIDSIG '));
+      if (error || signatures.length !== 1 || (repository.kind === 'pgdg' && !signatures[0].split(/\s+/).includes(SERVER1_PG17.pgdgFingerprint)) || Buffer.byteLength(stdout) > LIMITS.release) reject(new Error('server1_pg17_preparation_refused:cleanup_signature'));
+      else resolveRelease(Buffer.from(stdout));
+    });
+  });
+  if (digest(await readFile(signedPath, LIMITS.release, 0o600)) !== digest(signedWire)) refuse('cleanup_signed_input_changed');
+  const text = release.toString('utf8');
+  if (!/^Codename: noble(?:-pgdg|-updates|-security)?$/m.test(text) || (repository.kind === 'pgdg' && !/^Origin: apt.postgresql.org$/m.test(text)) || (repository.kind === 'ubuntu' && !/^Origin: Ubuntu$/m.test(text))) refuse('cleanup_repository_distribution');
+  for (const index of repository.indexes) assertReleaseIndex(text, index);
+  return release;
+}
+
+async function finalizeTerminalCleanup(approvedPinSha256: string): Promise<unknown> {
+  if (!SHA.test(approvedPinSha256)) refuse('cleanup_pin_sha256');
+  await hostGuard();
+  const journalWire = await readFile(SERVER1_PG17.journal, LIMITS.receipt, 0o600);
+  const terminal = parseServer1TerminalCleanupJournal(journalWire, approvedPinSha256);
+  const observed = await inspectPreparedFilesAndService();
+  if (observed.receipt.approvedPinSha256 !== approvedPinSha256 || observed.receipt.preparedAt < terminal.serviceVerifiedAt || observed.receipt.preparedAt > terminal.receiptFsyncedAt) refuse('terminal_receipt_not_acknowledged');
+  await verifyPreparedState(observed.receipt, true);
+  const pinWire = await readFile(SERVER1_PG17.pin, LIMITS.pin, 0o600);
+  if (digest(pinWire) !== approvedPinSha256) refuse('cleanup_pin_changed');
+  const pin = parseServer1Pg17ApprovedPin(pinWire);
+  await checkedDirectory(SERVER1_PG17.bundle, 0, 0, 0o700);
+  const releases: { path: string; sha256: string }[] = [];
+  const workExists = await exists(VERIFICATION_WORK);
+  if (workExists) {
+    await checkedDirectory(VERIFICATION_WORK, 0, 0, 0o700);
+    const allowed = new Set(pin.repositories.map((_, n) => `release-${n}`));
+    for (const entry of await fs.readdir(VERIFICATION_WORK, { withFileTypes: true })) if (!entry.isFile() || !allowed.has(entry.name)) refuse('cleanup_unknown_work_entry');
+  }
+  for (let n = 0; n < pin.repositories.length; n++) {
+    const expected = await signatureBoundRelease(pin.repositories[n]);
+    const path = `${VERIFICATION_WORK}/release-${n}`;
+    if (await exists(path)) {
+      const actual = await readFile(path, LIMITS.release);
+      if (!actual.equals(expected)) refuse('cleanup_release_not_signature_bound');
+      releases.push({ path, sha256: digest(expected) });
+    }
+  }
+  async function stable(): Promise<void> {
+    if (digest(await readFile(SERVER1_PG17.journal, LIMITS.receipt, 0o600)) !== terminal.sha256 || digest(await readFile(SERVER1_PG17.receipt, LIMITS.receipt, 0o600)) !== observed.fingerprints.receiptSha256 || digest(await readFile(SERVER1_PG17.pin, LIMITS.pin, 0o600)) !== approvedPinSha256 || (await hostGuard()).controlSha256 !== observed.fingerprints.controlSha256) refuse('terminal_cleanup_changed');
+    if (await exists(POLICY_PATH) || await exists('/run/systemd/system/postgresql.service') || await exists('/run/systemd/system/postgresql@17-main.service') || digest(await readFile(COMMON_CONFIG, 4096, 0o644)) !== digest(COMMON_WIRE)) refuse('terminal_startup_guard_state');
+  }
+  // Everything above is read-only. Only exact signed leftover files are removed.
+  // Partial prior cleanup is permitted only with the same complete terminal log;
+  // missing entries never permit an earlier/ambiguous installation to proceed.
+  await stable(); await verifyPreparedState(observed.receipt, true);
+  for (const release of releases) { await stable(); await removeOwned(release.path, release.sha256, LIMITS.release); }
+  if (workExists) { await checkedDirectory(VERIFICATION_WORK, 0, 0, 0o700); await fs.rmdir(VERIFICATION_WORK); await syncDirectory(dirname(VERIFICATION_WORK)); }
+  await stable(); await verifyPreparedState(observed.receipt, true); await stable();
+  await removeOwned(SERVER1_PG17.journal, terminal.sha256);
+  const inspected = await inspectServer1PreparedPostgres();
+  return frozen({ format: 'keryx-server1-postgres17-terminal-cleanup-v1', cleanupFinalized: true, installRetried: false, serviceStarted: false, databaseWritten: false, targetVerified: false, applicationAuthority: false, terminalJournalSha256: terminal.sha256, preparationReceiptSha256: inspected.fingerprints.receiptSha256, removedReleaseFiles: releases.length, prepared: inspected });
 }
 
 async function initialPreflight(): Promise<{ host: Awaited<ReturnType<typeof hostGuard>>; inventory: Awaited<ReturnType<typeof installedInventory>> }> {
@@ -386,8 +487,12 @@ async function verifyBundle(pin: Server1Pg17ApprovedPin, work: string): Promise<
  * Failure after the exclusive journal leaves it in place: inspect and reconcile,
  * never automatically retry/adopt a partially installed or unknown outcome.
  */
-export async function prepareServer1Postgres17(options: Readonly<{ mode: 'preflight' | 'apply'; approvedPinSha256?: string }>): Promise<unknown> {
+export async function prepareServer1Postgres17(options: Readonly<{ mode: 'preflight' | 'apply' | 'finalize-cleanup'; approvedPinSha256?: string }>): Promise<unknown> {
   exactKeys(options, options.mode === 'preflight' ? ['mode'] : ['mode', 'approvedPinSha256'], 'options');
+  if (options.mode === 'finalize-cleanup') {
+    if (typeof options.approvedPinSha256 !== 'string') refuse('cleanup_pin_sha256');
+    return finalizeTerminalCleanup(options.approvedPinSha256);
+  }
   if (options.mode === 'preflight') {
     if (await exists(SERVER1_PG17.receipt)) return inspectServer1PreparedPostgres();
     const initial = await initialPreflight();
@@ -415,7 +520,7 @@ export async function prepareServer1Postgres17(options: Readonly<{ mode: 'prefli
     try { await h.writeFile(next); await h.sync(); } finally { await h.close(); }
     journalWire += next;
   }
-  const work = '/root/keryx-migration/pg17-verification-work';
+  const work = VERIFICATION_WORK;
   try {
     await directoryNew(work, 0o700); await phase('signed_bundle_verification_started'); await verifyBundle(pin, work); await phase('signed_bundle_verified');
     if ((await hostGuard()).controlSha256 !== initial.host.controlSha256 || (await installedInventory()).sha256 !== initial.inventory.sha256 || digest(await readFile(SERVER1_PG17.pin, LIMITS.pin, 0o600)) !== options.approvedPinSha256) refuse('preinstall_changed');
@@ -465,7 +570,7 @@ export async function prepareServer1Postgres17(options: Readonly<{ mode: 'prefli
     const receipt: Server1PreparationReceipt = { format: 'keryx-server1-postgres17-preparation-v1', phase: 'prepared-unenrolled', cluster: '17/keryx', service: 'postgresql@17-keryx.service', socketDirectory: '/run/postgresql-keryx', port: 5432, serverVersionNum: 170012, dataDirectory: '/var/lib/postgresql/17/keryx', systemIdentifier: actual.systemIdentifier, approvedPinSha256: options.approvedPinSha256, packageInventorySha256: inventory.sha256, configHashes: literal.hashes, vendorUnitSha256: actual.vendorUnitSha256, runtimeHbaTemplateSha256: digest(literal.runtimeHba), observations: actual.observations, preparedAt: new Date().toISOString() };
     await writeExclusive(SERVER1_PG17.receipt, `${JSON.stringify(receipt)}\n`, 0o600);
     await phase('prepared_unenrolled_receipt_fsynced');
-    for (let n = 0; n < pin.repositories.length; n++) { const path = `${work}/release-${n}`; await removeOwned(path, await hashFile(path, LIMITS.release)); }
+    for (let n = 0; n < pin.repositories.length; n++) { const path = `${work}/release-${n}`; await removeOwned(path, await hashFile(path, LIMITS.release), LIMITS.release); }
     await checkedDirectory(work, 0, 0, 0o700); await fs.rmdir(work); await syncDirectory(dirname(work));
     // The journal is removed last. A lost receipt/journal ACK stays held until
     // read-only inspection resolves it; no retry occurs inside this function.
@@ -477,9 +582,10 @@ export async function prepareServer1Postgres17(options: Readonly<{ mode: 'prefli
   }
 }
 
-export function parseServer1Pg17Arguments(args: readonly string[]): Readonly<{ mode: 'preflight' | 'apply'; approvedPinSha256?: string }> {
+export function parseServer1Pg17Arguments(args: readonly string[]): Readonly<{ mode: 'preflight' | 'apply' | 'finalize-cleanup'; approvedPinSha256?: string }> {
   if (!args.length || (args.length === 1 && args[0] === '--preflight')) return frozen({ mode: 'preflight' });
   if (args.length === 3 && args[0] === '--apply' && args[1] === '--pin-sha256' && SHA.test(args[2])) return frozen({ mode: 'apply', approvedPinSha256: args[2] });
+  if (args.length === 3 && args[0] === '--finalize-cleanup' && args[1] === '--pin-sha256' && SHA.test(args[2])) return frozen({ mode: 'finalize-cleanup', approvedPinSha256: args[2] });
   return refuse('arguments');
 }
 if (typeof import.meta.url === 'string' && process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

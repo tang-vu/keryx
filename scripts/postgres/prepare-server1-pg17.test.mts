@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Script } from 'node:vm';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { transformSync } from 'esbuild';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -11,7 +12,7 @@ vi.mock('node:fs', async original => {
   const actual = await original<typeof import('node:fs')>();
   return { ...actual, promises: { ...actual.promises, realpath: boundary.realpath } };
 });
-import { SERVER1_PG17, assertServer1PackageIndex, inspectServer1PreparedPostgres, parseServer1Pg17ApprovedPin, parseServer1Pg17Arguments, prepareServer1Postgres17 } from './prepare-server1-pg17.mts';
+import { SERVER1_PG17, assertServer1PackageIndex, inspectServer1PreparedPostgres, parseServer1Pg17ApprovedPin, parseServer1Pg17Arguments, prepareServer1Postgres17, parseServer1TerminalCleanupJournal } from './prepare-server1-pg17.mts';
 
 const sha = 'a'.repeat(64);
 function candidate() {
@@ -184,5 +185,64 @@ describe('actual CJS import and zero-argument inspector refusal', () => {
     expect(loaded.paths).toEqual(['/etc/os-release', '/etc/os-release', '/etc/os-release', '/proc/sys/kernel/osrelease']);
     expect(loaded.close).toHaveBeenCalledOnce();
     expect(loaded.commands).not.toHaveBeenCalled();
+  });
+});
+
+describe('terminal-only cleanup journal and release ownership', () => {
+  const stages = ['signed_bundle_verification_started','signed_bundle_verified','package_startup_guards_installed','package_configuration_acknowledged','fresh_checksummed_cluster_initialized','dedicated_service_start_submitted','actual_persistent_service_verified','prepared_unenrolled_receipt_fsynced'];
+  function journal() { return [{format:'keryx-server1-postgres17-apply-in-progress-v1',approvedPinSha256:sha,startedAt:'2026-11-15T16:55:09.444Z',outcome:'UNKNOWN_UNTIL_PREPARED_RECEIPT',automaticRetry:false},...stages.map((stage,n)=>({stage,observedAt:`2026-11-15T16:55:${String(10+n).padStart(2,'0')}.000Z`}))]; }
+  function wire(value: unknown[]) { return Buffer.from(value.map(x=>JSON.stringify(x)).join('\n')+'\n'); }
+  it('requires explicit cleanup mode and a pin, with no bypass option', () => {
+    expect(parseServer1Pg17Arguments(['--finalize-cleanup','--pin-sha256',sha])).toEqual({mode:'finalize-cleanup',approvedPinSha256:sha});
+    for(const args of [['--finalize-cleanup'],['--finalize-cleanup','--pin-sha256',sha,'--ignore-journal'],['--apply','--finalize-cleanup','--pin-sha256',sha]]) expect(()=>parseServer1Pg17Arguments(args)).toThrow('arguments');
+  });
+  it('recognizes only the full acknowledged terminal sequence as data', () => {
+    const input=wire(journal()), parsed=parseServer1TerminalCleanupJournal(input,sha);
+    expect(parsed.sha256).toBe(createHash('sha256').update(input).digest('hex'));
+    expect(parsed.serviceVerifiedAt).toBe('2026-11-15T16:55:16.000Z');
+    expect(parsed.receiptFsyncedAt).toBe('2026-11-15T16:55:17.000Z');
+    expect(Object.isFrozen(parsed)).toBe(true);
+  });
+  it('refuses every earlier phase, extra event, wrong order, pin or retry promise', () => {
+    const original=journal();
+    for(let n=1;n<original.length;n++) expect(()=>parseServer1TerminalCleanupJournal(wire(original.slice(0,n)),sha)).toThrow('terminal_journal');
+    expect(()=>parseServer1TerminalCleanupJournal(wire([...original,original[8]]),sha)).toThrow('sequence');
+    const reordered=journal(); [reordered[2],reordered[3]]=[reordered[3],reordered[2]];
+    expect(()=>parseServer1TerminalCleanupJournal(wire(reordered),sha)).toThrow('sequence');
+    expect(()=>parseServer1TerminalCleanupJournal(wire(original),'b'.repeat(64))).toThrow('header');
+    const retry=journal(); Object.assign(retry[0],{automaticRetry:true}); expect(()=>parseServer1TerminalCleanupJournal(wire(retry),sha)).toThrow('header');
+  });
+  it('refuses invalid/backward clocks, noncanonical duplicates and partial trailing data', () => {
+    const backward=journal(); Object.assign(backward[8],{observedAt:'2026-11-15T16:55:08.000Z'}); expect(()=>parseServer1TerminalCleanupJournal(wire(backward),sha)).toThrow('sequence');
+    const invalid=journal(); Object.assign(invalid[8],{observedAt:'2026-02-30T16:55:17.000Z'}); expect(()=>parseServer1TerminalCleanupJournal(wire(invalid),sha)).toThrow('time');
+    expect(()=>parseServer1TerminalCleanupJournal(Buffer.from(wire(journal()).toString().trimEnd()),sha)).toThrow('incomplete');
+    const duplicate=wire(journal()).toString().replace('"automaticRetry":false','"automaticRetry":true,"automaticRetry":false');
+    expect(()=>parseServer1TerminalCleanupJournal(Buffer.from(duplicate),sha)).toThrow('noncanonical');
+    expect(()=>parseServer1TerminalCleanupJournal(Buffer.alloc(128*1024+1),sha)).toThrow('bound');
+  });
+  function ownedRelease(bytes: number, changed=false) {
+    const source=fileURLToPath(new URL('./prepare-server1-pg17.mts',import.meta.url));
+    // Test-only exposure of the actual private deletion primitive. No production
+    // export, observer issuer, host guard waiver or actual file unlink is added.
+    const code=transformSync(readFileSync(source,'utf8')+'\nmodule.exports.__removeOwned=removeOwned;', {loader:'ts',format:'cjs',platform:'node',target:'es2017',logLevel:'silent'}).code;
+    const path='/root/keryx-migration/pg17-verification-work/release-0';
+    const content=Buffer.alloc(Math.min(bytes,4*1024*1024),0x61); const unlink=vi.fn(async()=>undefined), sync=vi.fn(async()=>undefined), readBody=vi.fn(async()=>content); let stats=0;
+    const promises={realpath:async(p:string)=>p,unlink,open:async(p:string)=>p===path?{stat:async()=>({isFile:()=>true,nlink:1,uid:0,mode:0o100600,size:bytes,mtimeMs:changed&&stats++>0?2:1,ctimeMs:1}),readFile:readBody,close:async()=>undefined}:{sync,close:async()=>undefined}};
+    const builtin=createRequire(import.meta.url); const module={exports:{} as {__removeOwned:(p:string,sha256:string,bound?:number)=>Promise<void>}};
+    new Script(code).runInNewContext({module,exports:module.exports,Buffer,process:{argv:[]},require:(name:string)=>name==='node:fs'?{constants:builtin('node:fs').constants,promises}:name==='node:child_process'?{execFile:()=>{throw Error('No commands in release ownership test');}}:builtin(name)});
+    return {remove:module.exports.__removeOwned,path,sha256:createHash('sha256').update(content).digest('hex'),unlink,sync,readBody};
+  }
+  it('regresses the actual >128KiB release cleanup failure under its existing4MiB release bound', async () => {
+    const smallBound=ownedRelease(187952);
+    await expect(smallBound.remove(smallBound.path,smallBound.sha256)).rejects.toThrow('protected_file');
+    expect(smallBound.unlink).not.toHaveBeenCalled();
+    const actual=ownedRelease(187952);
+    await actual.remove(actual.path,actual.sha256,4*1024*1024);
+    expect(actual.unlink).toHaveBeenCalledExactlyOnceWith(actual.path); expect(actual.sync).toHaveBeenCalledOnce();
+  });
+  it('refuses wrong digest, changed bytes/metadata and overbound releases before unlink', async () => {
+    const wrong=ownedRelease(187952); await expect(wrong.remove(wrong.path,'b'.repeat(64),4*1024*1024)).rejects.toThrow('cleanup_ownership'); expect(wrong.unlink).not.toHaveBeenCalled();
+    const changed=ownedRelease(187952,true); await expect(changed.remove(changed.path,changed.sha256,4*1024*1024)).rejects.toThrow('file_changed'); expect(changed.unlink).not.toHaveBeenCalled();
+    const large=ownedRelease(4*1024*1024+1); await expect(large.remove(large.path,large.sha256,4*1024*1024)).rejects.toThrow('protected_file'); expect(large.readBody).not.toHaveBeenCalled(); expect(large.unlink).not.toHaveBeenCalled();
   });
 });
