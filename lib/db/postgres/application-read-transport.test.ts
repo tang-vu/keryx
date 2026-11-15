@@ -1,4 +1,4 @@
-import { beforeEach,describe,expect,it,vi } from "vitest";
+import { afterEach,beforeEach,describe,expect,it,vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from "../storage-identity";
 const state=vi.hoisted(()=>({query:vi.fn(),connect:vi.fn(),clientQuery:vi.fn(),release:vi.fn(),end:vi.fn(),pools:0}));
@@ -10,7 +10,7 @@ const options={endpoint:{kind:'loopback' as const,port:5432},database:'synthetic
 const response=(v:unknown)=>({rows:[[v===null?null:JSON.stringify(v)]],fields:[{name:'result',dataTypeID:3802}]});
 const client=()=>({query:state.clientQuery,release:state.release});
 const make=()=>createPostgresApplicationReadTransport(options,identity,'22'.repeat(32));
-beforeEach(()=>{vi.clearAllMocks();state.pools=0;state.query.mockResolvedValue(response(0));state.connect.mockResolvedValue(client());state.clientQuery.mockImplementation(async (q:unknown)=>typeof q==='string'?{}:response([]));state.end.mockResolvedValue(undefined);});
+beforeEach(()=>{vi.clearAllMocks();state.pools=0;state.query.mockResolvedValue(response(0));state.connect.mockResolvedValue(client());state.clientQuery.mockImplementation(async (q:unknown)=>typeof q==='string'?{}:response((q as {text:string}).text.includes('storage_browser_signer_retained_spend')?0:[]));state.end.mockResolvedValue(undefined);});
 describe('native application read composition',()=>{
  it('decodes only fixed native scalar/original operations and refuses legacy shadows',async()=>{
   const call=vi.fn(),channel={closed:false,call,async close(){}},t=composePostgresApplicationReadTransport(channel,identity),wire=JSON.stringify({id:'synthetic',question:'q\0\ud800',answer:'PRIVATE_BODY\0\udc00'}),raw={nativeOriginalHex:Buffer.from(wire).toString('hex')};
@@ -51,4 +51,10 @@ describe('native application read composition',()=>{
   let resume!:(c:ReturnType<typeof client>)=>void;state.connect.mockReturnValue(new Promise(resolve=>{resume=resolve;}));const t=make(),requests=Array.from({length:10},()=>t.applicationRead('list_all_sources',{}));
   await expect(t.applicationRead('list_all_sources',{})).rejects.toThrow(PostgresStorageBusy);expect(state.connect).toHaveBeenCalledTimes(10);resume(client());await Promise.all(requests);await t.close();
  });
+});
+
+afterEach(()=>{
+ expect(state.query).not.toHaveBeenCalled();
+ expect(state.release).toHaveBeenCalledTimes(state.connect.mock.calls.length);
+ for(const [destroy] of state.release.mock.calls)expect(typeof destroy).toBe("boolean");
 });

@@ -1,4 +1,4 @@
-import { beforeEach,describe,expect,it,vi } from "vitest";
+import { afterEach,beforeEach,describe,expect,it,vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { installMainnetApplicationSchema } from "../mainnet-application-schema";
 import { sqliteJournalTransaction } from "../sqlite-browser-journal";
@@ -8,8 +8,8 @@ import { ARC_MAINNET_PROFILE as profile } from "../../arc-network-profile";
 import { randomUUID } from "node:crypto";
 import { STORAGE_MAINNET_PROFILE_DIGEST,storageIdentityDigest,type StorageIdentity } from "../storage-identity";
 import { hostedTreasuryPolicyDigest,type HostedTreasuryPolicy } from "../../payments/hosted-treasury-policy";
-const state=vi.hoisted(()=>({query:vi.fn(),end:vi.fn(),pools:0}));
-vi.mock('pg',()=>({Pool:class{constructor(){state.pools++;}query(...a:unknown[]){return state.query(...a);}end(){return state.end();}on(){}},types:{getTypeParser:()=>(s:string)=>s}}));
+const state=vi.hoisted(()=>({query:vi.fn(),connect:vi.fn(),release:vi.fn(),poolQuery:vi.fn(),end:vi.fn(),pools:0}));
+vi.mock('pg',()=>({Pool:class{constructor(){state.pools++;}query(...a:unknown[]){return state.poolQuery(...a);}connect(){return state.connect();}end(){return state.end();}on(){}},types:{getTypeParser:()=>(s:string)=>s}}));
 import { createPostgresHostedLedgerTransport,HOSTED_PAYMENT_SOURCE_RECEIPT_PREFIX } from './hosted-ledger-transport';
 import { PostgresDomainWriteOutcomeUnknown } from './domain-channel';
 import { PostgresStorageUnavailable } from './connection';
@@ -20,7 +20,7 @@ const policy=():HostedTreasuryPolicy=>({format:'keryx-hosted-treasury-policy-v1'
   lifetimeCapMicroUsdc:'100',queryCapMicroUsdc:'10',expiresAtSeconds:Math.floor(Date.now()/1000)+60});
 const response=(v:unknown)=>({rows:[[v===null?null:JSON.stringify(v)]],fields:[{name:'result',dataTypeID:3802}]});
 const make=(protocol:'legacy-v1'|'source-payment-originals-v1'='legacy-v1')=>createPostgresHostedLedgerTransport(options,identity,'22'.repeat(32),protocol);
-beforeEach(()=>{vi.clearAllMocks();state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(null));});
+beforeEach(()=>{vi.clearAllMocks(); state.connect.mockResolvedValue({query:state.query,release:state.release});state.pools=0;state.end.mockResolvedValue(undefined);state.query.mockResolvedValue(response(null));});
 describe('closed native hosted ledger',()=>{
   it('binds policy identity/digest and composes one bounded pool',async()=>{
     const t=make(),p=policy();expect(await t.admitHostedTreasuryPolicy(p,'public')).toBe(hostedTreasuryPolicyDigest(p));expect(state.pools).toBe(1);
@@ -42,7 +42,7 @@ describe('closed native hosted ledger',()=>{
   });
   it('suppresses policy authority when disposed after native dispatch',async()=>{
     let finish!:(v:unknown)=>void;state.query.mockReturnValue(new Promise(resolve=>{finish=resolve;}));const t=make(),request=t.admitHostedTreasuryPolicy(policy(),'public');
-    const outcome=expect(request).rejects.toThrow(PostgresDomainWriteOutcomeUnknown);const closing=t.close();finish(response(null));await outcome;await closing;
+    const outcome=expect(request).rejects.toThrow(PostgresDomainWriteOutcomeUnknown);await vi.waitFor(()=>expect(state.query).toHaveBeenCalledTimes(1));const closing=t.close();finish(response(null));await outcome;await closing;
   });
 });
 
@@ -115,4 +115,10 @@ describe('finite hosted protocol selection',()=>{
   const t=make('source-payment-originals-v1');state.query.mockRejectedValue(new Error('synthetic lost ACK'));
   try{await expect(t.confirmHostedAuthorization(signer,nonce,'\0')).rejects.toThrow(PostgresDomainWriteOutcomeUnknown);expect(state.query).toHaveBeenCalledTimes(1);}finally{await t.close();}
  });
+});
+
+afterEach(()=>{
+ expect(state.poolQuery).not.toHaveBeenCalled();
+ expect(state.release).toHaveBeenCalledTimes(state.connect.mock.calls.length);
+ for(const [destroy] of state.release.mock.calls)expect(typeof destroy).toBe("boolean");
 });
