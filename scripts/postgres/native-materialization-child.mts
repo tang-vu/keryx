@@ -80,7 +80,7 @@ async function main(){
   }
   stage='source-projections';const projections=await materializeNativeProjections(db,options);
   if(packet.mode==='synthetic')assert(projections.domains.every(domain=>domain.rows===1));
-  stage='existing-projection-refusal';await assert.rejects(materializeNativeProjections(db,options),error=>error instanceof NativeMaterializationUnavailable&&error.diagnostic.stage==='projection-entry'&&error.diagnostic.commitOutcome==='not_attempted');
+  stage='existing-projection-refusal';await assert.rejects(materializeNativeProjections(db,options),error=>error instanceof NativeMaterializationUnavailable&&error.diagnostic.stage==='projection-preflight'&&error.diagnostic.commitOutcome==='not_attempted');
   stage='source-cache-authentication';const cache=auditCache(db,performance.now()+60000),identity=readStorageIdentity(db);assert(cache.authenticatedRows>0);assert.equal(cache.nullRows,0);
   delete process.env.CONTENT_MASTER_KEY;packet.key='';
   db.exec('ROLLBACK');db.close();db=undefined;checkSnapshotUnchanged(target,descriptor,before.size,before.mtimeNs);

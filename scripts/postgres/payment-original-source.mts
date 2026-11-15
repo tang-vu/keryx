@@ -10,7 +10,7 @@ export function captureObservedPaymentSource(db:DatabaseSync,id:string){
  assert.deepEqual(Object.keys(row).sort(),[...PAYMENT_EVENT_FIELDS].sort(),'Observe all27 actual Source payment cells');
  const observed=db.prepare('SELECT '+PAYMENT_EVENT_FIELDS.flatMap((key,i)=>[`typeof(${key}) AS kind${i}`,`lower(hex(CAST(${key} AS BLOB))) AS hex${i}`]).join(',')+' FROM payment_events WHERE id=?').get(id);assert(observed);
  for(const [i,key] of PAYMENT_EVENT_FIELDS.entries()){
-  const value:unknown=row[key],kind=observed['kind'+i];
+  const value:unknown=row[key],kind:unknown=observed['kind'+i];
   if(value===null)assert.equal(kind,'null');
   else if(typeof value==='string'){assert.equal(kind,'text');assert.equal(Buffer.from(value).toString('hex'),observed['hex'+i],'Source payment UTF8 bytes cannot be repaired');}
   else{assert.equal(typeof value,'number');assert(Number.isFinite(value));assert(kind==='integer'||kind==='real');}

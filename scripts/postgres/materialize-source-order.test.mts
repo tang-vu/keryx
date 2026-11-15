@@ -18,7 +18,7 @@ function fixture(run:(db:DatabaseSync,table:SnapshotTable,ordinals:Map<string,st
   db.exec('BEGIN');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);
   // Deliberately unrelated key/date/insertion order. Preserve signed int64
   // extremes and values that cannot survive a JavaScript Number conversion.
-  const rows=[['max','a',9223372036854775807n,'2026-11-15T01:00:00.123456789+01:00'],['zero','z',0n,'2026-11-15T00:00:00.123456789Z'],['unsafe','m',9007199254740993n,'2026-11-15T00:00:00.123456788Z'],['negative','b',-7n,'raw Source date'],['min','c',-9223372036854775808n,'2026-11-15T01:00:00.123456789+01:00']] as const;
+  const rows=[['max','a',BigInt('9223372036854775807'),'2026-11-15T01:00:00.123456789+01:00'],['zero','z',BigInt(0),'2026-11-15T00:00:00.123456789Z'],['unsafe','m',BigInt('9007199254740993'),'2026-11-15T00:00:00.123456788Z'],['negative','b',BigInt(-7),'raw Source date'],['min','c',BigInt('-9223372036854775808'),'2026-11-15T01:00:00.123456789+01:00']] as const;
   for(const [id,item,ordinal,date] of rows){db.prepare('INSERT INTO article_offers(rowid,source_id,item_id,id,content_version,price_usdc6,expires_at,signer,nonce,signature,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(ordinal,'\uFEFFsource',item,id,'\uFEFFversion',-1,0,'MiXeD signer','raw nonce ','\uFEFFraw signature',date);ordinals.set(id,String(ordinal));}
   insertStorageIdentity(db,identity);installStorageFences(db,identity);db.exec('COMMIT;PRAGMA query_only=ON;BEGIN');
   const table=snapshotTables(db).find(t=>t.name==='article_offers')!;expect(table).toBeDefined();run(db,table,ordinals);
@@ -57,7 +57,7 @@ it('requires the immutable Source pin and refuses a key that does not identify a
 it('looks up exact Source key bytes including BOM and embedded NUL without text decoding or truncation',()=>{
  const db=new DatabaseSync(':memory:');try{
   db.exec('BEGIN');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);
-  for(const [source,ordinal] of [['\uFEFFsame\0a',-3n],['\uFEFFsame\0b',0n]] as const)db.prepare('INSERT INTO article_offers(rowid,source_id,item_id,id,content_version,price_usdc6,expires_at,signer,nonce,signature,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(ordinal,source,'same','offer'+ordinal,'v',0,0,'s','n','sig','same clock');
+  for(const [source,ordinal] of [['\uFEFFsame\0a',BigInt(-3)],['\uFEFFsame\0b',BigInt(0)]] as const)db.prepare('INSERT INTO article_offers(rowid,source_id,item_id,id,content_version,price_usdc6,expires_at,signer,nonce,signature,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(ordinal,source,'same','offer'+ordinal,'v',0,0,'s','n','sig','same clock');
   db.exec('COMMIT;PRAGMA query_only=ON;BEGIN');const table=snapshotTables(db).find(t=>t.name==='article_offers')!,rows=[...snapshotRows(db,table,['source_id','item_id'])];
   expect(rows.map(row=>articleOfferSourceOrder(db,table,row))).toEqual(['-3','0']);
   // This is rowid observation only; scalar NUL native intake stays refused.
