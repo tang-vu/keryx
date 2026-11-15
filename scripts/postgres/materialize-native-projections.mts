@@ -23,6 +23,7 @@ import { hasPrivateResultIdentity,captureObservedPrivateResultSource,PRIVATE_RES
 import { sqliteA2aTimeProjection,sqliteA2aOriginalCellProjection } from './a2a-time-projection.mts';
 const tables=['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','a2a_original_time_projection','a2a_original_cell_projection','acceptance_original_projection'] as const;
 type Table=typeof tables[number]|'payment_event_originals'|'private_research_result_identity';
+export const NATIVE_PROJECTION_SOURCE_DOMAINS=Object.freeze([...tables,'payment_event_source_observation','private_research_result_identity'] as const);
 type Kind='json'|'json-null'|'hex';
 type Field={name:string;kind?:Kind};
 const field=(name:string,kind?:Kind):Field=>({name,...(kind?{kind}:{})});
@@ -36,6 +37,40 @@ function hasPaymentOriginals(contract:ReturnType<typeof exportNativePostgresSche
  const columns=sections.columns;assert(Array.isArray(columns));
  const actual=columns.filter(c=>c&&typeof c==='object'&&!Array.isArray(c)&&c.schema==='keryx_storage'&&c.relation==='payment_event_originals').map(c=>{assert(c&&typeof c==='object'&&!Array.isArray(c));return [c.name,c.type];});
  assert.deepEqual(actual.sort(),[['payment_id','text'],['identity_digest','text'],['original_wire','json'],['original_sha256','text'],['current_wire','json'],['current_sha256','text'],['native_projection','jsonb'],['unprojected_fields','text[]']].sort());return true;
+}
+/** Fixed Source-only capture shared by fresh intake and sealed catchup input.
+ * No target, receipt, native projection or application authority is returned. */
+export type NativeProjectionSelector = Readonly<{family:'run'|'review'|'a2a'|'payment'|'private-result';id:string}>|Readonly<{family:'watch';wallet:string;id:string}>;
+export type NativeProjectionRow = Readonly<{table:Table;keys:string[];columns:Field[];row:Record<string,unknown>}>;
+export async function captureNativeProjectionSource(db:DatabaseSync,selector:NativeProjectionSelector){
+ assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);
+ const identity=readStorageIdentity(db),pinned=canonicalJson(identity),current=()=>{assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(canonicalJson(readStorageIdentity(db)),pinned);};
+ const rows:NativeProjectionRow[]=[],add=(table:Table,keys:string[],columns:Field[],row:Record<string,unknown>)=>{assert.deepEqual(Object.keys(row).sort(),columns.map(c=>c.name).sort());assert(Buffer.byteLength(canonicalJson(row))<=8388608);rows.push({table,keys,columns,row});};
+ let payment:ReturnType<typeof captureObservedPaymentSource>|null=null,privateResult:Awaited<ReturnType<typeof captureObservedPrivateResultSource>>|null=null;
+ switch(selector.family){
+ case 'run':{const id=selector.id,h=sqliteOriginalHistoryProjection(db,id),o=sqliteOwnershipHistoryProjection(db,id),p=sqlitePrivacyProjection(db,id);
+   add('run_history_projection',['run_id'],[field('run_id'),field('original_sha256'),field('original_created_at'),field('recorded_owner'),field('owner_invalid'),field('funded'),field('provenance','json'),field('anonymous_claim_eligible')],{run_id:id,original_sha256:h.sha256,original_created_at:h.originalCreatedAt??null,recorded_owner:h.recordedOwner,owner_invalid:h.ownerInvalid,funded:h.funded,provenance:h.provenance,anonymous_claim_eligible:h.anonymousClaimEligible??false});
+   add('run_ownership_projection',['run_id'],[field('run_id'),field('original_sha256'),field('question_search','hex'),field('history_eligible'),field('recorded_valid'),field('claimed_valid'),field('summary','json')],{run_id:id,original_sha256:o.sha256,question_search:o.questionHex,history_eligible:o.historyEligible,recorded_valid:o.recordedValid,claimed_valid:o.claimedValid,summary:o.summary});
+   add('run_privacy_projection',['run_id'],[field('run_id'),field('original_sha256'),field('data_bytes'),field('original_valid'),field('scalar_identity_sha256'),field('scalar_cells','json'),field('answer_scalar','hex'),field('erase_wire'),field('original_fulfillment'),field('question_fields'),field('history_fields'),field('history_references','json'),field('learning_fields'),field('archive_wire'),field('erase_projection','json'),field('profile_fields'),field('payment_offline'),field('funding_offline'),field('funding_treasury')],{run_id:id,original_sha256:p.sha256,data_bytes:p.dataBytes,original_valid:p.valid,scalar_identity_sha256:storageIdentityDigest(identity),scalar_cells:p.scalarCells,answer_scalar:p.answerHex,erase_wire:p.eraseWire,original_fulfillment:p.originalFulfillment,question_fields:p.questionFields,history_fields:p.historyFields,history_references:p.historyReferences,learning_fields:p.learningFields,archive_wire:p.archiveWire,erase_projection:p.eraseProjection,profile_fields:p.publicProfile.profileFields,payment_offline:p.publicProfile.paymentOffline,funding_offline:p.publicProfile.fundingOffline,funding_treasury:p.publicProfile.fundingTreasury});
+   add('usage_projection',['run_id'],[field('run_id'),field('original_sha256'),field('usage_wire'),field('provenance_wire'),field('parsed_usage','json-null'),field('body_identity_valid')],{run_id:id,original_sha256:p.usage.sha256,usage_wire:p.usage.usageWire,provenance_wire:p.usage.provenanceWire,parsed_usage:p.usage.parsedUsage,body_identity_valid:p.usage.bodyIdentityValid});
+   add('public_ledger_projection',['run_id'],[field('run_id'),field('original_sha256'),field('original_valid'),field('snapshot_wire'),field('reference_ids','json')],{run_id:id,original_sha256:p.ledger.sha256,original_valid:p.ledger.valid,snapshot_wire:p.ledger.snapshotWire,reference_ids:p.ledger.references});
+ break;}
+ case 'review':{
+ const r=db.prepare("SELECT id,run_id,network,CASE WHEN typeof(input_json)='text' AND length(CAST(input_json AS BLOB))<=8192 THEN input_json END input_json FROM decision_review_records WHERE id=?").get(selector.id);assert(r&&typeof r.id==='string'&&typeof r.input_json==='string');const metadata=reviewOriginalMetadata(r.input_json);assert.equal(metadata.runId,r.run_id);assert.equal(metadata.terms.network,r.network);
+   add('review_projection',['id'],[field('id'),field('original_sha256'),field('metadata','json')],{id:r.id,original_sha256:sha(r.input_json),metadata});
+ break;}
+ case 'watch':{const r=selector;const p=sqliteWatchProjection(db,r.wallet,r.id);add('topic_watch_projection',['wallet','id'],[field('wallet'),field('id'),field('original_sha256'),field('metadata','json')],{wallet:p.owner,id:p.id,original_sha256:p.originalSha256,metadata:p});
+ break;}
+ case 'a2a':{const r=selector;
+   const time=sqliteA2aTimeProjection(db,r.id,identity);add('a2a_original_time_projection',['order_id'],Object.keys(time).map(name=>field(name)),time);
+   const cells=sqliteA2aOriginalCellProjection(db,r.id,identity);add('a2a_original_cell_projection',['order_id'],Object.keys(cells).map(name=>field(name)),cells);
+   const p=sqliteAcceptanceProjection(db,r.id);add('acceptance_original_projection',['order_id'],[field('order_id'),field('store_id'),field('source_order_wire'),field('source_order_sha256'),field('delivery_token'),field('owner'),field('network'),field('binding','json'),field('health_meta','json')],{order_id:p.orderId,store_id:p.storeId,source_order_wire:p.orderWire,source_order_sha256:p.orderSha256,delivery_token:p.deliveryToken,owner:p.owner,network:p.network,binding:p.binding,health_meta:p.health});
+ break;}
+ case 'payment':payment=captureObservedPaymentSource(db,selector.id);assert(payment);break;
+ case 'private-result':privateResult=await captureObservedPrivateResultSource(db,selector.id,identity);break;
+ default:assert.fail('Unknown fixed Source capture');
+ }
+ current();return {selector,rows,payment,privateResult};
 }
 export async function materializeNativeProjections(db:DatabaseSync,options:PostgresConnectionOptions,mode:NativeMaterializationProfileMode='observation505'){
  const profile=nativeMaterializationProfile(mode);
@@ -69,32 +104,15 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
    assert.deepEqual(nulls,columns.map(c=>row[c.name]===null&&c.kind!=='json-null'));assert.equal(canonicalJson(actual),wire);
    digests.get(name)!.update(wire).update('\n');counts[name]++;
   };
-  const runKeys=db.prepare('SELECT id FROM query_runs ORDER BY id COLLATE BINARY');let runs=0;
-  for(const key of runKeys.iterate()){
-   assert(typeof key.id==='string'&&++runs<=10000);const id=key.id,h=sqliteOriginalHistoryProjection(db,id),o=sqliteOwnershipHistoryProjection(db,id),p=sqlitePrivacyProjection(db,id);
-   await insert('run_history_projection',['run_id'],[field('run_id'),field('original_sha256'),field('original_created_at'),field('recorded_owner'),field('owner_invalid'),field('funded'),field('provenance','json'),field('anonymous_claim_eligible')],{run_id:id,original_sha256:h.sha256,original_created_at:h.originalCreatedAt??null,recorded_owner:h.recordedOwner,owner_invalid:h.ownerInvalid,funded:h.funded,provenance:h.provenance,anonymous_claim_eligible:h.anonymousClaimEligible??false});
-   await insert('run_ownership_projection',['run_id'],[field('run_id'),field('original_sha256'),field('question_search','hex'),field('history_eligible'),field('recorded_valid'),field('claimed_valid'),field('summary','json')],{run_id:id,original_sha256:o.sha256,question_search:o.questionHex,history_eligible:o.historyEligible,recorded_valid:o.recordedValid,claimed_valid:o.claimedValid,summary:o.summary});
-   await insert('run_privacy_projection',['run_id'],[field('run_id'),field('original_sha256'),field('data_bytes'),field('original_valid'),field('scalar_identity_sha256'),field('scalar_cells','json'),field('answer_scalar','hex'),field('erase_wire'),field('original_fulfillment'),field('question_fields'),field('history_fields'),field('history_references','json'),field('learning_fields'),field('archive_wire'),field('erase_projection','json'),field('profile_fields'),field('payment_offline'),field('funding_offline'),field('funding_treasury')],{run_id:id,original_sha256:p.sha256,data_bytes:p.dataBytes,original_valid:p.valid,scalar_identity_sha256:storageIdentityDigest(identity),scalar_cells:p.scalarCells,answer_scalar:p.answerHex,erase_wire:p.eraseWire,original_fulfillment:p.originalFulfillment,question_fields:p.questionFields,history_fields:p.historyFields,history_references:p.historyReferences,learning_fields:p.learningFields,archive_wire:p.archiveWire,erase_projection:p.eraseProjection,profile_fields:p.publicProfile.profileFields,payment_offline:p.publicProfile.paymentOffline,funding_offline:p.publicProfile.fundingOffline,funding_treasury:p.publicProfile.fundingTreasury});
-   await insert('usage_projection',['run_id'],[field('run_id'),field('original_sha256'),field('usage_wire'),field('provenance_wire'),field('parsed_usage','json-null'),field('body_identity_valid')],{run_id:id,original_sha256:p.usage.sha256,usage_wire:p.usage.usageWire,provenance_wire:p.usage.provenanceWire,parsed_usage:p.usage.parsedUsage,body_identity_valid:p.usage.bodyIdentityValid});
-   await insert('public_ledger_projection',['run_id'],[field('run_id'),field('original_sha256'),field('original_valid'),field('snapshot_wire'),field('reference_ids','json')],{run_id:id,original_sha256:p.ledger.sha256,original_valid:p.ledger.valid,snapshot_wire:p.ledger.snapshotWire,reference_ids:p.ledger.references});
-  }
-  let reviews=0;for(const r of db.prepare("SELECT id,run_id,network,CASE WHEN typeof(input_json)='text' AND length(CAST(input_json AS BLOB))<=8192 THEN input_json END input_json FROM decision_review_records ORDER BY id COLLATE BINARY").iterate()){
-   assert(++reviews<=100000&&typeof r.id==='string'&&typeof r.input_json==='string');const metadata=reviewOriginalMetadata(r.input_json);assert.equal(metadata.runId,r.run_id);assert.equal(metadata.terms.network,r.network);
-   await insert('review_projection',['id'],[field('id'),field('original_sha256'),field('metadata','json')],{id:r.id,original_sha256:sha(r.input_json),metadata});
-  }
-  let watches=0;for(const r of db.prepare('SELECT wallet,id FROM topic_watches ORDER BY wallet COLLATE BINARY,id COLLATE BINARY').iterate()){
-   assert(++watches<=10000&&typeof r.wallet==='string'&&typeof r.id==='string');const p=sqliteWatchProjection(db,r.wallet,r.id);await insert('topic_watch_projection',['wallet','id'],[field('wallet'),field('id'),field('original_sha256'),field('metadata','json')],{wallet:p.owner,id:p.id,original_sha256:p.originalSha256,metadata:p});
-  }
-  let orders=0;for(const r of db.prepare('SELECT id FROM a2a_orders ORDER BY id COLLATE BINARY').iterate()){
-   assert(++orders<=10000&&typeof r.id==='string');
-   const time=sqliteA2aTimeProjection(db,r.id,identity);await insert('a2a_original_time_projection',['order_id'],Object.keys(time).map(name=>field(name)),time);
-   const cells=sqliteA2aOriginalCellProjection(db,r.id,identity);await insert('a2a_original_cell_projection',['order_id'],Object.keys(cells).map(name=>field(name)),cells);
-   const p=sqliteAcceptanceProjection(db,r.id);await insert('acceptance_original_projection',['order_id'],[field('order_id'),field('store_id'),field('source_order_wire'),field('source_order_sha256'),field('delivery_token'),field('owner'),field('network'),field('binding','json'),field('health_meta','json')],{order_id:p.orderId,store_id:p.storeId,source_order_wire:p.orderWire,source_order_sha256:p.orderSha256,delivery_token:p.deliveryToken,owner:p.owner,network:p.network,binding:p.binding,health_meta:p.health});
-  }
+  const capturedRows=async(selector:NativeProjectionSelector)=>{sourceCurrent();const captured=await captureNativeProjectionSource(db,selector);sourceCurrent();for(const row of captured.rows)await insert(row.table,row.keys,row.columns,row.row);sourceCurrent();};
+  let runs=0;for(const key of db.prepare('SELECT id FROM query_runs ORDER BY id COLLATE BINARY').iterate()){assert(typeof key.id==='string'&&++runs<=10000);await capturedRows({family:'run',id:key.id});}
+  let reviews=0;for(const r of db.prepare('SELECT id FROM decision_review_records ORDER BY id COLLATE BINARY').iterate()){assert(++reviews<=100000&&typeof r.id==='string');await capturedRows({family:'review',id:r.id});}
+  let watches=0;for(const r of db.prepare('SELECT wallet,id FROM topic_watches ORDER BY wallet COLLATE BINARY,id COLLATE BINARY').iterate()){assert(++watches<=10000&&typeof r.wallet==='string'&&typeof r.id==='string');await capturedRows({family:'watch',wallet:r.wallet,id:r.id});}
+  let orders=0;for(const r of db.prepare('SELECT id FROM a2a_orders ORDER BY id COLLATE BINARY').iterate()){assert(++orders<=10000&&typeof r.id==='string');await capturedRows({family:'a2a',id:r.id});}
   let payments=0;
   if(paymentEventOriginalsPresent)for(const key of db.prepare("SELECT CASE WHEN typeof(id)='text' AND length(CAST(id AS BLOB))<=1024 THEN id END id FROM payment_events ORDER BY payment_events.id COLLATE BINARY").iterate()){
    table='payment_event_originals';stage='payment-source-capture';sourceCurrent();assert(typeof key.id==='string'&&++payments<=100000);
-   const captured=captureObservedPaymentSource(db,key.id);assert(captured);
+   const captured=(await captureNativeProjectionSource(db,{family:'payment',id:key.id})).payment;assert(captured);sourceCurrent();
    const projectionWire=JSON.stringify({...captured.projection,settled:captured.projection.settled===1});
    const publicBytes=PAYMENT_EVENT_FIELDS.map(name=>`coalesce(octet_length(p.${quote(name)}::text),0)`).join('+');
    stage='payment-public-compare';const projected=await pg.query(`SELECT to_jsonb(expected)::text expected_projection,CASE WHEN ${publicBytes}<=${PAYMENT_EVENT_WIRE_BYTES*2} THEN to_jsonb(p)::text END actual_projection,CASE WHEN ${publicBytes}<=${PAYMENT_EVENT_WIRE_BYTES*2} THEN to_jsonb(p) IS NOT DISTINCT FROM to_jsonb(expected) ELSE false END projection_matches FROM jsonb_populate_record(NULL::public.payment_events,$2::jsonb) expected CROSS JOIN public.payment_events p WHERE p.id=$1 FOR SHARE OF p`,[key.id,projectionWire]);
@@ -118,7 +136,7 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
    }
    for(const key of db.prepare('SELECT id FROM private_research_results ORDER BY id COLLATE BINARY').iterate()){
     table='private_research_result_identity';stage='private-result-source-capture';sourceCurrent();assert(typeof key.id==='string'&&++privateResults<=10000);
-    const captured=await captureObservedPrivateResultSource(db,key.id,identity);sourceCurrent();
+    const captured=(await captureNativeProjectionSource(db,{family:'private-result',id:key.id})).privateResult;assert(captured);sourceCurrent();
     stage='private-result-public-compare';
     for(const [name,columns] of Object.entries(PRIVATE_RESULT_SOURCE_COLUMNS)){
      const bytes=columns.map(c=>'octet_length('+quote(c)+'::text)').join('+'),bounded=bytes+'<='+PRIVATE_RESULT_SOURCE_BYTE_LIMITS[name as PrivateResultSourceTable];

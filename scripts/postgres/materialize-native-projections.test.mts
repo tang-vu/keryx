@@ -1,13 +1,15 @@
 /** Intake/query-protocol unit test with actual SQLite Source cells and a
  * recording driver stand-in. This does not qualify PostgreSQL or containment. */
 import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
+import { canonicalJson } from '../../lib/canonical-json';
 import { beforeEach,expect,it,vi } from 'vitest';
 import { ARC_MAINNET_PROFILE } from '../../lib/arc-network-profile';
 import { syntheticA2aOriginal } from '../../lib/db/a2a-original-fixture';
 import { monthlyOrderToRow } from '../../lib/db/research-monthly';
 import { insertStorageIdentity } from '../../lib/db/storage-identity-sqlite';
 import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from '../../lib/db/storage-identity';
-import { materializeNativeProjections } from './materialize-native-projections.mts';
+import { materializeNativeProjections,captureNativeProjectionSource } from './materialize-native-projections.mts';
 
 const driver=vi.hoisted(()=>({rows:new Map<string,Record<string,unknown>[]>(),queries:[] as string[],identity:undefined as unknown,changeWire:false,changeCells:false}));
 vi.mock('../../lib/db/postgres/runtime-profile',()=>({NATIVE_READONLY_RUNTIME_PROFILE:{catalogSha256:'a'.repeat(64)},nativeMaterializationProfile:(mode='observation505')=>{if(mode!=='observation505')throw Error('Recording fixture supports observation505 only');return {catalogSha256:'a'.repeat(64)};}}));
@@ -59,10 +61,14 @@ it.each(['none','time','cells'] as const)('imports independent Source clocks/cel
   const pending=materializeNativeProjections(db,{endpoint:{kind:'loopback',port:5432},database:'native_materialized',role:'postgres',password:'b'.repeat(48)});
   if(changed!=='none'){await expect(pending).rejects.toMatchObject({diagnostic:{stage:'projection-re-read',table:changed==='time'?'a2a_original_time_projection':'a2a_original_cell_projection',commitOutcome:'not_attempted'}});expect(driver.rows.size).toBe(0);}
   else{
-   const result=await pending;expect(result.orders).toBe(1);expect(result.domains.find(d=>d.table==='a2a_original_time_projection')?.rows).toBe(1);expect(result.domains.find(d=>d.table==='a2a_original_cell_projection')?.rows).toBe(1);
+   const result=await pending;const captured=await captureNativeProjectionSource(db,{family:'a2a',id:original.id});expect(captured.rows.map(r=>r.table)).toEqual(['a2a_original_time_projection','a2a_original_cell_projection','acceptance_original_projection']);for(const row of captured.rows){expect(row.row).toEqual(driver.rows.get(row.table)![0]);expect(result.domains.find(d=>d.table===row.table)?.digest).toBe(createHash('sha256').update(canonicalJson(row.row)).update('\n').digest('hex'));}expect(captured.payment).toBeNull();expect(captured.privateResult).toBeNull();expect(result.orders).toBe(1);expect(result.domains.find(d=>d.table==='a2a_original_time_projection')?.rows).toBe(1);expect(result.domains.find(d=>d.table==='a2a_original_cell_projection')?.rows).toBe(1);
    expect(driver.rows.get('a2a_original_time_projection')![0]).toMatchObject({created_at:original.createdAt,updated_at:original.updatedAt,started_at:original.startedAt});
    expect(driver.rows.get('a2a_original_cell_projection')![0]).toMatchObject({package_data_wire:row.package_data,request_data_wire:row.request_data});
    expect(driver.queries.filter(q=>q.startsWith('SELECT to_jsonb(t)')).every(q=>q.includes('FROM (SELECT '))).toBe(true);
   }
  }finally{db.close();}
+});
+
+it('Source capture requires the existing read-only selected transaction without touching the target',async()=>{
+ const db=new DatabaseSync(':memory:');try{insertStorageIdentity(db,identity);await expect(captureNativeProjectionSource(db,{family:'run',id:'unselected'})).rejects.toThrow();expect(driver.queries).toEqual([]);db.exec('BEGIN');await expect(captureNativeProjectionSource(db,{family:'run',id:'unselected'})).rejects.toThrow();expect(driver.queries).toEqual([]);}finally{db.close();}
 });
