@@ -353,6 +353,36 @@ test('native artifact preparation uses fixed staged ENV/manifest while Source re
   assert.throws(()=>f.verify('startup'));f.setCutover(f.receipt);assert.equal(f.verify('startup'),f.review);assert(f.calls.some(c=>c.file==='/root/keryx/.env.local'&&c.environment==='native-active'));
   assert.throws(()=>f.verify('allow-production'));
 });
+test('artifact CLI final review uses staged native controls before the cutover receipt exists, including artifact reuse',()=>{
+  // Execute the actual synchronous CLI tail with recorded artifact/filesystem
+  // dependencies; the native compatibility validator itself remains real.
+  const source=fs.readFileSync(new URL('./redeploy-reviewed-roles.mjs',import.meta.url),'utf8');
+  const begin=source.indexOf('        const artifact = config.release.artifactReuseFile');
+  const finish="        console.log('Reviewed immutable source/artifact and compatibility binding passed.');";
+  const end=source.indexOf(finish,begin);
+  assert(begin>=0&&end>begin);assert.equal(source.indexOf('        const artifact = config.release.artifactReuseFile',begin+1),-1);
+  const run=new Function('config','verifyArtifactReuse','readProtectedDeploymentJson','inspect',
+    'verifyReleaseSourcePaths','releaseSource','verifyReleaseReview','console',source.slice(begin,end+finish.length));
+  for(const reuse of [false,true]){
+    const f=nativeCompatibilityFixture();f.setCutover(null);
+    const proof=Object.freeze({fixture:'existing separately qualified artifact proof'}),events=[];
+    if(reuse){f.binding.artifactReuseFile=path.posix.dirname(f.binding.compatibilityReviewFile)+'/artifact-reuse.json';f.binding.artifactReuseSha256='e'.repeat(64);}
+    const read=(file,hash,environment)=>{
+      if(reuse&&file===f.binding.artifactReuseFile){assert.equal(hash,f.binding.artifactReuseSha256);events.push('read-reuse');return proof;}
+      return f.read(file,hash,environment);
+    };
+    run({release:f.binding},(config,actual)=>{assert.equal(config.release,f.binding);assert.equal(actual,proof);events.push('verify-reuse');return f.artifact;},read,
+      ()=>{events.push('inspect');return f.artifact;},actual=>{assert.equal(actual,releaseSource(f.binding.commit));events.push('verify-source-paths');},releaseSource,
+      (binding,reader,artifact,headers,phase)=>{assert.equal(headers,undefined);events.push('review');return verifyReleaseReview(binding,reader,artifact,()=>'d'.repeat(64),phase);},
+      {log:message=>{assert.equal(message,'Reviewed immutable source/artifact and compatibility binding passed.');events.push('accepted');}});
+    assert.deepEqual(events,reuse?['read-reuse','verify-reuse','verify-source-paths','review','accepted']:['inspect','verify-source-paths','review','accepted']);
+    assert(f.calls.some(c=>c.file===f.files.environment&&c.environment==='native-staged'));
+    assert(f.calls.some(c=>c.file===f.files.manifest));
+    assert(!f.calls.some(c=>c.file===f.files.cutover||c.file==='/root/keryx/.env.local'));
+    // The same unpublished receipt must continue to refuse the startup default.
+    assert.throws(()=>f.verify());
+  }
+});
 test('native compatibility cannot overload old SQLite digest fields, choose a target, or activate held/private/unknown state',()=>{
   for(const mutate of [f=>{f.review.economicSchemaDigest='f'.repeat(64);},f=>{delete f.review.nativeStorage;},f=>{f.review.nativeStorage.catalogSha256='0'.repeat(64);},f=>{f.review.nativeStorage.runtimeManifestSha256='bad';},
     f=>{f.manifest.backend.kind='sqlite';},f=>{f.manifest.backend.database='other';},f=>{f.manifest.backend.endpoint.kind='loopback';},f=>{f.manifest.backend.credentialPaths.reader='/root/other/reader.json';},f=>{f.manifest.identity.provenanceDigest='f'.repeat(64);},

@@ -469,7 +469,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
           ? verifyArtifactReuse(config, readProtectedDeploymentJson(config.release.artifactReuseFile, config.release.artifactReuseSha256))
           : inspect();
         verifyReleaseSourcePaths(releaseSource(config.release.commit));
-        verifyReleaseReview(config.release, readProtectedDeploymentJson, artifact);
+        verifyReleaseReview(config.release, readProtectedDeploymentJson, artifact, undefined, 'artifact');
         console.log('Reviewed immutable source/artifact and compatibility binding passed.');
       }
       process.exit(0);
