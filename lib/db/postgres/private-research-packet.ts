@@ -3,7 +3,9 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { ARC_MAINNET_PROFILE } from '../../arc-network-profile';
-import { addressSchema } from '../../buyer/protocol';
+import { addressSchema,authorizationSchema,requirementSchema,BUYER_NETWORK } from '../../buyer/protocol';
+import { privateRequestSchema } from '../../buyer/private-request-commitment';
+import { privateMerchantPolicySchema } from '../../buyer/private-merchant-policy';
 import { privateResearchIdSchema,validatePrivateResearchIntent,type PrivateResearchIntent } from '../../a2a/private-research-intent';
 import { privatePaymentConfirmation,privatePaymentState,type PrivatePaymentConfirmation } from '../../a2a/private-payment-state';
 import { privateCreatorSubmissionSchema,type PrivateCreatorSubmissionRecord } from '../private-creator-submissions';
@@ -22,13 +24,20 @@ export const privateCreatorLegId=(data:z.infer<typeof privateCreatorSubmissionSc
 const freeze=<T>(value:T):T=>{if(value&&typeof value==='object'){for(const child of Object.values(value))freeze(child);Object.freeze(value);}return value;};
 const bound=(value:string,bytes:number)=>{if(typeof value!=='string'||Buffer.byteLength(value)>bytes)throw refuse();return value;};
 const copy=(value:unknown,bytes:number)=>JSON.parse(bound(JSON.stringify(value),bytes)) as unknown;
+// Synchronous structural capture uses the actual Source field schemas. All
+// caller objects/prototypes are discarded before bounded JSON serialization.
+// Genuine signature/commitment and current-intent payment checks still happen
+// through the Source validators after capture; this is never evidence issuance.
+const intentCaptureSchema=z.object({id:privateResearchIdSchema,submission:z.object({request:privateRequestSchema,salt:z.string().regex(/^0x[a-f0-9]{64}$/),payment:z.object({authorization:authorizationSchema,signature:z.string().regex(/^0x[a-fA-F0-9]{130}$/)}).strict()}).strict(),requirement:requirementSchema,merchants:privateMerchantPolicySchema}).strict();
+const confirmationFields={transaction:z.string().min(1).max(256).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),network:z.literal(BUYER_NETWORK),payer:addressSchema,payee:addressSchema,amountMicros:z.string().regex(/^[1-9]\d{0,6}$/),authorizationId:z.string().regex(/^0x[a-f0-9]{64}$/)};
+const paymentCaptureSchema=z.discriminatedUnion('source',[z.object({source:z.literal('circle-facilitator-success'),...confirmationFields}).strict(),z.object({source:z.literal('circle-transfer-search'),...confirmationFields,transferStatus:z.enum(['confirmed','completed'])}).strict()]);
 export function privateResearchLookup(id:string,payer:string){return freeze({id:privateResearchIdSchema.parse(id),payer:addressSchema.parse(payer).toLowerCase()});}
 export function capturePrivateResearchValue(action:PrivateResearchAction,value:unknown){
  if(!privateResearchActions.includes(action))throw refuse();
  switch(action){
-  case 'reserve-intent':return freeze(copy(value,524288));
+  case 'reserve-intent':try{return freeze(copy(intentCaptureSchema.parse(value),524288));}catch{throw Error('Invalid stored private research intent');}
   case 'reserve-treasury':{const p=z.object({signer:addressSchema,capacityMicros:z.string().regex(/^[1-9]\d{0,11}$/)}).strict().parse(value);return freeze({...p,signer:p.signer.toLowerCase()});}
-  case 'confirm-payment':return freeze(copy(value,8192));
+  case 'confirm-payment':try{return freeze(copy(paymentCaptureSchema.parse(value),8192));}catch{throw Error('Private payment confirmation mismatch');}
   case 'admit-creator':return freeze(privateCreatorSubmissionSchema.parse(value));
   case 'confirm-creator':return freeze(capturePrivateCreatorConfirmation(value));
   case 'save-result':return capturePrivateResearchResult(value as QueryRun);
@@ -125,7 +134,7 @@ function sourceJson(wire:string):JsonNode{
    if(wire[at++]!==end)throw refuse();const compact=ch+parts.join(',')+end;return {sql:compact,compact,...(object?{fields}:{})};
   }
   while(at<wire.length&&!/[\t\n\r ,}\]]/.test(wire[at]))at++;const token=wire.slice(start,at);
-  const value=JSON.parse(token) as number|boolean|null;return {sql:value===null?null:typeof value==='boolean'?(value?1n:0n):/^-?(?:0|[1-9]\d*)$/.test(token)&&BigInt(token)>=-9223372036854775808n&&BigInt(token)<=9223372036854775807n?BigInt(token):value,compact:token};
+  const value=JSON.parse(token) as number|boolean|null;return {sql:value===null?null:typeof value==='boolean'?(value?BigInt('1'):BigInt('0')):/^-?(?:0|[1-9]\d*)$/.test(token)&&BigInt(token)>=BigInt('-9223372036854775808')&&BigInt(token)<=BigInt('9223372036854775807')?BigInt(token):value,compact:token};
  };const value=parse(0);ws();if(at!==wire.length)throw refuse();return value;
 }
 const extracted=(node:JsonNode|null,...path:string[])=>{let value:JsonNode|undefined=node??undefined;for(const key of path)value=value?.fields?.find(([name])=>name===key)?.[1];return value?.sql??null;};
@@ -133,12 +142,12 @@ export function readPrivateTreasurySummary(raw:unknown):PrivateTreasurySummary|n
  const frame=z.object({capacity:z.string().nullable(),reservations:z.array(z.object({amount:z.string(),released:z.string().nullable()}).strict()),legs:z.array(z.object({amount:z.string(),signer:z.string(),data:z.string(),confirmation_id:z.string().nullable(),confirmation_data:z.string().nullable()}).strict())}).strict().parse(raw);
  if(frame.capacity===null)return null;
  const integer=(value:string)=>{if(!/^(0|[1-9]\d*)$/.test(value))throw refuse();return BigInt(value);};
- const capacity=integer(frame.capacity);let allocated=0n,committed=0n,confirmed=0n,invalid=0n;
+ const capacity=integer(frame.capacity);let allocated=BigInt('0'),committed=BigInt('0'),confirmed=BigInt('0'),invalid=BigInt('0');
  for(const row of frame.reservations)allocated+=integer(row.amount)-integer(row.released??'0');
  for(const row of frame.legs){const amount=integer(row.amount),leg=sourceJson(row.data),confirmation=row.confirmation_data===null?null:sourceJson(row.confirmation_data),source=extracted(confirmation,'source'),stage=extracted(confirmation,'transferStatus');
   if(extracted(leg,'submission','amountMicros')!==row.amount||extracted(leg,'submission','payer')!==row.signer||row.confirmation_id!==null&&(extracted(confirmation,'submission')!==extracted(leg,'submission')||!(source==='circle-facilitator-success'||source==='circle-transfer-search'&&['received','batched','confirmed','completed'].includes(String(stage)))))invalid++;
   committed+=amount;if(source==='circle-facilitator-success'||source==='circle-transfer-search'&&(stage==='confirmed'||stage==='completed'))confirmed+=amount;
  }
- if([capacity,allocated,committed,confirmed,invalid].some(value=>value<0n||value>999999999999n)||invalid!==0n||capacity===0n||confirmed>committed||committed>allocated||allocated>capacity)throw Error('Private treasury accounting mismatch');
+ if([capacity,allocated,committed,confirmed,invalid].some(value=>value<BigInt('0')||value>BigInt('999999999999'))||invalid!==BigInt('0')||capacity===BigInt('0')||confirmed>committed||committed>allocated||allocated>capacity)throw Error('Private treasury accounting mismatch');
  return {capacityMicros:String(capacity),allocatedMicros:String(allocated),unallocatedMicros:String(capacity-allocated),committedMicros:String(committed),confirmedMicros:String(confirmed),unresolvedOrProcessingMicros:String(committed-confirmed),conservativeBackingMicros:String(capacity-confirmed),observation:'database-recorded',chainFinalityVerified:false};
 }

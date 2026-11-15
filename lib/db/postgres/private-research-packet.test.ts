@@ -6,6 +6,37 @@ import { readFileSync } from 'node:fs';
 let p:typeof import('./private-research-packet');
 beforeAll(async()=>{vi.stubEnv('KERYX_NETWORK','arc');vi.stubEnv('NEXT_PUBLIC_KERYX_NETWORK','arc');vi.resetModules();p=await import('./private-research-packet');});
 afterAll(()=>vi.unstubAllEnvs());
+async function signedCaptureFixture(){
+ const {privateKeyToAccount}=await import('viem/accounts'),{createPrivateAuthorization}=await import('../../buyer/private-request-commitment'),{buyerTypedData}=await import('../../buyer/protocol'),{preparePrivateResearchIntent}=await import('../../a2a/private-research-intent');
+ const owner=privateKeyToAccount(`0x${'11'.repeat(32)}`),profile=ARC_MAINNET_PROFILE,merchants={privatePayee:'0x'+'ab'.repeat(20),publicResearchPayee:'0x'+'cd'.repeat(20)},requirement={scheme:'exact',network:profile.networkId,asset:profile.usdcAddress,amount:'50000',payTo:merchants.privatePayee,maxTimeoutSeconds:691200,extra:{name:'GatewayWalletBatched',version:'1',verifyingContract:profile.gatewayWallet}};
+ const request={question:'Synthetic capture\0\ud800',budget:.03,researchMode:'quick',packageVersion:'1.0.0',responseMode:'async',access:'payer-private-v1',model:null},fresh=await createPrivateAuthorization(request,requirement,owner.address,merchants,1788912000000),signature=await owner.signTypedData(buyerTypedData(fresh.authorization));
+ const intent=await preparePrivateResearchIntent({request:fresh.request,salt:fresh.salt,payment:{authorization:fresh.authorization,signature}},requirement,merchants);
+ return {intent,confirmation:{source:'circle-facilitator-success' as const,transaction:'synthetic-no-transfer',network:profile.networkId,payer:intent.submission.payment.authorization.from,payee:merchants.privatePayee,amountMicros:'50000',authorizationId:fresh.authorization.nonce}};
+}
+it('refuses enumerable caller toJSON exactly as genuine Source validators without invoking it',async()=>{
+ const f=await signedCaptureFixture(),{validatePrivateResearchIntent}=await import('../../a2a/private-research-intent'),{privatePaymentConfirmation}=await import('../../a2a/private-payment-state');let calls=0;
+ const intent={...f.intent,toJSON(){calls++;return f.intent;}},confirmation={...f.confirmation,toJSON(){calls++;return f.confirmation;}};
+ await expect(validatePrivateResearchIntent(intent)).rejects.toThrow('Invalid stored private research intent');expect(()=>p.capturePrivateResearchValue('reserve-intent',intent)).toThrow();
+ expect(()=>privatePaymentConfirmation(confirmation,f.intent)).toThrow('confirmation mismatch');expect(()=>p.capturePrivateResearchValue('confirm-payment',confirmation)).toThrow();expect(calls).toBe(0);
+ const nested=structuredClone(f.intent);Object.assign(nested.submission.request,{toJSON(){calls++;return f.intent.submission.request;}});
+ await expect(validatePrivateResearchIntent(nested)).rejects.toThrow();expect(()=>p.capturePrivateResearchValue('reserve-intent',nested)).toThrow();expect(calls).toBe(0);
+});
+it('copies Source schema fields from caller prototypes without running serialization hooks',async()=>{
+ const f=await signedCaptureFixture(),{validatePrivateResearchIntent}=await import('../../a2a/private-research-intent'),{privatePaymentConfirmation}=await import('../../a2a/private-payment-state');let calls=0;
+ const proto=Object.defineProperty({},'toJSON',{value(){calls++;throw Error('Caller hook must not run');}}),raw=Object.assign(Object.create(proto),f.intent),confirmation=Object.assign(Object.create(proto),f.confirmation);
+ const captured=p.capturePrivateResearchValue('reserve-intent',raw),payment=p.capturePrivateResearchValue('confirm-payment',confirmation);
+ expect(p.privateResearchSha(JSON.stringify(await validatePrivateResearchIntent(captured)))).toBe(p.privateResearchSha(JSON.stringify(await validatePrivateResearchIntent(raw))));expect(privatePaymentConfirmation(payment,f.intent)).toEqual(privatePaymentConfirmation(confirmation,f.intent));expect(calls).toBe(0);
+});
+it('pins every accepted intent/payment field before asynchronous validation and caller mutation',async()=>{
+ const f=await signedCaptureFixture(),{validatePrivateResearchIntent}=await import('../../a2a/private-research-intent'),{privatePaymentConfirmation}=await import('../../a2a/private-payment-state'),raw=structuredClone(f.intent),confirmation={...f.confirmation};
+ const captured=p.capturePrivateResearchValue('reserve-intent',raw),payment=p.capturePrivateResearchValue('confirm-payment',confirmation),pending=validatePrivateResearchIntent(captured);
+ raw.submission.request.question='Changed after call';raw.submission.payment.signature='0x'+'00'.repeat(65);raw.requirement.payTo='0x'+'ef'.repeat(20);raw.merchants.privatePayee='0x'+'ef'.repeat(20);confirmation.amountMicros='999';confirmation.transaction='changed';
+ expect(p.privateResearchSha(JSON.stringify(await pending))).toBe(p.privateResearchSha(JSON.stringify(f.intent)));expect(privatePaymentConfirmation(payment,f.intent)).toEqual(f.confirmation);expect(Object.isFrozen(captured)).toBe(true);expect(Object.isFrozen((captured as typeof f.intent).submission.request)).toBe(true);
+});
+it('preserves Source save-result intentional JSON codec including its toJSON behavior',async()=>{
+ const {capturePrivateResearchResult}=await import('../private-research-results');let calls=0;const value={id:'prv_'+'11'.repeat(32),question:'Synthetic',budget:.03,researchMode:'quick',answer:'Raw\0\ud800'},raw={toJSON(){calls++;return value;}} as unknown as QueryRun;
+ expect(p.capturePrivateResearchValue('save-result',raw)).toBe(capturePrivateResearchResult(raw));expect(calls).toBe(2);
+});
 it('captures private result JSON exactly before an asynchronous owner lookup',()=>{
  const run={id:'prv_'+'11'.repeat(32),question:'Synthetic private\0\ud800',budget:.03,researchMode:'quick',answer:'Private answer\0\udfff',nested:{value:'retained'}} as unknown as QueryRun;
  const captured=p.capturePrivateResearchValue('save-result',run) as string;run.question='changed';(run as unknown as {nested:{value:string}}).nested.value='changed';
