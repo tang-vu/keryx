@@ -1,7 +1,7 @@
 /** Genuine, compiled current-profile factory checks against synthetic PG only.
  * Driver hooks observe real I/O; they never replace results or issue provenance. */
 import assert from 'node:assert/strict';
-import {readFileSync,readSync,writeFileSync} from 'node:fs';
+import {lstatSync,readFileSync,readSync,writeFileSync} from 'node:fs';
 import {Client} from 'pg';
 import {canonicalJson} from '../../lib/canonical-json';
 import {validateStorageIdentity} from '../../lib/db/storage-identity';
@@ -9,6 +9,9 @@ import {NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE} from '../../lib/db/postgres/ru
 import {POSTGRES_SOURCE_METHOD_ACCESS,POSTGRES_SOURCE_PROPERTIES,postgresSourcePropertyEnabled} from '../../lib/db/postgres/runtime-surface';
 import {POSTGRES_RUNTIME_STORE_NAMES} from '../../lib/db/postgres/runtime-stores';
 import {PostgresDomainWriteOutcomeUnknown} from '../../lib/db/postgres/domain-channel';
+import {accountLocaleKey,enrolledSqliteLocalePort,type LocalePreferencePort} from '../../lib/i18n/locale-preference-route';
+import {encodeLocaleValue} from '../../lib/i18n/locale-preference';
+import {operatorAuditDirectory} from '../../lib/business-operator/journal';
 const modes=['success','readonly','wrong-identity','wrong-source','wrong-key','credential-change','committed-context-loss','held-target'] as const;
 export type CurrentRuntimeMode=typeof modes[number];
 let stage='containment';
@@ -42,7 +45,7 @@ async function main(){
   return result;
  }})});
  const storage=await import('../../lib/db/application-storage'),native=await import('../../lib/db/postgres/runtime-adapter');
- let checks=0;
+ let checks=0,localePort:LocalePreferencePort|null=null;const localeKey=accountLocaleKey('https://keryx.cc',identity.network,'0x'+'e1'.repeat(20));
  const factory=input.mode==='readonly'?storage.createReadonlyApplicationStorage:storage.createApplicationStorage;
  if(['wrong-identity','wrong-source','wrong-key','held-target'].includes(input.mode)){
   stage='factory-refusal';await assert.rejects(factory());checks++;
@@ -80,6 +83,8 @@ async function main(){
     stage='writer-user-roundtrip';const wallet='0x'+'e1'.repeat(20),created=await db.upsertUser(wallet,'asker');assert.equal(created.created,true);assert.equal((await db.getUser(wallet))?.walletAddress,wallet);checks+=2;
     stage='writer-sync-roundtrip';
     await db.setSyncState('synthetic-current-key','line one\nline two');assert.equal(await db.getSyncState('synthetic-current-key'),'line one\nline two');assert.equal((await db.getSyncStates!(['synthetic-current-key'])).get('synthetic-current-key'),'line one\nline two');checks+=3;
+    stage='genuine-native-account-locale';localePort=await enrolledSqliteLocalePort(db,'write',identity.network);assert(localePort);localePort.assertCurrent();assert.equal(await localePort.read(localeKey),null);await localePort.write(localeKey,encodeLocaleValue('vi'));assert.equal(await localePort.read(localeKey),encodeLocaleValue('vi'));checks+=3;
+    stage='genuine-native-worker-private-audit';const audit=await operatorAuditDirectory();assert.equal(audit,folder+'/.business-operator-audit');const auditStat=lstatSync(audit);assert(auditStat.isDirectory()&&!auditStat.isSymbolicLink());assert.equal(auditStat.mode&0o077,0);checks+=3;
     stage='writer-session-roundtrip';const now=Date.now(),session={hash:'e1'.repeat(32),wallet,issuedAt:now,expiresAt:now+60000};await db.createWebSession(session);assert.deepEqual(await db.getWebSession(session.hash),session);await db.revokeWebSession(session.hash,wallet);assert.equal(await db.getWebSession(session.hash),null);checks+=2;
     stage='writer-cache-roundtrip';
     assert.equal(await db.getCached('synthetic-current-cache'),'Synthetic current-profile encrypted cache');await db.setCached('synthetic-current-written-cache','Fresh native writer encrypted text');assert.equal(await db.getCached('synthetic-current-written-cache'),'Fresh native writer encrypted text');checks+=2;
@@ -90,6 +95,7 @@ async function main(){
   stage='canonical-disposal-and-borrowed-methods';const borrowed=db.getUser,nested=db.privateProfiles!.get;const sql=appSql+readerSql;let getters=0;const hostile=new Proxy({},{get(){getters++;throw Error('Disposed arguments must remain untouched');}});
   await native.closePostgresRuntimeAdapter(db);await assert.rejects(native.assertPostgresRuntimeIdentity(db));checks++;
   await assert.rejects(Promise.resolve().then(()=>Reflect.apply(borrowed,undefined,[hostile])));await assert.rejects(Promise.resolve().then(()=>Reflect.apply(nested,undefined,[hostile,hostile])));assert.equal(getters,0);assert.equal(appSql+readerSql,sql);checks+=4;
+  if(localePort){assert.throws(()=>localePort!.assertCurrent());await assert.rejects(localePort.read(localeKey));assert.equal(appSql+readerSql,sql);checks+=3;}
  }finally{await native.closePostgresRuntimeAdapter(db);Object.defineProperty(Client.prototype,'query',queryDescriptor);}
  assert.equal(outbound,0);process.env.CONTENT_MASTER_KEY='';input.key='';
  console.log(JSON.stringify({passed:true,mode:input.mode,checks,outbound,genuineFactory:true,positiveWriterQualified:input.mode==='success',currentProfileFactorySmokeOnly:true,completeApplicationQualification:false,productionChanged:false}));

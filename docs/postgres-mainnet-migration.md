@@ -1,53 +1,45 @@
 # PostgreSQL mainnet migration
 
-The owner selected PostgreSQL on November 11, 2026 after recurring web CPU stalls.
+The owner selected PostgreSQL on November 11, 2026 after recurring web readiness timeouts.
 The migration must preserve the current application, financial authority, original
 journals and source-owned payment rules. A prepared PostgreSQL server or successful
 transport test does not admit the current mainnet application to that backend.
 
 ## Current preparation
 
-Native A2A execution groups exact-original claim with payment-start, result-save
-and failure checkpoints under separate fixed operation policies. It preserves
-the first checkpoint timestamp, Source eligibility/false results and immutable
-financial proofs. These ports record metadata and cannot execute or retry a job.
-Read-only installed facades remain closed to mutation. Full A2A production,
-paid-response JSON, resolution/repair and pending-owner association still need
-their complete protocols before the application writer can be enabled.
+The canonical zero-argument Linux factories compose the current510 Source profile
+through the complete 219-method/20-property surface and the same seventeen nested
+stores used by Core. The older505 observation profile remains read-only. These
+profiles are independently pinned in `lib/db/postgres/runtime-profile.ts`; target
+discovery and DATA receipts cannot allocate a runtime profile.
 
-The closed native hosted-admission port adds atomic new originals for unmanaged
-sources, operating fees and existing private execution tuples. It validates the
-Arc payload and fresh accounting, preserves original nonce/query/lifetime limits
-and writes the pending public payment with the retained authorization. A late
-payment failure must roll back both. The current source-claim marker/history
-check blocks managed or ambiguous records; managed-source policy admission
-remains a separate missing protocol. This port is absent from the installed
-read-only facade and does not enable the complete application writer.
-An unsupported Unicode escape in retained managed-history JSON also holds new
-admissions. Complete managed-policy/JSON compatibility must be qualified before
-the full writer is enabled; malformed metadata is never ignored as unclaimed.
+Admission requires the protected selected manifest, all nine identity fields,
+the active target and exact Source catalog, a private selected-role credential,
+the existing content key, and unchanged local configuration/feature flags. Only
+the factory registers its genuine facade in the private WeakMap, with its actual
+reader/writer role. Sponsor binding follows that registration and a final guard.
+Setup failure drains the transport. Supplied objects, wrappers and copied facade
+properties cannot provide installed provenance.
 
-The isolated protocol command is:
+The required compiled Linux protocol is:
 
 ```text
-node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --hosted-admission-only
+node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --current-runtime-only
 ```
 
-Its actual SQLite helper comparison covers current caps and original budgets,
-retained source/fee ownership barriers, private execution eligibility, rollback,
-concurrent admissions, writer contention and lost commit acknowledgement.
-Synthetic private dependency imports are declared fixture facts; the private
-payment/execution producer and real custody/provider paths are not run.
+It exercises actual writer/reader roles, ordinary writes, credential and key
+refusals, post-write context loss without a retry, and shared terminal retirement
+after a successful SQL result fails strict Source decoding. Native locale and
+worker-audit consumers use the selected genuine boundary. Full Next load,
+combined source CI, fresh live-data catchup and operational cutover remain
+separate requirements; this preparation does not switch production.
 
-`lib/db/postgres/connection.ts` provides an asynchronous, local-only bootstrap
-transport. Its three fixed reads carry the complete expected storage identity and,
-where applicable, the source contract digest as bound parameters. It publishes no
-pool, raw SQL, transaction callback, enrollment operation or installed-adapter
-provenance. The existing SQLite and Supabase factories do not select it.
-
-An explicit PostgreSQL manifest can now select the controlled Linux observation
-factory described below. Application writers remain closed while the remaining
-current domains, full-data rehearsal and cutover are being completed.
+The explicit current DATA lane leaves its target held and requires an observed
+SQL refusal. Separate `--current-runtime-synthetic` and `--current-runtime-retained`
+materialization modes qualify the genuine readonly factory and original-key
+ciphertext/plaintext fidelity over an isolated fresh target. They return it held
+and drain all readers, without selecting the production backend or admitting
+funding, signing, custody or an application cutover.
 
 Each process has two connections and at most eight additional pending reads.
 Server-side statement and lock timeouts complement client connection/query bounds.
@@ -1436,3 +1428,38 @@ keys. Their local test-key data signatures and synthetic success metadata are
 not production payments. Keep unsupported representation classes explicit;
 qualifying one protocol does not resolve full writer, funding/custody consumer,
 live-data delta, startup policy or production cutover requirements.
+
+
+## Held catchup and native consumer boundaries (2026-11-15)
+
+Typed snapshot comparison streams exact old/new cells under the original BINARY
+primary keys, with complete schema, identity and immutable-file checks. A private
+bounded NDJSON seal carries provisional changes, affected Source projections,
+all twelve family censuses and the separate article-offer rowid derivative.
+These are DATA, never a store enrollment or runtime-authority proof.
+
+The applier independently regenerates that input, requires the pinned current
+catalog, all nine identity fields, a held target and no application sessions or
+writer records. It locks the complete fixed table set before acquiring a repeatable
+read snapshot, then compares the entire predecessor public/private state. Fixed
+parameterized old-cell CAS, FK ordering and exact after-state comparison share one
+transaction. Lost acknowledgements never trigger retry; an acknowledged COMMIT
+stays acknowledged even if the deadline or cleanup subsequently fails. Zero
+changes avoid COMMIT. Original payment first wires remain immutable; existing
+payment-current updates and retained private/browser/acceptance dependencies
+remain explicit pre-write holds.
+
+`--held-catchup-synthetic` runs the baseline and applier in a disposable Linux
+512MiB/zero-swap child. Its owner-contention case must observe a genuine lock wait,
+commit unrelated target drift and require refusal before the independent positive
+CAS. This qualifies that DATA protocol only. Full-size timing, a fresh online
+baseline/final delta, every active role's startup prerequisites and one bounded
+final maintenance window remain required.
+
+Native obligations and locale adapters await the selected genuine identity and
+retain the SQLite/native local guard; ordinary/Supabase/fabricated facades stay
+unavailable. Reader consumers await terminal disposal. The mainnet worker derives
+its private audit directory from the validated common native role-credential
+parent, preserving the existing audit basename and bytes. It accepts no request
+or separate audit-path override. Deployment must retain that original private
+root and audit continuity; source merges do not migrate audit evidence.

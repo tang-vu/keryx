@@ -9840,3 +9840,27 @@ intake, including payment originals and private-result identity. Its twelve
 projection groups do not approve a runtime factory or an application writer.
 Require genuine factory refusal in this lane and retain separate consumer,
 memory/load, live catchup, startup-policy and release acceptance.
+
+
+## Compose current native runtime and keep HELD catchup as DATA (2026-11-15)
+
+Use a separately pinned current510 runtime profile, preserving the older505
+readonly boundary. The zero-argument factory alone owns genuine facade and role
+registration; Core, its seventeen shared stores and the full Source surface use
+the same context and terminal transport. Register before writer sponsor binding,
+guard before publication and drain every failed setup. Existing selected keys,
+policy/custody authority and unsupported-original holds remain independent.
+
+Require actual compiled Linux writer/reader and strict-decoder retirement checks,
+and a separate materialized original-key readonly proof. Native consumers await
+genuine identity checks and disposal. Keep worker audit evidence in the selected
+private credential root, without a new path selector or evidence migration.
+
+Catchup seals carry exact Source changes and projection censuses, not authority.
+Take the complete table lock set before a repeatable-read snapshot so another
+held owner cannot hide drift behind a stale snapshot. Preserve actual COMMIT
+acknowledged/unknown state through deadlines and every cleanup failure. Retain
+immutable payment first wires and conservative protected-dependency holds. Native
+synthetic CAS acceptance, full-size timing, fresh live data, startup and authorized
+ROOT cutover remain separate gates; no automatic retry, policy renewal, funding,
+schedule or publication follows from these source changes.

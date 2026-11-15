@@ -12,6 +12,7 @@ import {sealEnrolledCacheText} from '../../lib/sources/enrolled-content-cache';
 import {validateStorageIdentity,type StorageIdentity} from '../../lib/db/storage-identity';
 import {NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE} from '../../lib/db/postgres/runtime-profile';
 import type {CurrentRuntimeMode} from './native-current-runtime-child.mts';
+import {accountLocaleKey} from '../../lib/i18n/locale-preference-route';
 export async function qualifyCurrentRuntime(input:{postgresContainer:string;password:string;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  const identity=validateStorageIdentity(input.identity);assert.equal(input.digest,NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE.catalogSha256);assert.match(input.postgresContainer,/^keryx-postgres-consents-[a-f0-9-]{36}$/);
  const docker=(args:string[],wire?:string)=>execFileSync('docker',args,{input:wire,encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:131072,stdio:['pipe','pipe','pipe']}).trim();
@@ -21,9 +22,9 @@ export async function qualifyCurrentRuntime(input:{postgresContainer:string;pass
  const previousKey=process.env.CONTENT_MASTER_KEY;let envelope:string;
  try{process.env.CONTENT_MASTER_KEY=key;envelope=sealEnrolledCacheText('Synthetic current-profile encrypted cache','synthetic-current-cache',identity);}finally{if(previousKey===undefined)delete process.env.CONTENT_MASTER_KEY;else process.env.CONTENT_MASTER_KEY=previousKey;}
  const baseline=input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND usename IN('keryx_reader','keryx_app');");
- const reports:unknown[]=[];
+ const reports:unknown[]=[],localeKey=accountLocaleKey('https://keryx.cc',identity.network,'0x'+'e1'.repeat(20));
  try{
-  assert.equal(input.ownerSql("SELECT (SELECT count(*) FROM public.cache_items WHERE source_id IN('synthetic-current-cache','synthetic-current-written-cache'))+(SELECT count(*) FROM public.sync_state WHERE key='synthetic-current-key')+(SELECT count(*) FROM public.web_sessions WHERE hash='"+'e1'.repeat(32)+"')+(SELECT count(*) FROM public.users WHERE wallet_address IN("+['e1','e2','e3'].map(x=>q('0x'+x.repeat(20))).join(',')+"));"),'0','Every exact synthetic namespace must be empty before ownership');rowsOwned=true;
+  assert.equal(input.ownerSql("SELECT (SELECT count(*) FROM public.cache_items WHERE source_id IN('synthetic-current-cache','synthetic-current-written-cache'))+(SELECT count(*) FROM public.sync_state WHERE key IN('synthetic-current-key',"+q(localeKey)+"))+(SELECT count(*) FROM public.web_sessions WHERE hash='"+'e1'.repeat(32)+"')+(SELECT count(*) FROM public.users WHERE wallet_address IN("+['e1','e2','e3'].map(x=>q('0x'+x.repeat(20))).join(',')+"));"),'0','Every exact synthetic namespace must be empty before ownership');rowsOwned=true;
   pg(`INSERT INTO public.cache_items(source_id,text) VALUES('synthetic-current-cache',${q(envelope)});`);
   buildSync({entryPoints:[fileURLToPath(new URL('./native-current-runtime-child.mts',import.meta.url))],outfile:bundle,bundle:true,platform:'node',target:'node24',format:'cjs',external:['pg-native'],logLevel:'silent'});assert(readFileSync(bundle).byteLength<=16777216);
   const base=docker(['image','inspect','node:24.22.1-bookworm-slim','--format','{{.Id}}']);containers.add(fixture);docker(['create','--name',fixture,'--network','none','--label','keryx.current-runtime-fixture='+fixture,base,'node','--version']);docker(['cp',bundle,fixture+':/child.cjs']);image=docker(['commit','--change','LABEL keryx.current-runtime-fixture='+fixture,fixture]);assert.match(image,/^sha256:[a-f0-9]{64}$/);docker(['rm',fixture]);containers.delete(fixture);
@@ -43,7 +44,7 @@ export async function qualifyCurrentRuntime(input:{postgresContainer:string;pass
  }finally{
   for(const name of containers)try{docker(['rm','-f',name]);}catch{}
   if(image){assert.equal(docker(['image','inspect',image,'--format','{{index .Config.Labels "keryx.current-runtime-fixture"}}']),fixture);docker(['image','rm',image]);}
-  if(rowsOwned)pg("DELETE FROM public.cache_items WHERE source_id IN('synthetic-current-cache','synthetic-current-written-cache');DELETE FROM public.sync_state WHERE key='synthetic-current-key';DELETE FROM public.web_sessions WHERE hash='"+'e1'.repeat(32)+"';DELETE FROM public.users WHERE wallet_address IN("+['e1','e2','e3'].map(x=>q('0x'+x.repeat(20))).join(',')+");");
+  if(rowsOwned)pg("DELETE FROM public.cache_items WHERE source_id IN('synthetic-current-cache','synthetic-current-written-cache');DELETE FROM public.sync_state WHERE key IN('synthetic-current-key',"+q(localeKey)+");DELETE FROM public.web_sessions WHERE hash='"+'e1'.repeat(32)+"';DELETE FROM public.users WHERE wallet_address IN("+['e1','e2','e3'].map(x=>q('0x'+x.repeat(20))).join(',')+");");
   if(existsSync(bundle))unlinkSync(bundle);rmdirSync(folder);
  }
 }
