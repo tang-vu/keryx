@@ -1,21 +1,9 @@
 import {expect,it} from 'vitest';
-import {DatabaseSync} from 'node:sqlite';
 import {randomUUID} from 'node:crypto';
-import {mkdtempSync,existsSync,unlinkSync,rmdirSync,readFileSync} from 'node:fs';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
-import {ARC_MAINNET_PROFILE as profile} from '../../lib/arc-network-profile';
-import {installMainnetApplicationSchema} from '../../lib/db/mainnet-application-schema';
-import {installNativeUserDomainSchema} from '../../lib/db/native-user-domain-schema';
-import {insertStorageIdentity,installStorageFences} from '../../lib/db/storage-identity-sqlite';
-import {openVerifiedSqliteStorage,assertVerifiedSqliteConnection} from '../../lib/db/storage-identity-connection';
-import {supportedSqliteApplicationProfiles} from '../../lib/db/enrolled-sqlite-schema-profile';
+import {readFileSync} from 'node:fs';
+import {createPaymentConsumedFieldsFixture} from './payment-consumed-fields-fixture.mts';
 import {STORAGE_MAINNET_PROFILE_DIGEST,validateStorageIdentity} from '../../lib/db/storage-identity';
-import {SqliteAdapter} from '../../lib/db/sqlite-adapter';
-import {prepareBrowserJournal,type BrowserJournalAdmission} from '../../lib/db/browser-authorization-journal';
-import {activateSqliteBrowserJournal,admitSqliteBrowserJournalInTransaction,sqliteJournalTransaction,upsertSqliteJournalGrant,transitionSqliteBrowserJournal,terminalSqliteJournalPayment} from '../../lib/db/sqlite-browser-journal';
 import {PAYMENT_EVENT_FIELDS} from '../../lib/db/postgres/payment-events-packet';
-import {captureObservedPaymentSource} from './payment-original-source.mts';
 import {LEGACY_PAYMENT_CONSUMED_FIELDS,KNOWN_PAYMENT_UNPROJECTED_FIELDS} from './payment-browser-source.mts';
 
 const expectedColumns=['id','network','authorization_id','grant_epoch','payer','payee','amount_usdc','settled','settlement_status','authorization_phase','tx_hash'];
@@ -39,48 +27,31 @@ it('binds each finite mapping to the existing transitive financial helper column
  expect(whitespace).toEqual(sourceSet);expect(whitespace).toHaveLength(25);
 });
 
-// Real, fresh verified Source fixture with genuine plain-journal producers.
-// This supplies neither Native installed provenance nor actual funding/signing.
-async function sourceFixture(run:(core:SqliteAdapter,db:DatabaseSync,id:string,nonce:string,session:string,request:string,signer:string)=>Promise<void>){
- const folder=mkdtempSync(join(tmpdir(),'keryx-consumed-payment-')),file=join(folder,'synthetic.sqlite');
- const signer='0x'+'22'.repeat(20),owner='0x'+'11'.repeat(20),payee='0x'+'33'.repeat(20),epoch=randomUUID(),session='synthetic-consumed-fields',request='synthetic-request';
- const identity=validateStorageIdentity({format:'keryx-mainnet-storage-identity-v1',authorityMode:'mainnet-real',network:profile.networkId,profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:new Date().toISOString(),provenanceDigest:'71'.repeat(32)});
- let source:ReturnType<typeof openVerifiedSqliteStorage>|undefined,nonce='';
- try{
-  const seed=new DatabaseSync(file);try{
-   seed.exec('BEGIN IMMEDIATE');installMainnetApplicationSchema(seed,{publicReferenceArchive:true});installNativeUserDomainSchema(seed);seed.exec('COMMIT');activateSqliteBrowserJournal(seed,profile);
-   upsertSqliteJournalGrant(seed,{sessionId:session,sessAddr:signer,ownerAddr:owner,cap:.01,expiry:Date.now()+60000,txHash:'synthetic-unfunded-fixture',grantEpoch:epoch});
-   const input:BrowserJournalAdmission={sessionId:session,signer,grantEpoch:epoch,requestId:request,queryId:'synthetic-query',sourceId:'synthetic-source',offerId:null,kind:'fetch',payee,amountMicroUsdc:1,network:profile.networkId,token:profile.usdcAddress,gatewayContract:profile.gatewayWallet,
-    requirements:{scheme:'exact',network:profile.networkId,asset:profile.usdcAddress,payTo:payee,amount:'1',maxTimeoutSeconds:691200,extra:{name:'GatewayWalletBatched',version:'1',verifyingContract:profile.gatewayWallet}},
-    payment:{kind:'fetch',queryId:'synthetic-query',sourceId:'synthetic-source',sourceName:'Synthetic',payer:signer,payee,amountUsdc:.000001,network:profile.networkId,grantEpoch:epoch}};
-   const prepared=prepareBrowserJournal(input,profile),result=sqliteJournalTransaction(seed,()=>admitSqliteBrowserJournalInTransaction(seed,input,prepared));if(result.status!=='admitted')throw Error('Synthetic Source journal refused');nonce=result.journal.nonce;
-   seed.exec('BEGIN IMMEDIATE');insertStorageIdentity(seed,identity);installStorageFences(seed,identity);seed.exec('COMMIT');
-  }finally{seed.close();}
-  source=openVerifiedSqliteStorage(file,identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>{}});
-  const core=SqliteAdapter.assembleConnectionCore(source.db,identity,()=>expect(assertVerifiedSqliteConnection(source!.db)).toEqual(identity));await run(core,source.db,'x402:'+nonce,nonce,session,request,signer);
- }finally{source?.close();for(const path of [file,file+'-wal',file+'-shm',file+'-journal'])if(existsSync(path))unlinkSync(path);rmdirSync(folder);}
-}
-it('proves Source ignores payment presentation/date gaps but requires actual original receipt evidence',async()=>sourceFixture(async(core,db,id,nonce,session,request,signer)=>{
- const read=async()=>({funding:await core.sessionFundingAccounting(signer),confirmed:await core.browserSignerConfirmedSpendMicro(signer),withdrawal:await core.sessionWithdrawalAccounting(signer),owner:await core.creatorOwnerWithdrawalAccounting(signer)});
- const baseline=await read();
- sqliteJournalTransaction(db,()=>db.prepare('UPDATE payment_events SET created_at=?,source_name=?,rationale=?,authorization_expires_at=?,origin=?,item_title=?,item_url=?,content_version=?,item_published_at=? WHERE id=?').run('invalid\0payment-date','\ufeffsource\0lone\ud800','rationale\0','invalid\0expiry','origin\0','title\0','url\0','version\0','published\0',id));
- const packet=captureObservedPaymentSource(db,id)!;
- expect(packet.unprojectedFields).toEqual(['authorization_expires_at','content_version','created_at','item_published_at','item_title','item_url','origin','rationale','source_name']);
- expect(packet.row.source_name).toBe('\ufeffsource\0lone\ufffd');expect(packet.row.created_at).toBe('invalid\0payment-date');
- expect(await read()).toEqual(baseline);const changes=db.prepare('SELECT total_changes() AS n').get()!.n;await read();expect(db.prepare('SELECT total_changes() AS n').get()!.n).toBe(changes);
- expect(transitionSqliteBrowserJournal(db,session,request,'prepared','exposed')).toBe(true);expect(terminalSqliteJournalPayment(db,id,nonce,'receipt\0retained',false)).toEqual({resolved:true,reservationReleased:false});
- const confirmed=await read();expect(confirmed.funding.confirmedSpentMicroUsdc).toBe('1');expect(confirmed.confirmed).toBe(1);
- const receipt=captureObservedPaymentSource(db,id)!;expect(receipt.unprojectedFields).toContain('tx_hash');expect(receipt.projection.tx_hash).toBeNull();expect(receipt.row.tx_hash).toBe('receipt\0retained');
- // Source counts this exact NUL receipt; using the NULL native projection
- // would lose its evidence. Every finite operation must keep tx_hash held.
- for(const fields of Object.values(LEGACY_PAYMENT_CONSUMED_FIELDS))expect(fields).toContain('tx_hash');
- for(const blank of [' ','\t','\ufeff','\u3000']){
-  sqliteJournalTransaction(db,()=>db.prepare('UPDATE payment_events SET tx_hash=? WHERE id=?').run(blank,id));
-  // Representable text is not itself receipt evidence: every JS-trim-empty
-  // class still has to refuse. This is not a new SUM/value equivalence claim.
-  expect(captureObservedPaymentSource(db,id)!.unprojectedFields).not.toContain('tx_hash');
-  await expect(core.sessionFundingAccounting(signer)).rejects.toThrow('Original settled debit');await expect(core.browserSignerConfirmedSpendMicro(signer)).rejects.toThrow('Original settled debit');await expect(core.sessionWithdrawalAccounting(signer)).rejects.toThrow('Original settled debit');await expect(core.creatorOwnerWithdrawalAccounting(signer)).rejects.toThrow('Original settled debit');
- }
- sqliteJournalTransaction(db,()=>db.prepare('UPDATE payment_events SET tx_hash=? WHERE id=?').run(' \ufeffordinary-receipt\t ',id));
- expect((await read()).funding.confirmedSpentMicroUsdc).toBe('1');expect(captureObservedPaymentSource(db,id)!.unprojectedFields).not.toContain('tx_hash');
-}));
+// The shared helper is pure Node/actual Source, never a Vitest/app runtime.
+const expectedIdentity=()=>validateStorageIdentity({format:'keryx-mainnet-storage-identity-v1',authorityMode:'mainnet-real',network:'eip155:5042',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:new Date().toISOString(),provenanceDigest:'71'.repeat(32)});
+it('accepts only a fresh synthetic expected identity and retains exact Source cells for native intake',()=>{
+ expect(()=>createPaymentConsumedFieldsFixture(undefined)).toThrow();expect(()=>createPaymentConsumedFieldsFixture({...expectedIdentity(),extra:true})).toThrow();
+ const fixture=createPaymentConsumedFieldsFixture(expectedIdentity());try{
+  const snapshot=fixture.snapshot();expect(snapshot.payments).toHaveLength(3);expect(snapshot.tables.browser_journal_control).toEqual([{id:1,active:1}]);
+  for(const grant of snapshot.tables.session_grants)expect(Number(grant.expiry)-Date.now()).toBeGreaterThan(3500000);
+  for(const payment of snapshot.payments){expect(Object.keys(payment.row).sort()).toEqual([...PAYMENT_EVENT_FIELDS].sort());expect(JSON.parse(payment.rowWire)).toEqual(payment.row);}
+  const helper=readFileSync(new URL('./payment-consumed-fields-fixture.mts',import.meta.url),'utf8');expect(helper).not.toMatch(/from ['"]vitest/);expect(helper).not.toContain('SqliteAdapter');expect(helper).not.toMatch(/from ['"][^'"]*(?:runtime-adapter|supabase-adapter|config)['"]/);
+ }finally{fixture.close();}
+});
+it('proves Source ignores payment presentation/date gaps while valid padded receipts stay eligible',()=>{
+ const fixture=createPaymentConsumedFieldsFixture(expectedIdentity());try{
+  const baseline=fixture.read(),packet=fixture.addPresentationGaps();
+  expect(packet.unprojectedFields).toEqual(['authorization_expires_at','content_version','created_at','item_published_at','item_title','item_url','origin','rationale','source_name']);
+  expect(packet.row.source_name).toBe('\ufeffsource\0lone\ufffd');expect(packet.row.created_at).toBe('invalid\0payment-date');expect(fixture.read()).toEqual(baseline);
+  const changes=fixture.changes();fixture.read();expect(fixture.changes()).toBe(changes);
+  fixture.expose('padded');fixture.settlePadded();expect(fixture.read().funding.confirmedSpentMicroUsdc).toBe('1');expect(fixture.read().confirmed).toBe(1);expect(fixture.payment('padded').unprojectedFields).not.toContain('tx_hash');
+  fixture.expose('nul');fixture.settleNul();expect(fixture.read('nul').confirmed).toBe(1);expect(fixture.payment('nul').row.tx_hash).toBe('receipt\0retained');expect(fixture.payment('nul').projection.tx_hash).toBeNull();expect(fixture.payment('nul').unprojectedFields).toContain('tx_hash');
+  for(const fields of Object.values(LEGACY_PAYMENT_CONSUMED_FIELDS))expect(fields).toContain('tx_hash');
+ }finally{fixture.close();}
+});
+it('uses genuine independent Source terminal calls for each representable trim-empty negative',()=>{
+ for(const kind of ['space','tab','bom','ideographic'] as const){const fixture=createPaymentConsumedFieldsFixture(expectedIdentity());try{
+  fixture.expose('whitespace');fixture.settleWhitespace(kind);expect(fixture.payment('whitespace').unprojectedFields).not.toContain('tx_hash');
+  expect(()=>fixture.read('whitespace')).toThrow('Original settled debit');fixture.assertRefused('whitespace');
+ }finally{fixture.close();}}
+});
