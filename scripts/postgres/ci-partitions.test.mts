@@ -48,7 +48,7 @@ describe('PostgreSQL partition acceptance', () => {
     for (const name of names) expect(workflow.jobs[name]['timeout-minutes']).toBe(25);
     expect(gate.steps.some(step => step.if === '${{ cancelled() }}' && step.run === 'exit 1')).toBe(true);
   });
-  it('requires both the observed factory profile and current DATA-only intake', () => {
+  it('requires the observed factory, held current DATA intake and current original-key readonly factory', () => {
     const steps=workflow.jobs['synthetic-materialization'].steps;
     expect(steps.filter(step=>step.run?.endsWith('qualify-native-materialization.mts --synthetic'))).toHaveLength(1);
     const current=steps.filter(step=>step.run?.endsWith('qualify-native-materialization.mts --development-current-data-synthetic'));
@@ -56,6 +56,9 @@ describe('PostgreSQL partition acceptance', () => {
     expect(current[0].if).toBeUndefined();
     expect(current[0].run).toContain('--import ./scripts/postgres/current-data-source-bootstrap.mjs');
     expect(current[0].env).toMatchObject({NODE_OPTIONS:'--max-old-space-size=512',KERYX_NETWORK:'arc',NEXT_PUBLIC_KERYX_NETWORK:'arc',KERYX_FORCE_OFFLINE:'0'});
+    const runtime=steps.filter(step=>step.run?.endsWith('qualify-native-materialization.mts --current-runtime-synthetic'));
+    expect(runtime).toHaveLength(1);expect(runtime[0].if).toBeUndefined();expect(runtime[0].run).toContain('--import ./scripts/postgres/current-data-source-bootstrap.mjs');
+    expect(runtime[0].env).toMatchObject({NODE_OPTIONS:'--max-old-space-size=512',KERYX_NETWORK:'arc',NEXT_PUBLIC_KERYX_NETWORK:'arc',KERYX_FORCE_OFFLINE:'0'});
   });
   it('boots the actual Source schema rehearsal with provider access trapped', () => {
     const bootstrap=new URL('./current-data-source-bootstrap.mjs',import.meta.url).href;
@@ -63,6 +66,9 @@ describe('PostgreSQL partition acceptance', () => {
     const program="fetch('data:text/plain,unexpected').then(()=>{process.exitCode=2},error=>{if(error.message!=='Current data qualification forbids provider HTTP')process.exitCode=3})";
     const run=(flags:string[],overrides:Record<string,string>={})=>spawnSync(process.execPath,['--import',bootstrap,'--eval',program,'--',...flags],{env:{...env,...overrides},encoding:'utf8',timeout:5000,windowsHide:true});
     expect(run(['--development-current-data-synthetic']).status).toBe(0);
+    expect(run(['--current-runtime-synthetic']).status).toBe(0);
+    expect(run(['--current-runtime-retained']).status).toBe(0);
+    expect(run(['--current-runtime-synthetic','--development-current-data-retained']).status).not.toBe(0);
     expect(run(['--synthetic']).status).not.toBe(0);
     expect(run(['--development-current-data-synthetic','--development-current-data-retained']).status).not.toBe(0);
     expect(run(['--development-current-data-synthetic'],{KERYX_FORCE_OFFLINE:'1'}).status).not.toBe(0);
