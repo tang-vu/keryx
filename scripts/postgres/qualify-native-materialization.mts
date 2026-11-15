@@ -38,22 +38,30 @@ const runChild=(run:string[],packet:string,deadline:number)=>new Promise<{code:n
  const timer=setTimeout(stop,deadline);child.stdout.on('data',(chunk:Buffer)=>{stdout+=chunk.toString('utf8');if(Buffer.byteLength(stdout)>262144)stop();});
  const finish=(code:number|null)=>{if(done)return;done=true;clearTimeout(timer);resolveResult({code,stdout});};child.once('error',()=>finish(null));child.once('close',finish);
 });
+let stage='source-profile';
 try{
  const source=currentDataOnly?nativeCurrentProducersSource():nativeRuntimeSource();assert.equal(source.sha256,profile.sourceSqlSha256);
+ stage='postgres-image';
  assert.match(docker(['image','inspect',pgImage,'--format','{{.Id}}']),/^sha256:[a-f0-9]{64}$/);
+ stage='postgres-startup';
  owned=true;docker(['run','-d','--name',name,'--label','keryx.native-materialization='+name,'--network','none','--user','postgres','--read-only','--memory','3g','--memory-swap','3g','--cpus','1','--pids-limit','64','--cap-drop','ALL','--security-opt','no-new-privileges','--ulimit','core=0','--tmpfs','/var/lib/postgresql/data:rw,nosuid,uid=70,gid=70,size=2g','--tmpfs','/var/run/postgresql:rw,nosuid,uid=70,gid=70,size=8m','--tmpfs','/tmp:rw,nosuid,size=16m','-e','POSTGRES_PASSWORD='+password,pgImage,'-c','shared_buffers=64MB','-c','max_connections=12','-c','work_mem=4MB','-c','max_wal_size=256MB','-c','log_min_error_statement=panic','-c','log_error_verbosity=terse']);
  let ready=false;for(let i=0;i<200;i++){try{docker(['exec',name,'pg_isready','-h','127.0.0.1','-U','postgres'],undefined,2000);ready=true;break;}catch{await delay(100);}}assert(ready);
+ stage='postgres-kernel-limits';
  assert.equal(docker(['exec',name,'cat','/sys/fs/cgroup/memory.max','/sys/fs/cgroup/memory.swap.max','/sys/fs/cgroup/cpu.max','/sys/fs/cgroup/pids.max']),'3221225472\n0\n100000 100000\n64');
+ stage='postgres-databases';
  sql('postgres',`CREATE ROLE keryx_owner NOLOGIN NOINHERIT;CREATE ROLE keryx_app LOGIN NOINHERIT CONNECTION LIMIT 8 PASSWORD '${password}';CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;
  CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
  CREATE DATABASE native_materialized WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
  CREATE DATABASE native_staging WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
  REVOKE ALL ON DATABASE native_staging FROM PUBLIC,keryx_app,keryx_reader,anon,authenticated,service_role;`);
  for(const database of ['native_source','native_materialized'] as const){
+  stage='source-install-'+database;
   assert.equal(sql(database,"SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"),'0');
   sql(database,`GRANT CREATE ON DATABASE ${database} TO keryx_owner;CREATE PUBLICATION supabase_realtime;ALTER PUBLICATION supabase_realtime OWNER TO keryx_owner;GRANT CREATE ON SCHEMA public TO keryx_owner;SET statement_timeout='30s';BEGIN;`+source.sql+'\nCOMMIT;');
  }
+ stage='catalog-export';
  const describe="SET statement_timeout='5s';SELECT keryx_storage.catalog_contract();",referenceWire=sql('native_source',describe),reference=exportNativePostgresSchemaContract(referenceWire),actual=exportNativePostgresSchemaContract(sql('native_materialized',describe));
+ stage='catalog-profile';
  assert.equal(reference.sha256,profile.catalogSha256);assert.equal(actual.sha256,reference.sha256);if(currentDataOnly){const sections=reference.metadata.sections;assert(sections&&typeof sections==='object'&&!Array.isArray(sections));const functions=Reflect.get(sections,'functions');assert(Array.isArray(functions));assert.equal(functions.length,510);}
  if(sourcePlanOnly){
  const tables=JSON.parse(sql('native_source',`SELECT jsonb_agg(t ORDER BY t.name) FROM(SELECT c.relname name,
@@ -64,18 +72,26 @@ try{
  for(const table of tables){assert(/^[a-z][a-z0-9_]*$/.test(table.name));const rows=JSON.parse(sql('native_source',`SELECT coalesce(jsonb_agg(t),'[]'::jsonb) FROM(SELECT * FROM public."${table.name}" LIMIT 3)t;`)) as unknown[];assert(rows.length<=1);if(rows.length)seeds[table.name]=rows;}
  console.log(JSON.stringify({format:'keryx-native-materialization-source-plan-v1',passed:true,...(currentDataOnly?{profileMode,dataIntakeOnly:true,genuineColdFactoryQualified:false}:{}),sourceSqlSha256:source.sha256,catalogSha256:reference.sha256,independentFreshSourceTargetEqual:true,postgresImage:pgImage,postgresMemoryBytes:3221225472,postgresSwapBytes:0,nativePublicTables:tables,pristineSeedRows:seeds,applicationMaterialized:false,selectedApplicationWriter:false,productionDataRead:false,productionChanged:false,paymentActions:0,jobActions:0}));
  }else{
+  stage='node-image';
   assert.match(docker(['image','inspect',nodeImage,'--format','{{.Id}}']),/^sha256:[a-f0-9]{64}$/);const location=join(taskRoot,'native-materialization');mkdirSync(location,{recursive:true});assert.equal(realpathSync(location).toLowerCase(),location.toLowerCase());folder=mkdtempSync(join(location,'job-'));if(process.platform!=='win32')chmodSync(folder,0o700);bundle=join(folder,'child.cjs');
+  stage='materialization-child-bundle';
   buildSync({entryPoints:[fileURLToPath(new URL('./native-materialization-child.mts',import.meta.url))],outfile:bundle,bundle:true,platform:'node',target:'node24',format:'cjs',minifyWhitespace:true,external:['pg-native'],logLevel:'silent'});
+  stage='materialization-compiled-bound';
   const compiled=readFileSync(bundle);assert(compiled.length>0&&compiled.length<=4194304);nodeName='keryx-native-materialization-node-'+randomUUID();
   const run=['run','-i','--name',nodeName,'--label','keryx.native-materialization-node='+name,'--network','container:'+name,'--user','0:0','--read-only','--memory','512m','--memory-swap','512m','--cpus','.25','--pids-limit','32','--cap-drop','ALL','--security-opt','no-new-privileges','--ulimit','core=0','--tmpfs','/run/keryx-intake:rw,nosuid,noexec,mode=0700,size=16m','--mount',`type=bind,source=${bundle},target=/child.cjs,readonly`];
   // Only the exact new private candidate changes startup. Source buyer/private
   // profiles are import-sticky, so this must precede Node module evaluation.
   // Docker receives no host environment; fixed blank keys add no custody.
+  stage='private-result-identity';
   if(hasPrivateResultIdentity(reference,profileMode))run.push('-e','KERYX_NETWORK=arc','-e','NEXT_PUBLIC_KERYX_NETWORK=arc','-e','KERYX_FORCE_OFFLINE=0','-e','BASE_URL=https://keryx.cc','-e','KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','AGENT_PRIVATE_KEY=','-e','TREASURY_PRIVATE_KEY=','-e','KERYX_TREASURY_PRIVATE_KEY=','-e','SIGNER_PRIVATE_KEY=','-e','PRIVATE_KEY=','-e','AGENT_FUNDER_PRIVATE_KEY=','-e','BUYER_PRIVATE_KEY=','-e','DEPLOYER_PRIVATE_KEY=','-e','KERYX_PRIVATE_TREASURY_PRIVATE_KEY=','-e','NEXT_PUBLIC_SUPABASE_URL=','-e','NEXT_PUBLIC_SUPABASE_ANON_KEY=','-e','SUPABASE_SERVICE_ROLE_KEY=');
   if(input)run.push('--mount',`type=bind,source=${input},target=/input/snapshot.sqlite,readonly`);run.push(nodeImage,'/usr/bin/timeout','--signal=KILL','1800s','node','--no-warnings','--max-old-space-size=256','/child.cjs','--materialize');
+  stage='materialization-packet';
   const packet=JSON.stringify({mode:retained?'retained':'synthetic',password,referenceWire,key,...(currentDataOnly?{profileMode}:{}),...(expectedHash?{expectedHash}:{})});assert(Buffer.byteLength(packet)<=8388608);
+  stage='materialization-worker';
   const result=await runChild(run,packet,1810000);
+  stage='materialization-worker-state';
   const state=JSON.parse(docker(['inspect',nodeName,'--format','{{json .State}}'])) as {Running:boolean;OOMKilled:boolean};assert(!state.Running);
+  stage='materialization-worker-report';
   const reports=result.stdout.split(/\r?\n/).filter(s=>s.startsWith('{')).map(s=>JSON.parse(s) as Record<string,unknown>),report=reports.at(-1)??null;
   const sourceIdentityForColdChild=report?.sourceIdentityForColdChild;delete report?.sourceIdentityForColdChild;
   console.log(JSON.stringify({format:'keryx-native-materialization-qualification-v1',...(currentDataOnly?{profileMode,dataIntakeOnly:true,genuineColdFactoryQualified:false}:{}),sourceSqlSha256:source.sha256,catalogSha256:reference.sha256,independentFreshSourceTargetEqual:true,postgresImage:pgImage,nodeImage,compiledSha256:createHash('sha256').update(compiled).digest('hex'),compiledBytes:compiled.length,compiledByteLimitInclusive:4194304,postgresMemoryBytes:3221225472,postgresSwapBytes:0,privateInputCopiedIntoImage:false,workerExit:result.code,oomKilled:state.OOMKilled,report,productionChanged:false,applicationBackendSwitched:false}));
@@ -102,7 +118,7 @@ try{
   else console.log(JSON.stringify({format:'keryx-native-projection-and-cold-qualification-v1',passed:true,sourceDerivedProjectionsMaterialized:true,genuineOriginalKeyColdFactory:true,sourceIdentityUsedAsExpectation:true,isolatedTargetReturnedHeld:true,actualReaderConnectionsDrained:true,completeApplicationWriterQualified:false,productionChanged:false,applicationBackendSwitched:false}));
  }
 }catch{
- console.error(JSON.stringify({format:'keryx-native-materialization-source-plan-v1',passed:false,reason:'native_materialization_source_unavailable',productionChanged:false}));process.exitCode=1;
+ console.error(JSON.stringify({format:'keryx-native-materialization-source-plan-v1',passed:false,reason:'native_materialization_source_unavailable',stage,productionChanged:false}));process.exitCode=1;
 }finally{
  if(nodeName&&docker(['ps','-aq','--filter','name=^/'+nodeName+'$'])){assert.equal(docker(['inspect',nodeName,'--format','{{index .Config.Labels "keryx.native-materialization-node"}}']),name);docker(['rm','-f',nodeName]);}
  if(owned){assert.equal(docker(['inspect',name,'--format','{{index .Config.Labels "keryx.native-materialization"}}']),name);docker(['rm','-f',name]);assert.equal(docker(['ps','-aq','--filter','name=^/'+name+'$']),'');owned=false;}
