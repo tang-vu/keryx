@@ -29,7 +29,7 @@ const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_req
 export async function createPostgresRuntimeAdapter():Promise<KeryxDB>{
  if(arguments.length)refuseStorage('invalid_operation');
  // Ordinary/testnet/unselected consumers retain the existing closed boundary.
- if(process.platform!=='linux'||config.profile!==ARC_MAINNET_PROFILE)refuseStorage('adapter_not_initialized');
+ if(process.platform!=='linux'||config.profile!==ARC_MAINNET_PROFILE||!process.env.KERYX_STORAGE_MANIFEST)refuseStorage('adapter_not_initialized');
  const deployment=readRuntimeStorageDeployment();
  if(deployment.backend.kind!=='postgres'||deployment.identity.authorityMode!=='mainnet-real')refuseStorage('identity_mismatch');
  if(deployment.backend.sourceDigest!==NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE.catalogSha256)refuseStorage('adapter_not_initialized');
