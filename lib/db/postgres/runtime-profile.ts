@@ -12,8 +12,8 @@ export const NATIVE_READONLY_RUNTIME_PROFILE=Object.freeze({
 export const NATIVE_CURRENT_DATA_INTAKE_PROFILE=Object.freeze({
  format:'keryx-native-postgres-development-data-profile-v1',
  digestFormat:'keryx-postgres17-jsonb-text-sha256-v1',
- sourceSqlSha256:'a4ea9909bc89c66e88ebb81f1095ea772d41acf3bdeb4f397d1f5802faaae2a5',
- catalogSha256:'6c5467e41bb119c5fe3b76a3b575c6715a723e5f3a55395a225586756db37e93',
+ sourceSqlSha256:'cc15c6b020b5b838eef62f7f247bec9943567cbc66dfc6359cddd599d65b848c',
+ catalogSha256:'d368c98db910ff072d10d7c2a20ba3b8b2934e4f5f76c0afdd875ebfda07803f',
  nativeFunctionCount:510,applicationFactoryApproved:false,genuineColdFactoryQualified:false,fullWriterQualified:false,
 });
 export type NativeMaterializationProfileMode='observation505'|'development-current510-data-only';

@@ -5,7 +5,7 @@ import { nativeApplicationJsonEntrySource } from './source-json-entries.mts';
 /** Append to the current complete SOURCE after operational/read compilation.
  * No base snapshot, catalog-cap increase, legacy issuer or runtime proof. */
 export function nativeArticleOffersSourceAddition(){
- const schema=readFileSync(new URL('../../ops/keryx-postgres/article-offers.sql',import.meta.url),'utf8');
+ const schema=readFileSync(new URL('../../ops/keryx-postgres/article-offers.sql',import.meta.url),'utf8').replaceAll('\r\n','\n');
  const router=nativeApplicationJsonEntrySource(['set_article_offer','delete_article_offer'],true,65536,'operational_write_article_offers');
  if(Buffer.byteLength(schema)>32768||Buffer.byteLength(router)>32768)throw new Error('Article offer SOURCE part bound');
  const sql=`\nSET ROLE keryx_owner;\n${schema}\n${router}\nRESET ROLE;\n`;
