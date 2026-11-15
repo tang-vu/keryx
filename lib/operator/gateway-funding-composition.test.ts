@@ -5,6 +5,11 @@ import ts from "typescript";
 import { createOperatorGatewayFundingComposition, OPERATOR_GATEWAY_FUNDING_ACTIVATION } from "./gateway-funding-composition";
 
 const preparedChild = "scripts/postgres/prepared-next-child.mts";
+const nativeCutover = "scripts/postgres/server1-native-cutover.mts";
+const nativeCutoverHelpers = new Set([
+  "scripts/redeploy-reviewed-roles.mjs", "lib/db/application-storage.ts", "lib/config.ts",
+  "lib/payments/hosted-treasury-policy.ts", "lib/research/research-allowance.ts", "lib/db/runtime-storage-config.ts",
+]);
 const preparedHelperRoots = new Map<string, "source" | "metadata.source">([
   ["scripts/immutable-release-public-profile.mjs", "source"],
   ["scripts/immutable-release-staging.mjs", "source"],
@@ -57,6 +62,52 @@ function preparedArtifactImport(node: ts.CallExpression, parsed: ts.SourceFile, 
   return exactRoot ? "../" + helper.text.slice("scripts/".length) : null;
 }
 
+/** Only these fixed operator artifact edges are mapped. The source graph still
+ * inspects each real target; this operator may never be reached by the app. */
+function nativeCutoverImport(node: ts.CallExpression, parsed: ts.SourceFile, file: string): string | null {
+  if (file !== nativeCutover || node.expression.kind !== ts.SyntaxKind.ImportKeyword
+    || node.arguments.length !== 1 || node.typeArguments?.length || !loaderNamesAreUnshadowed(parsed)
+    || !namedNodeImport(parsed, "node:url", "pathToFileURL")) return null;
+  const href = node.arguments[0];
+  if (!ts.isPropertyAccessExpression(href) || href.questionDotToken || href.name.text !== "href") return null;
+  const url = href.expression;
+  if (!ts.isCallExpression(url) || url.questionDotToken || url.typeArguments?.length
+    || !ts.isIdentifier(url.expression) || url.expression.text !== "pathToFileURL" || url.arguments.length !== 1) return null;
+  const path = url.arguments[0];
+  if (ts.isStringLiteral(path)) return path.text === "/root/keryx/scripts/immutable-release-staging.mjs"
+    ? "../immutable-release-staging.mjs" : null;
+  if (!ts.isCallExpression(path) || path.questionDotToken || path.typeArguments?.length
+    || !ts.isIdentifier(path.expression) || path.expression.text !== "join" || path.arguments.length !== 2
+    || !namedNodeImport(parsed, "node:path", "join")) return null;
+  const [root, helper] = path.arguments;
+  if (!ts.isStringLiteral(helper) || !nativeCutoverHelpers.has(helper.text)
+    || !ts.isCallExpression(root) || root.questionDotToken || root.typeArguments?.length
+    || !ts.isIdentifier(root.expression) || root.expression.text !== "releaseSource" || root.arguments.length !== 1
+    || !ts.isIdentifier(root.arguments[0]) || root.arguments[0].text !== "commit") return null;
+  const definitions = parsed.statements.filter(ts.isFunctionDeclaration).filter(fn => fn.name?.text === "releaseSource");
+  if (definitions.length !== 1) return null;
+  const fn = definitions[0], result = fn.body?.statements.at(-1);
+  if (fn.parameters.length !== 1 || !ts.isIdentifier(fn.parameters[0].name) || fn.parameters[0].name.text !== "commit"
+    || !result || !ts.isReturnStatement(result) || !result.expression) return null;
+  const tail = result.expression;
+  if (!ts.isBinaryExpression(tail) || tail.operatorToken.kind !== ts.SyntaxKind.PlusToken
+    || !ts.isStringLiteral(tail.right) || tail.right.text !== "/source" || !ts.isBinaryExpression(tail.left)
+    || tail.left.operatorToken.kind !== ts.SyntaxKind.PlusToken || !ts.isStringLiteral(tail.left.left)
+    || tail.left.left.text !== "/root/.local/share/keryx-releases/"
+    || !ts.isIdentifier(tail.left.right) || tail.left.right.text !== "commit") return null;
+  let shadowed = false;
+  const binding = (name: ts.BindingName): boolean => ts.isIdentifier(name) ? name.text === "releaseSource"
+    : name.elements.some(element => !ts.isOmittedExpression(element) && binding(element.name));
+  const visit = (n: ts.Node) => {
+    if ((ts.isVariableDeclaration(n) || ts.isParameter(n)) && binding(n.name)) shadowed = true;
+    if ((ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isClassDeclaration(n)
+      || ts.isClassExpression(n) || ts.isEnumDeclaration(n)) && n !== fn && n.name?.text === "releaseSource") shadowed = true;
+    ts.forEachChild(n, visit);
+  };
+  visit(parsed);
+  return shadowed ? null : posix.relative("scripts/postgres", helper.text);
+}
+
 function runtimeImports(source: string, file: string): string[] {
   const imports: string[] = [];
   // Import inspection never reads node.parent; avoid constructing the extra
@@ -78,7 +129,7 @@ function runtimeImports(source: string, file: string): string[] {
       const argument = node.arguments[0];
       if (argument && ts.isStringLiteralLike(argument)) imports.push(argument.text);
       else {
-        const reviewed = preparedArtifactImport(node, parsed, file);
+        const reviewed = preparedArtifactImport(node, parsed, file) ?? nativeCutoverImport(node, parsed, file);
         if (!reviewed) throw new Error(`Unreviewed dynamic import: ${file}`);
         imports.push(reviewed);
       }
@@ -111,7 +162,7 @@ function assertDormantGraph(roots: string[], read: (file: string) => string,
     const watchConnection = chain.at(-1) === "lib/db/topic-watches-sqlite.ts" && file === "lib/db/storage-identity-connection.ts";
     const accountProfile = chain.at(-1) === "lib/accounts/sqlite-store.ts" && file === "lib/db/enrolled-sqlite-schema-profile.ts";
     const manifestObservation = file === "lib/db/runtime-storage-config.ts" && manifestObservationReaders.has(chain.at(-1) ?? "");
-    if (file === preparedChild && chain.length > 0
+    if ((file === preparedChild || file === nativeCutover) && chain.length > 0
       || dormantRuntime.test(file) && !admittedStorage && !accountProfile && !watchConnection && !manifestObservation) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
     if (visited.has(file)) return;
     visited.add(file);
@@ -235,6 +286,7 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("scripts/postgres/qualify-research-purchases.mts")).toBe(false);
     expect(visited.has("scripts/postgres/held-native-catchup-input.mts")).toBe(false);
     expect(visited.has(preparedChild)).toBe(false);
+    expect(visited.has(nativeCutover)).toBe(false);
     const inspectedHelpers = assertDormantGraph([...preparedHelperRoots.keys()], file => readFileSync(join(cwd, file), "utf8"), resolveImport, importsFor);
     for (const helper of preparedHelperRoots.keys()) expect(inspectedHelpers.has(helper)).toBe(true);
     expect(inspectedHelpers.has("scripts/next-public-observation.mjs")).toBe(true);
@@ -462,6 +514,72 @@ describe("dormant Operator funding release", () => {
       return target + (target === "scripts/postgres/prepared-next-child" ? ".mts" : ".ts");
     })).toThrow("Dormant runtime reachable");
     expect(read).not.toHaveBeenCalledWith(preparedChild);
+  });
+
+  const cutoverLoaderImports = "import { join } from 'node:path'; import { pathToFileURL } from 'node:url'; function releaseSource(commit) { return '/root/.local/share/keryx-releases/' + commit + '/source'; }";
+  it.each([...nativeCutoverHelpers])("inspects the fixed native operator artifact edge %s", helper => {
+    const expression = `pathToFileURL(join(releaseSource(commit), '${helper}')).href`;
+    expect(runtimeImports(`${cutoverLoaderImports} void import(${expression});`, nativeCutover))
+      .toEqual(["node:path", "node:url", posix.relative("scripts/postgres", helper)]);
+  });
+  it("maps the separately pinned installed inspector to its inspected source", () => {
+    expect(runtimeImports(`${cutoverLoaderImports} void import(pathToFileURL('/root/keryx/scripts/immutable-release-staging.mjs').href);`, nativeCutover))
+      .toEqual(["node:path", "node:url", "../immutable-release-staging.mjs"]);
+  });
+  it.each([
+    "pathToFileURL(join(releaseSource(commit), 'lib/payments/gateway-funding-executor.ts')).href",
+    "pathToFileURL(join(releaseSource(commit), helper)).href",
+    "pathToFileURL(join(releaseSource(commit), `lib/config.ts`)).href",
+    "pathToFileURL(join(releaseSource(other), 'lib/config.ts')).href",
+    "pathToFileURL(join(otherSource(commit), 'lib/config.ts')).href",
+    "pathToFileURL(join(source, 'lib/config.ts')).href",
+    "pathToFileURL(join(releaseSource(commit), 'lib', 'config.ts')).href",
+    "pathToFileURL(join(releaseSource(commit), 'lib/config.ts'), extra).href",
+    "pathToFileURL(join(releaseSource(commit), 'lib/config.ts'))['href']",
+    "pathToFileURL(join(releaseSource(commit), 'lib/config.ts'))?.href",
+    "pathToFileURL?.(join(releaseSource(commit), 'lib/config.ts')).href",
+    "pathToFileURL(join(releaseSource?.(commit), 'lib/config.ts')).href",
+    "pathToFileURL('/root/other/scripts/immutable-release-staging.mjs').href",
+    "pathToFileURL(installedInspector).href",
+    "appUrl",
+  ])("rejects near-match native operator imports: %s", expression => {
+    expect(() => runtimeImports(`${cutoverLoaderImports} void import(${expression});`, nativeCutover))
+      .toThrow("Unreviewed dynamic import");
+  });
+  it("does not admit native artifact expressions from any other file or loader binding", () => {
+    const expression = "pathToFileURL(join(releaseSource(commit), 'lib/config.ts')).href";
+    for (const file of [preparedChild, "app/entry.ts", "scripts/postgres/server1-native-cutover-extra.mts"])
+      expect(() => runtimeImports(`${cutoverLoaderImports} void import(${expression});`, file)).toThrow("Unreviewed dynamic import");
+    for (const source of [
+      cutoverLoaderImports.replace("/root/.local/share/keryx-releases/", "/root/unreviewed/"),
+      cutoverLoaderImports.replace("+ '/source'", "+ '/other'"),
+      cutoverLoaderImports + "function wrapper(releaseSource) {}",
+      cutoverLoaderImports + "const { releaseSource } = unreviewed;",
+      cutoverLoaderImports + "function releaseSource(commit) { return commit; }",
+      cutoverLoaderImports + "function wrapper(join) {}",
+      cutoverLoaderImports.replace("from 'node:url'", "from 'other-url'"),
+    ]) expect(() => runtimeImports(`${source} void import(${expression});`, nativeCutover)).toThrow("Unreviewed dynamic import");
+    expect(() => runtimeImports(`${cutoverLoaderImports} void require(${expression});`, nativeCutover)).toThrow("Unreviewed dynamic import");
+  });
+  it("continues inspecting funding descendants and rejects application reachability of the operator", () => {
+    const helper = "scripts/redeploy-reviewed-roles.mjs";
+    const sources: Record<string, string> = {
+      [nativeCutover]: `${cutoverLoaderImports} void import(pathToFileURL(join(releaseSource(commit), '${helper}')).href);`,
+      [helper]: "import '../lib/payments/gateway-funding-executor';",
+      "lib/payments/gateway-funding-executor.ts": "",
+    };
+    const resolveFixture = (file: string, specifier: string) => {
+      if (!specifier.startsWith(".")) return null;
+      const target = posix.resolve("/", posix.dirname(file), specifier).slice(1);
+      return target.endsWith(".mjs") ? target : target + ".ts";
+    };
+    expect(() => assertDormantGraph([nativeCutover], file => sources[file], resolveFixture)).toThrow("Dormant runtime reachable");
+    const read = vi.fn((file: string) => file === "app/entry.ts" ? "import './helper';" : "import '../scripts/postgres/server1-native-cutover';");
+    expect(() => assertDormantGraph(["app/entry.ts"], read, (file, specifier) => {
+      const target = posix.resolve("/", posix.dirname(file), specifier).slice(1);
+      return target + (target === "scripts/postgres/server1-native-cutover" ? ".mts" : ".ts");
+    })).toThrow("Dormant runtime reachable");
+    expect(read).not.toHaveBeenCalledWith(nativeCutover);
   });
 
   it.each(["export { createEnrolledSupabaseAdapter } from '../lib/db/enrolled-supabase-adapter';",
