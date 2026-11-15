@@ -280,7 +280,10 @@ export function exportPostgres17SchemaContract(input: unknown) {
     if (!Array.isArray(section)) refuse();
     const limit = key === 'functions' || key === 'relations' ? 512 : key === 'columns' ? 4096 : key === 'roles' ? 128 : 16384;
     if (section.length > limit) refuse();
-    section.sort((a,b) => Buffer.compare(Buffer.from(postgresJsonText(a)),Buffer.from(postgresJsonText(b))));
+    // Function definitions can be long: serialize each PostgreSQL ordering key
+    // once, while retaining the same stable UTF-8 byte ordering for equal keys.
+    sections[key] = section.map(value => ({ value, order: Buffer.from(postgresJsonText(value)) }))
+      .sort((a,b) => Buffer.compare(a.order,b.order)).map(({ value }) => value);
   }
   const canonicalJson = JSON.stringify(metadata);
   if (Buffer.byteLength(canonicalJson)>8388608) refuse();

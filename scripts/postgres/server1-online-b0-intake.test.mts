@@ -77,7 +77,7 @@ vi.mock('node:sqlite',()=>({DatabaseSync:class{
 vi.mock('../../lib/db/storage-identity-sqlite',()=>({readStorageIdentity:()=>model.identity}));
 vi.mock('../../lib/db/storage-provenance-snapshot',()=>({checkSnapshotSidecars:()=>{},configureSnapshotConnection:()=>{},validateSnapshotHeader:()=>{}}));
 vi.mock('../../lib/db/postgres/runtime-profile',()=>({NATIVE_CURRENT_DATA_INTAKE_PROFILE:{get sourceSqlSha256(){return model.sqlHash;},get catalogSha256(){return model.catalog;}}}));
-vi.mock('./native-contract.mts',()=>({exportNativePostgresSchemaContract:()=>({sha256:model.catalog,metadata:{sections:{relations:[...Array.from({length:94},(_,i)=>({schema:'public',name:'table_'+i,kind:'r'})),...Array.from({length:14},(_,i)=>({schema:'keryx_storage',name:'table_'+i,kind:'r'}))]}}})}));
+vi.mock('./native-contract.mts',()=>({exportNativePostgresSchemaContract:()=>({sha256:model.fault==='catalog-mismatch'?'f'.repeat(64):model.catalog,metadata:{sections:{relations:[...Array.from({length:94},(_,i)=>({schema:'public',name:'table_'+i,kind:'r'})),...Array.from({length:14},(_,i)=>({schema:'keryx_storage',name:'table_'+i,kind:'r'}))]}}})}));
 vi.mock('./typed-snapshot.mts',async importOriginal=>{
  const real=await importOriginal<typeof import('./typed-snapshot.mts')>();
  return {...real,snapshotTables:(db:unknown)=>db&&typeof db==='object'&&'recordingSource' in db?Array.from({length:model.sourceTables},(_,i)=>({name:'recording_'+i})):real.snapshotTables(db as Parameters<typeof real.snapshotTables>[0])};
@@ -187,9 +187,9 @@ describe('fixed server1 B0 recording lifecycle (not actual PG qualification)',()
  it('rejects an existing or partial target before any stage write',async()=>{
   model.badPublic=true;await refusal();expect(model.kernels).toEqual(['fresh']);expect(model.commit).toBe(0);expect(model.stagingRows).toBe(0);
  });
- it.each(['role','held','connect','source-count','domain-count','census'])('retains actual %s guard refusal',async which=>{
-  if(which==='role')model.role='owneradmin';if(which==='held')model.held=false;if(which==='connect')model.allowConnect=false;if(which==='source-count')model.sourceTables=93;if(which==='domain-count')model.domains=11;if(which==='census')model.fault='census';
-  await refusal();expect(events().some(e=>e.event==='held-census')).toBe(false);if(['role','held','connect','source-count'].includes(which))expect(model.commit).toBe(0);
+ it.each(['role','held','connect','catalog','source-count','domain-count','census'])('retains actual %s guard refusal',async which=>{
+  if(which==='role')model.role='owneradmin';if(which==='held')model.held=false;if(which==='connect')model.allowConnect=false;if(which==='catalog')model.fault='catalog-mismatch';if(which==='source-count')model.sourceTables=93;if(which==='domain-count')model.domains=11;if(which==='census')model.fault='census';
+  await refusal();expect(events().some(e=>e.event==='held-census')).toBe(false);if(['role','held','connect','catalog','source-count'].includes(which))expect(model.commit).toBe(0);
  });
  it('refuses absent protected control and never opens a client',async()=>{
   model.openError=held;await refusal();expect(model.configs).toHaveLength(0);expect(model.commit).toBe(0);
