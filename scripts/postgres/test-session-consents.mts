@@ -323,7 +323,8 @@ try {
     UPDATE keryx_storage.control SET mode='active';`);
   if(currentRuntimeOnly){
     const currentRuntime=await qualifyCurrentRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
-    console.log(JSON.stringify({passed:true,currentRuntimeOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,currentRuntime,applicationBackendSwitched:false}));return;
+    const currentTerminalRetirement=await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement),qualification:'terminal-retirement-only'});
+    console.log(JSON.stringify({passed:true,currentRuntimeOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,currentRuntime,currentTerminalRetirement,applicationBackendSwitched:false}));return;
   }
   const port = Number(docker(["port", name, "5432/tcp"]).trim().split(":")[1]);
   const connect = async (role: string) => {

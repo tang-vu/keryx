@@ -22,6 +22,7 @@ import type { Source,QueryRun } from '../../lib/types';
 import type { SourceMeta } from '../../lib/db/keryx-db';
 import type { SourceClaim,SourceClaimChallenge } from '../../lib/sources/public-source-claim';
 import { APPLICATION_READ_OPERATIONS } from '../../lib/db/postgres/application-read-calls';
+import {NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE} from '../../lib/db/postgres/runtime-profile';
 const nativeRuntimeModes=['success','public-profiles','owner-assignments','remaining-ports','query-readers','held-during-provenance','credential-during-provenance','close-during-provenance','query-iterator-guards','wrong-identity','wrong-source','wrong-key','missing-key','wrong-credential-role','withdrawn-before-usage-body','withdrawn-before-ledger-read','withdrawn-before-acceptance-read','withdrawn-before-account-read','withdrawn-before-public-profile-read','claims-issuance-off','public-profiles-off','withdrawn-before-chat-read','withdrawn-before-owner-assignment-reply','withdrawn-before-account-history','held-before-cache-crypto','foreign-cache-identity','foreign-cache-source','plaintext-cache','oversized-cache','restored-cold-factory','private-profile-terminal-retirement'] as const;
 export type NativeRuntimeMode=typeof nativeRuntimeModes[number];
 async function main(){
@@ -80,7 +81,13 @@ async function main(){
    reader=await application.createReadonlyApplicationStorage();assert(reader);
    assert.deepEqual(await application.applicationStorageIdentity(reader,'read'),input.identity);checks++;
    application.assertApplicationStorageCurrentLocal(reader,'read');
-   await assert.rejects(application.applicationStorageIdentity(reader,'write'),/readonly_operation/);await assert.rejects(application.createApplicationStorage(),/adapter_not_initialized/);checks++;
+   await assert.rejects(application.applicationStorageIdentity(reader,'write'),/readonly_operation/);
+   if(input.digest===NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE.catalogSha256){
+    // Current writer admission is independently exercised by the closed current
+    // factory fixture. This protocol retains a genuine readonly facade only.
+    await assert.rejects(native.assertPostgresRuntimeIdentity(reader,'write'),/readonly_operation/);
+   }else await assert.rejects(application.createApplicationStorage(),/adapter_not_initialized/);
+   checks++;
    const profiles=reader.privateProfiles!,identities=reader.profileIdentities!,history=reader.personalHistory!,privacy=reader.runPrivacy!;
    const top=reader.getSource,coreRead=reader.getQueryRun,coreMetrics=reader.metrics,profileRead=profiles.get,identityRead=identities.list,historyRead=history.list,privacyRead=privacy.read;
    const iterator=reader.iterateRecentQueries(1)[Symbol.asyncIterator](),bound=reader.topicWatches!.bindSession(input.session),boundRead=bound.list;
