@@ -230,8 +230,11 @@ export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBui
       // The same three complete Vitest file shards as CI avoid retaining the
       // entire suite graph in one long-lived pool. They run sequentially in
       // this independently copied source, with no shared concurrent outputs.
+      // The isolated Linux builder reserves capacity for eight bounded workers;
+      // Windows retains its existing single-worker SQLite/browser fixture lane.
+      const workers = process.platform === 'win32' ? 1 : 8;
       const commands = name === 'tests' ? [1, 2, 3].map(shard =>
-        [...args, '--', `--shard=${shard}/3`, '--maxWorkers=3']) : [args];
+        [...args, '--', `--shard=${shard}/3`, `--maxWorkers=${workers}`]) : [args];
       const deadline = started + 30 * 60 * 1000;
       for (const command of commands) {
         const remaining = Math.floor(deadline - performance.now());
