@@ -1,3 +1,7 @@
+// Transform the genuine application authority graph during collection; bounded
+// fixtures below still reset modules and enroll their own actual SQLite storage.
+// This import creates no facade, database, selected identity or native proof.
+import "./application-storage";
 import { afterEach, expect, it, vi } from "vitest";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -832,7 +836,7 @@ it("quotes and admits normal private mainnet research with independently checked
     throw new Error("Unexpected synthetic private mainnet transport");
   }));
   const input={question:"Private original source marker",budget:0.03,researchMode:"quick",packageVersion:"1.0.0",responseMode:"async"};
-  const quote=(await import("../a2a/private-quote-bootstrap")).privateQuoteBootstrap(adapter)!.quote(input);
+  const quote=(await (await import("../a2a/private-quote-bootstrap")).privateQuoteBootstrap(adapter))!.quote(input);
   expect(quote.requirement.network).toBe(ARC_MAINNET_PROFILE.networkId);expect(quote.requirement.maxTimeoutSeconds).toBe(691200);expect(globalThis.fetch).not.toHaveBeenCalled();
   const bootstrap=(await import("../a2a/private-purchase-bootstrap")).privatePurchaseBootstrap,signal=new AbortController().signal;
   vi.stubEnv("KERYX_MAINNET_PRIVATE_TREASURY_PRIVATE_KEY",`0x${"44".repeat(32)}`);

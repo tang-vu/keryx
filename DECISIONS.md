@@ -1,5 +1,34 @@
 # Keryx — Decision Log
 
+## Await hosted storage authority before local signing checks - 2026-11-15
+
+Hosted public/private policy acquisition now awaits the selected facade's genuine
+storage provenance. This rail admits only enrolled SQLite or the genuine native
+PostgreSQL boundary; generic Supabase provenance does not admit hosted custody.
+The native application writer factory remains unconditionally closed.
+
+After asynchronous authority, accounting and durable nonce admission, the signer
+checks the exact local storage selection, terminal closure, protected policy and
+expiry, configured origin/profile, role key fingerprint and captured payment
+frame immediately after its final RPC await and before invoking its captured key.
+The synchronous local check returns neither identity nor capability and cannot
+replace awaited native SQL authority or create provenance. Promise-returning local
+hooks refuse signing. Private accounting keeps its explicit historical role.
+
+Policy expiry or rotation stops new admission; an already observed settlement
+still attempts original confirmation and retains recovery-required evidence when
+persistence fails. No automatic retry, funding, policy renewal or factory opening
+is introduced. Policy consumers await genuine identity and policy acquisition.
+Private workers recheck captured configuration after gateway construction. Public
+treasury observations await their owned reader's disposal, then synchronously
+recheck protected policy and selection before publishing; this final check grants
+no authority from an intentionally closed facade. Strict decoder retirement of the
+shared transport also terminally retires the factory facade and its Core on the
+next entry, starts pool disposal, and rejects retained methods before argument
+inspection. Business refusals and recognized contention do not cause retirement.
+The prepared current DATA catalogue alone selects Source-aware hosted wires;
+this selection does not admit that catalogue to either application factory.
+
 ## Preserve Source A2A execution checkpoints in one bounded native writer - 2026-11-14
 
 Group exact-original claim and the payment-start, result-saving and failure
@@ -9811,3 +9840,27 @@ intake, including payment originals and private-result identity. Its twelve
 projection groups do not approve a runtime factory or an application writer.
 Require genuine factory refusal in this lane and retain separate consumer,
 memory/load, live catchup, startup-policy and release acceptance.
+
+
+## Compose current native runtime and keep HELD catchup as DATA (2026-11-15)
+
+Use a separately pinned current510 runtime profile, preserving the older505
+readonly boundary. The zero-argument factory alone owns genuine facade and role
+registration; Core, its seventeen shared stores and the full Source surface use
+the same context and terminal transport. Register before writer sponsor binding,
+guard before publication and drain every failed setup. Existing selected keys,
+policy/custody authority and unsupported-original holds remain independent.
+
+Require actual compiled Linux writer/reader and strict-decoder retirement checks,
+and a separate materialized original-key readonly proof. Native consumers await
+genuine identity checks and disposal. Keep worker audit evidence in the selected
+private credential root, without a new path selector or evidence migration.
+
+Catchup seals carry exact Source changes and projection censuses, not authority.
+Take the complete table lock set before a repeatable-read snapshot so another
+held owner cannot hide drift behind a stale snapshot. Preserve actual COMMIT
+acknowledged/unknown state through deadlines and every cleanup failure. Retain
+immutable payment first wires and conservative protected-dependency holds. Native
+synthetic CAS acceptance, full-size timing, fresh live data, startup and authorized
+ROOT cutover remain separate gates; no automatic retry, policy renewal, funding,
+schedule or publication follows from these source changes.

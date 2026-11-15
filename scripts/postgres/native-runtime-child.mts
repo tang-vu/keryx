@@ -22,11 +22,15 @@ import type { Source,QueryRun } from '../../lib/types';
 import type { SourceMeta } from '../../lib/db/keryx-db';
 import type { SourceClaim,SourceClaimChallenge } from '../../lib/sources/public-source-claim';
 import { APPLICATION_READ_OPERATIONS } from '../../lib/db/postgres/application-read-calls';
+import {NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE} from '../../lib/db/postgres/runtime-profile';
+const nativeRuntimeModes=['success','public-profiles','owner-assignments','remaining-ports','query-readers','held-during-provenance','credential-during-provenance','close-during-provenance','query-iterator-guards','wrong-identity','wrong-source','wrong-key','missing-key','wrong-credential-role','withdrawn-before-usage-body','withdrawn-before-ledger-read','withdrawn-before-acceptance-read','withdrawn-before-account-read','withdrawn-before-public-profile-read','claims-issuance-off','public-profiles-off','withdrawn-before-chat-read','withdrawn-before-owner-assignment-reply','withdrawn-before-account-history','held-before-cache-crypto','foreign-cache-identity','foreign-cache-source','plaintext-cache','oversized-cache','restored-cold-factory','private-profile-terminal-retirement'] as const;
+export type NativeRuntimeMode=typeof nativeRuntimeModes[number];
 async function main(){
  const sourceMethods=['getSource','getSourceByOnchainId','listSources','listAllSources','getSourceMeta','getSourceClaim','getSourceClaimForSource','getSourceClaimChallenge','listSourceClaims'];
  const queryMethods=['getQueryRun','listRecentQueries','listQueryRunsByAsker','listFollowUps','iterateRecentQueries'];
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
- const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient};sourceClaims:{source:Source;meta:SourceMeta;claim:SourceClaim;challenge:SourceClaimChallenge};queryReads:{projected:QueryRun;sourceHistory:unknown};publicProfile:{actor:PublicProfileActor;handle:string;snapshot:PublicProfileSnapshot;settings:PublicProfileSettings;sitemap:Array<{handle:string;updatedAt:string}>}};
+ const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:NativeRuntimeMode;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition};chat:{link:ChatLink;preview:PendingChatLink;recipient:ChatRecipient};sourceClaims:{source:Source;meta:SourceMeta;claim:SourceClaim;challenge:SourceClaimChallenge};queryReads:{projected:QueryRun;sourceHistory:unknown};publicProfile:{actor:PublicProfileActor;handle:string;snapshot:PublicProfileSnapshot;settings:PublicProfileSettings;sitemap:Array<{handle:string;updatedAt:string}>}};
+ assert(nativeRuntimeModes.includes(input.mode),'Unknown native runtime fixture mode');
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid!(),0);
  const cgroup=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:cgroup('memory.max'),swapMax:cgroup('memory.swap.max'),cpuMax:cgroup('cpu.max'),pidsMax:cgroup('pids.max')};
@@ -49,6 +53,75 @@ async function main(){
  chmodSync(readerPath,0o644);assert.throws(()=>privateFile.readPrivatePostgresCredential(readerPath,'keryx_reader'));chmodSync(readerPath,0o600);checks++;
  const alias=folder+'/alias';linkSync(readerPath,alias);assert.throws(()=>privateFile.readPrivatePostgresCredential(readerPath,'keryx_reader'));rmSync(alias);symlinkSync(readerPath,alias);assert.throws(()=>privateFile.readPrivatePostgresCredential(alias,'keryx_reader'));rmSync(alias);checks++;
  assert.throws(()=>privateFile.readPrivatePostgresCredential(readerPath,'keryx_app'));checks++;
+ if(input.mode==='private-profile-terminal-retirement'){
+  const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});
+  let reader:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>,locked=false,readerSql=0,profileSelectsCompleted=0;
+  let profileSelectFailure:{sqlState:string;refusal:string}|undefined;
+  const observedProfileFailure=():{sqlState:string;refusal:string}|undefined=>profileSelectFailure;
+  const fixedProfileRefusals=new Set(['native profile read-only transaction required','native profile context refused','native profile network refused','native profile activity bound','native profile topic shape','native profile surface unavailable','native profile record bound','native history context refused','native Source scalar projection unavailable','canceling statement due to lock timeout','canceling statement due to statement timeout']);
+  const descriptor=Object.getOwnPropertyDescriptor(Client.prototype,'query');assert(descriptor&&typeof descriptor.value==='function');
+  // Record the real driver's reader calls without replacing SQL, results,
+  // credentials, factory selection or its private provenance registration.
+  Object.defineProperty(Client.prototype,'query',{...descriptor,value:new Proxy(descriptor.value,{apply(target,thisArg,args){
+   const params=(thisArg as Client&{connectionParameters?:{user?:string;database?:string}}).connectionParameters;
+   const observed=params?.user==='keryx_reader'&&params.database==='native_target';
+   if(observed)readerSql++;
+   const result=Reflect.apply(target,thisArg,args);
+   const query=args[0],text=typeof query==='string'?query:query&&typeof query==='object'?Reflect.get(query,'text'):'';
+   if(observed&&typeof text==='string'&&text.includes('public.storage_private_profile_get('))
+    void Promise.resolve(result).then(()=>{profileSelectsCompleted++;},(error:unknown)=>{
+     const code=error&&typeof error==='object'?Reflect.get(error,'code'):undefined,message=error instanceof Error?error.message:undefined;
+     profileSelectFailure={sqlState:typeof code==='string'&&/^[0-9A-Z]{5}$/.test(code)?code:'unclassified',refusal:typeof message==='string'&&fixedProfileRefusals.has(message)?message:'unclassified native profile refusal'};
+    });
+   return result;
+  }})});
+  const readerCount=async()=>Number((await admin.query("SELECT count(*)::integer n FROM pg_stat_activity WHERE datname=current_database() AND usename='keryx_reader'")).rows[0].n);
+  try{
+   await admin.connect();const baseline=await readerCount();
+   reader=await application.createReadonlyApplicationStorage();assert(reader);
+   assert.deepEqual(await application.applicationStorageIdentity(reader,'read'),input.identity);checks++;
+   application.assertApplicationStorageCurrentLocal(reader,'read');
+   await assert.rejects(application.applicationStorageIdentity(reader,'write'),/readonly_operation/);
+   if(input.digest===NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE.catalogSha256){
+    // Current writer admission is independently exercised by the closed current
+    // factory fixture. This protocol retains a genuine readonly facade only.
+    await assert.rejects(native.assertPostgresRuntimeIdentity(reader,'write'),/readonly_operation/);
+   }else await assert.rejects(application.createApplicationStorage(),/adapter_not_initialized/);
+   checks++;
+   const profiles=reader.privateProfiles!,identities=reader.profileIdentities!,history=reader.personalHistory!,privacy=reader.runPrivacy!;
+   const top=reader.getSource,coreRead=reader.getQueryRun,coreMetrics=reader.metrics,profileRead=profiles.get,identityRead=identities.list,historyRead=history.list,privacyRead=privacy.read;
+   const iterator=reader.iterateRecentQueries(1)[Symbol.asyncIterator](),bound=reader.topicWatches!.bindSession(input.session),boundRead=bound.list;
+   const other='0x'+'d7'.repeat(20);assert.notEqual(other,input.owner);
+   assert.equal((await profileRead(other,'eip155:5042')).activity.questions,0);checks++;
+   await assert.rejects(profileRead('invalid-wallet','eip155:5042'));assert.deepEqual(await native.assertPostgresRuntimeIdentity(reader),input.identity);checks++;
+   await admin.query('BEGIN');locked=true;await admin.query('SELECT pg_advisory_xact_lock(634781904177022::bigint)');
+   let settled=false;const contention=profileRead(other,'eip155:5042').then(()=>{settled=true;return false;},()=>{settled=true;return true;});
+   let waited=false;const deadline=Date.now()+4000;
+   while(Date.now()<deadline&&!settled){
+    const wait=await admin.query("SELECT count(*)::integer n FROM pg_locks WHERE locktype='advisory' AND mode='ShareLock' AND NOT granted AND objsubid=1 AND classid::bigint*4294967296+objid::bigint=634781904177022::bigint AND pg_backend_pid()=ANY(pg_blocking_pids(pid))");
+    if(Number(wait.rows[0].n)>0){waited=true;break;}await new Promise(resolve=>setTimeout(resolve,10));
+   }
+   assert(waited,'Private-profile control must actually wait behind the data lock');assert.equal(await contention,true);
+   await admin.query('ROLLBACK');locked=false;assert.deepEqual(await native.assertPostgresRuntimeIdentity(reader),input.identity);assert.equal((await profileRead(other,'eip155:5042')).activity.questions,0);checks+=2;
+   let getters=0;const hostile=new Proxy({},{get(){getters++;throw Error('Terminal facade inspected caller fields');}}) as never;
+   await assert.rejects(profiles.update(input.owner,hostile),/readonly_operation/);assert.equal(getters,0);assert.deepEqual(await native.assertPostgresRuntimeIdentity(reader),input.identity);checks++;
+   const completed=profileSelectsCompleted;profileSelectFailure=undefined;
+   await assert.rejects(profileRead('0x'+'d8'.repeat(20),'eip155:5042'),/adapter_not_initialized/);
+   const failure=observedProfileFailure();if(failure)process.stderr.write(JSON.stringify({fixtureMode:input.mode,event:'terminal-profile-native-select-refused',...failure})+'\n');
+   assert.equal(profileSelectsCompleted,completed+1,'The actual SELECT must succeed before strict Source profile decoding retires the reader');assert.equal(failure,undefined);checks++;
+   const afterFailure=readerSql;
+   assert.throws(()=>native.assertPostgresRuntimeCurrentLocal(reader!),/adapter_not_initialized/);
+   await assert.rejects(native.assertPostgresRuntimeIdentity(reader),/adapter_not_initialized/);await assert.rejects(application.applicationStorageIdentity(reader,'read'),/adapter_not_initialized/);checks++;
+   for(const invoke of [()=>top(hostile),()=>coreRead(hostile),()=>coreMetrics(),()=>profileRead(hostile,hostile),()=>identityRead(hostile),()=>historyRead(hostile,hostile),()=>privacyRead(hostile,hostile),()=>boundRead(),()=>iterator.next()])await assert.rejects(async()=>invoke(),/adapter_not_initialized/);checks+=9;
+   assert.throws(()=>Reflect.get(reader!,'getSource'),/adapter_not_initialized/);assert.throws(()=>Reflect.get(reader!,'privateProfiles'),/adapter_not_initialized/);assert.equal(getters,0);assert.equal(readerSql,afterFailure);checks++;
+   await application.closeReadonlyApplicationStorage(reader);assert.equal(await readerCount(),baseline);assert.equal(readerSql,afterFailure);checks++;
+   assert.equal(outbound,0);
+   console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,strictPrivateProfileDecodeAfterSuccessfulNativeSelect:true,ordinaryInputAndLockRefusalsNonterminal:true,actualDataLockWait:true,acquiredTopNestedAndCoreMethodsRetired:true,noCallerGettersAfterRetirement:true,noReaderSqlAfterRetirement:true,canonicalDisposalDrainedReaders:true,nativeFacadeTerminalRetirementQualified:true,fullWriterQualified:false,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{
+   try{if(locked)await admin.query('ROLLBACK');if(reader)try{await application.closeReadonlyApplicationStorage(reader);}catch(error){await native.closePostgresRuntimeAdapter(reader);}}
+   finally{Object.defineProperty(Client.prototype,'query',descriptor);await admin.end();}
+  }
+ }
  if(input.mode==='held-before-cache-crypto'){
   const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});
   let connected=false,barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,decipherCalls=0;

@@ -131,6 +131,25 @@ jobs:
           KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
           NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
         run: node --import ./scripts/postgres/current-data-source-bootstrap.mjs --import tsx --no-warnings scripts/postgres/qualify-native-materialization.mts --development-current-data-synthetic
+      - name: Current Source materialized original-key readonly factory
+        env:
+          NODE_OPTIONS: --max-old-space-size=512
+          KERYX_NETWORK: arc
+          NEXT_PUBLIC_KERYX_NETWORK: arc
+          KERYX_FORCE_OFFLINE: "0"
+          KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
+          NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
+        run: node --import ./scripts/postgres/current-data-source-bootstrap.mjs --import tsx --no-warnings scripts/postgres/qualify-native-materialization.mts --current-runtime-synthetic
+
+      - name: Synthetic HELD CAS catchup and owner-contention refusal
+        env:
+          NODE_OPTIONS: --max-old-space-size=512
+          KERYX_NETWORK: arc
+          NEXT_PUBLIC_KERYX_NETWORK: arc
+          KERYX_FORCE_OFFLINE: "0"
+          KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
+          NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555"
+        run: node --import ./scripts/postgres/current-data-source-bootstrap.mjs --import tsx --no-warnings scripts/postgres/qualify-native-materialization.mts --held-catchup-synthetic
 
   publication-contained:
     runs-on: ubuntu-latest
@@ -240,6 +259,10 @@ jobs:
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --payment-observers-only
       - name: Consumed financial fields and original receipt holds
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --payment-consumed-fields-only
+      - name: Current canonical factory Node image
+        run: docker pull node:24.22.1-bookworm-slim
+      - name: Genuine current factory roles, writes, refusal and ambiguous outcomes
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --current-runtime-only
 
   postgres-preparation:
     if: ${{ always() }}

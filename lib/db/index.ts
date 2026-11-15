@@ -22,10 +22,11 @@ export async function getDb(): Promise<KeryxDB> {
         await adapter.init();
         return adapter;
       } catch (error) {
-        // SQLite owns a file handle and exposes close(); Supabase has no adapter
-        // disposal API. Cleanup does not roll back earlier schema/cache writes.
+        // A selected native facade also owns an asynchronous connection drain.
+        // Complete cleanup before another initialization attempt is admitted.
+        // Cleanup does not roll back earlier schema/cache writes.
         if ("close" in adapter && typeof adapter.close === "function") {
-          try { adapter.close(); } catch { /* preserve the initialization failure */ }
+          try { await adapter.close(); } catch { /* preserve the initialization failure */ }
         }
         throw error;
       }

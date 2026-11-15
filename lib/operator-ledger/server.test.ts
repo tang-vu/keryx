@@ -30,3 +30,12 @@ it("uses the provenance-bound terminal closer without probing undeclared Supabas
   const response = await GET(new Request("http://localhost/api/operator/ledger"));
   expect(response.status).toBe(200); expect(mocks.close.mock.calls.at(-1)?.[0] === reader).toBe(true);
 });
+
+it('keeps the API pending until selected native reader disposal completes',async()=>{
+  let entered!:()=>void,release!:()=>void;
+  const closing=new Promise<void>(resolve=>{entered=resolve;}),drain=new Promise<void>(resolve=>{release=resolve;});
+  const reader={async *iterateRecentQueries(){yield ledgerRun({settledPayments:0});},async listPayments(){return [];}};
+  mocks.create.mockResolvedValue(reader);mocks.close.mockImplementationOnce(()=>{entered();return drain;});
+  let settled=false;const pending=GET(new Request('http://localhost/api/operator/ledger')).then(response=>{settled=true;return response;});
+  await closing;expect(settled).toBe(false);release();expect((await pending).status).toBe(200);
+});

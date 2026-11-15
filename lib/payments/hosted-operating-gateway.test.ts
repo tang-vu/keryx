@@ -1,3 +1,5 @@
+// Dependency recordings for receipt persistence; genuine selected identity and
+// custody guards are exercised in mainnet-hosted-postgres-storage.test.ts.
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
@@ -5,10 +7,12 @@ import { operatingFeeEndpointPath, operatingFeePolicyDigest, type OperatingFeeCo
 import { pendingPaymentFrom, settledPaymentFrom } from "./payment-state";
 import type { KeryxDB } from "../db/keryx-db";
 
-const state = vi.hoisted(() => ({ transport: vi.fn(), configured: vi.fn(), policy: vi.fn(), available: vi.fn() }));
+const state = vi.hoisted(() => ({ transport: vi.fn(), configured: vi.fn(), policy: vi.fn(), available: vi.fn(), identity: vi.fn(), local: vi.fn(), selection: vi.fn() }));
 vi.mock("../config", async () => ({ config: { profile: (await import("../arc-network-profile")).ARC_MAINNET_PROFILE,
   networkId: "eip155:5042", baseUrl: "https://keryx.cc", rpcUrl: "https://rpc.invalid", maxTimeoutSeconds: 604900 } }));
-vi.mock("../db/application-storage", () => ({ applicationSqliteIdentity: () => ({}) }));
+vi.mock("../db/application-storage", () => ({ applicationStorageIdentity: state.identity,
+  assertApplicationStorageCurrentLocal: state.local }));
+vi.mock("../db/runtime-storage-config", () => ({ readRuntimeStorageDeployment: state.selection }));
 vi.mock("./hosted-treasury-policy", async original => ({ ...await original<object>(), configuredHostedTreasuryPolicy: state.policy }));
 vi.mock("./operating-fee-policy", async original => ({ ...await original<object>(), configuredOperatingFeePolicy: state.configured }));
 vi.mock("../gateway/gateway-balance", () => ({ getGatewayAvailableAtomic: state.available }));
@@ -23,7 +27,11 @@ const hostedPolicy = { format: "keryx-hosted-treasury-policy-v1", network: ARC_M
 const fee: OperatingFeeContext = { policyDigest: operatingFeePolicyDigest(feePolicy), allocationDigest: "b".repeat(64), amountMicroUsdc: "25000",
   sourceUrls: ["https://publisher.test/article"] };
 beforeEach(() => {
-  vi.clearAllMocks(); state.policy.mockReturnValue(hostedPolicy); state.configured.mockReturnValue(feePolicy); state.available.mockResolvedValue(BigInt(100000));
+  vi.clearAllMocks(); state.identity.mockResolvedValue({});
+  state.local.mockReset().mockImplementation((_db, access) => { expect(access).toBe("write"); });
+  state.selection.mockReturnValue({ format: "keryx-storage-deployment-v1", identity: {},
+    backend: { kind: "sqlite", databasePath: "synthetic-dependency-only.sqlite" } });
+  state.policy.mockReturnValue(hostedPolicy); state.configured.mockReturnValue(feePolicy); state.available.mockResolvedValue(BigInt(100000));
   vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY", key);
   vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
 });

@@ -39,7 +39,7 @@ async function main() {
         const { getDb } = await import("../lib/db");
         const { privateWorkerBootstrap } = await import("../lib/a2a/private-worker-bootstrap");
         db = await getDb();
-        const worker = privateWorkerBootstrap(db, spool);
+        const worker = await privateWorkerBootstrap(db, spool);
         if (!worker) throw new Error();
         await runPrivateWorkerLoop(worker, { signal: stop.signal, once: values.once,
           recovery: createPrivateResultRecovery(db, spool),

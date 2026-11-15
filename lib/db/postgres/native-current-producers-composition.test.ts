@@ -84,7 +84,9 @@ describe('closed current producer composition',()=>{
  });
  it('does not turn optional composition into purchase authority or unsafe publication capture',async()=>{
   const f=fixture();await f.core.adapter.init();
-  await expect(f.core.adapter.assertResearchPurchaseAuthority(identity.network)).rejects.toThrow('invalid_operation');
+  await expect(f.core.adapter.assertResearchPurchaseAuthority(identity.network)).rejects.toBeInstanceOf(PostgresStorageUnavailable);
+  const inspected=vi.fn(()=>{throw Error('Missing scope inspected caller fields');}),hostile=new Proxy({},{get:inspected}) as never;
+  await expect(f.core.adapter.assertResearchPurchaseAuthority(hostile)).rejects.toBeInstanceOf(PostgresStorageUnavailable);expect(inspected).not.toHaveBeenCalled();
   await expect(f.core.adapter.saveQueryRun({} as never,{visibility:'public'})).rejects.toThrow('privacy_unavailable');
   expect(f.call).not.toHaveBeenCalled();expect(f.rpc).not.toHaveBeenCalled();
  });

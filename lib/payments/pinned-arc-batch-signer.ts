@@ -12,7 +12,8 @@ import { sameAddress } from "./x402-payment-evidence";
  * Server transport must independently match the challenge to its authorized creator and amount. */
 export function createPinnedArcBatchSigner(account: PrivateKeyAccount, rpcUrl: string,
   profile: ArcNetworkProfile = paymentRuntimeConfig().profile, maxTimeoutSeconds = paymentRuntimeConfig().maxTimeoutSeconds,
-  beforeAuthorization?: (payload: TypedDataPayload) => Promise<void>): BatchPayloadSigner {
+  beforeAuthorization?: (payload: TypedDataPayload) => Promise<void>,
+  assertCurrentLocal?: (payload: TypedDataPayload) => void): BatchPayloadSigner {
   if (profile !== ARC_MAINNET_PROFILE && profile !== ARC_TESTNET_PROFILE || !Number.isSafeInteger(maxTimeoutSeconds) ||
     maxTimeoutSeconds < 604900 || maxTimeoutSeconds > 691200) throw new Error("Arc payment policy unavailable");
   const policy = createSessionSigningPolicy(profile);
@@ -50,6 +51,14 @@ export function createPinnedArcBatchSigner(account: PrivateKeyAccount, rpcUrl: s
               await beforeAuthorization(structuredClone(snapshot) as unknown as TypedDataPayload);
               policy.validatePayment(snapshot as unknown as TypedDataPayload, payer);
               await assertArcRpcChain(rpcUrl, profile);
+            }
+            policy.validatePayment(snapshot as unknown as TypedDataPayload, payer);
+            if (assertCurrentLocal) {
+              // Optional narrowing only: the caller must already own custody and
+              // complete durable admission. A Promise must never cross this final
+              // synchronous boundary to the captured key.
+              const result: unknown = assertCurrentLocal(structuredClone(snapshot) as unknown as TypedDataPayload);
+              if (result !== undefined) { void Promise.resolve(result).catch(() => {}); throw new Error(); }
             }
             return sign(snapshot as Parameters<PrivateKeyAccount["signTypedData"]>[0]);
           },

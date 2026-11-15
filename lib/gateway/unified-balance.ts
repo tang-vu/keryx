@@ -14,7 +14,9 @@ import path from "node:path";
 import { formatUnits } from "viem";
 import { config } from "../config";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
-import { createReadonlyApplicationStorage, applicationSqliteIdentity } from "../db/application-storage";
+import { createReadonlyApplicationStorage, applicationStorageIdentity, assertApplicationStorageCurrentLocal, closeReadonlyApplicationStorage } from "../db/application-storage";
+import { readRuntimeStorageDeployment } from "../db/runtime-storage-config";
+import { canonicalJson } from "../canonical-json";
 import { configuredHostedTreasuryPolicy, hostedTreasuryPolicyDigest } from "../payments/hosted-treasury-policy";
 import { getGatewayAvailableAtomic } from "./gateway-balance";
 import {
@@ -48,31 +50,57 @@ export interface MainnetTreasuryObservation {
 /** Address-only observation of the reviewed public role. Never loads a key or admits a policy. */
 export async function getMainnetTreasuryObservation(): Promise<MainnetTreasuryObservation> {
   if (config.profile !== ARC_MAINNET_PROFILE) throw new Error("Mainnet treasury observation refused");
+  const baseUrl = config.baseUrl, origin = new URL(baseUrl), selection = readRuntimeStorageDeployment();
+  if (selection.backend.kind !== "sqlite" && selection.backend.kind !== "postgres")
+    throw new Error("Mainnet treasury observation backend refused");
+  if (origin.protocol !== "https:" || origin.pathname !== "/" || origin.search || origin.hash || origin.username || origin.password)
+    throw new Error("Mainnet treasury origin refused");
+  const selectionWire = canonicalJson(selection);
   const db = await createReadonlyApplicationStorage();
   if (!db) throw new Error("Mainnet treasury observation unavailable");
+  let publish: (() => MainnetTreasuryObservation) | undefined;
   try {
-    const baseUrl = config.baseUrl, origin = new URL(baseUrl);
-    if (origin.protocol !== "https:" || origin.pathname !== "/" || origin.search || origin.hash || origin.username || origin.password)
-      throw new Error("Mainnet treasury origin refused");
-    const readPolicy = () => configuredHostedTreasuryPolicy(applicationSqliteIdentity(db, "read"), origin.origin, "public");
+    const identity = await applicationStorageIdentity(db, "read"), identityWire = canonicalJson(identity);
+    const configuredPolicy = () => {
+      if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl
+        || canonicalJson(readRuntimeStorageDeployment()) !== selectionWire
+        || canonicalJson(selection.identity) !== identityWire)
+        throw new Error("Mainnet treasury observation changed");
+      return configuredHostedTreasuryPolicy(identity, origin.origin, "public");
+    };
+    const readPolicy = () => { assertApplicationStorageCurrentLocal(db, "read"); return configuredPolicy(); };
     const policy = readPolicy(), digest = hostedTreasuryPolicyDigest(policy);
+    const refresh = async () => {
+      const current = await applicationStorageIdentity(db, "read");
+      if (canonicalJson(current) !== identityWire || hostedTreasuryPolicyDigest(readPolicy()) !== digest)
+        throw new Error("Mainnet treasury observation changed");
+    };
     // This read detects historical cross-role custody conflicts; it is not policy admission or readiness.
     await db.hostedTreasuryAccounting(policy.signer, "public");
+    await refresh();
     const amount = await getGatewayAvailableAtomic(policy.signer, ARC_MAINNET_PROFILE);
-    if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl ||
-        hostedTreasuryPolicyDigest(readPolicy()) !== digest)
-      throw new Error("Mainnet treasury observation changed");
+    await refresh();
     await db.hostedTreasuryAccounting(policy.signer, "public");
     // Revalidate once more after the final awaited role check (including expiry).
-    if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl || hostedTreasuryPolicyDigest(readPolicy()) !== digest)
+    await refresh();
+    if (hostedTreasuryPolicyDigest(readPolicy()) !== digest)
       throw new Error("Mainnet treasury observation changed");
-    return { network: ARC_MAINNET_PROFILE.networkId, address: policy.signer, policyDigest: digest,
+    const result: MainnetTreasuryObservation = { network: ARC_MAINNET_PROFILE.networkId, address: policy.signer, policyDigest: digest,
       storageIdentityDigest: policy.storageIdentityDigest, availableUsdc: amount === null ? null : formatUnits(amount, 6),
       fetchedAt: new Date().toISOString(), paymentReadiness: "not-probed" };
+    publish = () => {
+      // Disposal is the final await. Narrow protected configuration once more
+      // before publishing; the intentionally closed facade cannot issue proof.
+      if (hostedTreasuryPolicyDigest(configuredPolicy()) !== digest)
+        throw new Error("Mainnet treasury observation changed");
+      return result;
+    };
   } finally {
     // Each uncached observation owns this read-only facade, including policy/vendor refusal paths.
-    (db as { close?: () => void }).close?.();
+    await closeReadonlyApplicationStorage(db);
   }
+  if (!publish) throw new Error("Mainnet treasury observation unavailable");
+  return publish();
 }
 
 /** The persistent spend wallet is created by RealGateway; only its address is read here. */

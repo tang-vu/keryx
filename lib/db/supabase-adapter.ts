@@ -195,6 +195,7 @@ export interface NativePostgresBusinessCoreOptions {
   readonly registrationSponsor?:PostgresRegistrationSponsorPort;
   readonly a2aOriginals?:PostgresA2aOriginalsPort;
   readonly researchPurchases?:PostgresResearchPurchasesPort;
+  readonly publication?:KeryxDB['saveQueryRun'];
 
   readonly financialApplication?:NativeFinancialApplicationPort;
   readonly sourceClaimWrites?:ReturnType<typeof composePostgresSourceClaimWrites>;
@@ -353,7 +354,11 @@ export class SupabaseAdapter implements KeryxDB {
     if(native?.onramp)installNativeMethods(native.onramp,[['reserveOnramp',true],['releaseOnramp',true]]);
     if(native?.scholarly)installNativeMethods(native.scholarly,[['getPaperState',false],['beginPaperEnrollment',true],['submitPaper',true],['reviewPaper',true],['getPaperAdmission',false]]);
     if(native?.registrationSponsor)installNativeMethods(native.registrationSponsor,[['admitRegistrationSponsor',true],['getRegistrationSponsor',false],['getRegistrationSponsorExecution',false],['inspectRegistrationSponsorFunding',false],['transitionRegistrationSponsor',true]]);
-    if(native?.researchPurchases)installNativeMethods(native.researchPurchases,[['claimResearchPurchase',true],['createResearchMonthly',true],['getResearchMonthly',false],['redeemResearchMonthly',true]]);
+    if(native?.researchPurchases){
+      installNativeMethods(native.researchPurchases,[['claimResearchPurchase',true],['createResearchMonthly',true],['getResearchMonthly',false],['redeemResearchMonthly',true]]);
+      if(native.researchPurchases.assertResearchPurchaseAuthority!==undefined)installNativeMethods(native.researchPurchases,[['assertResearchPurchaseAuthority',true]]);
+    }
+    if(native?.publication)installNativeMethods({saveQueryRun:native.publication},[['saveQueryRun',true]]);
     if(native?.a2aOriginals){
       const originals=native.a2aOriginals,claimOriginal=originals.claimA2aOriginal;
       if(typeof claimOriginal!=='function')refuseStorage('adapter_not_initialized');

@@ -37,18 +37,24 @@ const applicationStorageBoundary = "lib/db/application-storage.ts";
 const applicationStorageSubstrate = new Set(["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts",
   "lib/db/enrolled-sqlite-schema-profile.ts", "lib/db/runtime-storage-config.ts", "lib/db/storage-identity-connection.ts",
   "lib/db/storage-identity-sqlite.ts", "lib/db/chat-accounts-sqlite.ts", "lib/db/gateway-funding-ledger-types.ts", "lib/db/gateway-funding-sqlite-schema.ts"]);
+// These exact Node consumers observe the pinned manifest around awaited genuine
+// storage admission. Reading configuration grants no factory/enrollment/funding
+// authority, and every descendant of this edge is still inspected below.
+const manifestObservationReaders = new Set(["lib/payments/mainnet-hosted-gateway.ts", "lib/gateway/unified-balance.ts",
+  "lib/operator-obligations/inspection.ts", "lib/sources/registration-sponsor-runtime.ts"]);
 
 function assertDormantGraph(roots: string[], read: (file: string) => string,
   resolveImport: (file: string, specifier: string) => string | null,
   importsFor?: (file: string) => string[]): Set<string> {
   const visited = new Set<string>();
   const walk = (file: string, chain: string[]) => {
-    // Only the source-owned APPLICATION boundary admits storage. Its entire transitive graph is still inspected:
+    // Only the source-owned APPLICATION boundary admits storage factories. Its entire transitive graph is still inspected:
     // provisioning, funding executor/orchestrator/transaction/key-loading edges remain forbidden.
     const admittedStorage = chain.includes(applicationStorageBoundary) && applicationStorageSubstrate.has(file);
     const watchConnection = chain.at(-1) === "lib/db/topic-watches-sqlite.ts" && file === "lib/db/storage-identity-connection.ts";
     const accountProfile = chain.at(-1) === "lib/accounts/sqlite-store.ts" && file === "lib/db/enrolled-sqlite-schema-profile.ts";
-    if (dormantRuntime.test(file) && !admittedStorage && !accountProfile && !watchConnection) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
+    const manifestObservation = file === "lib/db/runtime-storage-config.ts" && manifestObservationReaders.has(chain.at(-1) ?? "");
+    if (dormantRuntime.test(file) && !admittedStorage && !accountProfile && !watchConnection && !manifestObservation) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
     if (visited.has(file)) return;
     visited.add(file);
     for (const specifier of importsFor ? importsFor(file) : runtimeImports(read(file), file)) {
@@ -153,6 +159,8 @@ describe("dormant Operator funding release", () => {
           || importer === "scripts/postgres/qualify-reference-archive.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-scholarly.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-research-purchases.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          // Source-only sealed DATA capture, not an application selector/issuer.
+          || importer === "scripts/postgres/held-native-catchup-input.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-chat-links.mts" && target === "lib/db/chat-accounts-sqlite.ts"
           || importer === "scripts/postgres/native-account-fixture.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/native-chat-fixture.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
@@ -167,6 +175,7 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("scripts/postgres/qualify-a2a-fulfillment.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-publication.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-research-purchases.mts")).toBe(false);
+    expect(visited.has("scripts/postgres/held-native-catchup-input.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-ledger.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-acceptance.mts")).toBe(false);
     expect(visited.has("scripts/postgres/qualify-native-runtime.mts")).toBe(false);
@@ -241,6 +250,55 @@ describe("dormant Operator funding release", () => {
     expect(runtimeImports("import type { Authority } from './helper'; type Other = import('./helper').Authority;", "types.ts")).toEqual([]);
   });
 
+  it.each([...manifestObservationReaders])("permits the exact %s manifest observation while traversing its children", importer => {
+    const sources: Record<string, string> = {
+      "app/entry.ts": `import '../${importer.slice(0, -3)}';`,
+      [importer]: "import { readRuntimeStorageDeployment } from '../db/runtime-storage-config';",
+      "lib/db/runtime-storage-config.ts": "import { canonicalJson } from '../canonical-json';",
+      "lib/canonical-json.ts": "export const canonicalJson = JSON.stringify;",
+    };
+    const visited = assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
+      posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts");
+    expect([...visited]).toEqual(["app/entry.ts", importer, "lib/db/runtime-storage-config.ts", "lib/canonical-json.ts"]);
+  });
+
+  for (const importer of manifestObservationReaders) {
+    it.each(["lib/payments/gateway-funding-executor.ts", "lib/operator/gateway-funding-composition.ts",
+      "lib/payments/gateway-funding-transaction.ts", "lib/db/storage-identity-provision.ts"])(
+      `rejects %s beneath the reviewed ${importer} manifest edge`, forbidden => {
+        const sources: Record<string, string> = {
+          "app/entry.ts": `import '../${importer.slice(0, -3)}';`,
+          [importer]: "import '../db/runtime-storage-config';",
+          "lib/db/runtime-storage-config.ts": `export * from '../../${forbidden.slice(0, -3)}';`,
+          [forbidden]: "",
+        };
+        expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
+          posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts")).toThrow("Dormant runtime reachable");
+      });
+    it(`does not permit ${importer} to select an enrolled factory directly`, () => {
+      const sources: Record<string, string> = {
+        "app/entry.ts": `import '../${importer.slice(0, -3)}';`,
+        [importer]: "import '../db/runtime-storage-config'; void import('../db/enrolled-supabase-adapter');",
+        "lib/db/runtime-storage-config.ts": "",
+        "lib/db/enrolled-supabase-adapter.ts": "",
+      };
+      expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
+        posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts")).toThrow("Dormant runtime reachable");
+    });
+  }
+
+  it.each(["lib/payments/mainnet-hosted-gateway-helper.ts", "lib/gateway/unified-balance-extra.ts",
+    "lib/operator-obligations/inspection-helper.ts", "lib/sources/registration-sponsor-runtime-extra.ts"])(
+    "refuses unreviewed near-match manifest reader %s", importer => {
+      const sources: Record<string, string> = {
+        "app/entry.ts": `import '../${importer.slice(0, -3)}';`,
+        [importer]: "import '../db/runtime-storage-config';",
+        "lib/db/runtime-storage-config.ts": "",
+      };
+      expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
+        posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts")).toThrow("Dormant runtime reachable");
+    });
+
   it("keeps the chat-link native factory behind its exact application storage edge", () => {
     const sources: Record<string, string> = {
       "app/entry.ts": "import '../lib/db/chat-accounts-sqlite';",
@@ -248,6 +306,18 @@ describe("dormant Operator funding release", () => {
     };
     expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
       posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts")).toThrow("Dormant runtime reachable");
+  });
+
+  it("keeps sealed catchup Source profile selection outside the application graph", () => {
+    const sources: Record<string, string> = {
+      "app/entry.ts": "import '../scripts/postgres/held-native-catchup-input';",
+      "scripts/postgres/held-native-catchup-input.mts": "import '../../lib/db/enrolled-sqlite-schema-profile';",
+      "lib/db/enrolled-sqlite-schema-profile.ts": "",
+    };
+    expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) => {
+      const target = posix.resolve("/", posix.dirname(file), specifier).slice(1);
+      return target + (target === "scripts/postgres/held-native-catchup-input" ? ".mts" : ".ts");
+    })).toThrow("Dormant runtime reachable");
   });
 
   it.each(["export { createEnrolledSupabaseAdapter } from '../lib/db/enrolled-supabase-adapter';",

@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   catch { return authJson({ error: "Invalid private quote request." }, 400); }
   try {
     const purchase = await readyPrivatePurchaseService(privatePurchaseBootstrap, context.db, req.signal, context.wallet);
-    const service = purchase ?? privateQuoteBootstrap(context.db);
+    const service = purchase ?? await privateQuoteBootstrap(context.db);
     if (!service) return authJson({ error: "Private research quotes are not available yet." }, 503);
     const current = await accountSessionContext();
     if (current instanceof Response) return current;

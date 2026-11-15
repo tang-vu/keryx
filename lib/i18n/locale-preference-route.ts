@@ -3,9 +3,10 @@ import { isConfiguredSameOrigin } from "../auth-origin";
 import { canonicalLocaleOwner, decodeLocaleValue, encodeLocaleValue, LOCALE_BODY_BYTES, localeScopeKey, parseLocaleBody } from "./locale-preference";
 import type { KeryxDB } from "../db/keryx-db";
 import type { UiLocale } from "./locales";
+import { canonicalJson } from "../canonical-json";
 
 type AccountContext = { db: KeryxDB; wallet: string; currentId: string };
-export type LocalePreferencePort = { read(key: string): Promise<string | null>; write(key: string, value: string): Promise<void> };
+export type LocalePreferencePort = { read(key: string): Promise<string | null>; write(key: string, value: string): Promise<void>; assertCurrent(): void };
 export interface LocaleRouteDependencies {
   origin: string;
   network: string;
@@ -94,13 +95,16 @@ export function createLocalePreferenceRoute(dependencies: LocaleRouteDependencie
       let locale = decodeLocaleValue(previous);
       if (request.method === "PUT") {
         locale = await readBody(request);
+        port.assertCurrent();
         if (!locale) return privateLocaleResponse({ error: "invalid_locale_preference" }, 400);
         if (!await stillCurrent() || request.signal.aborted) return privateLocaleResponse({ error: "account_changed" }, 409);
+        port.assertCurrent();
         const next = encodeLocaleValue(locale);
         await port.write(key, next);
         if (await port.read(key) !== next) return privateLocaleResponse({ error: "locale_write_unconfirmed" }, 503);
       }
       if (!await stillCurrent() || request.signal.aborted) return privateLocaleResponse({ error: "account_changed" }, 409);
+      port.assertCurrent();
       const header = request.headers.get("accept-language");
       return privateLocaleResponse({ version: 1, locale, owner, network: dependencies.network, origin,
         acceptLanguage: typeof header === "string" && header.length <= 4096 ? header : null });
@@ -108,19 +112,31 @@ export function createLocalePreferenceRoute(dependencies: LocaleRouteDependencie
   };
 }
 
-/** Installed SQLite facade provenance and current read/write guard, not ENV or duck typing.
- * Other facades stay unavailable; no ordinary adapter construction or storage fallback. */
+/** Selected SQLite/native provenance and current read/write guard, not ENV or duck typing.
+ * The historical export name is retained for its existing route. Supabase and
+ * ordinary/fabricated facades stay unavailable, with no storage fallback. */
 export async function enrolledSqliteLocalePort(db: KeryxDB, access: "read" | "write", network: string): Promise<LocalePreferencePort | null> {
   try {
-    const { applicationSqliteIdentity: assertEnrolledSqliteAdapter } = await import("../db/application-storage");
-    const assert = () => { if (assertEnrolledSqliteAdapter(db, access).network !== network) throw new Error("Locale storage realm mismatch"); };
-    assert();
-    if (typeof db.getSyncState !== "function" || typeof db.setSyncState !== "function") return null;
+    const { applicationStorageIdentity, assertApplicationStorageCurrentLocal } = await import("../db/application-storage");
+    const local = () => { assertApplicationStorageCurrentLocal(db, access); };
+    local();
+    const identity = await applicationStorageIdentity(db, access), identityWire = canonicalJson(identity);
+    local();
+    if (identity.network !== network) return null;
+    const current = async () => {
+      local();
+      const fresh = await applicationStorageIdentity(db, access);
+      local();
+      if (canonicalJson(fresh) !== identityWire) throw new Error("Locale storage realm mismatch");
+    };
+    if (typeof db.getSyncState !== "function" || (access === "write" && typeof db.setSyncState !== "function")) return null;
+    const read = db.getSyncState.bind(db), write = access === "write" ? db.setSyncState.bind(db) : undefined;
     return {
-      read: async key => { if (!/^keryx:ui-locale:account:v1:[a-f0-9]{64}$/u.test(key)) throw new Error("Invalid locale namespace"); assert(); const value = await db.getSyncState(key); assert(); return value; },
+      assertCurrent: local,
+      read: async key => { if (!/^keryx:ui-locale:account:v1:[a-f0-9]{64}$/u.test(key)) throw new Error("Invalid locale namespace"); await current(); const value = await read(key); await current(); return value; },
       write: async (key, value) => {
-        if (access !== "write" || !/^keryx:ui-locale:account:v1:[a-f0-9]{64}$/u.test(key) || !decodeLocaleValue(value)) throw new Error("Invalid locale storage write");
-        assert(); await db.setSyncState(key, value); assert();
+        if (!write || !/^keryx:ui-locale:account:v1:[a-f0-9]{64}$/u.test(key) || !decodeLocaleValue(value)) throw new Error("Invalid locale storage write");
+        await current(); await write(key, value); await current();
       },
     };
   } catch { return null; }
