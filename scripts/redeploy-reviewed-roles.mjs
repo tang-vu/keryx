@@ -13,6 +13,60 @@ const tails = {
 };
 const refuse = () => { throw Error('Reviewed role deployment refused; preserve processes and retained builds.'); };
 const digest = b => createHash('sha256').update(b).digest('hex');
+export const SERVER1_NATIVE_RELEASE = Object.freeze({
+  sourceCommit: '3654cf66bd3541a90d9c621eb72d57556e306dd6',
+  sourceSqlSha256: 'cc15c6b020b5b838eef62f7f247bec9943567cbc66dfc6359cddd599d65b848c',
+  catalogSha256: 'd368c98db910ff072d10d7c2a20ba3b8b2934e4f5f76c0afdd875ebfda07803f',
+  publicPolicySha256: 'c70be6ac6ca452b15ef1a8caac96654aa181a025ed0638b8e138569c7b62f422',
+  manifest: '/root/.local/share/keryx-mainnet-runtime/production-v2/storage.json',
+});
+const sameKeys = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
+  && Object.keys(value).sort().join('|') === [...keys].sort().join('|');
+const hashValue = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+export function nativeReleaseFiles(binding) {
+  validateReleaseBinding(binding);
+  const directory = path.posix.dirname(binding.compatibilityReviewFile);
+  return Object.freeze({ environment: `${directory}/runtime.env`, manifest: `${directory}/storage.json`, cutover: `${directory}/native-cutover.json` });
+}
+export function verifyNativeCutoverReceipt(binding, review, receipt) {
+  const fields = ['format', 'phase', 'sourceCommit', 'targetCommit', 'sourceManifestSha256',
+    'runtimeManifestSha256', 'identityDigest', 'sourceSqlSha256', 'catalogSha256',
+    'finalSnapshotSha256', 'finalSchemaSha256', 'finalDataDigest', 'nativeCensusSha256',
+    'publicPolicySha256', 'sourceWritersNaturallyEnded', 'sourceStartupRetired', 'sourceManifestRetired',
+    'privateWorkerInactive', 'pendingOriginalsPreserved', 'targetMode', 'activationOutcome',
+    'runtimeHbaVerified', 'newFunding', 'financialPolicyChanged', 'createdAt'];
+  if (!sameKeys(receipt, fields) || receipt.format !== 'keryx-server1-native-cutover-v1' || receipt.phase !== 'complete'
+    || receipt.sourceCommit !== SERVER1_NATIVE_RELEASE.sourceCommit || receipt.targetCommit !== binding.commit
+    || receipt.identityDigest !== review.storageIdentityDigest
+    || receipt.sourceSqlSha256 !== SERVER1_NATIVE_RELEASE.sourceSqlSha256 || receipt.catalogSha256 !== SERVER1_NATIVE_RELEASE.catalogSha256
+    || receipt.runtimeManifestSha256 !== review.nativeStorage.runtimeManifestSha256
+    || receipt.publicPolicySha256 !== SERVER1_NATIVE_RELEASE.publicPolicySha256
+    || receipt.targetMode !== 'active' || receipt.activationOutcome !== 'acknowledged'
+    || receipt.newFunding !== false || receipt.financialPolicyChanged !== false
+    || ['sourceWritersNaturallyEnded', 'sourceStartupRetired', 'sourceManifestRetired', 'privateWorkerInactive',
+      'pendingOriginalsPreserved', 'runtimeHbaVerified'].some(key => receipt[key] !== true)
+    || ['sourceManifestSha256', 'runtimeManifestSha256', 'identityDigest', 'sourceSqlSha256', 'catalogSha256',
+      'finalSnapshotSha256', 'finalSchemaSha256', 'finalDataDigest', 'nativeCensusSha256', 'publicPolicySha256'].some(key => !hashValue(receipt[key]))
+    || typeof receipt.createdAt !== 'string' || !Number.isFinite(Date.parse(receipt.createdAt))
+    || new Date(receipt.createdAt).toISOString() !== receipt.createdAt) refuse();
+  return receipt;
+}
+function verifyNativeManifest(review, manifest) {
+  const backend = manifest?.backend, identity = manifest?.identity;
+  const identityKeys = ['format', 'deploymentId', 'storageId', 'network', 'authorityMode', 'profileDigest', 'enrollmentId', 'enrolledAt', 'provenanceDigest'];
+  if (!sameKeys(manifest, ['format', 'identity', 'backend']) || manifest.format !== 'keryx-storage-deployment-v1'
+    || !sameKeys(identity, identityKeys) || identity.network !== 'eip155:5042' || identity.authorityMode !== 'mainnet-real'
+    || digest(JSON.stringify(Object.fromEntries(identityKeys.map(key => [key, identity[key]])))) !== review.storageIdentityDigest
+    || !sameKeys(backend, ['kind', 'database', 'endpoint', 'credentialPaths', 'sourceDigest'])
+    || backend.kind !== 'postgres' || backend.database !== 'keryx_mainnet' || backend.sourceDigest !== SERVER1_NATIVE_RELEASE.sourceSqlSha256
+    || !sameKeys(backend.endpoint, ['kind', 'directory', 'port']) || backend.endpoint.kind !== 'unix'
+    || backend.endpoint.directory !== '/run/postgresql-keryx' || backend.endpoint.port !== 5432
+    || !sameKeys(backend.credentialPaths, ['application', 'reader'])
+    || backend.credentialPaths.application === backend.credentialPaths.reader
+    || ['application', 'reader'].some(key => typeof backend.credentialPaths[key] !== 'string'
+      || path.posix.resolve(backend.credentialPaths[key]) !== backend.credentialPaths[key]
+      || path.posix.dirname(backend.credentialPaths[key]) !== path.posix.dirname(SERVER1_NATIVE_RELEASE.manifest))) refuse();
+}
 // This stdin authority stays self-contained. Regression tests keep its public
 // digest vocabulary equal to the separately imported keyless builder's policy.
 export const REVIEWED_PUBLIC_BUILD_KEYS = Object.freeze([
@@ -135,8 +189,9 @@ export function verifyArtifactReuse(config, proof, now = Date.now(), snapshot = 
 
 /** This protected operator review binds existing acceptance/native evidence, not
  * new payment/storage authority. No automatic migration or rollback is provided. */
-export function verifyReleaseReview(binding, read, artifact, inspectHeaders = reviewedPrivateHeaderDigest) {
+export function verifyReleaseReview(binding, read, artifact, inspectHeaders = reviewedPrivateHeaderDigest, phase = 'startup') {
   validateReleaseBinding(binding);
+  if (!['artifact', 'startup'].includes(phase)) refuse();
   const preparation = read(`${path.posix.dirname(releaseSource(binding.commit))}/preparation.json`, binding.preparationSha256);
   if (!preparation || preparation.format !== 'keryx-immutable-preparation-v1' ||
       preparation.productionAdmitted !== false || preparation.commit !== binding.commit ||
@@ -148,18 +203,26 @@ export function verifyReleaseReview(binding, read, artifact, inspectHeaders = re
       !Array.isArray(preparation.checks.results) || preparation.checks.results.length !== 3 ||
       preparation.checks.results.some((result, index) => result.name !== ['typecheck', 'tests', 'build'][index] ||
         result.exitCode !== 0 || result.signal !== null || result.processError !== null || !/^[a-f0-9]{64}$/.test(result.outputSha256))) refuse();
-  const runtimePublic = read('/root/keryx/.env.local', binding.runtimeEnvironmentSha256, true);
+  const review = read(binding.compatibilityReviewFile, binding.compatibilityReviewSha256);
+  const native = review?.format === 'keryx-reviewed-native-release-compatibility-v1';
+  const files = native ? nativeReleaseFiles(binding) : null;
+  const runtimePublic = read(native && phase === 'artifact' ? files.environment : '/root/keryx/.env.local',
+    binding.runtimeEnvironmentSha256, native ? phase === 'artifact' ? 'native-staged' : 'native-active' : true);
   if (!runtimePublic || runtimePublic.mainnetPublicConfigSha256 !== preparation.checks.publicBuildSettings.mainnetPublicConfigSha256 ||
       !/^[a-f0-9]{64}$/.test(preparation.checks.publicBuildSettings.mainnetPublicConfigSha256) ||
       !/^[a-f0-9]{64}$/.test(preparation.checks.publicBuildSettings.privateRunHeadersSha256)) refuse();
-  const review = read(binding.compatibilityReviewFile, binding.compatibilityReviewSha256);
+  if (native && (!sameKeys(runtimePublic.nativeEnvironment, ['manifest', 'legacySelectorsAbsent', 'network', 'publicNetwork', 'baseUrl', 'forceOffline', 'publicPolicySha256'])
+    || runtimePublic.nativeEnvironment.manifest !== SERVER1_NATIVE_RELEASE.manifest || runtimePublic.nativeEnvironment.legacySelectorsAbsent !== true
+    || runtimePublic.nativeEnvironment.network !== 'arc' || runtimePublic.nativeEnvironment.publicNetwork !== 'arc'
+    || runtimePublic.nativeEnvironment.baseUrl !== 'https://keryx.cc' || runtimePublic.nativeEnvironment.forceOffline !== '0'
+    || runtimePublic.nativeEnvironment.publicPolicySha256 !== SERVER1_NATIVE_RELEASE.publicPolicySha256)) refuse();
   const fields = ['format', 'commit', 'tree', 'sourceManifestSha256', 'artifactInspectionSha256',
     'artifactDigest', 'buildId', 'runtimeEnvironmentSha256', 'acceptanceEvidenceSha256',
-    'storageIdentityDigest', 'economicSchemaDigest', 'retainedEconomicStateSha256',
+    'storageIdentityDigest', ...(native ? ['nativeStorage'] : ['economicSchemaDigest', 'retainedEconomicStateSha256']),
     'sourceAndArtifactAccepted', 'mainnetPublicSettingsAccepted', 'previouslyActiveRoles',
     'heldSchedulers', 'rollback'];
   if (!review || Object.keys(review).sort().join('|') !== [...fields].sort().join('|') ||
-      review.format !== 'keryx-reviewed-release-compatibility-v1' || review.commit !== binding.commit ||
+      review.format !== (native ? 'keryx-reviewed-native-release-compatibility-v1' : 'keryx-reviewed-release-compatibility-v1') || review.commit !== binding.commit ||
       !/^[a-f0-9]{40}$/.test(review.tree) || !/^[a-zA-Z0-9_-]{1,128}$/.test(review.buildId) ||
       review.sourceManifestSha256 !== binding.sourceManifestSha256 ||
       review.artifactInspectionSha256 !== binding.artifactInspectionSha256 ||
@@ -169,7 +232,15 @@ export function verifyReleaseReview(binding, read, artifact, inspectHeaders = re
       JSON.stringify([...review.previouslyActiveRoles].sort()) !== JSON.stringify([...names].sort()) ||
       review.heldSchedulers !== true || review.rollback !== 'hold-for-review') refuse();
   for (const name of ['artifactDigest', 'acceptanceEvidenceSha256', 'storageIdentityDigest',
-    'economicSchemaDigest', 'retainedEconomicStateSha256']) if (!/^[a-f0-9]{64}$/.test(review[name])) refuse();
+    ...(native ? [] : ['economicSchemaDigest', 'retainedEconomicStateSha256'])]) if (!hashValue(review[name])) refuse();
+  if (native) {
+    if (!sameKeys(review.nativeStorage, ['sourceSqlSha256', 'catalogSha256', 'runtimeManifestSha256', 'cutoverReceiptSha256'])
+      || Object.values(review.nativeStorage).some(value => !hashValue(value))
+      || review.nativeStorage.sourceSqlSha256 !== SERVER1_NATIVE_RELEASE.sourceSqlSha256
+      || review.nativeStorage.catalogSha256 !== SERVER1_NATIVE_RELEASE.catalogSha256) refuse();
+    verifyNativeManifest(review, read(phase === 'artifact' ? files.manifest : SERVER1_NATIVE_RELEASE.manifest, review.nativeStorage.runtimeManifestSha256));
+    if (phase === 'startup') verifyNativeCutoverReceipt(binding, review, read(files.cutover, review.nativeStorage.cutoverReceiptSha256));
+  }
   if (artifact && ['commit', 'tree', 'buildId', 'artifactDigest', 'sourceManifestSha256'].some(name =>
     artifact[name] !== review[name] || artifact[name] !== preparation[name])) refuse();
   if (artifact && inspectHeaders(releaseSource(binding.commit)) !== preparation.checks.publicBuildSettings.privateRunHeadersSha256) refuse();
@@ -294,8 +365,11 @@ export function validateReviewedRoles(value) {
 }
 
 export function readProtectedDeploymentJson(file, expectedSha256, environmentFile = false) {
+  const environmentAllowed = environmentFile === true || environmentFile === 'native-active' ? file === '/root/keryx/.env.local'
+    : environmentFile === 'native-staged' && /^\/root\/\.local\/share\/[a-zA-Z0-9_./-]+\/runtime\.env$/.test(file);
   if (process.platform !== 'linux' || process.getuid() !== 0 || !/^[a-f0-9]{64}$/.test(expectedSha256) ||
-      !(environmentFile ? file === '/root/keryx/.env.local' : /^\/root\/\.local\/share\/[a-zA-Z0-9_./-]+\.json$/.test(file)) || path.resolve(file) !== file) refuse();
+      ![false, true, 'native-staged', 'native-active'].includes(environmentFile) ||
+      !(environmentFile ? environmentAllowed : /^\/root\/\.local\/share\/[a-zA-Z0-9_./-]+\.json$/.test(file)) || path.resolve(file) !== file) refuse();
   for (let p = path.dirname(file); ; p = path.dirname(p)) {
     const s = fs.lstatSync(p);
     if (!s.isDirectory() || s.isSymbolicLink() || s.uid !== 0 || s.gid !== 0 || s.mode & 0o022) refuse();
@@ -312,7 +386,13 @@ export function readProtectedDeploymentJson(file, expectedSha256, environmentFil
     if (BigInt(bytes.length) !== before.size || digest(bytes) !== expectedSha256 ||
         signature(fs.fstatSync(fd, { bigint: true })) !== signature(before) ||
         signature(fs.lstatSync(file, { bigint: true })) !== signature(before)) refuse();
-    return environmentFile ? { mainnetPublicConfigSha256: reviewedPublicBuildProfileSha256(bytes) } : JSON.parse(bytes);
+    if (!environmentFile) return JSON.parse(bytes);
+    if (environmentFile === true) return { mainnetPublicConfigSha256: reviewedPublicBuildProfileSha256(bytes) };
+    const env = parseEnv(bytes.toString('utf8'));
+    return { mainnetPublicConfigSha256: reviewedPublicBuildProfileSha256(bytes), nativeEnvironment: {
+      manifest: env.KERYX_STORAGE_MANIFEST ?? null, legacySelectorsAbsent: !env.KERYX_SQLITE_PATH && !env.NEXT_PUBLIC_SUPABASE_URL && !env.SUPABASE_SERVICE_ROLE_KEY,
+      network: env.KERYX_NETWORK ?? null, publicNetwork: env.NEXT_PUBLIC_KERYX_NETWORK ?? null,
+      baseUrl: env.BASE_URL ?? null, forceOffline: env.KERYX_FORCE_OFFLINE ?? null, publicPolicySha256: env.KERYX_MAINNET_TREASURY_POLICY_DIGEST ?? null } };
   } finally { fs.closeSync(fd); }
 }
 export function readReviewedRoles(file, expected) {
@@ -359,7 +439,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         config.release && config.release.commit !== expectedCommit) refuse();
     const recheck = () => {
       readReviewedRoles(file, expected);
-      if (config.release) verifyReleaseReview(config.release, readProtectedDeploymentJson);
+      if (config.release) verifyReleaseReview(config.release, readProtectedDeploymentJson, undefined, undefined,
+        ['artifact', 'artifact-record', 'validate'].includes(mode) ? 'artifact' : 'startup');
     };
     recheck();
     if (mode === 'artifact' || mode === 'artifact-record') {
@@ -371,7 +452,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const inspect = () => {
         const artifact = verifyImmutableArtifact({ candidate: path.dirname(releaseSource(config.release.commit)), ...config.release });
         verifyReleaseSourcePaths(releaseSource(config.release.commit));
-        verifyReleaseReview(config.release, readProtectedDeploymentJson, artifact);
+        verifyReleaseReview(config.release, readProtectedDeploymentJson, artifact, undefined, 'artifact');
         return artifact;
       };
       if (mode === 'artifact-record') {
