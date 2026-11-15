@@ -3,6 +3,8 @@
 import assert from "node:assert/strict";
 import { execFileSync,spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
+import { closeSync,constants,fstatSync,lstatSync,openSync,readSync,realpathSync } from "node:fs";
+import { isAbsolute,resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "pg";
 import { nativeConsentDomainSource, nativeFundingDomainSource, nativeWithdrawalDomainSource, nativeCreatorWithdrawalDomainSource, nativeHostedLedgerSource, nativeOwnerWithdrawalSource } from "./native-domain-source.mts";
@@ -61,6 +63,7 @@ import {capturePaymentEvent} from "../../lib/db/postgres/payment-events-packet";
 import { qualifyBrowserJournal } from "./qualify-browser-journal.mts";
 import { qualifyNativeRuntime } from "./qualify-native-runtime.mts";
 import {qualifyCurrentRuntime} from "./qualify-current-runtime.mts";
+import {qualifyPreparedNext} from "./qualify-prepared-next.mts";
 import { qualifyOriginalJson } from "./qualify-original-json.mts";
 import { nativePrivacySource } from './privacy-source.mts';
 import { qualifyPrivacy } from './qualify-privacy.mts';
@@ -117,6 +120,19 @@ import { nativeApplicationDomainsReferenceSource } from "./application-domains-s
 import { createPostgresApplicationReadTransport,type PostgresApplicationReadTransport } from "../../lib/db/postgres/application-read-transport";
 import { nativeApplicationFinancialReferenceSource } from "./application-reference-source.mts";
 
+const preparedNextOnly=process.argv[2]==='--prepared-next-only';
+let preparedNextControl:Record<string,unknown>|undefined;
+if(preparedNextOnly){
+  assert.equal(process.argv.length,4,'Prepared Next qualification is a closed standalone mode');
+  const file=process.argv[3];assert(isAbsolute(file)&&resolve(file)===file&&realpathSync(file)===file);
+  const before=lstatSync(file,{bigint:true});assert(before.isFile()&&!before.isSymbolicLink()&&before.nlink===BigInt(1)&&before.size>BigInt(0)&&before.size<=BigInt(32768));
+  const fd=openSync(file,constants.O_RDONLY|(constants.O_NOFOLLOW??0)|constants.O_NONBLOCK),buffer=Buffer.alloc(32769);let size=0;
+  const signature=(s:typeof before)=>[s.dev,s.ino,s.size,s.mtimeNs,s.ctimeNs].join(':');
+  try{assert.equal(signature(fstatSync(fd,{bigint:true})),signature(before));while(size<buffer.length){const count=readSync(fd,buffer,size,buffer.length-size,size);if(!count)break;size+=count;}assert(size<=32768);assert.equal(signature(fstatSync(fd,{bigint:true})),signature(before));assert.equal(signature(lstatSync(file,{bigint:true})),signature(before));}finally{closeSync(fd);}
+  assert.equal(BigInt(size),before.size);const value:unknown=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,size)));
+  assert(value&&typeof value==='object'&&!Array.isArray(value));preparedNextControl=value as Record<string,unknown>;
+  assert.equal(Object.keys(preparedNextControl).sort().join(','),'artifactInspectionSha256,candidate,preparationSha256,preparedImage,publicBuildControls,sourceManifestSha256');
+}
 const name = `keryx-postgres-consents-${randomUUID()}`, password = randomBytes(24).toString("hex");
 const docker = (args: string[], input?: string, timeout = 30_000) => execFileSync("docker", args,
   { input, timeout, encoding: "utf8", maxBuffer: 8 * 1024 * 1024, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
@@ -176,8 +192,8 @@ try {
   const nativeRuntimeOnly=process.argv.includes("--native-runtime-only");
   const nativeRuntimeTailOnly=process.argv.includes("--native-runtime-tail-only");
   assert(!(nativeRuntimeOnly&&nativeRuntimeTailOnly), "Native runtime partitions are mutually exclusive");
-  const currentRuntimeOnly=process.argv.includes('--current-runtime-only');
-  if(currentRuntimeOnly)assert.deepEqual(process.argv.slice(2),['--current-runtime-only'],'Current runtime qualification is a closed standalone mode');
+  const currentRuntimeOnly=process.argv.includes('--current-runtime-only')||preparedNextOnly;
+  if(currentRuntimeOnly&&!preparedNextOnly)assert.deepEqual(process.argv.slice(2),['--current-runtime-only'],'Current runtime qualification is a closed standalone mode');
   const nativeTerminalRetirementOnly=process.argv.includes("--native-terminal-retirement-only");
   const nativeFactoryOnly=process.argv.includes("--native-factory-only")||nativeTerminalRetirementOnly;
   const originalJsonOnly=process.argv.includes("--original-json-only");
@@ -321,6 +337,11 @@ try {
     INSERT INTO keryx_storage.source_contract VALUES(true,${literal(JSON.parse(reference.canonicalJson))},'${reference.sha256}');
     ${paymentConsumedFieldsOnly||currentRuntimeOnly?'':`INSERT INTO public.browser_signer_capacity VALUES('${signer}',7);`}
     UPDATE keryx_storage.control SET mode='active';`);
+  if(preparedNextOnly){
+    const port=Number(docker(['port',name,'5432/tcp']).trim().split(':')[1]);
+    const preparedNext=await qualifyPreparedNext({...preparedNextControl,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,postgresContainer:name} as Parameters<typeof qualifyPreparedNext>[0]);
+    console.log(JSON.stringify({passed:true,preparedNextOnly:true,sourceSqlSha256:source.sha256,referenceCatalogSha256:reference.sha256,preparedNext,applicationBackendSwitched:false}));return;
+  }
   if(currentRuntimeOnly){
     const currentRuntime=await qualifyCurrentRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
     const currentTerminalRetirement=await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement),qualification:'terminal-retirement-only'});
