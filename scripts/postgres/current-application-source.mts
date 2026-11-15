@@ -8,7 +8,7 @@ import { installNativeUserDomainSchema } from '../../lib/db/native-user-domain-s
 import { nativeApplicationDomainsReferenceSource } from './application-domains-source.mts';
 export function nativeCurrentApplicationSource(){
  const domain=nativeApplicationDomainsReferenceSource();
- const additions=['application-tables.sql','current-application-columns.sql','application-indexes.sql'].map(name=>readFileSync(new URL('../../ops/keryx-postgres/'+name,import.meta.url),'utf8').replaceAll('\r\n','\n'));
+ const additions=['application-tables.sql','current-application-columns.sql','application-indexes.sql','privacy-projection-schema.sql'].map(name=>readFileSync(new URL('../../ops/keryx-postgres/'+name,import.meta.url),'utf8').replaceAll('\r\n','\n'));
  if(additions.some(s=>Buffer.byteLength(s)>131072))throw new Error('Current application source bound exceeded');
  const declarations=[...additions[0].matchAll(/-- SQLite SOURCE ([a-z0-9_]+) sha256:([0-9a-f]{64})/g)];
  if(declarations.length!==34||new Set(declarations.map(m=>m[1])).size!==34)throw new Error('Current table declaration inventory refused');

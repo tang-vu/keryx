@@ -69,7 +69,7 @@ CREATE FUNCTION keryx_storage.a2a_original_settled(o public.a2a_orders,b jsonb) 
   AND NOT EXISTS(SELECT 1 FROM public.research_monthly_redemptions WHERE order_id=c.purchase_id));
 $$;
 CREATE FUNCTION keryx_storage.a2a_original_row(o public.a2a_orders,raw_cells boolean DEFAULT false) RETURNS json LANGUAGE plpgsql STABLE SET search_path=pg_catalog,pg_temp AS $$
-DECLARE result json;t keryx_storage.a2a_original_time_projection;
+DECLARE result json;t keryx_storage.a2a_original_time_projection;c keryx_storage.a2a_original_cell_projection;
 BEGIN
  SELECT * INTO t FROM keryx_storage.a2a_original_time_projection WHERE order_id=o.id;
  IF NOT FOUND OR t.identity_digest IS DISTINCT FROM (SELECT identity_digest FROM keryx_storage.identity WHERE singleton)
@@ -77,7 +77,11 @@ BEGIN
   OR t.created_at::timestamptz IS DISTINCT FROM o.created_at OR t.updated_at::timestamptz IS DISTINCT FROM o.updated_at
   OR t.started_at::timestamptz IS DISTINCT FROM o.started_at OR t.payment_started_at::timestamptz IS DISTINCT FROM o.payment_started_at
   OR t.result_saving_at::timestamptz IS DISTINCT FROM o.result_saving_at THEN RAISE EXCEPTION 'native original Source time unavailable';END IF;
- SELECT row_to_json(r) INTO result FROM(SELECT o.id,o.query_id,o.authorization_id,o.request_hash,o.payer,o.payee,o.amount_usdc,o.creator_budget_usdc,o.service_fee_usdc,o.research_mode,CASE WHEN raw_cells THEN to_json(o.package_data::text) ELSE o.package_data::json END package_data,o.status,o.transaction_id,CASE WHEN raw_cells THEN to_json(o.request_data::text) ELSE o.request_data::json END request_data,
+ SELECT * INTO c FROM keryx_storage.a2a_original_cell_projection WHERE order_id=o.id;
+ IF NOT FOUND OR c.identity_digest IS DISTINCT FROM t.identity_digest OR c.query_id IS DISTINCT FROM o.query_id OR c.request_hash IS DISTINCT FROM o.request_hash
+  OR c.package_data_wire::jsonb IS DISTINCT FROM o.package_data OR c.request_data_wire::jsonb IS DISTINCT FROM o.request_data
+ THEN RAISE EXCEPTION 'native original Source cells unavailable';END IF;
+ SELECT row_to_json(r) INTO result FROM(SELECT o.id,o.query_id,o.authorization_id,o.request_hash,o.payer,o.payee,o.amount_usdc,o.creator_budget_usdc,o.service_fee_usdc,o.research_mode,CASE WHEN raw_cells THEN to_json(c.package_data_wire) ELSE c.package_data_wire::json END package_data,o.status,o.transaction_id,CASE WHEN raw_cells THEN to_json(c.request_data_wire) ELSE c.request_data_wire::json END request_data,
   t.started_at,o.worker_id,o.execution_journal_version,t.payment_started_at,t.result_saving_at,
   CASE WHEN raw_cells THEN to_json(o.response_data::text) ELSE o.response_data::json END response_data,o.error_code,CASE WHEN raw_cells THEN to_json(o.resolution_data::text) ELSE o.resolution_data::json END resolution_data,
   t.created_at,t.updated_at)r;

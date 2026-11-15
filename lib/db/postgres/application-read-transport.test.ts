@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from "../storage-identity";
 const state=vi.hoisted(()=>({query:vi.fn(),connect:vi.fn(),clientQuery:vi.fn(),release:vi.fn(),end:vi.fn(),pools:0}));
 vi.mock('pg',()=>({Pool:class{constructor(){state.pools++;}query(...args:unknown[]){return state.query(...args);}connect(){return state.connect();}end(){return state.end();}on(){}},types:{getTypeParser:()=>(s:string)=>s}}));
-import { createPostgresApplicationReadTransport,type PostgresApplicationRead } from './application-read-transport';
+import { createPostgresApplicationReadTransport,composePostgresApplicationReadTransport,type PostgresApplicationRead } from './application-read-transport';
 import { PostgresStorageBusy,PostgresStorageUnavailable } from './connection';
 const identity:StorageIdentity={format:'keryx-mainnet-storage-identity-v1',network:'eip155:5042',authorityMode:'mainnet-real',deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),enrolledAt:'2026-11-12T00:00:00.000Z',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,provenanceDigest:'11'.repeat(32)};
 const options={endpoint:{kind:'loopback' as const,port:5432},database:'synthetic',role:'keryx_app',password:'synthetic-not-a-live-secret'};
@@ -12,6 +12,16 @@ const client=()=>({query:state.clientQuery,release:state.release});
 const make=()=>createPostgresApplicationReadTransport(options,identity,'22'.repeat(32));
 beforeEach(()=>{vi.clearAllMocks();state.pools=0;state.query.mockResolvedValue(response(0));state.connect.mockResolvedValue(client());state.clientQuery.mockImplementation(async (q:unknown)=>typeof q==='string'?{}:response([]));state.end.mockResolvedValue(undefined);});
 describe('native application read composition',()=>{
+ it('decodes only fixed native scalar/original operations and refuses legacy shadows',async()=>{
+  const call=vi.fn(),channel={closed:false,call,async close(){}},t=composePostgresApplicationReadTransport(channel,identity),wire=JSON.stringify({id:'synthetic',question:'q\0\ud800',answer:'PRIVATE_BODY\0\udc00'}),raw={nativeOriginalHex:Buffer.from(wire).toString('hex')};
+  call.mockResolvedValue(raw);expect(await t.applicationRead('get_query_run',{p_id:'synthetic'})).toEqual({data:JSON.parse(wire)});
+  call.mockResolvedValue([raw]);expect(await t.applicationRead('list_query_runs_by_asker',{p_asker:'0x'+'11'.repeat(20),p_limit:1})).toEqual([{data:JSON.parse(wire)}]);
+  call.mockResolvedValue({data:JSON.parse(wire)});await expect(t.applicationRead('get_query_run',{p_id:'synthetic'})).rejects.toThrow(PostgresStorageUnavailable);
+  const numeric={id:'synthetic',duration_ms:null,payment_attempts:0,settled_payments:0,evidence_claim_count:0,grounded_claim_count:0,rewarded_citation_count:0,economics_data:null};
+  call.mockResolvedValue([{...numeric,nativeScalarHex:{origin:Buffer.from('web\0').toString('hex'),asker:null,payment_mode:null,confidence_level:null,mcp_client:Buffer.from('custom\ufffd').toString('hex')}}]);
+  expect(await t.applicationRead('scan_query_metrics',{p_offset:0,p_limit:1})).toEqual([{...numeric,origin:'web\0',asker:null,payment_mode:null,confidence_level:null,mcp_client:'custom\ufffd'}]);
+  expect(state.pools).toBe(0);
+ });
  it('uses a real read-only transaction and the same bounded pool as financial ports',async()=>{
   const t=make();expect(await t.applicationRead('list_all_sources',{})).toEqual([]);expect(await t.browserSignerRetainedSpend('0x'+'11'.repeat(20))).toBe(0);
   expect(state.pools).toBe(1);expect(state.clientQuery.mock.calls[0][0]).toBe('BEGIN READ ONLY');expect(state.clientQuery.mock.calls[1][0].text).toBe("SELECT public.storage_application_read_group_5($1::jsonb,$2::text,'list_all_sources',$3::jsonb) AS result");

@@ -1,3 +1,5 @@
+import type { PostgresA2aFulfillmentPort } from './postgres/a2a-fulfillment-transport';
+
 import { PostgresDomainWriteOutcomeUnknown } from './postgres/domain-channel';
 import type { NativeFinancialApplicationPort } from './postgres/native-financial-application-port';
 import type { PostgresSourceClaimsPort } from './postgres/source-claims-transport';
@@ -162,6 +164,8 @@ export interface NativePostgresBusinessCoreOptions {
   readonly assertEntry:()=>void;
   readonly verify:()=>Promise<void>;
   readonly sourceClaims?:PostgresSourceClaimsPort;
+  readonly a2aFulfillment?:PostgresA2aFulfillmentPort;
+
   readonly financialApplication?:NativeFinancialApplicationPort;
   readonly sourceClaimWrites?:ReturnType<typeof composePostgresSourceClaimWrites>;
   readonly sourceUpkeep?:ReturnType<typeof composePostgresSourceUpkeep>;
@@ -265,7 +269,24 @@ export class SupabaseAdapter implements KeryxDB {
         data.sourceContractDigest !== SUPABASE_RUNTIME_CONTRACT.afterDigest) refuseStorage("identity_unavailable");
       this.assertEntry();
     }, close: () => { this.#enrolled!.ready = false; } });
-    const guardedMutation=<A extends unknown[],R>(work:(...args:A)=>Promise<R>)=>async(...args:A)=>{this.assertEntry();const value=await work(...args);this.assertEntry();return value;};
+    const guardedMutation=<A extends unknown[],R>(work:(...args:A)=>Promise<R>)=>async(...args:A)=>{
+      this.assertEntry();const value=await work(...args);
+      try{this.assertEntry();}catch{throw new PostgresDomainWriteOutcomeUnknown();}
+      return value;
+    };
+    if(native?.a2aFulfillment){
+      const port=native.a2aFulfillment,invoke=async<T>(write:boolean,work:()=>Promise<T>)=>{
+        this.assertEntry();const result=await work();
+        try{this.assertEntry();}catch(error){if(write)throw new PostgresDomainWriteOutcomeUnknown();throw error;}
+        return result;
+      };
+      Object.defineProperties(this,{
+        claimA2aFailedOriginalFulfillment:{value:(...args:Parameters<PostgresA2aFulfillmentPort['claimA2aFailedOriginalFulfillment']>)=>invoke(true,()=>port.claimA2aFailedOriginalFulfillment(...args)),configurable:true},
+        getA2aFailedOriginalFulfillment:{value:(...args:Parameters<PostgresA2aFulfillmentPort['getA2aFailedOriginalFulfillment']>)=>invoke(false,()=>port.getA2aFailedOriginalFulfillment(...args)),configurable:true},
+        completeA2aFailedOriginalFulfillment:{value:(...args:Parameters<PostgresA2aFulfillmentPort['completeA2aFailedOriginalFulfillment']>)=>invoke(true,()=>port.completeA2aFailedOriginalFulfillment(...args)),configurable:true},
+        hasA2aFailedOriginalFulfillment:{value:(...args:Parameters<PostgresA2aFulfillmentPort['hasA2aFailedOriginalFulfillment']>)=>invoke(false,()=>port.hasA2aFailedOriginalFulfillment(...args)),configurable:true},
+      });
+    }
     if(native?.financialApplication){
       const port=native.financialApplication;
       // Fixed internal composition grants no installed facade or financial

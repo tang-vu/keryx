@@ -6,7 +6,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { Client } from 'pg';
 import { canonicalJson } from '../../lib/canonical-json';
 import { readStorageIdentity } from '../../lib/db/storage-identity-sqlite';
-import { validateStorageIdentity } from '../../lib/db/storage-identity';
+import { validateStorageIdentity,storageIdentityDigest } from '../../lib/db/storage-identity';
 import { postgresPoolConfiguration,type PostgresConnectionOptions } from '../../lib/db/postgres/connection';
 import { NATIVE_READONLY_RUNTIME_PROFILE } from '../../lib/db/postgres/runtime-profile';
 import { reviewOriginalMetadata } from '../../lib/db/postgres/review-packet';
@@ -17,8 +17,8 @@ import { sqliteOwnershipHistoryProjection } from './ownership-history-projection
 import { sqlitePrivacyProjection } from './privacy-projection.mts';
 import { sqliteWatchProjection } from './watch-projection.mts';
 import { sqliteAcceptanceProjection } from './acceptance-projection.mts';
-import { sqliteA2aTimeProjection } from './a2a-time-projection.mts';
-const tables=['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','a2a_original_time_projection','acceptance_original_projection'] as const;
+import { sqliteA2aTimeProjection,sqliteA2aOriginalCellProjection } from './a2a-time-projection.mts';
+const tables=['run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection','public_ledger_projection','review_projection','topic_watch_projection','a2a_original_time_projection','a2a_original_cell_projection','acceptance_original_projection'] as const;
 type Table=typeof tables[number];
 type Kind='json'|'json-null'|'hex';
 type Field={name:string;kind?:Kind};
@@ -56,7 +56,7 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
    assert(typeof key.id==='string'&&++runs<=10000);const id=key.id,h=sqliteOriginalHistoryProjection(db,id),o=sqliteOwnershipHistoryProjection(db,id),p=sqlitePrivacyProjection(db,id);
    await insert('run_history_projection',['run_id'],[field('run_id'),field('original_sha256'),field('original_created_at'),field('recorded_owner'),field('owner_invalid'),field('funded'),field('provenance','json'),field('anonymous_claim_eligible')],{run_id:id,original_sha256:h.sha256,original_created_at:h.originalCreatedAt??null,recorded_owner:h.recordedOwner,owner_invalid:h.ownerInvalid,funded:h.funded,provenance:h.provenance,anonymous_claim_eligible:h.anonymousClaimEligible??false});
    await insert('run_ownership_projection',['run_id'],[field('run_id'),field('original_sha256'),field('question_search','hex'),field('history_eligible'),field('recorded_valid'),field('claimed_valid'),field('summary','json')],{run_id:id,original_sha256:o.sha256,question_search:o.questionHex,history_eligible:o.historyEligible,recorded_valid:o.recordedValid,claimed_valid:o.claimedValid,summary:o.summary});
-   await insert('run_privacy_projection',['run_id'],[field('run_id'),field('original_sha256'),field('data_bytes'),field('original_valid'),field('erase_wire'),field('original_fulfillment'),field('question_fields'),field('history_fields'),field('history_references','json'),field('learning_fields'),field('archive_wire'),field('erase_projection','json'),field('profile_fields'),field('payment_offline'),field('funding_offline'),field('funding_treasury')],{run_id:id,original_sha256:p.sha256,data_bytes:p.dataBytes,original_valid:p.valid,erase_wire:p.eraseWire,original_fulfillment:p.originalFulfillment,question_fields:p.questionFields,history_fields:p.historyFields,history_references:p.historyReferences,learning_fields:p.learningFields,archive_wire:p.archiveWire,erase_projection:p.eraseProjection,profile_fields:p.publicProfile.profileFields,payment_offline:p.publicProfile.paymentOffline,funding_offline:p.publicProfile.fundingOffline,funding_treasury:p.publicProfile.fundingTreasury});
+   await insert('run_privacy_projection',['run_id'],[field('run_id'),field('original_sha256'),field('data_bytes'),field('original_valid'),field('scalar_identity_sha256'),field('scalar_cells','json'),field('answer_scalar','hex'),field('erase_wire'),field('original_fulfillment'),field('question_fields'),field('history_fields'),field('history_references','json'),field('learning_fields'),field('archive_wire'),field('erase_projection','json'),field('profile_fields'),field('payment_offline'),field('funding_offline'),field('funding_treasury')],{run_id:id,original_sha256:p.sha256,data_bytes:p.dataBytes,original_valid:p.valid,scalar_identity_sha256:storageIdentityDigest(identity),scalar_cells:p.scalarCells,answer_scalar:p.answerHex,erase_wire:p.eraseWire,original_fulfillment:p.originalFulfillment,question_fields:p.questionFields,history_fields:p.historyFields,history_references:p.historyReferences,learning_fields:p.learningFields,archive_wire:p.archiveWire,erase_projection:p.eraseProjection,profile_fields:p.publicProfile.profileFields,payment_offline:p.publicProfile.paymentOffline,funding_offline:p.publicProfile.fundingOffline,funding_treasury:p.publicProfile.fundingTreasury});
    await insert('usage_projection',['run_id'],[field('run_id'),field('original_sha256'),field('usage_wire'),field('provenance_wire'),field('parsed_usage','json-null'),field('body_identity_valid')],{run_id:id,original_sha256:p.usage.sha256,usage_wire:p.usage.usageWire,provenance_wire:p.usage.provenanceWire,parsed_usage:p.usage.parsedUsage,body_identity_valid:p.usage.bodyIdentityValid});
    await insert('public_ledger_projection',['run_id'],[field('run_id'),field('original_sha256'),field('original_valid'),field('snapshot_wire'),field('reference_ids','json')],{run_id:id,original_sha256:p.ledger.sha256,original_valid:p.ledger.valid,snapshot_wire:p.ledger.snapshotWire,reference_ids:p.ledger.references});
   }
@@ -70,6 +70,7 @@ export async function materializeNativeProjections(db:DatabaseSync,options:Postg
   let orders=0;for(const r of db.prepare('SELECT id FROM a2a_orders ORDER BY id COLLATE BINARY').iterate()){
    assert(++orders<=10000&&typeof r.id==='string');
    const time=sqliteA2aTimeProjection(db,r.id,identity);await insert('a2a_original_time_projection',['order_id'],Object.keys(time).map(name=>field(name)),time);
+   const cells=sqliteA2aOriginalCellProjection(db,r.id,identity);await insert('a2a_original_cell_projection',['order_id'],Object.keys(cells).map(name=>field(name)),cells);
    const p=sqliteAcceptanceProjection(db,r.id);await insert('acceptance_original_projection',['order_id'],[field('order_id'),field('store_id'),field('source_order_wire'),field('source_order_sha256'),field('delivery_token'),field('owner'),field('network'),field('binding','json'),field('health_meta','json')],{order_id:p.orderId,store_id:p.storeId,source_order_wire:p.orderWire,source_order_sha256:p.orderSha256,delivery_token:p.deliveryToken,owner:p.owner,network:p.network,binding:p.binding,health_meta:p.health});
   }
   stage='projection-final';await verify();for(const name of tables)assert.equal((await pg.query(`SELECT count(*)::text n FROM keryx_storage.${quote(name)}`)).rows[0].n,String(counts[name]));

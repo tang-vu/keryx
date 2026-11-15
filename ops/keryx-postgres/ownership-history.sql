@@ -35,14 +35,14 @@ END;$$;
 -- One candidate join; a recorded association wins. Ticket expiry does not revoke
 -- a consumed association. Changed originals, completion times or A2A membership do.
 CREATE FUNCTION keryx_storage.ownership_candidates(wallet text,network text,origin text,selected_id text DEFAULT NULL)
- RETURNS TABLE(run_id text,created_at timestamptz,claimed_at bigint,question_search bytea,history_eligible boolean,recorded_valid boolean,claimed_valid boolean,summary jsonb,provenance jsonb,funded boolean)
+ RETURNS TABLE(run_id text,created_at text,claimed_at bigint,question_search bytea,history_eligible boolean,recorded_valid boolean,claimed_valid boolean,summary jsonb,provenance jsonb,funded boolean)
  LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
- SELECT q.id,q.created_at,CASE WHEN q.asker IS NOT NULL THEN NULL::bigint ELSE c.claimed_at END,
+ SELECT q.id,convert_from(decode(s.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8'),CASE WHEN s.scalar_cells->'asker'->>'boundHex' IS NOT NULL THEN NULL::bigint ELSE c.claimed_at END,
   p.question_search,p.history_eligible,p.recorded_valid,p.claimed_valid,p.summary,h.provenance,h.funded
  FROM public.query_runs q LEFT JOIN public.anonymous_run_claims c ON c.run_id=q.id AND c.network=ownership_candidates.network AND c.origin=ownership_candidates.origin
- LEFT JOIN keryx_storage.run_ownership_projection p ON p.run_id=q.id LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
- WHERE (selected_id IS NULL OR q.id=selected_id) AND(q.asker=wallet OR(q.asker IS NULL AND c.claimed_wallet=wallet AND c.claimed_at IS NOT NULL
-  AND q.created_at=c.completed_at::timestamptz AND h.original_created_at=c.completed_at AND h.original_sha256=c.original_sha256
+ LEFT JOIN keryx_storage.run_privacy_projection s ON s.run_id=q.id LEFT JOIN keryx_storage.run_ownership_projection p ON p.run_id=q.id LEFT JOIN keryx_storage.run_history_projection h ON h.run_id=q.id
+ WHERE (selected_id IS NULL OR q.id=selected_id) AND(s.scalar_cells->'asker'->>'boundHex'=encode(convert_to(wallet,'UTF8'),'hex') OR(s.scalar_cells->'asker'->>'boundHex' IS NULL AND c.claimed_wallet=wallet AND c.claimed_at IS NOT NULL
+  AND convert_from(decode(s.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8')=c.completed_at AND q.created_at=c.completed_at::timestamptz AND h.original_created_at=c.completed_at AND h.original_sha256=c.original_sha256
   AND octet_length(q.data::text)<=4000000
   AND CASE WHEN octet_length(q.data::text)<=4000000 THEN keryx_storage.run_original_sha256(q.data)=c.original_sha256 ELSE false END
   AND NOT EXISTS(SELECT 1 FROM public.a2a_orders o WHERE o.query_id=q.id)));
@@ -57,13 +57,13 @@ BEGIN
  IF EXISTS(SELECT 1 FROM keryx_storage.ownership_candidates(wallet,network,origin) c WHERE c.history_eligible IS NULL OR c.funded IS NULL)
  THEN RAISE EXCEPTION 'native ownership derivative unavailable';END IF;
  FOR r IN SELECT c.* FROM keryx_storage.ownership_candidates(wallet,network,origin) c WHERE(c.claimed_at IS NULL OR c.history_eligible)
-  AND(upper_position IS NULL OR c.created_at<(upper_position->>'createdAt')::timestamptz OR(c.created_at=(upper_position->>'createdAt')::timestamptz AND c.run_id COLLATE "C" <=(upper_position->>'id') COLLATE "C"))
-  AND(before_position IS NULL OR c.created_at<(before_position->>'createdAt')::timestamptz OR(c.created_at=(before_position->>'createdAt')::timestamptz AND c.run_id COLLATE "C" <(before_position->>'id') COLLATE "C"))
-  AND(NOT(filters?'from') OR c.created_at>=(filters->>'from')::timestamptz) AND(NOT(filters?'to') OR c.created_at<=(filters->>'to')::timestamptz)
+  AND(upper_position IS NULL OR c.created_at COLLATE "C" <(upper_position->>'createdAt') COLLATE "C" OR(c.created_at COLLATE "C" =(upper_position->>'createdAt') COLLATE "C" AND c.run_id COLLATE "C" <=(upper_position->>'id') COLLATE "C"))
+  AND(before_position IS NULL OR c.created_at COLLATE "C" <(before_position->>'createdAt') COLLATE "C" OR(c.created_at COLLATE "C" =(before_position->>'createdAt') COLLATE "C" AND c.run_id COLLATE "C" <(before_position->>'id') COLLATE "C"))
+  AND(NOT(filters?'from') OR c.created_at COLLATE "C" >=(filters->>'from') COLLATE "C") AND(NOT(filters?'to') OR c.created_at COLLATE "C" <=(filters->>'to') COLLATE "C")
   AND(NOT(filters?'search') OR position(convert_to(filters->>'search','UTF8') IN c.question_search)>0)
   AND(NOT(filters?'surface') OR coalesce(c.provenance->>'surface','unknown')=filters->>'surface')
   AND(NOT(filters?'funding') OR CASE WHEN c.funded THEN 'browser-recorded' ELSE 'other-or-unknown' END=filters->>'funding')
-  ORDER BY c.created_at DESC,c.run_id COLLATE "C" DESC LIMIT take LOOP
+  ORDER BY c.created_at COLLATE "C" DESC NULLS LAST,c.run_id COLLATE "C" DESC LIMIT take LOOP
   IF r.summary IS NULL OR NOT(CASE WHEN r.claimed_at IS NULL THEN r.recorded_valid ELSE r.claimed_valid END) THEN RAISE EXCEPTION 'native ownership original unavailable';END IF;
   item:=r.summary||jsonb_build_object('ownership',jsonb_build_object('method',CASE WHEN r.claimed_at IS NULL THEN 'recorded' ELSE 'claimed' END,
    'claimedAt',CASE WHEN r.claimed_at IS NULL THEN NULL ELSE to_char(to_timestamp(r.claimed_at/1000.0) AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') END));
@@ -83,7 +83,7 @@ BEGIN
   IF r.history_eligible IS NULL THEN RAISE EXCEPTION 'native ownership derivative unavailable';END IF;
   IF r.claimed_at IS NULL OR r.history_eligible THEN
    IF NOT(CASE WHEN r.claimed_at IS NULL THEN r.recorded_valid ELSE r.claimed_valid END) OR octet_length(r.original::text)>4000000 THEN RAISE EXCEPTION 'native ownership original unavailable';END IF;
-   item:=jsonb_build_object('id',r.run_id,'createdAt',to_char(r.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+   item:=jsonb_build_object('id',r.run_id,'createdAt',r.created_at,
     'originalHex',encode(convert_to(r.original::text,'UTF8'),'hex'),'ownership',jsonb_build_object('method',CASE WHEN r.claimed_at IS NULL THEN 'recorded' ELSE 'claimed' END,
     'claimedAt',CASE WHEN r.claimed_at IS NULL THEN NULL ELSE to_char(to_timestamp(r.claimed_at/1000.0) AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') END));
   END IF;

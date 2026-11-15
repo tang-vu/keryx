@@ -22,6 +22,7 @@ import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection
 import type { AcceptanceInput } from '../../lib/deliverable-acceptance/contracts';
 import { sqliteAcceptanceProjection,heldAcceptanceProjectionSql } from './acceptance-projection.mts';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql,sqliteA2aOriginalCellProjection,heldA2aOriginalCellProjectionSql } from './a2a-time-projection.mts';
 export async function qualifyAcceptance(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  const folder=mkdtempSync(join(tmpdir(),'keryx-native-acceptance-')),file=join(folder,'oracle.sqlite'),manifestPath=join(folder,'storage.json');
  const identity=validateStorageIdentity({...input.identity,deploymentId:randomUUID(),storageId:randomUUID(),enrollmentId:randomUUID(),provenanceDigest:'d7'.repeat(32)}),manifest=canonicalJson({format:'keryx-storage-deployment-v1',identity,backend:{kind:'sqlite',databasePath:file}});
@@ -46,7 +47,7 @@ export async function qualifyAcceptance(input:{options:PostgresConnectionOptions
    insertStorageIdentity(db,identity);installStorageFences(db,identity);db.exec('COMMIT');
    const p=sqliteAcceptanceProjection(db,order.id);assert(p.binding);storeId=p.storeId;let sql=`INSERT INTO public.deliverable_acceptance_store(singleton,id) VALUES(1,${q(storeId)});`;
    for(const table of ['a2a_orders','payment_events','research_purchase_authorizations','web_sessions','api_keys'])for(const row of db.prepare('SELECT * FROM '+table).all())sql+=copy(table,row);
-   pg(sql+heldAcceptanceProjectionSql(p));
+   pg(sql+heldA2aTimeProjectionSql(sqliteA2aTimeProjection(db,order.id,input.identity))+heldA2aOriginalCellProjectionSql(sqliteA2aOriginalCellProjection(db,order.id,input.identity))+heldAcceptanceProjectionSql(p));
   }finally{db.close();}writeFileSync(manifestPath,manifest,{mode:0o600});
   const args=[order.payer,binding.network,order.id] as const,initial=await native.read(...args),before=originalCounts();assert.deepEqual(initial,await oracle(p=>p.read(...args)));assert.equal(initial.state,'no_response');vectors++;
   assert.deepEqual(await native.publicState(binding.network,order.id),await oracle(p=>p.publicState(binding.network,order.id)));assert.deepEqual(await native.metrics(binding.network),await oracle(p=>p.metrics(binding.network)));vectors++;

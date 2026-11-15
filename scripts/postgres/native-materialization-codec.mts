@@ -2,15 +2,25 @@
  * retained; this codec grants no runtime or target-discovery authority. */
 import { canonicalJson } from '../../lib/canonical-json';
 import type { SnapshotValue } from './typed-snapshot.mts';
+import { publicationScalarText } from '../../lib/db/postgres/publication-scalar-text';
 export const NATIVE_MATERIALIZATION_TYPES=Object.freeze(['text','numeric','json','jsonb','timestamp with time zone','date','smallint','integer','bigint','boolean','keryx_storage.sqlite_number','keryx_storage.native_uuid_text','double precision'] as const);
 export type NativeMaterializationType=typeof NATIVE_MATERIALIZATION_TYPES[number];
 const refuse=():never=>{throw Error('Native materialization cell refused');};
+const queryScalarColumns=new Set(['question','answer','engine','parent_id','asker','origin','mcp_client','payment_mode','confidence_level']);
+/** Only the declared QueryRun scalar columns use a checked TEXT shadow. The
+ * independent typed staging and scalar projection retain their Source cells. */
+export function nativeMaterializationQueryCell(cell:SnapshotValue,type:NativeMaterializationType,column:string):string|null{
+ if(type!=='text'||!queryScalarColumns.has(column)||cell[0]==='null')return nativeMaterializationCell(cell,type);
+ if(cell[0]!=='text'||cell[1].length>8388608||cell[1].length%2||/[^a-f0-9]/.test(cell[1]))return refuse();
+ let value:string;try{value=new TextDecoder('utf8',{fatal:true,ignoreBOM:true}).decode(Buffer.from(cell[1],'hex'));}catch{return refuse();}
+ const scalar=publicationScalarText(value);return scalar.postgres.kind==='text'?scalar.postgres.value:scalar.sourceJsonWire;
+}
 export function nativeMaterializationType(raw:unknown):NativeMaterializationType{
  if(typeof raw!=='string'||!(NATIVE_MATERIALIZATION_TYPES as readonly string[]).includes(raw))return refuse();return raw as NativeMaterializationType;
 }
 function text(cell:SnapshotValue):string{
  if(cell[0]!=='text'||cell[1].length>8388608||cell[1].length%2||/[^a-f0-9]/.test(cell[1]))return refuse();
- let value:string;try{value=new TextDecoder('utf8',{fatal:true}).decode(Buffer.from(cell[1],'hex'));}catch{return refuse();}
+ let value:string;try{value=new TextDecoder('utf8',{fatal:true,ignoreBOM:true}).decode(Buffer.from(cell[1],'hex'));}catch{return refuse();}
  if(value.includes('\0'))return refuse();return value;
 }
 function number(cell:SnapshotValue):string{

@@ -18,7 +18,7 @@ import { SqliteAdapter } from '../../lib/db/sqlite-adapter';
 import { validateStorageIdentity,type StorageIdentity } from '../../lib/db/storage-identity';
 import type { PostgresPendingOwnerSessionPacket } from '../../lib/a2a/pending-owner-association';
 import { acceptanceOriginalMetadata } from '../../lib/db/postgres/acceptance-metadata';
-import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql } from './a2a-time-projection.mts';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql,sqliteA2aOriginalCellProjection,heldA2aOriginalCellProjectionSql } from './a2a-time-projection.mts';
 
 export const nativePendingOwnerFixturePaths=(folder:string)=>{const file=join(folder,'pending-owner.sqlite');return [file,file+'-wal',file+'-shm',file+'-journal',join(folder,'pending-owner-storage.json')];};
 export async function nativePendingOwnerFixture(folder:string,rawIdentity:StorageIdentity){
@@ -49,6 +49,7 @@ export async function nativePendingOwnerFixture(folder:string,rawIdentity:Storag
   }
   for(const row of selected.db.prepare('SELECT * FROM a2a_orders').all()){
    sql+=heldA2aTimeProjectionSql(sqliteA2aTimeProjection(selected.db,String(row.id),identity));
+   sql+=heldA2aOriginalCellProjectionSql(sqliteA2aOriginalCellProjection(selected.db,String(row.id),identity));
    const p=acceptanceOriginalMetadata(row,storeId);
    sql+=`INSERT INTO keryx_storage.acceptance_original_projection(order_id,store_id,source_order_wire,source_order_sha256,delivery_token,owner,network,binding,health_meta) VALUES(${[p.orderId,p.storeId,p.orderWire,p.orderSha256,p.deliveryToken,p.owner,p.network].map(v=>v===null?'NULL':q(v)).join(',')},${p.binding===null?'NULL':q(JSON.stringify(p.binding))+'::jsonb'},${q(JSON.stringify(p.health))}::jsonb);`;
   }

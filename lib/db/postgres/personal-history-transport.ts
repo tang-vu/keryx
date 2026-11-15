@@ -11,7 +11,9 @@ export function composePostgresPersonalHistory(channel:PostgresDomainChannel):Pe
    live();const wallet=historyWallet(owner),filters=historyFiltersSchema.parse(query.filters),take=query.take;
    if(!Number.isInteger(take)||take<1||take>51)throw unavailable();
    const upper=query.upper?canonicalJson(historyPositionSchema.parse(query.upper)):null,before=query.before?canonicalJson(historyPositionSchema.parse(query.before)):null;
-   try{const value=await channel.call('personalHistoryList',[wallet,canonicalJson(filters),String(take),upper,before]);live();return z.object({wallet:z.literal(wallet),rows:z.array(historyRowSchema).max(take)}).strict().parse(value).rows;}
+   try{const value=await channel.call('personalHistoryList',[wallet,canonicalJson(filters),String(take),upper,before]);live();
+    const wireRow=historyRowSchema.omit({question:true,paymentMode:true}).extend({questionHex:z.string().max(65536).regex(/^(?:[a-f0-9]{2})*$/),paymentModeHex:z.string().max(256).regex(/^(?:[a-f0-9]{2})*$/).nullable()}).strict();
+    return z.object({wallet:z.literal(wallet),rows:z.array(wireRow).max(take)}).strict().parse(value).rows.map(({questionHex,paymentModeHex,...row})=>historyRowSchema.parse({...row,question:new TextDecoder('utf-8',{fatal:true}).decode(Buffer.from(questionHex,'hex')),paymentMode:paymentModeHex===null?null:new TextDecoder('utf-8',{fatal:true}).decode(Buffer.from(paymentModeHex,'hex'))}));}
    catch{throw unavailable();}
   },
   async receipts(rawId,take){

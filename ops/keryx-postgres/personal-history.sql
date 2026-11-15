@@ -6,6 +6,9 @@ CREATE FUNCTION keryx_storage.personal_history_context(wallet text) RETURNS void
 BEGIN
  IF wallet IS NULL OR wallet !~ '^0x[0-9a-f]{40}$' OR session_user NOT IN('keryx_app','keryx_reader') OR current_setting('transaction_read_only')<>'on'
   OR (SELECT mode FROM keryx_storage.control WHERE singleton) IS DISTINCT FROM 'active' THEN RAISE EXCEPTION 'native history context refused';END IF;
+ IF EXISTS(SELECT 1 FROM public.query_runs q LEFT JOIN keryx_storage.run_privacy_projection s ON s.run_id=q.id
+  WHERE s.run_id IS NULL OR s.scalar_identity_sha256 IS DISTINCT FROM (SELECT identity_digest FROM keryx_storage.identity WHERE singleton))
+ THEN RAISE EXCEPTION 'native Source scalar projection unavailable';END IF;
 END;$$;
 {{HISTORY_READ_HELPER}}
 CREATE FUNCTION public.storage_personal_history_list(expected jsonb,digest text,wallet text,filters jsonb,take integer,upper_position jsonb,before_position jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$

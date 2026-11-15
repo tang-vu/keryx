@@ -13,7 +13,7 @@ import type { StorageIdentity } from '../../lib/db/storage-identity';
 import type { QueryRun } from '../../lib/types';
 import { heldHistoryProjectionSql,sqliteOriginalHistoryProjection } from './run-history-projection.mts';
 import { heldOwnershipHistoryProjectionSql,sqliteOwnershipHistoryProjection } from './ownership-history-projection.mts';
-import { heldPrivacyProjectionSql,sqlitePrivacyProjection } from './privacy-projection.mts';
+import { heldPrivacyProjectionSql,sqlitePrivacyProjection,sqlitePublicationScalarProjection } from './privacy-projection.mts';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
 import { PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-channel';
 export async function qualifyPrivacy(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
@@ -23,15 +23,25 @@ export async function qualifyPrivacy(input:{options:PostgresConnectionOptions;id
  const pg=(s:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+s+"UPDATE keryx_storage.control SET mode='active';COMMIT;");let vectors=0;
  const historical:QueryRun={id:'synthetic-native-privacy-historical',createdAt:date,question:'Historical question',answer:'Historical answer',engine:'heuristic',budget:0,totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[],asker:owner};
  const derive=(id:string)=>heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id))+heldOwnershipHistoryProjectionSql(id,sqliteOwnershipHistoryProjection(db,id))+heldPrivacyProjectionSql(id,sqlitePrivacyProjection(db,id));
+ const heldSourceRow=(id:string)=>{
+  const row=db.prepare('SELECT * FROM query_runs WHERE id=?').get(id);assert(row);const scalar=sqlitePublicationScalarProjection(db,id),shadows:Record<string,string|null>={...scalar.shadows,answer:scalar.answerShadow};
+  const columns=Object.keys(row);assert(columns.every(key=>/^[a-z][a-z0-9_]*$/.test(key)));
+  const values=columns.map(key=>{
+   const value=Object.hasOwn(shadows,key)?shadows[key]:row[key];if(value===null)return 'NULL';
+   if(typeof value==='number'){assert(Number.isFinite(value));return String(value);}assert.equal(typeof value,'string');
+   return q(value as string)+(key==='data'||key==='economics_data'?'::json':'');
+  });
+  return `INSERT INTO public.query_runs(${columns.join(',')}) VALUES(${values.join(',')});`;
+ };
  const usageBound=(id:string)=>assert.equal(input.ownerSql(`SELECT count(*) FROM keryx_storage.usage_projection u JOIN public.query_runs q ON q.id=u.run_id WHERE q.id=${q(id)} AND u.original_sha256=keryx_storage.run_original_sha256(q.data) AND u.body_identity_valid;`),'1');
  try{
   installSqliteApplicationSchema(db);writeSqliteQueryRun(db,historical,false);db.exec(RUN_CLAIMS_SQL);db.exec(RUN_PRIVACY_SQL);const history=createSqliteRunOwnershipHistory(db),sqlite=createSqliteRunPrivacy(db,history);
-  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker,engine,total_spent,total_to_creators,answer) VALUES(${q(historical.id)},${q(date)},${q(historical.question)},0,${q(String(db.prepare('SELECT data FROM query_runs WHERE id=?').get(historical.id)!.data))}::json,${q(owner)},'heuristic',0,0,${q(historical.answer)});`+derive(historical.id));
+  pg(heldSourceRow(historical.id)+derive(historical.id));
   db.prepare('INSERT INTO web_sessions(hash,wallet,issued_at,expires_at) VALUES(?,?,?,?)').run(session,owner,Date.now()-10000,Date.now()+86400000);
   pg(`INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES(${q(session)},${q(owner)},${Date.now()-10000},${Date.now()+86400000});`);
   const save=(suffix:string,visibility:'public'|'private'|'unlisted'='public',patch:Partial<QueryRun>={})=>{
-   const run:QueryRun={id:'synthetic-native-privacy-'+suffix,createdAt:date,question:'Synthetic private question',answer:'Private original answer',engine:'heuristic',budget:0,totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[],paymentMode:'offline',asker:owner,...patch};writeSqliteQueryRun(db,run,false);db.prepare('UPDATE run_privacy SET visibility=? WHERE run_id=?').run(visibility,run.id);const wire=String(db.prepare('SELECT data FROM query_runs WHERE id=?').get(run.id)!.data);
-   pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker,engine,total_spent,total_to_creators,answer) VALUES(${q(run.id)},${q(date)},${q(run.question)},0,${q(wire)}::json,${run.asker?q(run.asker):'NULL'},'heuristic',0,0,'Private original answer');INSERT INTO public.run_privacy(run_id,visibility,updated_at) VALUES(${q(run.id)},${q(visibility)},${q(date)});`+derive(run.id));return run;
+   const run:QueryRun={id:'synthetic-native-privacy-'+suffix,createdAt:date,question:'Synthetic private question',answer:'Private original answer',engine:'heuristic',budget:0,totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[],paymentMode:'offline',asker:owner,...patch};writeSqliteQueryRun(db,run,false);db.prepare('UPDATE run_privacy SET visibility=? WHERE run_id=?').run(visibility,run.id);
+   pg(heldSourceRow(run.id)+`INSERT INTO public.run_privacy(run_id,visibility,updated_at) VALUES(${q(run.id)},${q(visibility)},${q(date)});`+derive(run.id));return run;
   };
   const publicRun=save('public'),privateRun=save('private','private'),unlisted=save('unlisted','unlisted'),foreign=save('foreign','private',{asker:other});
   for(const run of [publicRun,privateRun,unlisted,foreign])for(const who of [undefined,actor,{wallet:other,binding}]){assert.deepEqual(await native.read(run.id,who),await sqlite.read(run.id,who));vectors++;}

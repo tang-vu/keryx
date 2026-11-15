@@ -1,4 +1,13 @@
 SET ROLE keryx_owner;
+-- Permanent private Source cells. The disposable full-row derivative cannot
+-- be the only copy of immutable JSON TEXT representation and key order.
+CREATE TABLE keryx_storage.a2a_original_cell_projection(
+ order_id text PRIMARY KEY REFERENCES public.a2a_orders(id) ON DELETE CASCADE,
+ identity_digest text NOT NULL CHECK(identity_digest ~ '^[a-f0-9]{64}$'),
+ query_id text NOT NULL,request_hash text NOT NULL,
+ package_data_wire text CHECK(package_data_wire IS NULL OR octet_length(package_data_wire)<=4000000 AND package_data_wire IS JSON),
+ request_data_wire text CHECK(request_data_wire IS NULL OR octet_length(request_data_wire)<=4000000 AND request_data_wire IS JSON)
+);
 -- Body-less Source time wires survive disposable full-original derivatives.
 -- Native timestamptz columns retain instants; these TEXT cells retain exact
 -- offsets and fractional precision for the unchanged Source predicates.
@@ -55,6 +64,19 @@ BEGIN
   SELECT 1 FROM keryx_storage.writer w JOIN keryx_storage.operations o ON o.operation=w.operation JOIN keryx_storage.identity i ON i.identity_digest=w.identity_digest
   WHERE w.transaction_id=txid_current() AND NOT o.read_only AND 'a2a_orders'=ANY(o.relations) AND TG_TABLE_NAME=ANY(o.relations))
  THEN RAISE EXCEPTION 'native acceptance original writer required';END IF;
+ IF TG_TABLE_NAME='a2a_original_cell_projection' THEN
+  IF TG_OP='DELETE' THEN
+   IF NOT(session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held')
+    AND EXISTS(SELECT 1 FROM public.a2a_orders WHERE id=OLD.order_id) THEN RAISE EXCEPTION 'native original cells retained';END IF;
+   RETURN OLD;
+  END IF;
+  IF TG_OP='UPDATE' THEN RAISE EXCEPTION 'native original cells retained';END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.a2a_orders a JOIN keryx_storage.identity i ON i.singleton AND i.identity_digest=NEW.identity_digest
+   WHERE a.id=NEW.order_id AND a.query_id=NEW.query_id AND a.request_hash=NEW.request_hash
+    AND a.package_data IS NOT DISTINCT FROM NEW.package_data_wire::jsonb AND a.request_data IS NOT DISTINCT FROM NEW.request_data_wire::jsonb)
+  THEN RAISE EXCEPTION 'native original cell binding refused';END IF;
+  RETURN NEW;
+ END IF;
  IF TG_TABLE_NAME='a2a_original_time_projection' THEN
   IF TG_OP='DELETE' THEN
    IF NOT(session_user='postgres' AND (SELECT mode FROM keryx_storage.control WHERE singleton)='held')
@@ -78,6 +100,10 @@ BEGIN
   SELECT 1 FROM public.a2a_orders a WHERE a.id=NEW.order_id AND keryx_storage.acceptance_original_matches(NEW.source_order_wire,a))
  THEN RAISE EXCEPTION 'native acceptance original binding refused';END IF;
  IF (NEW.source_order_wire::jsonb->'response_data') IS DISTINCT FROM NEW.delivery_token::jsonb THEN RAISE EXCEPTION 'native acceptance delivery token refused';END IF;
+ IF NOT EXISTS(SELECT 1 FROM keryx_storage.a2a_original_cell_projection c WHERE c.order_id=NEW.order_id
+  AND c.package_data_wire IS NOT DISTINCT FROM (NEW.source_order_wire::json->>'package_data')
+  AND c.request_data_wire IS NOT DISTINCT FROM (NEW.source_order_wire::json->>'request_data'))
+ THEN RAISE EXCEPTION 'native acceptance exact Source cells required';END IF;
  IF EXISTS(SELECT 1 FROM keryx_storage.a2a_original_time_projection t WHERE t.order_id=NEW.order_id AND
   (t.created_at IS DISTINCT FROM (NEW.source_order_wire::json->>'created_at') OR t.updated_at IS DISTINCT FROM (NEW.source_order_wire::json->>'updated_at')
    OR t.started_at IS DISTINCT FROM (NEW.source_order_wire::json->>'started_at')
@@ -86,13 +112,15 @@ BEGIN
  THEN RAISE EXCEPTION 'native acceptance exact Source time required';END IF;
  RETURN NEW;
 END;$$;
+CREATE TRIGGER a2a_original_cell_writer BEFORE INSERT OR UPDATE OR DELETE ON keryx_storage.a2a_original_cell_projection FOR EACH ROW EXECUTE FUNCTION keryx_storage.acceptance_projection_fence();
+CREATE TRIGGER a2a_original_cell_no_truncate BEFORE TRUNCATE ON keryx_storage.a2a_original_cell_projection FOR EACH STATEMENT EXECUTE FUNCTION keryx_storage.immutable();
 CREATE TRIGGER a2a_original_time_writer BEFORE INSERT OR UPDATE OR DELETE ON keryx_storage.a2a_original_time_projection FOR EACH ROW EXECUTE FUNCTION keryx_storage.acceptance_projection_fence();
 CREATE TRIGGER a2a_original_time_no_truncate BEFORE TRUNCATE ON keryx_storage.a2a_original_time_projection FOR EACH STATEMENT EXECUTE FUNCTION keryx_storage.immutable();
 CREATE TRIGGER acceptance_original_projection_writer BEFORE INSERT OR UPDATE OR DELETE ON keryx_storage.acceptance_original_projection FOR EACH ROW EXECUTE FUNCTION keryx_storage.acceptance_projection_fence();
 CREATE FUNCTION keryx_storage.acceptance_projection_invalidate() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 BEGIN DELETE FROM keryx_storage.acceptance_original_projection WHERE order_id=OLD.id;RETURN NEW;END;$$;
 CREATE TRIGGER native_acceptance_projection_invalidate AFTER UPDATE ON public.a2a_orders FOR EACH ROW EXECUTE FUNCTION keryx_storage.acceptance_projection_invalidate();
-UPDATE keryx_storage.operations SET relations=array_append(array_append(relations,'acceptance_original_projection'),'a2a_original_time_projection') WHERE NOT read_only AND 'a2a_orders'=ANY(relations);
-REVOKE ALL ON keryx_storage.acceptance_original_projection,keryx_storage.a2a_original_time_projection FROM PUBLIC,keryx_app,keryx_reader;
+UPDATE keryx_storage.operations SET relations=array_append(array_append(array_append(relations,'acceptance_original_projection'),'a2a_original_time_projection'),'a2a_original_cell_projection') WHERE NOT read_only AND 'a2a_orders'=ANY(relations);
+REVOKE ALL ON keryx_storage.acceptance_original_projection,keryx_storage.a2a_original_time_projection,keryx_storage.a2a_original_cell_projection FROM PUBLIC,anon,authenticated,service_role,keryx_app,keryx_reader;
 REVOKE ALL ON FUNCTION keryx_storage.acceptance_original_matches(text,public.a2a_orders),keryx_storage.acceptance_projection_fence(),keryx_storage.acceptance_projection_invalidate() FROM PUBLIC,keryx_app,keryx_reader;
 RESET ROLE;

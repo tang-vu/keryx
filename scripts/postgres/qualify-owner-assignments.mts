@@ -20,6 +20,7 @@ import { heldHistoryProjectionSql,sqliteOriginalHistoryProjection } from './run-
 import { type Manifest,type RecipientAction,type Receipt } from '../../lib/owner-run-assignments/contracts';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
 import { Client } from 'pg';
+import { heldQueryRunFixture } from './held-query-run-fixture.mts';
 import { composePostgresRunClaims } from '../../lib/db/postgres/claims-transport';
 import { createEnrolledSqliteRunClaims } from '../../lib/db/run-claims-sqlite';
 export async function qualifyOwnerAssignments(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string}){
@@ -30,6 +31,10 @@ export async function qualifyOwnerAssignments(input:{options:PostgresConnectionO
  let proxy:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined,loss:ReturnType<typeof createPostgresDomainChannel>|undefined;
  const runIds:string[]=[],operationIds:string[]=[];
  const owner=(work:(db:DatabaseSync)=>void)=>{const db=new DatabaseSync(paths[0]);try{registerStorageCapability(db,input.identity,()=>true);db.exec('BEGIN IMMEDIATE');work(db);db.exec('COMMIT');}finally{db.close();}};
+ const originalSql=(db:DatabaseSync,id:string)=>{
+  const row=heldQueryRunFixture(db,id,'replace');
+  return row.physicalSql+row.scalarSql+heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id));
+ };
  const open=()=>{const manifest=readFileSync(paths[4],'utf8');selected=openVerifiedSqliteStorage(paths[0],input.identity,{applicationProfiles:supportedSqliteApplicationProfiles(true),runtimeGuard:()=>assert.equal(readFileSync(paths[4],'utf8'),manifest)});oracle=createEnrolledSqliteOwnerRunAssignments(selected.db);assert(oracle);};
  const clean=(value:unknown):unknown=>JSON.parse(JSON.stringify(value),(key,v)=>['committedAt','assignedAt','confirmedAt'].includes(key)&&v!==null?'generated-time':v);
  const requestId=()=>{const id=randomUUID();operationIds.push(id);return id;};
@@ -46,7 +51,7 @@ export async function qualifyOwnerAssignments(input:{options:PostgresConnectionO
     db.prepare("INSERT INTO payment_events(id,query_id,created_at,network,kind,amount_usdc,settlement_status,settled,source_id,source_name,payer,payee) VALUES(?,?,?,'eip155:5042','fetch',0,'pending',0,'synthetic-domain-source','Synthetic network provenance',?,?)").run(id+'-network',id,date,session.wallet,session.wallet);
     const payment=db.prepare('SELECT * FROM payment_events WHERE id=?').get(id+'-network')!;
     const paymentSql=`INSERT INTO public.payment_events(${Object.keys(payment).join(',')}) VALUES(${Object.entries(payment).map(([key,v])=>v===null?'NULL':key==='settled'?String(v===1):typeof v==='number'?String(v):q(String(v))).join(',')});`;
-    pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data) VALUES(${q(id)},${q(date)},'Synthetic assignment',1,${q(wire)}::json);`+paymentSql+heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id)));
+    pg(originalSql(db,id)+paymentSql);
     members.push({assignmentId:randomUUID(),runId:id,originalSha256:createHash('sha256').update(wire).digest('hex'),completedAt:date});
    }
   });
@@ -55,6 +60,26 @@ export async function qualifyOwnerAssignments(input:{options:PostgresConnectionO
   const compare=async()=>{assert(oracle);const a=await native.reply(s,session.wallet,origin,recipient),b=oracle.reply(s,session.wallet,origin,recipient);assert.equal(a.headers.get('Cache-Control'),'private, no-store');const na=await a.json(),ob=await b.json();assert.deepEqual(clean(na),clean(ob));assert(!JSON.stringify(na).includes('Private answer'));vectors++;return na;};
   const act=async(action:RecipientAction)=>{assert(oracle);const a=await native.act(s,recipient,action,origin),b=oracle.act(s,recipient,action,origin);assert.deepEqual(clean(a),clean(b));vectors++;return {a,b};};
   await compare();
+  const observedMember=members[0];let retainedHistory!:ReturnType<typeof sqliteOriginalHistoryProjection>;
+  owner(db=>{retainedHistory=sqliteOriginalHistoryProjection(db,observedMember.runId);});
+  const observed=(createdAt:string,asker:string|null=null)=>owner(db=>{
+   db.prepare('UPDATE query_runs SET created_at=?,asker=? WHERE id=?').run(createdAt,asker,observedMember.runId);
+   // Keep the genuine original projection captured before changing observed
+   // columns. This isolates current scalar admission from immutable body dates.
+   pg(originalSql(db,observedMember.runId)+heldHistoryProjectionSql(observedMember.runId,retainedHistory));
+  });
+  const refusedObserved=async()=>{
+   const action:RecipientAction={action:'consent',requestId:requestId(),manifest,acknowledgeAssignedLabel:true,noFinancialAuthority:true};
+   await assert.rejects(native.act(s,recipient,action,origin),/assignment_ineligible/);
+   assert.throws(()=>oracle!.act(s,recipient,action,origin),/assignment_ineligible/);vectors++;
+  };
+  for(const createdAt of [observedMember.completedAt.replace('Z','+00:00'),observedMember.completedAt.replace('Z','000000Z')]){
+   observed(createdAt);await refusedObserved();
+  }
+  observed(observedMember.completedAt,'synthetic\0\ud800');await refusedObserved();observed(observedMember.completedAt);
+  pg(`DELETE FROM keryx_storage.run_privacy_projection WHERE run_id=${q(observedMember.runId)};`);
+  await assert.rejects(native.act(s,recipient,{action:'consent',requestId:requestId(),manifest,acknowledgeAssignedLabel:true,noFinancialAuthority:true},origin),/assignment_unavailable/);vectors++;
+  owner(db=>pg(originalSql(db,observedMember.runId)));
   const consent:RecipientAction={action:'consent',requestId:requestId(),manifest,acknowledgeAssignedLabel:true,noFinancialAuthority:true};
   const accepted=await act(consent);assert.equal(accepted.a.inputDigest,accepted.b.inputDigest);assert.deepEqual(await native.act(s,recipient,consent,origin),accepted.a);vectors++;
   pg(`UPDATE keryx_storage.run_history_projection SET original_created_at=replace(original_created_at,'Z','+00:00') WHERE run_id=${q(members[0].runId)};`);
@@ -117,7 +142,7 @@ export async function qualifyOwnerAssignments(input:{options:PostgresConnectionO
   const reader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(composePostgresOwnerAssignments(reader,true).reply(s,session.wallet,origin,recipient),/assignment_unauthenticated/);vectors++;}finally{await reader.close();}
   assert.equal(input.ownerSql(`SELECT count(*) FROM public.owner269_associations WHERE recipient_account=${q(accountId)};`),'6');assert.equal(financial(),beforeFinancial);await channel.close();await assert.rejects(native.reply(s,session.wallet,origin));vectors++;
   assert(confirmed.a.results[0].status==='claimed');
-  return {vectors,actualPostgres:true,genuineSelectedFull19SqliteOracle:true,genuinePosixRootSourceCliGenesis:true,canonicalOriginalDatePreserved:true,escapedNulAndSurrogateOriginalText:true,currentDurableActorBeforeReplay:true,consentConfirmRejectWithdrawAndWithdrawConsent:true,exactRevisionCas:true,privateOriginalSuppressedAndNegativeDecisionAllowed:true,actualLostCommitAckReconciledByOriginalId:true,noAutomaticRetry:true,actualReaderRole:true,readonlyBeforeGetters:true,sourceOwnerAuthFaultInjection:true,actualWriterWaitThenSessionRevocationRefused:true,postWriterWaitExpiryFresh:true,jointClaimAndOriginalOccupancy:true,terminalAssociationAuditRetained:true,financialRowsUnchanged:true,fullWriterQualified:false,productionOperatorAssignmentQualified:false,productionData:false,paidOperations:0};
+  return {vectors,actualPostgres:true,genuineSelectedFull19SqliteOracle:true,genuinePosixRootSourceCliGenesis:true,canonicalOriginalDatePreserved:true,observedSourceDateBytesRequired:true,sameInstantOffsetAndPrecisionRefused:true,observedNulAskerRemainsNonAnonymous:true,missingScalarMetadataRefused:true,escapedNulAndSurrogateOriginalText:true,currentDurableActorBeforeReplay:true,consentConfirmRejectWithdrawAndWithdrawConsent:true,exactRevisionCas:true,privateOriginalSuppressedAndNegativeDecisionAllowed:true,actualLostCommitAckReconciledByOriginalId:true,noAutomaticRetry:true,actualReaderRole:true,readonlyBeforeGetters:true,sourceOwnerAuthFaultInjection:true,actualWriterWaitThenSessionRevocationRefused:true,postWriterWaitExpiryFresh:true,jointClaimAndOriginalOccupancy:true,terminalAssociationAuditRetained:true,financialRowsUnchanged:true,fullWriterQualified:false,productionOperatorAssignmentQualified:false,productionData:false,paidOperations:0};
  }catch(error){process.stderr.write(JSON.stringify({ownerAssignmentFixtureFailure:error instanceof Error?error.message:'unknown'})+'\n');throw error;}finally{
   await loss?.close();await proxy?.close();await channel.close();selected?.close();
   pg(`DELETE FROM public.owner269_associations WHERE recipient_account=${q(accountId??'')};`+(operationIds.length?`DELETE FROM public.owner269_operations WHERE request_id IN(${operationIds.map(q).join(',')});`:'')+

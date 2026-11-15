@@ -1,6 +1,6 @@
 SET ROLE keryx_owner;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
- ('public_usage_window',ARRAY['query_runs','payment_events','usage_projection']::text[],false,true),
+ ('public_usage_window',ARRAY['query_runs','payment_events','usage_projection','run_privacy_projection']::text[],false,true),
  ('public_usage_select',ARRAY['query_runs','run_privacy','usage_projection','run_privacy_projection']::text[],false,true),
  ('public_usage_finish',ARRAY['query_runs','run_privacy','usage_projection','run_privacy_projection']::text[],false,true);
 CREATE FUNCTION public.storage_public_usage_window(expected jsonb,digest text,selected_window jsonb) RETURNS jsonb
@@ -16,28 +16,30 @@ BEGIN
   OR length(selected_window->>'since')>32 OR length(selected_window->>'until')>32 OR (selected_window->>'since') COLLATE "C">=(selected_window->>'until') COLLATE "C"
  THEN RAISE EXCEPTION 'usage window refused';END IF;
  since_text:=selected_window->>'since';until_text:=selected_window->>'until';
- SELECT count(*) INTO counted FROM(SELECT 1 FROM public.query_runs q WHERE to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') COLLATE "C">=since_text COLLATE "C"
-  AND to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') COLLATE "C"<until_text COLLATE "C" LIMIT 10001)c;
+ -- Missing observed date bytes cannot silently remove a financial population.
+ IF EXISTS(SELECT 1 FROM public.query_runs q LEFT JOIN keryx_storage.run_privacy_projection pv ON pv.run_id=q.id WHERE pv.run_id IS NULL OR pv.scalar_identity_sha256 IS DISTINCT FROM keryx_storage.identity_digest(expected) OR jsonb_typeof(pv.scalar_cells->'created_at'->'boundHex') IS DISTINCT FROM 'string' OR convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8')::timestamptz IS DISTINCT FROM q.created_at) THEN RAISE EXCEPTION 'usage Source date unavailable';END IF;
+ SELECT count(*) INTO counted FROM(SELECT 1 FROM public.query_runs q LEFT JOIN keryx_storage.run_privacy_projection pv ON pv.run_id=q.id WHERE convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C">=since_text COLLATE "C"
+  AND convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C"<until_text COLLATE "C" LIMIT 10001)c;
  IF counted>10000 THEN RAISE EXCEPTION 'complete usage run bound';END IF;
- SELECT count(*) INTO counted FROM(SELECT 1 FROM public.payment_events p JOIN public.query_runs q ON q.id=p.query_id
-  WHERE to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') COLLATE "C">=since_text COLLATE "C"
-  AND to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') COLLATE "C"<until_text COLLATE "C" LIMIT 50001)c;
+ SELECT count(*) INTO counted FROM(SELECT 1 FROM public.payment_events p JOIN public.query_runs q ON q.id=p.query_id LEFT JOIN keryx_storage.run_privacy_projection pv ON pv.run_id=q.id
+  WHERE convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C">=since_text COLLATE "C"
+  AND convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C"<until_text COLLATE "C" LIMIT 50001)c;
  IF counted>50000 THEN RAISE EXCEPTION 'complete usage payment bound';END IF;
  -- Financial population deliberately includes every visibility and erasure state.
- FOR r IN SELECT q.id,q.created_at,q.asker,q.data,u.original_sha256,u.usage_wire,u.provenance_wire
-  FROM public.query_runs q LEFT JOIN keryx_storage.usage_projection u ON u.run_id=q.id
-  WHERE to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') COLLATE "C">=since_text COLLATE "C"
-   AND to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') COLLATE "C"<until_text COLLATE "C" ORDER BY q.id COLLATE "C" LOOP
+ FOR r IN SELECT q.id,convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') created_at,q.asker,q.data,u.original_sha256,u.usage_wire,u.provenance_wire
+  FROM public.query_runs q LEFT JOIN keryx_storage.usage_projection u ON u.run_id=q.id LEFT JOIN keryx_storage.run_privacy_projection pv ON pv.run_id=q.id
+  WHERE convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C">=since_text COLLATE "C"
+   AND convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C"<until_text COLLATE "C" ORDER BY q.id COLLATE "C" LOOP
   IF r.original_sha256 IS NULL OR octet_length(r.data::text)>4000000 OR r.original_sha256<>keryx_storage.run_original_sha256(r.data) THEN RAISE EXCEPTION 'usage original derivative unavailable';END IF;
-  item:=jsonb_build_object('id',r.id,'createdAt',to_char(r.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'originalSha256',r.original_sha256,
+  item:=jsonb_build_object('id',r.id,'createdAt',r.created_at,'originalSha256',r.original_sha256,
    'usageHex',encode(convert_to(r.usage_wire,'UTF8'),'hex'),'provenanceHex',encode(convert_to(r.provenance_wire,'UTF8'),'hex'),
    'actorId',CASE WHEN r.asker ~ '^0x[a-fA-F0-9]{40}$' THEN r.asker END);
   bytes:=bytes+octet_length(item::text)+2;IF bytes>20971520 THEN RAISE EXCEPTION 'complete usage wire bound';END IF;runs:=runs||jsonb_build_array(item);
  END LOOP;
  FOR r IN SELECT p.id,p.query_id,p.network,p.kind,p.amount_usdc,p.settled,p.settlement_status,p.tx_hash,p.payee
-  FROM public.payment_events p JOIN public.query_runs q ON q.id=p.query_id
-  WHERE to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') COLLATE "C">=since_text COLLATE "C"
-   AND to_char(q.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') COLLATE "C"<until_text COLLATE "C" ORDER BY p.id COLLATE "C" LOOP
+  FROM public.payment_events p JOIN public.query_runs q ON q.id=p.query_id LEFT JOIN keryx_storage.run_privacy_projection pv ON pv.run_id=q.id
+  WHERE convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C">=since_text COLLATE "C"
+   AND convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') COLLATE "C"<until_text COLLATE "C" ORDER BY p.id COLLATE "C" LOOP
   item:=jsonb_build_object('id',r.id,'queryId',r.query_id,'network',r.network,'kind',r.kind,'amountUsdc',coalesce(r.amount_usdc::double precision,0),
    'settled',coalesce(r.settled,false),'settlementStatus',r.settlement_status,'txHash',r.tx_hash,'payee',r.payee);
   bytes:=bytes+octet_length(item::text)+2;IF bytes>20971520 THEN RAISE EXCEPTION 'complete usage wire bound';END IF;payments:=payments||jsonb_build_array(item);
@@ -62,13 +64,14 @@ BEGIN
  IF current_setting('transaction_read_only')<>'on' OR take IS NULL OR take NOT BETWEEN 1 AND 100 OR published IS NULL OR privacy_active IS NULL OR published AND NOT privacy_active THEN RAISE EXCEPTION 'usage read refused';END IF;
  PERFORM keryx_storage.require_operation(expected,digest,'public_usage_select');PERFORM keryx_storage.usage_selection_valid(selection);
  IF NOT privacy_active AND jsonb_array_length(selection)>take THEN RAISE EXCEPTION 'usage inactive selection refused';END IF;
- FOR r IN SELECT q.id,q.created_at,q.data,u.original_sha256,u.parsed_usage,u.body_identity_valid,pv.original_valid,pv.original_sha256 privacy_sha,
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(selection) x JOIN public.query_runs q ON q.id=x->>'id' LEFT JOIN public.run_privacy p ON p.run_id=q.id LEFT JOIN keryx_storage.run_privacy_projection pv ON pv.run_id=q.id WHERE(NOT privacy_active OR p.visibility='public' AND p.erased=0) AND(pv.run_id IS NULL OR pv.scalar_identity_sha256 IS DISTINCT FROM keryx_storage.identity_digest(expected) OR jsonb_typeof(pv.scalar_cells->'created_at'->'boundHex') IS DISTINCT FROM 'string' OR convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8')::timestamptz IS DISTINCT FROM q.created_at)) THEN RAISE EXCEPTION 'usage Source date unavailable';END IF;
+ FOR r IN SELECT q.id,convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') created_at,q.data,u.original_sha256,u.parsed_usage,u.body_identity_valid,pv.original_valid,pv.original_sha256 privacy_sha,
   s.value expected,s.ord FROM jsonb_array_elements(selection) WITH ORDINALITY s(value,ord) JOIN public.query_runs q ON q.id=s.value->>'id'
   LEFT JOIN keryx_storage.usage_projection u ON u.run_id=q.id LEFT JOIN keryx_storage.run_privacy_projection pv ON pv.run_id=q.id
   LEFT JOIN public.run_privacy p ON p.run_id=q.id WHERE NOT privacy_active OR p.visibility='public' AND p.erased=0
-  ORDER BY CASE WHEN published OR NOT privacy_active THEN s.ord END,CASE WHEN NOT published AND privacy_active THEN q.created_at END DESC,q.id COLLATE "C" DESC
+  ORDER BY CASE WHEN published OR NOT privacy_active THEN s.ord END,CASE WHEN NOT published AND privacy_active THEN convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') END COLLATE "C" DESC,q.id COLLATE "C" DESC
   LIMIT CASE WHEN published THEN 10001 ELSE take END LOOP
-  counted:=counted+1;stamp:=to_char(r.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+  counted:=counted+1;stamp:=r.created_at;
   IF counted>10000 OR octet_length(r.data::text)>4000000 OR r.original_sha256 IS NULL THEN RAISE EXCEPTION 'usage original unavailable';END IF;
   fingerprint:=keryx_storage.run_original_sha256(r.data);
   IF r.original_sha256<>fingerprint OR NOT r.body_identity_valid OR stamp IS DISTINCT FROM r.expected->>'createdAt'
@@ -88,14 +91,14 @@ BEGIN
  IF current_setting('transaction_read_only')<>'on' OR privacy_active IS NULL OR take IS NULL OR take NOT BETWEEN 1 AND 100 OR published IS NULL OR published AND NOT privacy_active THEN RAISE EXCEPTION 'usage finish refused';END IF;
  PERFORM keryx_storage.require_operation(expected,digest,'public_usage_finish');PERFORM keryx_storage.usage_selection_valid(selection);
  IF NOT published AND jsonb_array_length(selection)>take THEN RAISE EXCEPTION 'usage finish selection refused';END IF;
- FOR r IN SELECT s.value expected,q.id,q.data,q.created_at,u.original_sha256,u.parsed_usage,u.body_identity_valid,pv.original_valid,pv.original_sha256 privacy_sha
+ FOR r IN SELECT s.value expected,q.id,q.data,convert_from(decode(pv.scalar_cells->'created_at'->>'boundHex','hex'),'UTF8') created_at,q.created_at native_created_at,pv.scalar_identity_sha256,u.original_sha256,u.parsed_usage,u.body_identity_valid,pv.original_valid,pv.original_sha256 privacy_sha
   FROM jsonb_array_elements(selection) WITH ORDINALITY s(value,ord) JOIN public.query_runs q ON q.id=s.value->>'id'
   LEFT JOIN keryx_storage.usage_projection u ON u.run_id=q.id LEFT JOIN public.run_privacy p ON p.run_id=q.id
   LEFT JOIN keryx_storage.run_privacy_projection pv ON pv.run_id=q.id
   WHERE NOT privacy_active OR p.visibility='public' AND p.erased=0 ORDER BY s.ord LOOP
-  stamp:=to_char(r.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+  stamp:=r.created_at;
   IF octet_length(r.data::text)>4000000 THEN RAISE EXCEPTION 'usage public original bound';END IF;fingerprint:=keryx_storage.run_original_sha256(r.data);
-  IF NOT coalesce(r.body_identity_valid,false) OR r.original_sha256 IS DISTINCT FROM fingerprint
+  IF r.scalar_identity_sha256 IS DISTINCT FROM keryx_storage.identity_digest(expected) OR r.created_at::timestamptz IS DISTINCT FROM r.native_created_at OR NOT coalesce(r.body_identity_valid,false) OR r.original_sha256 IS DISTINCT FROM fingerprint
    OR stamp IS DISTINCT FROM r.expected->>'createdAt' OR privacy_active AND coalesce(r.parsed_usage,'null'::jsonb) IS DISTINCT FROM r.expected->'usage'
    OR NOT privacy_active AND fingerprint IS DISTINCT FROM r.expected->>'originalSha256'
    OR privacy_active AND(NOT coalesce(r.original_valid,false) OR r.privacy_sha IS DISTINCT FROM fingerprint) THEN RAISE EXCEPTION 'usage public original changed';END IF;

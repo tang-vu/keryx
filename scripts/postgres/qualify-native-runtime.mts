@@ -13,7 +13,7 @@ import { validateStorageIdentity,type StorageIdentity } from '../../lib/db/stora
 import { heldHistoryProjectionSql,sqliteOriginalHistoryProjection } from './run-history-projection.mts';
 import { heldOwnershipHistoryProjectionSql,sqliteOwnershipHistoryProjection } from './ownership-history-projection.mts';
 import { DatabaseSync } from 'node:sqlite';
-import { heldPrivacyProjectionSql,sqlitePrivacyProjection } from './privacy-projection.mts';
+import { heldPrivacyProjectionSql,sqlitePrivacyProjection,sqlitePublicationScalarProjection } from './privacy-projection.mts';
 import { createTopicWatch,type TopicWatchState } from '../../lib/research/topic-watches';
 import { topicWatchProjection } from '../../lib/db/postgres/watch-packet';
 import { heldWatchProjectionSql } from './watch-projection.mts';
@@ -21,6 +21,8 @@ import { canonicalJson } from '../../lib/canonical-json';
 import { ARC_MAINNET_PROFILE } from '../../lib/arc-network-profile';
 import { syntheticA2aOriginal } from '../../lib/db/a2a-original-fixture';
 import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
+import { writeSqliteQueryRun } from '../../lib/db/query-run-record';
+import type { QueryRun } from '../../lib/types';
 import { installNativeUserDomainSchema } from '../../lib/db/native-user-domain-schema';
 import { insertStorageIdentity,installStorageFences } from '../../lib/db/storage-identity-sqlite';
 import { openVerifiedSqliteStorage } from '../../lib/db/storage-identity-connection';
@@ -32,7 +34,7 @@ import type { AcceptanceSnapshot,PublicAcceptance,AcceptanceMetrics } from '../.
 import { nativeAccountFixture,nativeAccountFixturePaths,nativeAccountFixtureTables } from './native-account-fixture.mts';
 import { nativeChatFixture } from './native-chat-fixture.mts';
 import { nativePublicProfileFixture } from './native-public-profile-fixture.mts';
-import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql } from './a2a-time-projection.mts';
+import { sqliteA2aTimeProjection,heldA2aTimeProjectionSql,sqliteA2aOriginalCellProjection,heldA2aOriginalCellProjectionSql } from './a2a-time-projection.mts';
 import { SqliteAdapter } from '../../lib/db/sqlite-adapter';
 import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy } from '../../lib/db/public-source-claims';
 import type { Source } from '../../lib/types';
@@ -103,7 +105,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
    for(const table of ['a2a_orders','payment_events','research_purchase_authorizations','deliverable_acceptance_entries','sources','source_meta','sync_state'])for(const row of selected.db.prepare('SELECT * FROM '+table).all()){
     const keys=Object.keys(row);assert(keys.every(k=>/^[a-z][a-z0-9_]*$/.test(k)));
     seed+=`INSERT INTO public.${table}(${keys.join(',')}) VALUES(${keys.map(k=>{const v=row[k];if(v===null)return 'NULL';if(['settled','active','verified'].includes(k))return v===1?'true':'false';if(table==='sync_state'&&k==='key')sourceClaimKeys.push(String(v));if(typeof v==='number'||typeof v==='bigint')return String(v);assert(typeof v==='string');return q(v)+(table==='a2a_orders'&&['request_data','response_data','package_data','resolution_data'].includes(k)||table==='sources'&&['tags','authors'].includes(k)?'::jsonb':'');}).join(',')});`;
-   }pg(seed+heldA2aTimeProjectionSql(sqliteA2aTimeProjection(selected.db,order.id,input.identity))+heldAcceptanceProjectionSql(projection));
+   }pg(seed+heldA2aTimeProjectionSql(sqliteA2aTimeProjection(selected.db,order.id,input.identity))+heldA2aOriginalCellProjectionSql(sqliteA2aOriginalCellProjection(selected.db,order.id,input.identity))+heldAcceptanceProjectionSql(projection));
   }finally{selected.close();}
   for(const table of nativeAccountFixtureTables)assert.equal(input.ownerSql(`SELECT count(*) FROM public.${table};`),'0');
   const accountSeed=await nativeAccountFixture(folder,input.identity,session,{freshLogin:true});account=accountSeed.observation;accountId=accountSeed.accountId;pg(accountSeed.sql);
@@ -122,9 +124,28 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   assert.match(candidateImage,/^sha256:[a-f0-9]{64}$/);
   docker(['rm',staging]);containers.delete(staging);
   const original=JSON.stringify({id:'synthetic-runtime-run',createdAt:'2026-01-02T03:04:05.000Z',question:'Original',answer:'Original answer',budget:0,engine:'heuristic',subClaims:[],decisions:[],citations:[],trace:[],asker:owner,totalSpent:0,totalToCreators:0,paymentMode:'offline',origin:'web',provenance:{version:1,surface:'web',ownershipMethod:'session'},usage:{version:1,network:'eip155:5042',cohort:'unknown',payment:'unknown',actorEvidenceSha256:null,fundingEvidenceSha256:null},uninterpreted:'\0\ud800'});
-  const oracle=new DatabaseSync(':memory:');let historyProjection:string,ownershipProjection:string,privacyProjection:string;
-  try{oracle.exec('CREATE TABLE query_runs(id TEXT,created_at TEXT,asker TEXT,data TEXT)');oracle.prepare('INSERT INTO query_runs VALUES(?,?,?,?)').run('synthetic-runtime-run','2026-01-02T03:04:05.000Z',owner,original);historyProjection=heldHistoryProjectionSql('synthetic-runtime-run',sqliteOriginalHistoryProjection(oracle,'synthetic-runtime-run'));ownershipProjection=heldOwnershipHistoryProjectionSql('synthetic-runtime-run',sqliteOwnershipHistoryProjection(oracle,'synthetic-runtime-run'));privacyProjection=heldPrivacyProjectionSql('synthetic-runtime-run',sqlitePrivacyProjection(oracle,'synthetic-runtime-run'));}finally{oracle.close();}
-  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker,engine,total_spent,total_to_creators,answer) VALUES('synthetic-runtime-run','2026-01-02T03:04:05.000Z','Original',0,${q(original)}::json,${q(owner)},'heuristic',0,0,'Original answer');INSERT INTO public.run_privacy(run_id,visibility,updated_at) VALUES('synthetic-runtime-run','public','2026-01-02T03:04:05.000Z');`+
+  const oracle=new DatabaseSync(':memory:');let historyProjection:string,ownershipProjection:string,privacyProjection:string,runInsert:string;
+  try{
+   // A genuine SOURCE writer supplies every observed scalar independently of
+   // PostgreSQL. Partial hand-made tables cannot attest missing/null cells.
+   oracle.exec('BEGIN IMMEDIATE');installMainnetApplicationSchema(oracle,{publicReferenceArchive:true});installNativeUserDomainSchema(oracle);
+   writeSqliteQueryRun(oracle,JSON.parse(original) as QueryRun,false);
+   oracle.prepare('UPDATE run_privacy SET visibility=? WHERE run_id=?').run('public','synthetic-runtime-run');
+   const row=oracle.prepare('SELECT * FROM query_runs WHERE id=?').get('synthetic-runtime-run');assert(row);assert.equal(row.data,original);
+   const scalar=sqlitePublicationScalarProjection(oracle,'synthetic-runtime-run'),keys=Object.keys(row);assert(keys.every(k=>/^[a-z][a-z0-9_]*$/.test(k)));
+   runInsert=`INSERT INTO public.query_runs(${keys.join(',')}) VALUES(${keys.map(k=>{
+    const observed=row[k];if(observed===null)return 'NULL';if(typeof observed==='number'){assert(Number.isFinite(observed));return String(observed);}if(typeof observed==='bigint')return String(observed);assert(typeof observed==='string');
+    const shadow=k==='answer'?scalar.answerShadow:Object.hasOwn(scalar.shadows,k)?scalar.shadows[k]:observed;assert(typeof shadow==='string');return q(shadow)+(['data','economics_data'].includes(k)?'::json':'');
+   }).join(',')});`;
+   const policy=oracle.prepare('SELECT run_id,visibility,updated_at FROM run_privacy WHERE run_id=?').get('synthetic-runtime-run');assert(policy);assert.equal(policy.visibility,'public');
+   // The native saved-run trigger inserts this row too; retain the actual
+   // SOURCE policy/date rather than duplicating it or changing any fence.
+   runInsert+=`INSERT INTO public.run_privacy(run_id,visibility,updated_at) VALUES(${q(String(policy.run_id))},${q(String(policy.visibility))},${q(String(policy.updated_at))}) ON CONFLICT(run_id) DO UPDATE SET visibility=excluded.visibility,updated_at=excluded.updated_at;`;
+   historyProjection=heldHistoryProjectionSql('synthetic-runtime-run',sqliteOriginalHistoryProjection(oracle,'synthetic-runtime-run'));
+   ownershipProjection=heldOwnershipHistoryProjectionSql('synthetic-runtime-run',sqliteOwnershipHistoryProjection(oracle,'synthetic-runtime-run'));
+   privacyProjection=heldPrivacyProjectionSql('synthetic-runtime-run',sqlitePrivacyProjection(oracle,'synthetic-runtime-run'));oracle.exec('COMMIT');
+  }finally{oracle.close();}
+  pg(runInsert+
    historyProjection+ownershipProjection+privacyProjection+`INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});
    INSERT INTO public.private_bibliographies(id,wallet,token_hash,title,content,reference_count,revision,created_at,updated_at) VALUES(${q(bibliographyId)},${q(owner)},${q(createHash('sha256').update('keryx-private-bib-v1:'+bibliographyToken).digest('hex'))},'Synthetic bibliography','Synthetic bibliography content',0,1,'2026-01-02T03:04:05.000Z','2026-01-02T03:04:05.000Z');
    INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES(${q(session.hash)},${q(owner)},${session.issuedAt},${session.expiresAt});

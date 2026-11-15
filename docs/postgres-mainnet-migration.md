@@ -1341,6 +1341,31 @@ The readonly installed factory does not receive these mutation ports. Actual
 Source/native protocol qualification and full SOURCE/catalog pins are required;
 the complete application writer, production intake and cutover remain gated.
 
+## Source scalars and exact failed-original receipts
+
+The candidate retains original JSON TEXT and protected scalar interpretations
+bound to the same logical identity and raw SHA. Encoded PostgreSQL TEXT shadows
+are storage representations; they do not establish wallet, privacy or payment
+authority. Answer BYTEA remains separate from metadata. Original date strings
+remain available for Source ordering, filtering and cursor semantics.
+
+Permanent private A2A package/request cells survive acceptance-projection
+invalidation. Completion preserves those cells and updates only the Source's
+six mutable fields, with canonical resolution and the receipt produced from the
+current original package. Qualification compares actual Source raw-row SHA and
+delivery token as well as decoded values.
+
+Publication and receipt candidates still require actual PostgreSQL and compiled
+512 MiB acceptance, complete held intake and consumer coverage. Their factory
+and production cutover remain closed while these checks are incomplete.
+
+Hosted acceptance requires successful contracts, core, tail, synthetic intake,
+contained publication and failed-original fulfillment jobs. Fulfillment uses the
+same pinned full runtime catalog in its separate job; `--native-runtime` still
+runs the complete protocol sequence. The aggregate rejects every missing,
+skipped, cancelled or failed required job. Historical NULL totals and leading
+UTF-8 BOM bytes are retained without substituting values or normalizing text.
+
 ## Optional native financial application composition
 
 The internal runtime transport maps 33 existing application methods to fixed
