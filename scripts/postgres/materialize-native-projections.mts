@@ -1,6 +1,7 @@
 /** Source-only metadata intake after public-cell fidelity. The actual target
  * remains held; no caller can turn these derivatives into runtime authority. */
 import assert from 'node:assert/strict';
+import { setTimeout as yieldTimers } from 'node:timers/promises';
 import { createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { Client,type QueryResult } from 'pg';
@@ -164,7 +165,8 @@ async function projectionTransaction(db:DatabaseSync,pg:Client,mode:NativeMateri
    sourceCurrent();assert.equal((await pg.query("SELECT mode FROM keryx_storage.control WHERE singleton FOR SHARE")).rows[0]?.mode,'held');
    const current=(await pg.query('SELECT identity::text wire FROM keryx_storage.identity WHERE singleton FOR SHARE')).rows;assert.equal(current.length,1);assert.equal(canonicalJson(validateStorageIdentity(JSON.parse(current[0].wire))),identityWire);
    assert.equal((await pg.query('SELECT source_digest FROM keryx_storage.source_contract WHERE singleton FOR SHARE')).rows[0]?.source_digest,profile.catalogSha256);
-   const contract=exportNativePostgresSchemaContract((await pg.query('SELECT keryx_storage.catalog_contract()::text wire')).rows[0].wire);assert.equal(contract.sha256,profile.catalogSha256);
+   const contract=exportNativePostgresSchemaContract((await pg.query('SELECT keryx_storage.catalog_contract()::text wire')).rows[0].wire);
+   await yieldTimers(0);assert.equal(contract.sha256,profile.catalogSha256);
    const present=hasPaymentOriginals(contract);if(paymentEventOriginalsPresent!==undefined)assert.equal(present,paymentEventOriginalsPresent);paymentEventOriginalsPresent=present;const privatePresent=hasPrivateResultIdentity(contract,mode);if(privateResultIdentityPresent!==undefined)assert.equal(privatePresent,privateResultIdentityPresent);privateResultIdentityPresent=privatePresent;if(privatePresent)assert(present);if(mode==='development-current510-data-only')assert(present&&privatePresent,'Current DATA intake requires all twelve private domains');sourceCurrent();
   };await verify();
   stage='projection-preflight';await verify();const selectedTables:Table[]=[...tables,...(paymentEventOriginalsPresent?['payment_event_originals' as const]:[]),...(privateResultIdentityPresent?['private_research_result_identity' as const]:[])];
