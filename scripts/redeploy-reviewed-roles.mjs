@@ -58,7 +58,7 @@ function verifyNativeManifest(review, manifest) {
     || !sameKeys(identity, identityKeys) || identity.network !== 'eip155:5042' || identity.authorityMode !== 'mainnet-real'
     || digest(JSON.stringify(Object.fromEntries(identityKeys.map(key => [key, identity[key]])))) !== review.storageIdentityDigest
     || !sameKeys(backend, ['kind', 'database', 'endpoint', 'credentialPaths', 'sourceDigest'])
-    || backend.kind !== 'postgres' || backend.database !== 'keryx_mainnet' || backend.sourceDigest !== SERVER1_NATIVE_RELEASE.sourceSqlSha256
+    || backend.kind !== 'postgres' || backend.database !== 'keryx_mainnet' || backend.sourceDigest !== SERVER1_NATIVE_RELEASE.catalogSha256
     || !sameKeys(backend.endpoint, ['kind', 'directory', 'port']) || backend.endpoint.kind !== 'unix'
     || backend.endpoint.directory !== '/run/postgresql-keryx' || backend.endpoint.port !== 5432
     || !sameKeys(backend.credentialPaths, ['application', 'reader'])
