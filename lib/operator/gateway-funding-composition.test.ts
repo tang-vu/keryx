@@ -134,6 +134,7 @@ describe("dormant Operator funding release", () => {
           || importer === "scripts/postgres/qualify-ledger.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-acceptance.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-native-runtime.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "scripts/postgres/qualify-operator-withdrawal.mts" && target === "lib/db/enrolled-sqlite-adapter.ts"
           || importer === "scripts/postgres/qualify-accounts.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-account-history.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/postgres/qualify-chat-links.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
