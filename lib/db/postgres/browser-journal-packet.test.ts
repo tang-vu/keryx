@@ -21,6 +21,9 @@ import { canonicalJson } from '../../canonical-json';
 import { config } from '../../config';
 import { issueSqliteSourceClaimChallenge,verifySqliteSourceClaim,bindSqliteSourceClaim,updateSqliteSourceClaimPolicy } from '../public-source-claims';
 import { captureBrowserJournalAdmission,captureBrowserJournalSelector,captureBrowserAuthorizationIntent,captureBrowserJournalGrant,decodeBrowserJournal,browserSigningSnapshot,captureBrowserWithdrawalHistory,decodeBrowserWithdrawalHistory,browserJournalSha256,type BrowserJournalStoredRow } from './browser-journal-packet';
+import { composePostgresBrowserJournal } from './browser-journal-transport';
+import type { PostgresDomainChannel } from './domain-channel';
+import type { SessionGrantRecord } from '../keryx-db';
 
 // Public, unfunded test-only keys sign only the Source historical query policy.
 // No configured key, live wallet, RPC, transaction, provider or payment is used.
@@ -55,6 +58,32 @@ it('captures one mainnet nonce before awaits and preserves serialized metadata s
 });
 it('keeps legacy intent return originals distinct from Source-bound scalar projection',()=>{
  const input={...admission(),sessionId:'session\ud800'},captured=captureBrowserAuthorizationIntent(input);expect(captured.intent.sessionId).toBe('session\ud800');expect(captured.projection.sessionId).toBe('session\ufffd');expect(captured.projection).not.toHaveProperty('payment');const grant=captureBrowserJournalGrant({sessionId:'session\ud800',sessAddr:signer.address,ownerAddr:owner.address,cap:.1,expiry:Date.now()+60000,txHash:'receipt\ud800',grantEpoch:epoch});expect(grant.grant.sessionId).toBe('session\ufffd');expect(grant.grant.txHash).toBe('receipt\ufffd');
+});
+it.each([false,true])('binds the same seven Source grant cells with journal active=%s, ignoring caller toJSON before a delayed native write',async(active)=>{
+ await fixture(async(core)=>{
+  const cells:Omit<SessionGrantRecord,'spent'>={sessionId:'source-grant-session',sessAddr:signer.address,ownerAddr:owner.address,cap:.25,expiry:Date.now()+60000,txHash:'original-source-receipt',grantEpoch:randomUUID()};
+  const toJSON=vi.fn(()=>({...cells,sessionId:'toJSON-substituted-session',ownerAddr:payee,cap:99})),ignored=vi.fn(()=>{throw Error('Source does not read extra properties');});
+  const raw=Object.defineProperties({...cells},{toJSON:{value:toJSON},ignored:{enumerable:true,get:ignored}});
+  let finish!:(value:boolean)=>void;const pendingReply=new Promise<boolean>(resolve=>{finish=resolve;}),call=vi.fn<PostgresDomainChannel['call']>(()=>pendingReply);
+  // Test-only fixed transport boundary; this supplies no native facade proof.
+  const port=composePostgresBrowserJournal({closed:false,call,async close(){}},false),pending=port.upsertSessionGrant(raw);
+  await core.upsertSessionGrant(raw);const saved=await core.getSessionGrant(cells.sessionId);expect(saved).toEqual({...cells,spent:0});expect(await core.getSessionGrant('toJSON-substituted-session')).toBeNull();
+  expect(call).toHaveBeenCalledOnce();expect(call.mock.calls[0][0]).toBe('browserJournalAction');expect(call.mock.calls[0][1][0]).toBe('grant');
+  const packet=JSON.parse(call.mock.calls[0][1][1]!);expect(packet).toEqual({grant:cells,capMicros:'250000'});expect({...packet.grant,spent:0}).toEqual(saved);
+  raw.sessionId='changed-after-capture';raw.cap=9;raw.txHash='changed-after-capture';finish(true);await pending;
+  expect(toJSON).not.toHaveBeenCalled();expect(ignored).not.toHaveBeenCalled();expect(JSON.parse(call.mock.calls[0][1][1]!).grant).toEqual(cells);
+ },false,undefined,active);
+});
+it('reads each named grant getter once in Source binding order and ignores serialization hooks',async()=>{
+ await fixture(async(core)=>{
+  const values:Omit<SessionGrantRecord,'spent'>={sessionId:'getter-source-session',sessAddr:signer.address,ownerAddr:owner.address,cap:.1,expiry:Date.now()+60000,txHash:'source-receipt',grantEpoch:randomUUID()},reads:string[]=[];
+  const raw={} as Omit<SessionGrantRecord,'spent'>;
+  for(const name of ['sessionId','sessAddr','ownerAddr','cap','expiry','txHash','grantEpoch'] as const)Object.defineProperty(raw,name,{enumerable:true,get(){reads.push(name);return values[name];}});
+  const ignored=vi.fn(()=>{throw Error('serialization hook inspected');});Object.defineProperties(raw,{toJSON:{get:ignored},unrelated:{enumerable:true,get:ignored}});
+  const captured=captureBrowserJournalGrant(raw);expect(reads).toEqual(['sessionId','sessAddr','ownerAddr','cap','expiry','txHash','grantEpoch']);reads.length=0;
+  await core.upsertSessionGrant(raw);expect(reads).toEqual(['sessionId','sessAddr','ownerAddr','cap','expiry','txHash','grantEpoch']);
+  expect(await core.getSessionGrant(values.sessionId)).toEqual({...captured.grant,spent:0});expect(ignored).not.toHaveBeenCalled();
+ },false,undefined,false);
 });
 it('reproduces genuine selected mainnet plain journal reads with NUL and escaped lone UTF-16 originals',async()=>{
  await fixture(async(core,db)=>{const input=admission(),result=await core.admitBrowserJournal(input);expect(result.status).toBe('admitted');const actual=await core.getBrowserJournal(input.sessionId,input.requestId);expect(decodeBrowserJournal(stored(db,input),captureBrowserJournalSelector(input.sessionId,input.requestId))).toEqual(actual);expect(actual!.payment.rationale).toBe('raw\0metadata\udfff');expect(db.prepare('SELECT rationale FROM payment_events').get()!.rationale).toBe('raw\0metadata\ufffd');expect(JSON.parse(String(db.prepare('SELECT payment_context FROM browser_journal_bindings').get()!.payment_context)).note).toBe('raw\0context\ud800');});
