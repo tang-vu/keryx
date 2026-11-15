@@ -36,7 +36,7 @@ export type HeldNativeCatchupRequest=Readonly<{source:Parameters<typeof prepareH
 export class HeldNativeCatchupRefused extends Error{
  constructor(readonly stage:string,readonly commitOutcome:'not_attempted'|'unknown'|'acknowledged'='not_attempted'){super('Held native catchup refused: '+stage);}
 }
-const refuse=(stage:string):never=>{throw new HeldNativeCatchupRefused(stage);};
+function refuse(stage:string):never{throw new HeldNativeCatchupRefused(stage);}
 function capture(input:HeldNativeCatchupRequest){
  let fields=0;const plain=(value:unknown,depth=0):void=>{
   if(depth>10||++fields>128||value===undefined||typeof value==='function'||typeof value==='symbol'||typeof value==='bigint')refuse('request');

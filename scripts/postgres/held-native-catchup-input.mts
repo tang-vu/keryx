@@ -25,7 +25,7 @@ export const HELD_CATCHUP_INPUT_LIMITS=Object.freeze({spoolBytes:64*MiB,changeFr
 type Limits={-readonly [K in keyof typeof HELD_CATCHUP_INPUT_LIMITS]:number};
 type DeltaCompletion=ReturnType<typeof streamTypedSnapshotDelta> extends AsyncGenerator<unknown,infer R,unknown>?R:never;
 export class HeldCatchupInputRefused extends Error{constructor(readonly code:string){super('Held catchup input refused: '+code);}}
-const refuse=(code:string):never=>{throw new HeldCatchupInputRefused(code);};
+function refuse(code:string):never{throw new HeldCatchupInputRefused(code);}
 function plain(value:unknown,depth=0):void{
  if(typeof value==='string'&&(value.length>8192||Buffer.byteLength(value)>8192)||typeof value==='number'&&!Number.isFinite(value))refuse('invalid_request');
  if(depth>8||value===undefined||typeof value==='function'||typeof value==='symbol'||typeof value==='bigint')refuse('invalid_request');
@@ -146,7 +146,7 @@ async function prepare(request:Request,cap:Limits,stream:ReturnType<typeof strea
    if(old)oldOffers.update(canonicalJson(old)).update('\n');if(next)newOffers.update(canonicalJson(next)).update('\n');
    if(canonicalJson(old)!==canonicalJson(next)||!u.done&&!v.done&&order===0&&snapshotRowWire(u.value)!==snapshotRowWire(v.value)){write({format:'keryx-held-native-catchup-offer-order-v1',provisional:true,before:old,after:next},cap.projectionFrameBytes);affectedOfferOrders++;}
    if(order<=0)u=a.next();if(order>=0)v=b.next();
-  }}finally{a.return();b.return();}
+   }}finally{a.return(undefined);b.return(undefined);}
   stage='seal';before.hash();after.hash();before.verify();after.verify();
   const result={format:'keryx-held-native-catchup-completion-v1',sealedData:true,delta:completion,beforeProjectionCensus:oldCensus.finish(),afterProjectionCensus:newCensus.finish(),beforeOfferOrderDigest:oldOffers.digest('hex'),afterOfferOrderDigest:newOffers.digest('hex'),affectedProjectionPackets,affectedOfferOrders,
    holds:[...holds].sort(),independentApplierQualificationRequired:true,contentSha256:contentHash.digest('hex'),framesBeforeCompletion:frames,bytesBeforeCompletion:bytes,targetVerified:false,applicationAuthority:false,nativeFactoryQualified:false,targetWrites:0};

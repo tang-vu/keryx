@@ -119,4 +119,4 @@ async function main(){
  let outbound=0;globalThis.fetch=(()=>{outbound++;throw Error('Synthetic Source forbids outbound I/O');}) as typeof fetch;
  let fixture:Awaited<ReturnType<typeof prepareHeldCatchupSynthetic>>|undefined;try{fixture=await prepareHeldCatchupSynthetic();assert.equal(outbound,0);process.stdout.write(JSON.stringify({...fixture.summary,outboundCalls:outbound,inputsUnchanged:true})+'\n');}finally{if(fixture)disposeHeldCatchupSynthetic(fixture);}
 }
-if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(()=>{process.stderr.write('Synthetic held catchup preparation refused\n');process.exitCode=1;});
+if(typeof import.meta.url==='string'&&process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(()=>{process.stderr.write('Synthetic held catchup preparation refused\n');process.exitCode=1;});
