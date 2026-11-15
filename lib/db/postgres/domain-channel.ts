@@ -147,13 +147,27 @@ export interface PostgresDomainChannel {
 function unavailable(): never { throw new PostgresStorageUnavailable(); }
 
 /** A single bounded pool for composed native domain ports. Not application
- * enrollment/provenance, target discovery, funding, custody or retry authority. */
-export function createPostgresDomainChannel(options: PostgresConnectionOptions, expected: StorageIdentity, sourceDigest: string): PostgresDomainChannel {
+ * enrollment/provenance, target discovery, funding, custody or retry authority.
+ * Current-selection checks narrow admission only. They cannot enroll a facade or
+ * issue runtime identity; SQL independently validates its current all-nine identity. */
+export function createPostgresDomainChannel(options: PostgresConnectionOptions, expected: StorageIdentity, sourceDigest: string, assertCurrentContext?: () => void): PostgresDomainChannel {
   const identity = validateStorageIdentity(expected);
   if (identity.authorityMode !== "mainnet-real" || typeof sourceDigest !== "string" || !/^[0-9a-f]{64}$/.test(sourceDigest)) unavailable();
+  if (assertCurrentContext !== undefined && typeof assertCurrentContext !== "function") unavailable();
   const expectedWire = canonicalJson(identity), pool = new Pool(postgresPoolConfiguration(options));
   let closed = false, pending = 0, closing: Promise<void> | undefined;
   const inFlight = new Set<Promise<unknown>>();
+  const current = () => {
+    if (closed) unavailable();
+    // Synchronous checks run at the actual dispatch boundary, never as a DTO or proof issuer.
+    let result: unknown;
+    try { result = assertCurrentContext?.(); } catch { unavailable(); }
+    if (result !== undefined) {
+      if (result instanceof Promise) void result.catch(() => {});
+      unavailable();
+    }
+    if (closed) unavailable();
+  };
   pool.on("error", () => {});
   return Object.freeze({
     get closed() { return closed; },
@@ -163,28 +177,32 @@ export function createPostgresDomainChannel(options: PostgresConnectionOptions, 
       if (!Array.isArray(args) || args.length !== selected.args || args.some(value => value !== null && typeof value !== "string")
         || Buffer.byteLength(JSON.stringify(args)) > ('inputBytes' in selected?selected.inputBytes:65536)) unavailable();
       if (pending >= 10) throw new PostgresStorageBusy();
+      current();
       let submitted = false, request: Promise<unknown> | undefined;
       pending++;
       try {
-        submitted = true;
         const statement = { text: selected.sql, rowMode: "array" as const, values: [expectedWire, sourceDigest, ...args] };
-        // These read adapters may traverse existing private domain helpers. A
-        // real read-only transaction enforces their nonmutation transitively.
-        // Only these fixed statements run here; no transaction callback escapes.
-        const query = "transaction" in selected && selected.transaction ? (async () => {
+        // Acquiring the client explicitly keeps queued writes behind the current
+        // context check. Pool.query would dispatch after an unchecked acquisition.
+        const query = (async () => {
           const client = await pool.connect();
           let complete = false;
           try {
-            if (closed) unavailable();
-            await client.query("BEGIN READ ONLY");
+            current();
+            const transaction = "transaction" in selected && selected.transaction;
+            if (transaction) { await client.query("BEGIN READ ONLY"); current(); }
+            // No await or caller code occurs between the current check and SQL.
+            submitted = selected.write;
             const result = await client.query(statement);
-            await client.query("COMMIT");
+            current();
+            if (transaction) { await client.query("COMMIT"); current(); }
             complete = true;
             return result;
           } finally { client.release(!complete); }
-        })() : pool.query(statement);
+        })();
         request = query; inFlight.add(query);
         const result = await query;
+        current();
         if (closed || result.rows.length !== 1 || result.fields.length !== 1 || result.fields[0].name !== "result"
           || ![114, 3802].includes(result.fields[0].dataTypeID)) unavailable();
         const row = result.rows[0] as unknown[];

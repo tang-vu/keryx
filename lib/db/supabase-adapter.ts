@@ -6,6 +6,13 @@ import type { PostgresArticleOfferPort } from './postgres/article-offer-transpor
 import type {PostgresOperatorWithdrawalPort} from './postgres/operator-withdrawal-transport';
 import type {PostgresReferenceArchivePort} from './postgres/reference-archive-transport';
 import type {PostgresPaymentObservationPort} from './postgres/payment-observation-transport';
+import type { PostgresPrivateResearchPort } from './postgres/private-research-transport';
+import type { PostgresOnrampPort } from './postgres/onramp-transport';
+import type { PostgresScholarlyPort } from './postgres/scholarly-transport';
+import type { PostgresRegistrationSponsorPort } from './postgres/registration-sponsor-transport';
+import type { PostgresA2aOriginalsPort } from './postgres/a2a-originals-transport';
+import type { PostgresResearchPurchasesPort } from './postgres/research-purchases-transport';
+import { APPLICATION_WRITE_OPERATIONS } from './postgres/application-domain-transport';
 
 import { PostgresDomainWriteOutcomeUnknown } from './postgres/domain-channel';
 import type { NativeFinancialApplicationPort } from './postgres/native-financial-application-port';
@@ -179,6 +186,12 @@ export interface NativePostgresBusinessCoreOptions {
   readonly operatorWithdrawal?:PostgresOperatorWithdrawalPort;
   readonly referenceArchive?:PostgresReferenceArchivePort;
   readonly paymentObservations?:PostgresPaymentObservationPort;
+  readonly privateResearch?:PostgresPrivateResearchPort;
+  readonly onramp?:PostgresOnrampPort;
+  readonly scholarly?:PostgresScholarlyPort;
+  readonly registrationSponsor?:PostgresRegistrationSponsorPort;
+  readonly a2aOriginals?:PostgresA2aOriginalsPort;
+  readonly researchPurchases?:PostgresResearchPurchasesPort;
 
   readonly financialApplication?:NativeFinancialApplicationPort;
   readonly sourceClaimWrites?:ReturnType<typeof composePostgresSourceClaimWrites>;
@@ -213,6 +226,17 @@ export function assembleNativePostgresBusinessCore(options:NativePostgresBusines
 }
 
 export class SupabaseAdapter implements KeryxDB {
+  declare readonly createOwnedA2aOrder?:NonNullable<KeryxDB['createOwnedA2aOrder']>;
+  declare readonly admitRegistrationSponsor?:NonNullable<KeryxDB['admitRegistrationSponsor']>;
+  declare readonly getRegistrationSponsor?:NonNullable<KeryxDB['getRegistrationSponsor']>;
+  declare readonly getRegistrationSponsorExecution?:NonNullable<KeryxDB['getRegistrationSponsorExecution']>;
+  declare readonly inspectRegistrationSponsorFunding?:NonNullable<KeryxDB['inspectRegistrationSponsorFunding']>;
+  declare readonly transitionRegistrationSponsor?:NonNullable<KeryxDB['transitionRegistrationSponsor']>;
+  declare readonly getPaperState?:NonNullable<KeryxDB['getPaperState']>;
+  declare readonly beginPaperEnrollment?:NonNullable<KeryxDB['beginPaperEnrollment']>;
+  declare readonly submitPaper?:NonNullable<KeryxDB['submitPaper']>;
+  declare readonly reviewPaper?:NonNullable<KeryxDB['reviewPaper']>;
+  declare readonly getPaperAdmission?:NonNullable<KeryxDB['getPaperAdmission']>;
   declare readonly issueSourceClaimChallenge?:NonNullable<KeryxDB['issueSourceClaimChallenge']>;
   declare readonly reserveSourceClaimVerification?:NonNullable<KeryxDB['reserveSourceClaimVerification']>;
   declare readonly verifySourceClaim?:NonNullable<KeryxDB['verifySourceClaim']>;
@@ -315,6 +339,29 @@ export class SupabaseAdapter implements KeryxDB {
         },configurable:true});
       }
     };
+    if(native?.privateResearch)installNativeMethods(native.privateResearch,[
+      ['getPrivateResearchIntent',false],['getPrivatePaymentState',false],['getPrivateResearchExecution',false],['getPrivateResearchResult',false],
+      ['getPrivateResearchInterruption',false],['getPrivateTreasury',false],['listPrivateCreatorSubmissions',false],['getPrivateCreatorConfirmation',false],
+      ['listPrivateResearchHistory',false],['getPrivateTreasurySummary',false],['listPrivateWorkerCandidates',false],['listPrivateReconciliationCandidates',false],
+      ['reservePrivateResearchIntent',true],['reservePrivateTreasury',true],['claimPrivatePaymentSubmission',true],['confirmPrivatePayment',true],
+      ['claimPrivateResearchExecution',true],['admitPrivateCreatorSubmission',true],['confirmPrivateCreatorSubmission',true],['savePrivateResearchResult',true],
+      ['interruptPrivateResearch',true],['releasePrivateTreasury',true],
+    ]);
+    if(native?.onramp)installNativeMethods(native.onramp,[['reserveOnramp',true],['releaseOnramp',true]]);
+    if(native?.scholarly)installNativeMethods(native.scholarly,[['getPaperState',false],['beginPaperEnrollment',true],['submitPaper',true],['reviewPaper',true],['getPaperAdmission',false]]);
+    if(native?.registrationSponsor)installNativeMethods(native.registrationSponsor,[['admitRegistrationSponsor',true],['getRegistrationSponsor',false],['getRegistrationSponsorExecution',false],['inspectRegistrationSponsorFunding',false],['transitionRegistrationSponsor',true]]);
+    if(native?.researchPurchases)installNativeMethods(native.researchPurchases,[['claimResearchPurchase',true],['createResearchMonthly',true],['getResearchMonthly',false],['redeemResearchMonthly',true]]);
+    if(native?.a2aOriginals){
+      const originals=native.a2aOriginals,claimOriginal=originals.claimA2aOriginal;
+      if(typeof claimOriginal!=='function')refuseStorage('adapter_not_initialized');
+      installNativeMethods(originals,[['hasA2aOriginalSettlement',false],['createA2aOrder',true],['createOwnedA2aOrder',true],['getA2aOrder',false],['completeA2aOrder',true],['resolveA2aOrder',true],['listUnfinishedA2aOrders',false],['markA2aOrderPaymentStarted',true],['markA2aOrderResultSaving',true],['failA2aOrder',true]]);
+      Object.defineProperty(this,'claimNextA2aOrder',{value:(workerId:string,startedAt:string,expectedOriginal?:A2aOriginalClaim)=>this.nativeResult(true,()=>{
+        // The native protocol accepts only the independently bound original.
+        // A bare mainnet queue claim must never reach a legacy RPC.
+        if(expectedOriginal===undefined)refuseStorage('invalid_operation');
+        return Reflect.apply(claimOriginal,originals,[expectedOriginal,workerId,startedAt]);
+      }),configurable:true});
+    }
     if(native?.sourceMetaSetter)installNativeMethods({setSourceMeta:native.sourceMetaSetter},[['setSourceMeta',true]]);
     if(native?.paymentEvents)installNativeMethods(native.paymentEvents,[['recordPayment',true],['recordPaymentOnce',true],['settlePendingPayment',true],['failPendingPayment',true]]);
     if(native?.sourceObservations)installNativeMethods(native.sourceObservations,[['verifySourceIfUnchanged',true]]);
@@ -397,10 +444,16 @@ export class SupabaseAdapter implements KeryxDB {
     if (!initializing && !lane.ready) refuseStorage("adapter_not_initialized");
   }
 
+  private async nativeResult<T>(write:boolean,work:()=>PromiseLike<T>):Promise<T>{
+    this.assertEntry();const result=await work();
+    try{this.assertEntry();}catch(error){if(write)throw new PostgresDomainWriteOutcomeUnknown();throw error;}
+    return result;
+  }
+
   /** Fixed operation/arguments are written at each call site. The enrolled lane
    * never executes the legacy closure, including on errors or missing RPCs. */
   private async domainCall<T, A extends Record<string, unknown>>(operation: string, args: A, legacy: (args: A) => PromiseLike<T>): Promise<T> {
-    if(this.#native){this.assertEntry();const result=await this.#native.authority.rpcResult(operation,args);this.assertEntry();if(result.error)throw result.error;return result as T;}
+    if(this.#native){const result=await this.nativeResult(Object.hasOwn(APPLICATION_WRITE_OPERATIONS,operation),()=>this.#native!.authority.rpcResult(operation,args));if(result.error)throw result.error;return result as T;}
     if (!this.#enrolled) return legacy(args);
     this.assertEntry(operation === "init");
     const result = operation === "init"
@@ -412,7 +465,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   private domainRpc(name: string, args: Record<string, unknown> = {}) {
-    if(this.#native){this.assertEntry();return this.#native.authority.rpcResult(name,args).then(result=>{this.assertEntry();return result;});}
+    if(this.#native)return this.nativeResult(Object.hasOwn(APPLICATION_WRITE_OPERATIONS,name),()=>this.#native!.authority.rpcResult(name,args));
     if (!this.#enrolled) return this.#sb.rpc(name, args);
     this.assertEntry();
     return this.#enrolled.authority.rpcResult(name, args).then(result => {
@@ -510,7 +563,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
-    if(this.#native?.sourceUpsert){this.assertEntry();await this.#native.sourceUpsert(s);this.assertEntry();return;}
+    if(this.#native?.sourceUpsert){await this.nativeResult(true,()=>this.#native!.sourceUpsert!(s));return;}
     if (s.registryAuthority) throw new Error("Immutable registry origin admission requires the SQLite adapter");
     if (s.sourceClaimId) throw new Error("Managed source claims require accepted atomic SQLite claim storage; Supabase imports are unsupported");
     if (s.scholarlyEnrolled) throw new Error("Scholarly enrolled sources cannot migrate to the unsupported Supabase backend");
