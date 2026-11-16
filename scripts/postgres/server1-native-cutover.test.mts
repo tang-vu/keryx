@@ -3,12 +3,16 @@ import {readFileSync} from 'node:fs';
 import {hostname} from 'node:os';
 import {DatabaseSync} from 'node:sqlite';
 import {EventEmitter} from 'node:events';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import type {Client} from 'pg';
 import ts from 'typescript';
 import {createOwnerSessionHeartbeat} from './owner-session-heartbeat.mts';
 import {SERVER1_CUTOVER,Server1CutoverUnavailable,inspectServer1NativeCutover,runServer1NativeCutover,parseServer1CutoverMode,parseServer1CutoverIntent,parseServer1CutoverReceiptTemplate,parseServer1SourceRoles,replaceServer1HashToken,validateServer1WorkerStop,validateServer1OperatorClock} from './server1-native-cutover.mts';
-import {snapshotRows,snapshotTables,type SnapshotRow} from './typed-snapshot.mts';
+import {snapshotRows,snapshotTables,snapshotRowWire,type SnapshotRow} from './typed-snapshot.mts';
 import {publishOperatorHeartbeat} from '../../lib/business-operator/status';
+import {canonicalJson} from '../../lib/canonical-json';
+import {nativeMaterializationValueKey,nativeMaterializationCell} from './native-materialization-codec.mts';
 
 const a='a'.repeat(64),b='b'.repeat(64),c='c'.repeat(64),commit='1'.repeat(40),at='2026-11-15T18:00:00.000Z';
 const intent=()=>({format:'keryx-server1-native-cutover-intent-v1',sourceCommit:SERVER1_CUTOVER.sourceCommit,targetCommit:commit,createdAt:at,windowId:'postgres-native-cutover-20261116-0123456789abcdef',baselineSha256:a,rolesSha256:a,reviewSha256:a,oldEnvironmentSha256:a,oldManifestSha256:a,runtimeEnvironmentSha256:a,runtimeManifestSha256:a,receiptTemplateSha256:a,nativeBootSha256:a,snapshotChildSha256:a,cutoverBundleSha256:a});
@@ -38,8 +42,16 @@ class RecordingOwner extends EventEmitter{
 }
 function recordingSessions(){const first=new RecordingOwner(),second=new RecordingOwner(),transactions=new Set<Client>(),cleanup:string[]=[];const sessions=composeSessions([first.client(),second.client()],transactions,cleanup);sessions.start();return {first,second,transactions,cleanup,sessions};}
 const operatorDecision=()=>({action:'hold' as const,reason:'acceptance-paused' as const,liquidity:'not-needed' as const,observedAt:at});
-const operatorValue=(observedAt=at)=>({version:1,network:'eip155:5042',observedAt,decision:operatorDecision(),auditRecorded:true,state:'held'});
+const operatorValue=(observedAt=at,decisionObservedAt=at)=>({version:1,network:'eip155:5042',observedAt,decision:{...operatorDecision(),observedAt:decisionObservedAt},auditRecorded:true,state:'held'});
 function operatorRow(value:unknown,column=at):SnapshotRow{return [text('businessOperator'),text(JSON.stringify(value)),text(column)];}
+// Exercise the exact private inventory implementation on real SQLite cells.
+// This is data-only coverage, never a host/target/factory qualification.
+const inventorySource=source.slice(source.indexOf('type TypedTable='),source.indexOf("const cutoverUnit="));
+const scalarSource=source.slice(source.indexOf('function scalarText('),source.indexOf('function sourceIdleWorker('));
+const shaSource=source.slice(source.indexOf('const sha='),source.indexOf('function releaseSource('));
+const inventoryWire=ts.transpileModule(shaSource+scalarSource+inventorySource,{compilerOptions:{target:ts.ScriptTarget.ES2017,module:ts.ModuleKind.None}}).outputText;
+type DataInventory={schemaSha256:string;dataDigest:string;normalizedDataDigest:string;syncSemanticDigest:string;worker:SnapshotRow;operatorClock:SnapshotRow;tables:unknown[];rows:number};
+const inspectInventory=new Function('assert','createHash','snapshotTables','snapshotRows','snapshotRowWire','canonicalJson','nativeMaterializationValueKey','nativeMaterializationCell','validateServer1WorkerStop','validateServer1OperatorClock',inventoryWire+';return typedInventory;')(assert,createHash,snapshotTables,snapshotRows,snapshotRowWire,canonicalJson,nativeMaterializationValueKey,nativeMaterializationCell,validateServer1WorkerStop,validateServer1OperatorClock) as (db:DatabaseSync,frame:()=>void,stop?:{baseline:DataInventory;pid:number;from:number;until:number})=>Promise<DataInventory>;
 
 describe('fixed server1 cutover input boundary (data only)',()=>{
  it('defaults to readonly preflight and admits only finite fixed selectors',()=>{
@@ -93,28 +105,43 @@ describe('actual Source SQL heartbeat to stop transition',()=>{
 });
 
 describe('narrow Source businessOperator clock',()=>{
- it('accepts the genuine publisher wire and actual SQLite three cells without changing the decision',async()=>{
+ it('accepts a fresh genuine Source decision observation and independent publisher/SQLite clocks',async()=>{
   const adapter=readFileSync(new URL('../../lib/db/sqlite-adapter.ts',import.meta.url),'utf8'),sql=adapter.slice(adapter.indexOf('async setSyncState(')).match(/`(INSERT OR REPLACE INTO sync_state \(key,value,updated_at\) VALUES \(\?,\?,\?\))`/)?.[1];expect(sql).toBeDefined();const db=new DatabaseSync(':memory:');vi.useFakeTimers();
   try{db.exec('CREATE TABLE sync_state(key TEXT PRIMARY KEY,value TEXT,updated_at TEXT)');const port={async setSyncState(key:string,value:string){db.prepare(sql!).run(key,value,new Date().toISOString());}};const take=()=>{db.exec('BEGIN');try{return [...snapshotRows(db,snapshotTables(db)[0],['key'])][0];}finally{db.exec('ROLLBACK');}};
-   vi.setSystemTime(new Date(from-500));await publishOperatorHeartbeat(port,'eip155:5042',operatorDecision(),'decision');const old=take();vi.setSystemTime(new Date(from+100));await publishOperatorHeartbeat(port,'eip155:5042',operatorDecision(),'decision');const next=take();
-   expect(validateServer1OperatorClock(old,next,from,until)).toEqual({before:Buffer.from((old[1] as readonly ['text',string])[1],'hex').toString(),after:Buffer.from((next[1] as readonly ['text',string])[1],'hex').toString()});expect(JSON.parse(Buffer.from((next[1] as readonly ['text',string])[1],'hex').toString()).decision).toEqual(operatorDecision());
+   vi.setSystemTime(new Date(from-500));await publishOperatorHeartbeat(port,'eip155:5042',operatorDecision(),'decision');const old=take();const refreshed={...operatorDecision(),observedAt:new Date(from+50).toISOString()};vi.setSystemTime(new Date(from+100));await publishOperatorHeartbeat(port,'eip155:5042',refreshed,'decision');const next=take();
+   expect(validateServer1OperatorClock(old,next,from,until)).toEqual({before:Buffer.from((old[1] as readonly ['text',string])[1],'hex').toString(),after:Buffer.from((next[1] as readonly ['text',string])[1],'hex').toString()});expect(JSON.parse(Buffer.from((next[1] as readonly ['text',string])[1],'hex').toString()).decision).toEqual(refreshed);
   }finally{vi.useRealTimers();db.close();}
  });
  it('allows the last heartbeat before SIGINT, equal clocks, and independent later timestamp column',()=>{
   const old=operatorRow(operatorValue()),observed=new Date(from-10).toISOString(),next=operatorRow(operatorValue(observed),new Date(from-9).toISOString());expect(()=>validateServer1OperatorClock(old,next,from,until)).not.toThrow();expect(()=>validateServer1OperatorClock(old,old,from,until)).not.toThrow();
+  const nested=new Date(from-20).toISOString();expect(()=>validateServer1OperatorClock(old,operatorRow(operatorValue(observed,nested),new Date(from-9).toISOString()),from,until)).not.toThrow();
  });
  it.each([{version:2},{network:'eip155:5042002'},{auditRecorded:false},{state:'working'},{state:'unknown'},{extra:true}])('refuses malformed/working/private-envelope mutations %j',change=>{
   const bad=operatorRow({...operatorValue(),...change});expect(()=>validateServer1OperatorClock(bad,bad,from,until)).toThrow();
  });
- it('refuses admitted/review decisions, unknown decision fields/enums and any changed retained decision',()=>{
+ it('refuses admitted/review decisions, unknown fields/enums and changed decision authority or state',()=>{
   for(const change of [{action:'run-next'},{action:'review'},{reason:'unknown'},{liquidity:'infinite'},{extra:true}]){const bad=operatorRow({...operatorValue(),decision:{...operatorDecision(),...change}});expect(()=>validateServer1OperatorClock(bad,bad,from,until)).toThrow();}
-  for(const change of [{reason:'policy-cap'},{liquidity:'covered'},{observedAt:new Date(from-100).toISOString()},{action:'idle'}]){const next=operatorRow({...operatorValue(new Date(from+100).toISOString()),decision:{...operatorDecision(),...change}},new Date(from+101).toISOString());expect(()=>validateServer1OperatorClock(operatorRow(operatorValue()),next,from,until)).toThrow();}
+  for(const change of [{reason:'policy-cap'},{liquidity:'covered'},{action:'idle'}]){const next=operatorRow({...operatorValue(new Date(from+100).toISOString()),decision:{...operatorDecision(),...change}},new Date(from+101).toISOString());expect(()=>validateServer1OperatorClock(operatorRow(operatorValue()),next,from,until)).toThrow();}
   expect(()=>validateServer1OperatorClock(operatorRow(operatorValue()),operatorRow({...operatorValue(new Date(from+100).toISOString()),state:'idle'},new Date(from+101).toISOString()),from,until)).toThrow();
  });
  it('bounds B0 and both final clocks; refuses backwards clocks, offsets and changed key/null/blob cells',()=>{
   const old=operatorRow(operatorValue()),later=new Date(from+100).toISOString();for(const next of [operatorRow(operatorValue(new Date(Date.parse(at)-1).toISOString()),at),operatorRow(operatorValue(later),new Date(from+99).toISOString()),operatorRow(operatorValue(later),new Date(until+1).toISOString()),operatorRow(operatorValue(later),later.replace('Z','+00:00'))])expect(()=>validateServer1OperatorClock(old,next,from,until)).toThrow();
   expect(()=>validateServer1OperatorClock(operatorRow(operatorValue(),new Date(from+1).toISOString()),operatorRow(operatorValue(later),later),from,until)).toThrow();
   for(const next of [[text('other'),old[1],old[2]],[old[0],['null'],old[2]],[old[0],['blob',(old[1] as readonly ['text',string])[1]],old[2]],[old[0],['text','ff'],old[2]],old.slice(0,2)] as SnapshotRow[])expect(()=>validateServer1OperatorClock(old,next,from,until)).toThrow();
+ });
+ it('independently bounds nested time, preserves its ordering and refuses noncanonical/future/backwards clocks',()=>{
+  const old=operatorRow(operatorValue()),top=new Date(from+100).toISOString(),column=new Date(from+101).toISOString();
+  for(const decisionTime of [new Date(Date.parse(at)-1).toISOString(),new Date(until+1).toISOString(),new Date(from+101).toISOString(),top.replace('Z','+00:00'),top.replace('.100Z','.1000Z'),'not-a-time'])expect(()=>validateServer1OperatorClock(old,operatorRow(operatorValue(top,decisionTime),column),from,until)).toThrow();
+  const nested=new Date(from+50).toISOString(),later=operatorRow(operatorValue(top,nested),column);expect(()=>validateServer1OperatorClock(old,later,from,until)).not.toThrow();expect(()=>validateServer1OperatorClock(later,operatorRow(operatorValue(top,new Date(from+49).toISOString()),column),from+200,until)).toThrow();
+ });
+ it('normalizes only the approved inventory hash while actual B1 sync cells/digest remain available for CAS',async()=>{
+  const db=new DatabaseSync(':memory:');try{
+   db.exec('CREATE TABLE sync_state(key TEXT PRIMARY KEY,value TEXT,updated_at TEXT);CREATE TABLE retained_data(id TEXT PRIMARY KEY,value TEXT)');for(let i=0;i<92;i++)db.exec('CREATE TABLE empty_'+i+'(id TEXT PRIMARY KEY)');db.prepare('INSERT INTO retained_data VALUES (?,?)').run('raw','retained\0body');
+   const set=db.prepare('INSERT OR REPLACE INTO sync_state VALUES(?,?,?)');set.run('a2aWorker',JSON.stringify(original()),at);set.run('businessOperator',JSON.stringify(operatorValue()),at);db.exec('PRAGMA query_only=ON;BEGIN');const b0=await inspectInventory(db,()=>{});db.exec('COMMIT;PRAGMA query_only=OFF');
+   const nested=new Date(from+50).toISOString(),top=new Date(from+100).toISOString(),column=new Date(from+102).toISOString();set.run('a2aWorker',JSON.stringify(stopped()),new Date(from+101).toISOString());set.run('businessOperator',JSON.stringify(operatorValue(top,nested)),column);db.exec('PRAGMA query_only=ON;BEGIN');
+   const b1=await inspectInventory(db,()=>{},{baseline:b0,pid,from,until}),raw=await inspectInventory(db,()=>{});expect(b1.tables).toHaveLength(94);expect(b1.normalizedDataDigest).toBe(b0.dataDigest);expect(b1.dataDigest).not.toBe(b0.dataDigest);expect(b1.dataDigest).toBe(raw.dataDigest);expect(b1.syncSemanticDigest).toBe(raw.syncSemanticDigest);expect(b1.syncSemanticDigest).not.toBe(b0.syncSemanticDigest);expect(b1.operatorClock).toEqual(operatorRow(operatorValue(top,nested),column));expect(b1.worker).toEqual(after());db.exec('COMMIT;PRAGMA query_only=OFF');
+   db.prepare('UPDATE retained_data SET value=? WHERE id=?').run('changed protected bytes','raw');db.exec('PRAGMA query_only=ON;BEGIN');await expect(inspectInventory(db,()=>{},{baseline:b0,pid,from,until})).rejects.toThrow();db.exec('ROLLBACK');
+  }finally{db.close();}
  });
  it('refuses duplicate fields, escaped/reordered producer wire, NUL/BOM and nested duplicate decisions',()=>{
   const old=operatorRow(operatorValue()),wire=JSON.stringify(operatorValue()),bad=[wire.replace('"version":1','"version":2,"version":1'),wire.replace('"action":"hold"','"action":"idle","action":"hold"'),wire.replace('"held"','"he\\u006cd"'),JSON.stringify(operatorValue(),null,2),'\ufeff'+wire,wire+'\0'];for(const value of bad)expect(()=>validateServer1OperatorClock(old,[old[0],text(value),old[2]],from,until)).toThrow();
@@ -154,6 +181,15 @@ describe('Source PM2 frame and irreversible ordering',()=>{
  it('checks predecessor boot readiness with its installed TypeScript loader before maintenance',()=>{
   const main=source.slice(source.indexOf('async function cutover(')),argv="['--env-file='+SERVER1_CUTOVER.activeEnvironment,'--import',releaseSource(SERVER1_CUTOVER.sourceCommit)+'/node_modules/tsx/dist/loader.mjs',SERVER1_CUTOVER.oldBootstrap,'--verify-only']";
   expect(main).toContain(argv);expect(main.indexOf(argv)).toBeLessThan(main.indexOf("stage='maintenance'"));
+ });
+ it('keeps the qualified snapshot argv able to inspect PID1 namespace while retaining outer Cap0',async()=>{
+  const raw=source.slice(source.indexOf('async function copyFinal('),source.indexOf('function journal(')),wire=ts.transpileModule(raw,{compilerOptions:{target:ts.ScriptTarget.ES2017,module:ts.ModuleKind.None}}).outputText;
+  const stop=Error('recording stops before any snapshot/I/O');let recorded:unknown[]|undefined;
+  const copy=new Function('assert','sha','SERVER1_CUTOVER','existsSync','command',wire+';return copyFinal;')(assert,(s:string)=>createHash('sha256').update(s).digest('hex'),SERVER1_CUTOVER,()=>false,async(...args:unknown[])=>{recorded=args;throw stop;}) as (c:unknown,frame:()=>void)=>Promise<unknown>;
+  await expect(copy({intent:{windowId:intent().windowId}},()=>{})).rejects.toBe(stop);expect(recorded?.[0]).toBe('/usr/bin/systemd-run');const argv=recorded?.[1] as string[];
+  for(const flag of ['--property=MemoryMax=256M','--property=MemorySwapMax=0','--property=CPUQuota=50%','--property=TasksMax=32','--property=RuntimeMaxSec=30s','--property=PrivateNetwork=yes','--property=NoNewPrivileges=yes'])expect(argv).toContain(flag);
+  expect(argv).not.toContain('--property=CapabilityBoundingSet=');expect(argv).toContain(SERVER1_CUTOVER.snapshotChild);expect(argv).toContain(SERVER1_CUTOVER.activeManifest);expect(argv).toContain(SERVER1_CUTOVER.finalSnapshot);expect(recorded?.slice(2)).toEqual([65536,35000]);
+  const outer=source.slice(source.indexOf('function containment('),source.indexOf('const serviceProperties='));expect(outer).toContain('/^CapEff:\\s+0+$/m.test(status)&&/^NoNewPrivs:\\s+1$/m.test(status)');
  });
  it('contains no force-stop/retry/target reopening or receipt-derived authority shortcut',()=>{
   expect(source).not.toMatch(/process\.kill\([^\n]*['"]SIGKILL|\.Client\.start\(|\.connect\(.*PM2|--force|allowProduction|register.*Facade|mint.*Provenance|executeRemote/i);expect(source).toContain("lease.rpc.call('notifyKillPM2',{},()=>{})");expect(source).toContain("sock.set('retry timeout',0);sock.retry=0");expect(source).toContain("new Set<Client>()");expect(source).toContain("assert.equal(sha(canonicalJson({staging,publicCensus,projections})),c.baseline.nativeCensusSha256)"); // No acceptance claim is inferred from this static contract test.
