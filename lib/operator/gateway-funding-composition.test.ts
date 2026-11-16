@@ -74,7 +74,7 @@ function nativeCutoverImport(node: ts.CallExpression, parsed: ts.SourceFile, fil
   if (!ts.isCallExpression(url) || url.questionDotToken || url.typeArguments?.length
     || !ts.isIdentifier(url.expression) || url.expression.text !== "pathToFileURL" || url.arguments.length !== 1) return null;
   const path = url.arguments[0];
-  if (ts.isStringLiteral(path)) return path.text === "/root/keryx/scripts/immutable-release-staging.mjs"
+  if (ts.isStringLiteral(path)) return path.text === "/root/.local/share/keryx-releases/3654cf66bd3541a90d9c621eb72d57556e306dd6/source/scripts/immutable-release-staging.mjs"
     ? "../immutable-release-staging.mjs" : null;
   if (!ts.isCallExpression(path) || path.questionDotToken || path.typeArguments?.length
     || !ts.isIdentifier(path.expression) || path.expression.text !== "join" || path.arguments.length !== 2
@@ -523,10 +523,14 @@ describe("dormant Operator funding release", () => {
       .toEqual(["node:path", "node:url", posix.relative("scripts/postgres", helper)]);
   });
   it("maps the separately pinned installed inspector to its inspected source", () => {
-    expect(runtimeImports(`${cutoverLoaderImports} void import(pathToFileURL('/root/keryx/scripts/immutable-release-staging.mjs').href);`, nativeCutover))
+    expect(runtimeImports(`${cutoverLoaderImports} void import(pathToFileURL('/root/.local/share/keryx-releases/3654cf66bd3541a90d9c621eb72d57556e306dd6/source/scripts/immutable-release-staging.mjs').href);`, nativeCutover))
       .toEqual(["node:path", "node:url", "../immutable-release-staging.mjs"]);
   });
   it.each([
+    "pathToFileURL('/root/keryx/scripts/immutable-release-staging.mjs').href",
+    "pathToFileURL('/root/.local/share/keryx-releases/5440d3c6f99dba5bda983acdcce121498c04bf42/source/scripts/immutable-release-staging.mjs').href",
+    "pathToFileURL(immutableInspector).href",
+    "pathToFileURL('/root/.local/share/keryx-releases/' + sourceCommit + '/source/scripts/immutable-release-staging.mjs').href",
     "pathToFileURL(join(releaseSource(commit), 'lib/payments/gateway-funding-executor.ts')).href",
     "pathToFileURL(join(releaseSource(commit), helper)).href",
     "pathToFileURL(join(releaseSource(commit), `lib/config.ts`)).href",
