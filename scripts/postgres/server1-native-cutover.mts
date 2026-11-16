@@ -24,6 +24,7 @@ import {snapshotRows,snapshotRowWire,snapshotTables,type SnapshotRow,type Snapsh
 import {nativeMaterializationCell,nativeMaterializationValueKey} from './native-materialization-codec.mts';
 import {sourceRegistryAuthoritySchema} from '../../lib/registry/source-registry-authority-schema';
 import {createOwnerSessionHeartbeat} from './owner-session-heartbeat.mts';
+import {assertServer1PlatformCurrent} from './server1-platform-compatibility.mts';
 
 const root='/root/keryx-migration',archive='/root/.local/share/keryx-private-release-archives/postgres-mainnet-cutover-20261116';
 export const SERVER1_CUTOVER=Object.freeze({
@@ -308,7 +309,7 @@ function containment(){
 }
 const serviceProperties=['LoadState','ActiveState','SubState','UnitFileState','User','Group','Type','DropInPaths','RuntimeDirectory','RuntimeDirectoryMode','MemoryMax','MemorySwapMax','CPUQuotaPerSecUSec','TasksMax','NoNewPrivileges','CapabilityBoundingSet','MainPID','FragmentPath','ExecStart','ControlGroup'] as const;
 async function preparedRuntime(c:Inputs,frame:()=>void){
- frame();const inventory=await command('/usr/bin/dpkg-query',['-W','-f=${binary:Package}\t${Version}\t${db:Status-Status}\n'],4194304);frame();assert.equal(sha(inventory),hash(c.preparation.packageInventorySha256));assert(inventory.length>0&&inventory.trimEnd().split('\n').every(v=>v.split('\t').length===3&&v.split('\t')[2]==='installed'));
+ frame();await assertServer1PlatformCurrent();frame();
  const observe=async()=>{const p=properties(await command('/usr/bin/systemctl',['show',pgUnit,'--all',...serviceProperties.map(v=>'--property='+v)]));frame();exact(p,[...serviceProperties]);
   for(const [key,value]of Object.entries({LoadState:'loaded',ActiveState:'active',SubState:'running',UnitFileState:'enabled',User:'postgres',Group:'root',Type:'simple',DropInPaths:pgDropin,RuntimeDirectory:'postgresql-keryx',RuntimeDirectoryMode:'0750',MemoryMax:'1073741824',MemorySwapMax:'0',CPUQuotaPerSecUSec:'750ms',TasksMax:'64',NoNewPrivileges:'yes',CapabilityBoundingSet:'',ControlGroup:pgGroup}))assert.equal(p[key],value);
   assert(/^[1-9][0-9]{0,9}$/.test(p.MainPID));assert(['/lib/systemd/system/postgresql@.service','/usr/lib/systemd/system/postgresql@.service'].includes(p.FragmentPath));assert(p.ExecStart.includes('path=/usr/lib/postgresql/17/bin/postgres ; argv[]=/usr/lib/postgresql/17/bin/postgres -D /var/lib/postgresql/17/keryx -c config_file=/etc/postgresql/17/keryx/postgresql.conf ;'));

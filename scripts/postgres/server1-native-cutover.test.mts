@@ -387,3 +387,13 @@ describe('full94-table two-operational-table preservation and recording CAS',()=
  });
 
 });
+
+
+describe('awaited platform guard before existing prepared-runtime observations (recording only)',()=>{
+ const declaration=parsed.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='preparedRuntime');assert(declaration);const wire=ts.transpileModule(declaration.getText(parsed),{compilerOptions:{target:ts.ScriptTarget.ES2017,module:ts.ModuleKind.None}}).outputText;
+ it.each(['qualification-refused','current-frame-changed'])('refuses %s after a genuine await boundary before service commands or input getters',async mode=>{
+  let resolve!:()=>void,reject!:(e:Error)=>void;const gate=new Promise<void>((a,b)=>{resolve=a;reject=b;}),reason=Error(mode);let checks=0,commands=0,getters=0;
+  const run=new Function('assertServer1PlatformCurrent','command',wire+';return preparedRuntime;')(()=>gate,async()=>{commands++;throw Error('unexpected service command');})as(c:unknown,frame:()=>void)=>Promise<void>;
+  const value=new Proxy({}, {get(){getters++;throw Error('premature input getter');}}),pending=run(value,()=>{checks++;if(mode==='current-frame-changed'&&checks===2)throw reason;});expect(checks).toBe(1);expect(commands).toBe(0);expect(getters).toBe(0);if(mode==='qualification-refused')reject(reason);else resolve();await expect(pending).rejects.toBe(reason);expect(commands).toBe(0);expect(getters).toBe(0);expect(checks).toBe(mode==='qualification-refused'?1:2);
+ });
+});
