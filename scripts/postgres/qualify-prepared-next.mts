@@ -37,11 +37,11 @@ export function preparedNextRecords(wire:string):Record<string,unknown>[]{
  const lines=wire.trim().split('\n');if(lines.length>2)preparedNextRefused();
  return lines.map(line=>{const x=JSON.parse(line) as Record<string,unknown>;if(!x||typeof x!=='object'||Array.isArray(x))preparedNextRefused();
   for(const [key,value]of Object.entries(x)){
-   if(['started','passed','limitsVerified','namespaceVerified','artifactVerified','actualCompiledNext','mainnetPublicBuild','sqlObserved','httpDrained','noSqliteFallback','nativeGracefulDrainProven'].includes(key)){if(typeof value!=='boolean')preparedNextRefused();}
+   if(['started','passed','limitsVerified','namespaceVerified','artifactVerified','actualCompiledNext','mainnetPublicBuild','sqlObserved','httpDrained','noSqliteFallback','nativeGracefulDrainProven','pinnedStartupRefusal'].includes(key)){if(typeof value!=='boolean')preparedNextRefused();}
    else if(['observedMemoryBytes','healthRequests','pageBytes','assetBytes','blockedRegistryFetches','otherBlockedFetches','logCalls'].includes(key)){if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0)preparedNextRefused();}
    else if(key==='mode'){if(!['verify','writer','restart','wrong-identity','wrong-source','wrong-key','reader-credential','held-target','limits','oom','hang'].includes(String(value)))preparedNextRefused();}
    else if(key==='refusal'){if(!['limits_refused','prepared_next_refused'].includes(String(value)))preparedNextRefused();}
-   else if(key==='refusalAt'){if(value!==null&&value!=='startup'&&value!=='health')preparedNextRefused();}
+   else if(key==='refusalAt'){if(value!==null&&value!=='startup'&&value!=='health'&&value!=='instrumentation')preparedNextRefused();}
    else if(key==='artifactDigest'){if(typeof value!=='string'||!/^[a-f0-9]{64}$/.test(value))preparedNextRefused();}
    else if(key==='buildId'){if(typeof value!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(value))preparedNextRefused();}
    else preparedNextRefused();
@@ -92,7 +92,7 @@ export async function qualifyPreparedNext(raw:PreparedNextQualificationInput){
      if(mode==='verify')assert.equal(last.artifactVerified,true);
      else{assert.equal(last.actualCompiledNext,true);assert.equal(last.mainnetPublicBuild,true);assert.equal(last.noSqliteFallback,true);assert.equal(last.nativeGracefulDrainProven,false);
       if(mode==='writer'||mode==='restart'){assert.equal(last.sqlObserved,true);assert.equal(last.healthRequests,16);assert.equal(last.httpDrained,true);assert.equal(last.refusalAt,null);assert(Number(last.pageBytes)>0&&Number(last.assetBytes)>0&&Number(last.blockedRegistryFetches)>0);assert.equal(last.otherBlockedFetches,0);}
-      else assert(['startup','health'].includes(String(last.refusalAt)));
+      else{assert(['startup','health','instrumentation'].includes(String(last.refusalAt)));if(last.refusalAt!=='health')assert.equal(last.pinnedStartupRefusal,true);}
      }
     }
    }
@@ -110,7 +110,7 @@ export async function qualifyPreparedNext(raw:PreparedNextQualificationInput){
   return {passed:true,compiledMainnetNext512:true,actualCompiledRoutes:true,preparedArtifactVerifiedBeforeAndAfter:true,artifactDigest:before.report.artifactDigest,buildId:before.report.buildId,healthRequests:32,maximumHealthConcurrency:2,actual384MiBRefused:true,actualOomKilled:true,actualDeadlineKilled:true,negativeControlExitCodes:{limits:limits.exitCode,oom:oom.exitCode,deadline:deadline.exitCode},reports,selectedWriterStartupAndRestart:true,readerCredentialRefused:true,readonlyFactoryPositiveQualifiedHere:false,processExitConnectionsCleaned:true,nativeGracefulDrainProven:false,registryOnlineQualified:false,postgresCreated:false,productionChanged:false,fullApplicationQualified:false};
  }finally{
   const failures:string[]=[];for(const name of [...containers])try{remove(name);}catch{failures.push('container');}
-  try{for(const id of docker(['image','ls','--no-trunc','-q','--filter','label='+LABEL+'='+owner]).split(/\s+/).filter(Boolean)){if(id===input.preparedImage||!/^sha256:[a-f0-9]{64}$/.test(id)||docker(['image','inspect',id,'--format','{{index .Config.Labels "'+LABEL+'"}}'])!==owner)preparedNextRefused();docker(['image','rm',id]);}if(docker(['image','ls','-q','--filter','label='+LABEL+'='+owner]))preparedNextRefused();}catch{failures.push('image');}
+  try{for(const id of docker(['image','ls','--no-trunc','-q','--filter','label='+LABEL+'='+owner]).split(/\s+/).filter(Boolean)){if(id===input.preparedImage||!/^sha256:[a-f0-9]{64}$/.test(id)||docker(['image','inspect',id,'--format','{{index .Config.Labels "'+LABEL+'"}}'])!==owner)preparedNextRefused();docker(['image','rm','--no-prune',id]);}if(docker(['image','ls','-q','--filter','label='+LABEL+'='+owner]))preparedNextRefused();}catch{failures.push('image');}
   try{if(folder){if(resolve(folder)!==realpathSync(folder)||dirname(folder)!==temp||lstatSync(folder).isSymbolicLink())preparedNextRefused();const file=join(folder,'child.cjs');if(existsSync(file)){if(!lstatSync(file).isFile()||lstatSync(file).isSymbolicLink())preparedNextRefused();unlinkSync(file);}rmdirSync(folder);}}catch{failures.push('files');}
   if(failures.length)throw Error('Prepared Next owned cleanup refused');
  }

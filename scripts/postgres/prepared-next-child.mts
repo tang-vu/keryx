@@ -54,6 +54,34 @@ export function assertPreparedNextNamespace(interfaces:string[],route:string,ipv
  if(route.trim().split(/\r?\n/).slice(1).some(line=>line.trim()&&!/^lo\s/.test(line)))preparedNextRefused();
  if(ipv6.trim().split(/\r?\n/).some(line=>line.trim()&&!/\slo\s*$/.test(line)))preparedNextRefused();
 }
+/** Pinned Next 16.4.1 observes its cached prepare rejection at this exact call
+ * site. Observe that existing call; never invoke register/prepare a second time. */
+export function isPreparedNextInstrumentationRefusal(mode:PreparedNextMode,args:readonly unknown[]):boolean{
+ const sourceErrors:Partial<Record<PreparedNextMode,string>>={
+  'wrong-identity':'PostgreSQL storage unavailable','wrong-source':'Storage identity refused: adapter_not_initialized',
+  'wrong-key':'Enrolled content cache unavailable','reader-credential':'PostgreSQL storage unavailable','held-target':'PostgreSQL storage unavailable',
+ };
+ const expected=sourceErrors[mode];if(!expected||args.length!==2||args[0]!=='Failed to prepare server'||!(args[1] instanceof Error))return false;
+ const message=Object.getOwnPropertyDescriptor(args[1],'message');
+ return !!message&&'value'in message&&message.value==='An error occurred while loading instrumentation hook: '+expected;
+}
+export function preparedNextNegativeHealth(mode:PreparedNextMode,response:{status:number;body:Buffer;type:string},pinnedStartupRefusal:boolean):'health'|'instrumentation'{
+ if(!['wrong-identity','wrong-source','wrong-key','reader-credential','held-target'].includes(mode))preparedNextRefused();
+ if(response.status===500){
+  // Next fails before GET can run its JSON503 catch. A generic500, another
+  // mode/cause or an unobserved startup error never satisfies this branch.
+  if(!pinnedStartupRefusal||response.type!==''||!response.body.equals(Buffer.from('Internal Server Error')))preparedNextRefused();
+  return 'instrumentation';
+ }
+ assert.equal(response.status,503);const body=JSON.parse(response.body.toString('utf8'));
+ assert.equal(body.ok,false);assert.equal(body.db,'unreachable');return 'health';
+}
+export function canonicalPreparedNextSnapshot(rows:readonly {relation:string;rows:string;digest:string}[]):string{
+ const captured=rows.map(row=>({relation:row.relation,rows:row.rows,digest:row.digest}));
+ captured.sort((a,b)=>a.relation<b.relation?-1:a.relation>b.relation?1:0);
+ assert.equal(new Set(captured.map(row=>row.relation)).size,captured.length);
+ return canonicalJson(captured);
+}
 function privateBytes(file:string,max:number):Buffer{
  const a=lstatSync(file,{bigint:true});if(!a.isFile()||a.isSymbolicLink()||a.nlink!==BigInt(1)||a.size<BigInt(1)||a.size>BigInt(max)||a.uid!==BigInt(process.getuid!())||(a.mode&BigInt(0o022)))preparedNextRefused();
  const bytes=readFileSync(file),b=lstatSync(file,{bigint:true});
@@ -135,21 +163,33 @@ async function main(){
  owner.on('error',()=>{});await owner.connect();let rowOwned=false,running:{close:()=>Promise<void>}|undefined;
  let logCalls=0,blockedRegistryFetches=0,otherBlockedFetches=0;const originalFetch=globalThis.fetch;
  const logs=[console.log,console.info,console.warn,console.error,console.debug] as const;
- const silence=()=>{if(++logCalls>10000)preparedNextRefused();};console.log=console.info=console.warn=console.error=console.debug=silence;
+ let pinnedStartupRefusal=false,unknownStartupRefusal=false;
+ const silence=()=>{if(++logCalls>10000)preparedNextRefused();};console.log=console.info=console.warn=console.debug=silence;
+ console.error=(...args:unknown[])=>{silence();if(args[0]==='Failed to prepare server'){if(isPreparedNextInstrumentationRefusal(input.mode,args))pinnedStartupRefusal=true;else unknownStartupRefusal=true;}};
  globalThis.fetch=(async(resource:Parameters<typeof fetch>[0],...args:unknown[])=>{
   const url=new URL(typeof resource==='string'?resource:resource instanceof URL?resource.href:resource.url);
   if(url.origin===new URL(ARC_MAINNET_PROFILE.rpcUrl).origin)blockedRegistryFetches++;else otherBlockedFetches++;
   throw Error('Prepared Next external fetch blocked');
  }) as typeof fetch;
- const positive=input.mode==='writer'||input.mode==='restart';let healthRequests=0,assetBytes=0,pageBytes=0,sqlObserved=false,refusalAt:'startup'|'health'|null=null,httpDrained=false;
+ const positive=input.mode==='writer'||input.mode==='restart';let healthRequests=0,assetBytes=0,pageBytes=0,sqlObserved=false,refusalAt:'startup'|'health'|'instrumentation'|null=null,httpDrained=false;
+ const negativeSnapshot=async()=>{
+  // This owner observes only this fresh synthetic fixture. Compare every data
+  // relation, including private identity/originals/control, before/after the
+  // rejected startup; row counts alone would miss an UPDATE.
+  const tables=(await owner.query("SELECT n.nspname,c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN('public','keryx_storage') AND c.relkind IN('r','p') ORDER BY n.nspname,c.relname")).rows;
+  assert(tables.length>0&&tables.length<=256);for(const row of tables)assert(/^[a-z][a-z0-9_]{0,62}$/.test(row.nspname)&&/^[a-z][a-z0-9_]{0,62}$/.test(row.relname));
+  const statements=tables.map(row=>`SELECT '${row.nspname}.${row.relname}' AS relation,count(*)::text AS rows,encode(sha256(convert_to(coalesce(string_agg(row_to_json(r)::text,E'\\n' ORDER BY row_to_json(r)::text),''),'UTF8')),'hex') AS digest FROM "${row.nspname}"."${row.relname}" r`);
+  return canonicalPreparedNextSnapshot((await owner.query(statements.join(' UNION ALL '))).rows);
+ };
  try{
   assert.equal((await owner.query("SELECT mode FROM keryx_storage.control")).rows[0]?.mode,'active');
   assert.equal((await owner.query('SELECT count(*)::int AS n FROM public.cache_items')).rows[0]?.n,0,'Only fresh synthetic cache intake is admitted');
   assert.equal((await owner.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=current_database() AND usename IN('keryx_app','keryx_reader')")).rows[0]?.n,0);
   await owner.query('BEGIN');try{await owner.query("UPDATE keryx_storage.control SET mode='held'");await owner.query('INSERT INTO public.cache_items(source_id,text) VALUES($1,$2)',[cacheId,envelope]);await owner.query("UPDATE keryx_storage.control SET mode='active'");await owner.query('COMMIT');rowOwned=true;}catch(e){await owner.query('ROLLBACK');throw e;}
   if(input.mode==='held-target')await owner.query("UPDATE keryx_storage.control SET mode='held'");
+  const beforeNegative=positive?undefined:await negativeSnapshot();
   const server=await import(pathToFileURL(join(metadata.source,'scripts/next-public-server.mjs')).href);
-  try{running=await server.startNextPublicServer({dir:metadata.source,port:3940,useBuildConfig:true});}catch{if(positive)throw Error('Prepared Next positive startup refused');refusalAt='startup';}
+  try{running=await server.startNextPublicServer({dir:metadata.source,port:3940,useBuildConfig:true});}catch{if(positive||!pinnedStartupRefusal||unknownStartupRefusal)throw Error('Prepared Next startup refusal unqualified');refusalAt='startup';}
   if(running){
    const first=await get('/api/health');healthRequests++;
    if(positive){
@@ -163,16 +203,16 @@ async function main(){
     const html=page.body.toString('utf8'),assets=[...html.matchAll(/(?:src|href)="([^"<>]+)"/g)].map(x=>x[1].replaceAll('&amp;','&')).filter(x=>/^\/_next\/static\/[A-Za-z0-9_./%?=+&-]+\.(?:css|js)(?:\?[^"<>]*)?$/.test(x));assert(assets.length,'Prepared public page must load a local compiled asset');
     const asset=await get(assets.find(x=>x.includes('.css'))??assets[0],2*1024*1024);assert.equal(asset.status,200);assert(asset.body.length>0);assetBytes=asset.body.length;
     assert(blockedRegistryFetches>0,'Actual immediate mainnet registry sync must be observed and blocked');assert.equal(otherBlockedFetches,0,'Unexpected provider HTTP is not qualified');
-   }else{assert.equal(first.status,503);const body=JSON.parse(first.body.toString('utf8'));assert.equal(body.ok,false);assert.equal(body.db,'unreachable');refusalAt='health';}
+   }else{if(unknownStartupRefusal)preparedNextRefused();refusalAt=preparedNextNegativeHealth(input.mode,first,pinnedStartupRefusal);}
    await running.close();httpDrained=true;running=undefined;
   }
-  if(!positive)assert(refusalAt!==null);noSqlite(folder);
+  if(!positive){assert(refusalAt!==null);assert.equal(await negativeSnapshot(),beforeNegative,'Rejected startup must not mutate the synthetic fixture');assert.equal((await owner.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=current_database() AND usename IN('keryx_app','keryx_reader')")).rows[0]?.n,0);}noSqlite(folder);
  }finally{
   await running?.close();globalThis.fetch=originalFetch;[console.log,console.info,console.warn,console.error,console.debug]=logs;
   try{if(rowOwned){await owner.query('BEGIN');try{await owner.query("UPDATE keryx_storage.control SET mode='held'");const removed=await owner.query('DELETE FROM public.cache_items WHERE source_id=$1 AND text=$2',[cacheId,envelope]);assert.equal(removed.rowCount,1);await owner.query("UPDATE keryx_storage.control SET mode='active'");await owner.query('COMMIT');}catch(e){await owner.query('ROLLBACK');throw e;}}}finally{await owner.end();}
   process.env.CONTENT_MASTER_KEY='';input.password='';
  }
- await report({passed:true,mode:input.mode,actualCompiledNext:true,mainnetPublicBuild:true,sqlObserved,healthRequests,pageBytes,assetBytes,blockedRegistryFetches,otherBlockedFetches,logCalls,httpDrained,refusalAt,noSqliteFallback:true,nativeGracefulDrainProven:false});
+ await report({passed:true,mode:input.mode,actualCompiledNext:true,mainnetPublicBuild:true,sqlObserved,healthRequests,pageBytes,assetBytes,blockedRegistryFetches,otherBlockedFetches,logCalls,httpDrained,refusalAt,pinnedStartupRefusal,noSqliteFallback:true,nativeGracefulDrainProven:false});
  // Next's existing custom shutdown exits after HTTP/Next drain. Background
  // timers/native sockets end with this process; the controller proves actual
  // post-exit PG connection cleanup, never labels this graceful facade drain.
