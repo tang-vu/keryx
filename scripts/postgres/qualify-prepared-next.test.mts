@@ -6,7 +6,7 @@ import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {STORAGE_MAINNET_PROFILE_DIGEST} from '../../lib/db/storage-identity';
 import {NATIVE_CURRENT_RUNTIME_CANDIDATE_PROFILE} from '../../lib/db/postgres/runtime-profile';
 import {PREPARED_NEXT_PUBLIC_KEYS} from './prepared-next-child.mts';
-import {PREPARED_NEXT_NODE_IMAGE,PREPARED_NEXT_POSTGRES_IMAGE,qualifyPreparedNext} from './qualify-prepared-next.mts';
+import {PREPARED_NEXT_NODE_IMAGE,PREPARED_NEXT_POSTGRES_IMAGE,preparedNextRecords,qualifyPreparedNext} from './qualify-prepared-next.mts';
 
 const mocks=vi.hoisted(()=>({exec:vi.fn(),spawn:vi.fn(),build:vi.fn()}));
 vi.mock('node:child_process',()=>({execFileSync:mocks.exec,spawn:mocks.spawn}));
@@ -76,4 +76,9 @@ it('removes its derived helper after a failed child while retaining the untagged
 it('refuses image removal when ownership changes after enumeration and still preserves the caller runtime',async()=>{
  const fixture=dockerFixture(true);await expect(qualifyPreparedNext(input())).rejects.toThrow('owned cleanup refused');
  expect(fixture.removals).toEqual([]);expect(fixture.derivedPresent()).toBe(true);expect(fixture.runtimePresent()).toBe(true);expect(fixture.containerCount()).toBe(0);
+});
+
+it('accepts only finite instrumentation report metadata, never error/body strings',()=>{
+ expect(preparedNextRecords(JSON.stringify({mode:'wrong-identity',refusalAt:'instrumentation',pinnedStartupRefusal:true})+'\n')).toEqual([{mode:'wrong-identity',refusalAt:'instrumentation',pinnedStartupRefusal:true}]);
+ for(const report of [{refusalAt:'unknown'},{pinnedStartupRefusal:'true'},{error:'private data'},{body:'private data'}])expect(()=>preparedNextRecords(JSON.stringify(report)+'\n')).toThrow();
 });
