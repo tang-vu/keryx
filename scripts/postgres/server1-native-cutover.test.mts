@@ -70,6 +70,47 @@ type DataInventory={schemaSha256:string;dataDigest:string;normalizedDataDigest:s
 const inspectInventory=new Function('sourceRegistryAuthoritySchema','SERVER1_CHECKPOINT_KEYS','landingDay','assert','createHash','snapshotTables','snapshotRows','snapshotRowWire','canonicalJson','nativeMaterializationValueKey','nativeMaterializationCell','validateServer1WorkerStop','validateServer1OperatorClock',inventoryWire+';return typedInventory;')(sourceRegistryAuthoritySchema,SERVER1_CHECKPOINT_KEYS,'2026-11-15',assert,createHash,snapshotTables,snapshotRows,snapshotRowWire,canonicalJson,nativeMaterializationValueKey,nativeMaterializationCell,validateServer1WorkerStop,validateServer1OperatorClock) as (db:DatabaseSync,frame:()=>void,stop?:{baseline:DataInventory;pid:number;from:number;until:number;copyUntil?:number},identityDigest?:string)=>Promise<DataInventory>;
 function contentSchema(db:DatabaseSync){db.exec('CREATE TABLE cache_items(source_id TEXT PRIMARY KEY,text TEXT,updated_at TEXT);CREATE TABLE sources(id TEXT PRIMARY KEY,active INTEGER,verified INTEGER,rss_url TEXT,evidence_provenance TEXT);CREATE TABLE source_items('+SERVER1_CONTENT_ITEM_COLUMNS.map((name,i)=>'"'+name+'" '+(i===14?'INTEGER':'TEXT')+(i===0?' PRIMARY KEY':'')).join(',')+')');}
 
+// Execute the actual private fixed service checks with mechanical command
+// recordings. These tests do not qualify a host/systemd service or issue proof.
+type ServiceCommand=(bin:string,args:readonly string[],maximum?:number,timeout?:number)=>Promise<string>;
+type ServiceChecks={pm2Service(frame:()=>void):Promise<void>;publicRolesService(frame:()=>void):Promise<void>;completeEmptyExecProperties(unit:string,value:Record<string,unknown>,frame:()=>void):Promise<Record<string,unknown>>};
+const serviceNames=['refuse','exact','properties','completeEmptyExecProperties','pm2Service'];
+const serviceSource=serviceNames.map(name=>{const node=parsed.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text===name);assert(node);return node.getText(parsed);}).join('\n');
+const publicRolesSource=source.slice(source.indexOf('const beforeBoot=properties('),source.indexOf('if(apply){ownedJournal=journal();'));
+const serviceWire=ts.transpileModule(serviceSource+'\nasync function publicRolesService(frame:()=>void){'+publicRolesSource+'}\nreturn {pm2Service,publicRolesService,completeEmptyExecProperties};',{compilerOptions:{target:ts.ScriptTarget.ES2017,module:ts.ModuleKind.None}}).outputText;
+const serviceChecks=(command:ServiceCommand)=>new Function('assert','command',serviceWire)(assert,command)as ServiceChecks;
+const pm2Properties={ExecStart:'{ path=/usr/bin/pm2 ; argv[]=/usr/bin/pm2 ping ; }',ExecStop:'',Restart:'no',KillMode:'process',SendSIGKILL:'no',TimeoutStopUSec:'infinity'};
+const publicRolesProperties={DropInPaths:'',Type:'oneshot',RemainAfterExit:'yes',WorkingDirectory:'/root/keryx',TimeoutStopUSec:'infinity',SendSIGKILL:'no',ExecStop:'',ExecStopPost:''};
+function propertyWire(value:Record<string,string>){return Object.entries(value).map(([key,value])=>key+'='+value).join('\n')+'\n';}
+function serviceRecording(unit:'pm2-root.service'|'keryx-public-roles.service',wire:string,bus='a(sasbttttuii) 0\n'){
+ const calls:{bin:string;args:readonly string[];maximum?:number;timeout?:number}[]=[];
+ const api=serviceChecks(async(bin,args,maximum,timeout)=>{calls.push({bin,args,maximum,timeout});if(bin==='/usr/bin/systemctl'){expect(args[0]).toBe('show');expect(args[1]).toBe(unit);expect(args[2]).toBe('--all');return wire;}expect(bin).toBe('/usr/bin/busctl');return bus;});
+ return {calls,run:(frame=()=>{})=>unit==='pm2-root.service'?api.pm2Service(frame):api.publicRolesService(frame)};
+}
+
+describe('fixed systemd missing empty exec arrays (Source recordings only)',()=>{
+ it.each(['pm2-root.service','keryx-public-roles.service']as const)('proves only the fixed absent arrays for %s before retaining exact guards',async unit=>{
+  const values:Record<string,string>={...(unit==='pm2-root.service'?pm2Properties:publicRolesProperties)};delete values.ExecStop;if(unit==='keryx-public-roles.service')delete values.ExecStopPost;
+  const f=serviceRecording(unit,propertyWire(values));let frames=0;await f.run(()=>{frames++;});const bus=f.calls.filter(c=>c.bin==='/usr/bin/busctl'),object=unit==='pm2-root.service'?'/org/freedesktop/systemd1/unit/pm2_2droot_2eservice':'/org/freedesktop/systemd1/unit/keryx_2dpublic_2droles_2eservice';
+  expect(bus.map(c=>c.args)).toEqual((unit==='pm2-root.service'?['ExecStop']:['ExecStop','ExecStopPost']).map(property=>['--system','get-property','org.freedesktop.systemd1',object,'org.freedesktop.systemd1.Service',property]));expect(bus.every(c=>c.maximum===1024&&c.timeout===5000)).toBe(true);expect(frames).toBe(1+bus.length*2);
+ });
+ it.each(['pm2-root.service','keryx-public-roles.service']as const)('preserves present empty arrays without an extra D-Bus query for %s',async unit=>{const f=serviceRecording(unit,propertyWire(unit==='pm2-root.service'?pm2Properties:publicRolesProperties));await f.run();expect(f.calls).toHaveLength(1);});
+ it.each(['a(sasbttttuii) 1 synthetic\n','s ""\n','as 0\n','','a(sasbttttuii) 0','a(sasbttttuii) 0\n\n','a(sasbttttuii) 0\na(sasbttttuii) 0\n'])('refuses a nonexact typed-zero result %j without filling the field',async result=>{
+  const value:Record<string,unknown>={},calls:string[]=[];const api=serviceChecks(async bin=>{calls.push(bin);return result;});await expect(api.completeEmptyExecProperties('pm2-root.service',value,()=>{})).rejects.toThrow();expect(Object.prototype.hasOwnProperty.call(value,'ExecStop')).toBe(false);expect(calls).toEqual(['/usr/bin/busctl']);
+ });
+ it('propagates command failure without filling any absent array',async()=>{const reason=Error('synthetic bus failure'),value:Record<string,unknown>={};let calls=0;const api=serviceChecks(async()=>{calls++;throw reason;});await expect(api.completeEmptyExecProperties('keryx-public-roles.service',value,()=>{})).rejects.toBe(reason);expect(value).toEqual({});expect(calls).toBe(1);});
+ it.each(['before','after']as const)('checks the current frame %s the genuine await before filling a missing property',async when=>{
+  let frames=0,calls=0;const reason=Error('synthetic changed frame'),value:Record<string,unknown>={},api=serviceChecks(async()=>{calls++;return 'a(sasbttttuii) 0\n';});await expect(api.completeEmptyExecProperties('pm2-root.service',value,()=>{frames++;if(frames===(when==='before'?1:2))throw reason;})).rejects.toBe(reason);expect(value).toEqual({});expect(calls).toBe(when==='before'?0:1);
+ });
+ it('does not inspect fields or select commands for a foreign unit',async()=>{let calls=0,gets=0;const api=serviceChecks(async()=>{calls++;throw Error('unexpected');}),value=new Proxy({}, {getOwnPropertyDescriptor(){gets++;throw Error('unexpected field');}});await expect(api.completeEmptyExecProperties('other.service',value,()=>{})).rejects.toThrow('exec_unit');expect(calls).toBe(0);expect(gets).toBe(0);});
+ it('does not turn a present undefined field into an empty array',async()=>{let calls=0;const api=serviceChecks(async()=>{calls++;throw Error('unexpected');}),value={ExecStop:undefined};expect(await api.completeEmptyExecProperties('pm2-root.service',value,()=>{})).toBe(value);expect(value.ExecStop).toBeUndefined();expect(calls).toBe(0);});
+ it.each(['pm2-root.service','keryx-public-roles.service']as const)('retains nonempty/invalid present array refusal for %s',async unit=>{for(const invalid of ['synthetic-command','undefined']){const value={...(unit==='pm2-root.service'?pm2Properties:publicRolesProperties),ExecStop:invalid},f=serviceRecording(unit,propertyWire(value));await expect(f.run()).rejects.toThrow();expect(f.calls).toHaveLength(1);}});
+ it.each(['pm2-root.service','keryx-public-roles.service']as const)('refuses duplicate systemctl property records for %s',async unit=>{const f=serviceRecording(unit,propertyWire(unit==='pm2-root.service'?pm2Properties:publicRolesProperties)+'ExecStop=\n');await expect(f.run()).rejects.toThrow();expect(f.calls).toHaveLength(1);});
+ it.each(['missing-other','unknown-key','unsafe-value']as const)('never repairs an unrelated systemctl mismatch: %s',async kind=>{
+  for(const unit of ['pm2-root.service','keryx-public-roles.service']as const){const values:Record<string,string>={...(unit==='pm2-root.service'?pm2Properties:publicRolesProperties)};delete values.ExecStop;if(unit==='keryx-public-roles.service')delete values.ExecStopPost;if(kind==='missing-other')delete values[unit==='pm2-root.service'?'Restart':'Type'];if(kind==='unknown-key')values.Unreviewed='';if(kind==='unsafe-value')values.SendSIGKILL='yes';const f=serviceRecording(unit,propertyWire(values));await expect(f.run()).rejects.toThrow();expect(f.calls.filter(c=>c.bin==='/usr/bin/busctl')).toHaveLength(unit==='pm2-root.service'?1:2);}
+ });
+});
+
 describe('fixed server1 cutover input boundary (data only)',()=>{
  it('defaults to readonly preflight and admits only finite fixed selectors',()=>{
   expect(parseServer1CutoverMode([])).toBe('preflight');expect(parseServer1CutoverMode(['--preflight'])).toBe('preflight');expect(parseServer1CutoverMode(['--apply'])).toBe('apply');expect(parseServer1CutoverMode(['--verify-native-only'])).toBe('verify-native-only');expect(parseServer1CutoverMode(['--verify-artifact-only'])).toBe('verify-artifact-only');
