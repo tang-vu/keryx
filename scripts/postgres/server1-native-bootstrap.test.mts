@@ -4,8 +4,12 @@ import { createHash } from 'node:crypto';
 const r=vi.hoisted(()=>({files:new Map<string,Buffer>(),fds:new Map<number,string>(),next:20,closed:0,steps:[] as string[],expired:false,base:'https://keryx.cc',backend:'postgres',privateActive:false,identityFailure:false,promiseLocal:false,keyChanged:false,readyFailures:0,readyCalls:0,factoryCalls:0,identityCalls:0,accountingCalls:0,closeCalls:0,pm2Calls:[] as string[][],
  factoryGate:undefined as Promise<void>|undefined,identityGate:undefined as Promise<void>|undefined,accountingGate:undefined as Promise<void>|undefined,closeGate:undefined as Promise<void>|undefined,rows:[] as unknown[],identity:{} as Record<string,unknown>,roles:{} as any,artifact:{} as any,review:{} as any,env:{} as Record<string,string>,identityDigest:'',signer:'0x'+'ab'.repeat(20)}));
 const commit='c'.repeat(40),rolesFile='/root/.local/share/native-release/roles.json',envFile='/root/keryx/.env.local';
+const renewalFixture = vi.hoisted(() => ({
+ controllerCommit: 'c'.repeat(40), documents: new Map<string, { digest: string; value: any }>(),
+ receiptValid: true, retainedMicroUsdc: '60000', releasePhases: [] as string[],
+}));
 vi.mock('node:path',async original=>{const real=await original<typeof import('node:path')>();return {...real,...real.posix,default:real.posix};});
-vi.mock('node:url',async original=>({...await original<typeof import('node:url')>(),fileURLToPath:()=>'/root/.local/share/keryx-releases/'+'c'.repeat(40)+'/source/scripts/postgres/server1-native-bootstrap.mts'}));
+vi.mock('node:url',async original=>({...await original<typeof import('node:url')>(),fileURLToPath:()=>'/root/.local/share/keryx-releases/'+renewalFixture.controllerCommit+'/source/scripts/postgres/server1-native-bootstrap.mts'}));
 vi.mock('node:crypto',async original=>{
  const real=await original<typeof import('node:crypto')>();return {...real,createHash:(algorithm:string)=>{const data:Buffer[]=[];return {update(v:string|Buffer){data.push(Buffer.from(v));return this;},digest(encoding:'hex'){const bytes=Buffer.concat(data);if(bytes.toString().startsWith('{"format":"keryx-single-writer-host-transfer-v1"'))return 'e9212277066c6774ea5959914823ce59125892ed1da9706725a50597e56ddb68';if(bytes.toString()==='recorded-machine\n')return 'a9baadf374fdfbacaa7ac7d7562109b32111821b583170a94d423de4ef4e65eb';return real.createHash(algorithm).update(bytes).digest(encoding);}};}};
 });
@@ -30,18 +34,29 @@ vi.mock('../../lib/research/research-allowance',()=>({configuredResearchAllowanc
 vi.mock('../../lib/payments/hosted-treasury-policy',()=>({configuredHostedTreasuryPolicy:(_identity:unknown,origin:string,role:string)=>{expect(origin).toBe('https://keryx.cc');expect(role).toBe('public');if(r.expired)throw Error('expired');return {signer:r.signer,lifetimeCapMicroUsdc:'100000',expiresAtSeconds:1900000000};},hostedTreasuryPolicyDigest:()=> 'c70be6ac6ca452b15ef1a8caac96654aa181a025ed0638b8e138569c7b62f422'}));
 vi.mock('../../lib/db/runtime-storage-config',()=>({readRuntimeStorageDeployment:()=>({identity:r.identity,backend:{kind:r.backend,database:'keryx_mainnet'}})}));
 vi.mock('../../lib/db/application-storage',()=>({
- createReadonlyApplicationStorage:async()=>{r.steps.push('factory');r.factoryCalls++;await r.factoryGate;return Object.defineProperty({},'hostedTreasuryAccounting',{get(){r.steps.push('accounting-getter');return async(_signer:string,role:string)=>{expect(role).toBe('public');r.accountingCalls++;await r.accountingGate;return {retainedMicroUsdc:'60000'};};}});},
+ createReadonlyApplicationStorage:async()=>{r.steps.push('factory');r.factoryCalls++;await r.factoryGate;return Object.defineProperty({},'hostedTreasuryAccounting',{get(){r.steps.push('accounting-getter');return async(_signer:string,role:string)=>{expect(role).toBe('public');r.accountingCalls++;await r.accountingGate;return {retainedMicroUsdc:renewalFixture.retainedMicroUsdc};};}});},
  applicationStorageIdentity:async(_db:unknown,access:string)=>{expect(access).toBe('read');r.steps.push('identity');r.identityCalls++;await r.identityGate;if(r.identityFailure)throw Error('genuine authority refused');return r.identity;},
  assertApplicationStorageCurrentLocal:()=>{r.steps.push('local');if(r.promiseLocal)return Promise.resolve();},
  closeReadonlyApplicationStorage:async()=>{r.steps.push('close');r.closeCalls++;await r.closeGate;},
 }));
-vi.mock('../immutable-release-staging.mjs',()=>({verifyImmutableArtifact:()=>r.artifact}));
+vi.mock('../immutable-release-staging.mjs',()=>({verifyImmutableArtifact:({candidate}:{candidate:string})=>({...r.artifact,commit:candidate.split('/').at(-1)})}));
+vi.mock('./server1-public-policy-renewal.mts',()=>({verifyPublicPolicyExtension:({original,active,authorization}:any)=>{
+ expect(original.toString()).toBe('recorded original ENV');expect(active.equals(r.files.get(envFile)!)).toBe(true);
+ expect(authorization).toEqual({fixture:'authorized renewal'});r.steps.push('renewal');
+ return {policySha256:r.env.KERYX_MAINNET_TREASURY_POLICY_DIGEST,expiresAtSeconds:1900000000};
+}}));
 vi.mock('../redeploy-reviewed-roles.mjs',()=>({
  SERVER1_NATIVE_RELEASE:{sourceCommit:'3654cf66bd3541a90d9c621eb72d57556e306dd6',manifest:'/root/.local/share/keryx-mainnet-runtime/production-v2/storage.json',publicPolicySha256:'c70be6ac6ca452b15ef1a8caac96654aa181a025ed0638b8e138569c7b62f422'},
- releaseSource:(value:string)=>'/root/.local/share/keryx-releases/'+value+'/source',readReviewedRoles:()=>r.roles,verifyReleaseReview:()=>r.review,readProtectedDeploymentJson:()=>r.review,
+ releaseSource:(value:string)=>'/root/.local/share/keryx-releases/'+value+'/source',readReviewedRoles:()=>r.roles,
+ verifyReleaseReview:(_binding:unknown,_read:unknown,_artifact:unknown,_headers:unknown,phase:string)=>{renewalFixture.releasePhases.push(phase);return r.review;},
+ readProtectedDeploymentJson:(file:string,digest:string)=>{const d=renewalFixture.documents.get(file);if(!d || d.digest!==digest)throw Error('unreviewed document');return d.value;},
+ nativeReleaseFiles:()=>({environment:'/root/.local/share/native-release/runtime.env',cutover:'/root/.local/share/native-release/native-cutover.json'}),
+ verifyNativeCutoverReceipt:()=>{if(!renewalFixture.receiptValid)throw Error('invalid receipt');r.steps.push('historical receipt');},
 }));
 import { bootstrapServer1NativeRoles } from './server1-native-bootstrap.mts';
 beforeEach(async()=>{
+ renewalFixture.documents.clear();renewalFixture.releasePhases=[];renewalFixture.controllerCommit=commit;
+ renewalFixture.receiptValid=true;renewalFixture.retainedMicroUsdc='60000';
  r.files.clear();r.fds.clear();Object.assign(r,{next:20,closed:0,steps:[],expired:false,base:'https://keryx.cc',backend:'postgres',privateActive:false,identityFailure:false,promiseLocal:false,keyChanged:false,readyFailures:0,readyCalls:0,factoryCalls:0,identityCalls:0,accountingCalls:0,closeCalls:0,pm2Calls:[],factoryGate:undefined,identityGate:undefined,accountingGate:undefined,closeGate:undefined,rows:[]});
  const {STORAGE_MAINNET_PROFILE_DIGEST,storageIdentityDigest}=await import('../../lib/db/storage-identity');
  r.identity={format:'keryx-mainnet-storage-identity-v1',deploymentId:'11111111-1111-4111-8111-111111111111',storageId:'22222222-2222-4222-8222-222222222222',network:'eip155:5042',authorityMode:'mainnet-real',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST,enrollmentId:'33333333-3333-4333-8333-333333333333',enrolledAt:'2026-11-11T00:00:00.000Z',provenanceDigest:'a'.repeat(64)};r.identityDigest=storageIdentityDigest(r.identity);
@@ -57,6 +72,39 @@ const call=(verifyOnly=true)=>bootstrapServer1NativeRoles(rolesFile,'a'.repeat(6
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r;});return {promise,resolve};};
 
 describe('server1 native public bootstrap dependency recordings',()=>{
+ function recordedRenewal() {
+  const controller = 'd'.repeat(40), preparationSha256 = 'e'.repeat(64);
+  renewalFixture.controllerCommit = controller;
+  const authorizationFile = '/root/.local/share/renewal/authorization.json';
+  const bytes = Buffer.from(JSON.stringify({fixture:'authorized renewal'})), authorizationSha256 = createHash('sha256').update(bytes).digest('hex');
+  r.files.set(authorizationFile, bytes);
+  r.files.set('/root/.local/share/native-release/runtime.env',Buffer.from('recorded original ENV'));
+  renewalFixture.documents.set(authorizationFile,{digest:authorizationSha256,value:JSON.parse(bytes.toString())});
+  renewalFixture.documents.set('/root/.local/share/keryx-releases/'+controller+'/preparation.json',{digest:preparationSha256,value:{
+   ...r.artifact,commit:controller,format:'keryx-immutable-preparation-v1',productionAdmitted:false,writerHoldStarted:false,runtimeEnvironmentLoaded:false,
+   checks:{platform:'linux',node:'24.22.1',npm:'11.19.0',results:['typecheck','tests','build'].map(name=>({name,exitCode:0,signal:null,processError:null,outputSha256:'f'.repeat(64)}))}
+  }});
+  r.review.nativeStorage={runtimeManifestSha256:'1'.repeat(64),cutoverReceiptSha256:'2'.repeat(64)};
+  renewalFixture.documents.set(r.env.KERYX_STORAGE_MANIFEST,{digest:r.review.nativeStorage.runtimeManifestSha256,value:{}});
+  renewalFixture.documents.set('/root/.local/share/native-release/native-cutover.json',{digest:r.review.nativeStorage.cutoverReceiptSha256,value:{}});
+  return {authorizationFile,authorizationSha256,controllerPreparationSha256:preparationSha256};
+ }
+ it('starts only after the reviewed controller, original cutover, expiry and signer accounting pass',async()=>{
+  const renewal=recordedRenewal();
+  await expect(bootstrapServer1NativeRoles(rolesFile,'a'.repeat(64),false,renewal)).resolves.toMatchObject({rolesStarted:true,financialPolicyChanged:true,newFunding:false});
+  expect(new Set(renewalFixture.releasePhases)).toEqual(new Set(['artifact']));
+  expect(r.steps).toContain('renewal');expect(r.steps).toContain('historical receipt');expect(r.accountingCalls).toBe(1);
+ });
+ it.each(['controller','authorization','cutover','ledger','existing role'])('refuses renewal on a failing %s check before start/save',async reason=>{
+  const renewal=recordedRenewal();
+  if(reason==='controller')renewal.controllerPreparationSha256='0'.repeat(64);
+  if(reason==='authorization')renewal.authorizationSha256='0'.repeat(64);
+  if(reason==='cutover')renewalFixture.receiptValid=false;
+  if(reason==='ledger')renewalFixture.retainedMicroUsdc='100001';
+  if(reason==='existing role')r.rows=r.roles.apps.map((a:any,i:number)=>({name:a.name,pid:40+i,pm2_env:{status:'online',pm_exec_path:a.script,pm_cwd:a.cwd,exec_interpreter:a.interpreter,args:a.args,autorestart:a.autorestart,kill_timeout:a.kill_timeout}}));
+  await expect(bootstrapServer1NativeRoles(rolesFile,'a'.repeat(64),false,renewal)).rejects.toThrow();
+  expect(r.pm2Calls.every(args=>args[0]==='jlist')).toBe(true);
+ });
  it('refuses unprotected role paths and arbitrary hash before control reads or a reader',async()=>{await expect(bootstrapServer1NativeRoles('/tmp/roles.json','a'.repeat(64),true)).rejects.toThrow();await expect(bootstrapServer1NativeRoles(rolesFile,'caller-proof',true)).rejects.toThrow();expect(r.fds.size).toBe(0);expect(r.factoryCalls).toBe(0);expect(r.pm2Calls).toHaveLength(0);});
  it('awaits the selected identity boundary twice and closes before any start/save (recording)',async()=>{
   const result=await call(false) as {accepted:boolean;rolesStarted:boolean};expect(result).toMatchObject({accepted:true,rolesStarted:true});expect(r.identityCalls).toBe(2);expect(r.closeCalls).toBe(1);expect(r.accountingCalls).toBe(1);expect(r.steps.indexOf('identity')).toBeLessThan(r.steps.indexOf('accounting-getter'));expect(r.pm2Calls.filter(x=>x[0]==='start')).toEqual([['start',rolesFile]]);expect(r.fds.size).toBe(0);

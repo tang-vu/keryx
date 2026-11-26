@@ -15,8 +15,9 @@ import { configuredHostedTreasuryPolicy, hostedTreasuryPolicyDigest } from '../.
 import { applicationStorageIdentity, assertApplicationStorageCurrentLocal, closeReadonlyApplicationStorage, createReadonlyApplicationStorage } from '../../lib/db/application-storage';
 import { readRuntimeStorageDeployment } from '../../lib/db/runtime-storage-config';
 import { storageIdentityDigest, type StorageIdentity } from '../../lib/db/storage-identity';
-import { readProtectedDeploymentJson, readReviewedRoles, releaseSource, SERVER1_NATIVE_RELEASE, verifyReleaseReview } from '../redeploy-reviewed-roles.mjs';
+import { nativeReleaseFiles, readProtectedDeploymentJson, readReviewedRoles, releaseSource, SERVER1_NATIVE_RELEASE, verifyNativeCutoverReceipt, verifyReleaseReview } from '../redeploy-reviewed-roles.mjs';
 import { verifyImmutableArtifact } from '../immutable-release-staging.mjs';
+import { verifyPublicPolicyExtension } from './server1-public-policy-renewal.mts';
 
 const root='/root/keryx-migration',environment='/root/keryx/.env.local';
 const transferSha='e9212277066c6774ea5959914823ce59125892ed1da9706725a50597e56ddb68';
@@ -82,11 +83,37 @@ async function waitForPostgres(frame:()=>unknown){
  }
 }
 
-/** Protected role-file arguments are byte bindings to existing Root review,
- * never caller policy/facade/proof callbacks. This function performs real
- * selected native admission before any role start. */
-export async function bootstrapServer1NativeRoles(rolesFile:string,rolesSha256:string,verifyOnly:boolean){
- if(arguments.length!==3||typeof rolesFile!=='string'||typeof rolesSha256!=='string'||typeof verifyOnly!=='boolean')refuse();
+type Renewal = { authorizationFile: string; authorizationSha256: string; controllerPreparationSha256: string };
+
+function verifyRenewalController(entry: string, preparationSha256: string) {
+ const match = /^\/root\/\.local\/share\/keryx-releases\/([a-f0-9]{40})\/source\/scripts\/postgres\/server1-native-bootstrap\.mts$/.exec(entry);
+ if (!match) refuse();
+ const commit = match[1], candidate = dirname(releaseSource(commit));
+ const preparation = readProtectedDeploymentJson(candidate + '/preparation.json', preparationSha256);
+ assert.equal(preparation.format, 'keryx-immutable-preparation-v1');
+ assert.equal(preparation.commit, commit);
+ assert.equal(preparation.productionAdmitted, false);
+ assert.equal(preparation.writerHoldStarted, false);
+ assert.equal(preparation.runtimeEnvironmentLoaded, false);
+ assert.equal(preparation.checks.platform, 'linux');
+ assert.equal(preparation.checks.node, process.version.slice(1));
+ assert.equal(preparation.checks.npm, '11.19.0');
+ assert.deepEqual(preparation.checks.results.map((r: {name: string}) => r.name), ['typecheck','tests','build']);
+ for (const r of preparation.checks.results) {
+  assert(r.exitCode === 0 && r.signal === null && r.processError === null && /^[a-f0-9]{64}$/.test(r.outputSha256));
+ }
+ const artifact = verifyImmutableArtifact({ candidate, sourceManifestSha256: preparation.sourceManifestSha256,
+  artifactInspectionSha256: preparation.artifactInspectionSha256 });
+ for (const key of ['commit', 'tree', 'buildId', 'artifactDigest', 'sourceManifestSha256']) {
+  assert.equal(artifact[key], preparation[key]);
+ }
+ return commit;
+}
+
+/** Both entry points bind protected operator files and run native admission
+ * before starting the reviewed web and worker. Renewal requires a cold start. */
+export async function bootstrapServer1NativeRoles(rolesFile:string,rolesSha256:string,verifyOnly:boolean,renewal?:Renewal){
+ if((arguments.length!==3 && !(arguments.length===4 && renewal))||typeof rolesFile!=='string'||typeof rolesSha256!=='string'||typeof verifyOnly!=='boolean')refuse();
  if(!/^\/root\/\.local\/share\/[a-zA-Z0-9_./-]+\.json$/.test(rolesFile)||resolve(rolesFile)!==rolesFile||!/^[a-f0-9]{64}$/.test(rolesSha256))refuse();
  assert.equal(process.platform,'linux');assert.equal(process.getuid!(),0);assert.equal(process.version,'v24.22.1');assert.equal(process.cwd(),'/root/keryx');
  const held:Array<ReturnType<typeof heldFile>>=[];let db:Awaited<ReturnType<typeof createReadonlyApplicationStorage>>=undefined;let identity:Readonly<StorageIdentity>|undefined;
@@ -99,10 +126,38 @@ export async function bootstrapServer1NativeRoles(rolesFile:string,rolesSha256:s
   const actualMachine=heldFile('/etc/machine-id',256,false);held.push(actualMachine);assert.equal(actualMachine.bytes.toString('utf8').trim(),machine.bytes.toString('utf8').trim());
   const env=heldFile(environment,65536);held.push(env);const parsedEnvironment=parseEnv(env.bytes.toString('utf8'));
   const roles=readReviewedRoles(rolesFile,rolesSha256);assert(roles.release);const binding=roles.release;
-  assert.notEqual(binding.commit,SERVER1_NATIVE_RELEASE.sourceCommit);assert.equal(sha(env.bytes),binding.runtimeEnvironmentSha256);
-  assert.equal(typeof import.meta.url,'string');assert.equal(fileURLToPath(import.meta.url),releaseSource(binding.commit)+'/scripts/postgres/server1-native-bootstrap.mts');
+  assert.notEqual(binding.commit,SERVER1_NATIVE_RELEASE.sourceCommit);
+  const entry = fileURLToPath(import.meta.url);
+  let policySha256: string = SERVER1_NATIVE_RELEASE.publicPolicySha256;
+  if (renewal) {
+   assert.deepEqual(Object.keys(renewal).sort(), ['authorizationFile','authorizationSha256','controllerPreparationSha256']);
+   assert.notEqual(verifyRenewalController(entry, renewal.controllerPreparationSha256), binding.commit);
+   const authorization = readProtectedDeploymentJson(renewal.authorizationFile, renewal.authorizationSha256);
+   const pin = heldFile(renewal.authorizationFile, 65536); held.push(pin);
+   assert.equal(sha(pin.bytes), renewal.authorizationSha256);
+   const original = heldFile(nativeReleaseFiles(binding).environment, 65536); held.push(original);
+   const extension = verifyPublicPolicyExtension({ authorization, original: original.bytes, active: env.bytes,
+    commit: binding.commit, rolesSha256, originalEnvironmentSha256: binding.runtimeEnvironmentSha256,
+    originalPolicySha256: SERVER1_NATIVE_RELEASE.publicPolicySha256, nowSeconds: Math.floor(Date.now()/1000) });
+   policySha256 = extension.policySha256;
+  } else {
+   assert.equal(sha(env.bytes),binding.runtimeEnvironmentSha256);
+   assert.equal(entry,releaseSource(binding.commit)+'/scripts/postgres/server1-native-bootstrap.mts');
+  }
   const artifact=verifyImmutableArtifact({candidate:dirname(releaseSource(binding.commit)),sourceManifestSha256:binding.sourceManifestSha256,artifactInspectionSha256:binding.artifactInspectionSha256});
-  const review=verifyReleaseReview(binding,readProtectedDeploymentJson,artifact);assert.equal(review.format,'keryx-reviewed-native-release-compatibility-v1');
+  const checkRelease = () => {
+   const r = verifyReleaseReview(binding,readProtectedDeploymentJson,artifact,undefined,renewal ? 'artifact' : 'startup');
+   assert.equal(r.format,'keryx-reviewed-native-release-compatibility-v1');
+   if (renewal) {
+    // The original release review authenticates its staged ENV and manifest.
+    // Bind the live manifest and historical cutover to those same reviewed bytes.
+    readProtectedDeploymentJson(SERVER1_NATIVE_RELEASE.manifest, r.nativeStorage.runtimeManifestSha256);
+    const receipt = readProtectedDeploymentJson(nativeReleaseFiles(binding).cutover, r.nativeStorage.cutoverReceiptSha256);
+    verifyNativeCutoverReceipt(binding,r,receipt);
+   }
+   return r;
+  };
+  const review=checkRelease();
   const deployment=readRuntimeStorageDeployment();assert.equal(deployment.backend.kind,'postgres');assert.equal(process.env.KERYX_STORAGE_MANIFEST,SERVER1_NATIVE_RELEASE.manifest);
   const selection=canonicalJson(deployment),profile=canonicalJson({profile:config.profile,baseUrl:config.baseUrl,network:config.networkId});
   const key=process.env.KERYX_MAINNET_TREASURY_PRIVATE_KEY;assert(typeof key==='string'&&/^0x[a-fA-F0-9]{64}$/.test(key));const signer=privateKeyToAddress(key as `0x${string}`).toLowerCase();
@@ -110,12 +165,12 @@ export async function bootstrapServer1NativeRoles(rolesFile:string,rolesSha256:s
    for(const pin of held)pin.verify();
    for(const field of consumedEnvironment)assert.equal(process.env[field]??'',parsedEnvironment[field]??'');
    assert.equal(canonicalJson(readReviewedRoles(rolesFile,rolesSha256)),canonicalJson(roles));
-   assert.equal(canonicalJson(verifyReleaseReview(binding,readProtectedDeploymentJson,artifact)),canonicalJson(review));
+   assert.equal(canonicalJson(checkRelease()),canonicalJson(review));
    assert.equal(canonicalJson(readRuntimeStorageDeployment()),selection);
    assert.equal(canonicalJson({profile:config.profile,baseUrl:config.baseUrl,network:config.networkId}),profile);
    assert.equal(config.profile.name,'arc');assert.equal(config.baseUrl,'https://keryx.cc');assert.equal(configuredResearchAllowance(),null);
    assert.equal(process.env.KERYX_MAINNET_TREASURY_PRIVATE_KEY,key);privateWorkerInactive();
-   const policy=configuredHostedTreasuryPolicy(identity??deployment.identity,'https://keryx.cc','public');assert.equal(hostedTreasuryPolicyDigest(policy),SERVER1_NATIVE_RELEASE.publicPolicySha256);assert.equal(policy.signer.toLowerCase(),signer);return policy;
+   const policy=configuredHostedTreasuryPolicy(identity??deployment.identity,'https://keryx.cc','public');assert.equal(hostedTreasuryPolicyDigest(policy),policySha256);assert.equal(policy.signer.toLowerCase(),signer);return policy;
   };
   frame();
   await waitForPostgres(frame);frame();
@@ -131,15 +186,24 @@ export async function bootstrapServer1NativeRoles(rolesFile:string,rolesSha256:s
   // The reader is terminal now. Narrow only protected files/current public
   // policy after the last await; never use a retired facade as a fresh proof.
   frame();let rows=observedRoles(roles,verifyOnly);frame();let started=false;
+  if (renewal) assert.equal(rows.length, 0);
   if(!verifyOnly&&rows.length===0){frame();pm2(['start',rolesFile]);started=true;frame();rows=observedRoles(roles,false);assert.equal(rows.length,2);}
   if(!verifyOnly){frame();pm2(['save']);frame();}
-  accepted={format:'keryx-server1-native-public-boot-v1',accepted:true,verifyOnly,commit:binding.commit,buildId:artifact.buildId,identityDigest:review.storageIdentityDigest,policySha256:SERVER1_NATIVE_RELEASE.publicPolicySha256,policyExpiry:new Date(frame()!.expiresAtSeconds*1000).toISOString(),rolesStarted:started,sourceTransferPreserved:true,privateWorkerInactive:true,financialPolicyChanged:false,newFunding:false};
+  accepted={format:'keryx-server1-native-public-boot-v1',accepted:true,verifyOnly,commit:binding.commit,buildId:artifact.buildId,identityDigest:review.storageIdentityDigest,policySha256,policyExpiry:new Date(frame()!.expiresAtSeconds*1000).toISOString(),rolesStarted:started,sourceTransferPreserved:true,privateWorkerInactive:true,financialPolicyChanged:!!renewal,newFunding:false};
  }catch(error){failure=error;}
  for(const pin of held)try{pin.close();}catch{cleanup.push('descriptor');}
  if(failure||cleanup.length)throw new Error('Server1 native public boot refused');
  return accepted;
 }
 if(typeof import.meta.url==='string'&&process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- const args=process.argv.slice(2);if(args.length!==2&&!(args.length===3&&args[2]==='--verify-only'))process.exitCode=1;
- else bootstrapServer1NativeRoles(args[0],args[1],args.length===3).then(result=>console.log(JSON.stringify(result))).catch(()=>{console.error('Server1 native public boot refused');process.exitCode=1;});
+ const args=process.argv.slice(2);
+ const verifyOnly = args.at(-1) === '--verify-only';
+ if (verifyOnly) args.pop();
+ let boot: ReturnType<typeof bootstrapServer1NativeRoles> | undefined;
+ if (args.length === 2) boot = bootstrapServer1NativeRoles(args[0], args[1], verifyOnly);
+ else if (args.length === 6 && args[2] === '--policy-renewal') {
+  boot = bootstrapServer1NativeRoles(args[0],args[1],verifyOnly,{authorizationFile:args[3],authorizationSha256:args[4],controllerPreparationSha256:args[5]});
+ }
+ if (!boot) process.exitCode = 1;
+ else boot.then(result=>console.log(JSON.stringify(result))).catch(()=>{console.error('Server1 native public boot refused');process.exitCode=1;});
 }
