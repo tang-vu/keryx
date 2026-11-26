@@ -187,6 +187,30 @@ test('wrong npm, timeout or terminated command cannot become successful preparat
   }
 });
 
+test('typecheck and test outputs stay outside the source selected for the production build', t => {
+  const f = fixture(t), checkSource = path.join(f.scratch, 'isolated-check-source');
+  fs.mkdirSync(checkSource);
+  const phases = [];
+  runPreparationChecks({ ...f, checkSource, run(_command, argv, options) {
+    const args = argv.slice(1);
+    const phase = args[0] === 'run' ? args[1] : args[0];
+    phases.push(phase);
+    if (phase === 'build') {
+      assert.equal(options.cwd, f.source);
+      assert.equal(fs.existsSync(path.join(f.source, '.artifacts')), false);
+      assert.equal(fs.existsSync(path.join(f.source, 'data')), false);
+    } else {
+      assert.equal(options.cwd, checkSource);
+      if (phase === 'test') {
+        for (const dir of ['.artifacts', 'data']) fs.mkdirSync(path.join(options.cwd, dir), { recursive: true });
+      }
+    }
+    return { status: 0, stdout: phase === '--version' ? '11.19.0\n' : '', stderr: '' };
+  } });
+  assert.deepEqual(phases, ['--version', 'typecheck', 'test', 'test', 'test', 'build']);
+  assert(fs.existsSync(path.join(checkSource, '.artifacts')));
+});
+
 test('dependency copy has separate file identity and refuses substituted installation metadata', t => {
   const f = fixture(t), entry = { version: '1.0.0', resolved: 'https://registry.invalid/fixture.tgz', integrity: 'sha512-synthetic' };
   const packages = { 'node_modules/fixture': entry };

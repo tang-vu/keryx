@@ -198,7 +198,7 @@ export function copyPreparationDependencies({ source, dependencies }) {
 
 /** Commands are fixed and run sequentially, before artifact recording and any hold.
  * The process seam lets tests prove failure ordering without pretending a build passed. */
-export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBuild = false, inherited = process.env, run = spawnSync }) {
+export function runPreparationChecks({ staged, checkSource = staged.source, scratch, npmCli, mainnetPublicBuild = false, inherited = process.env, run = spawnSync }) {
   if (process.versions.node !== pinnedNode || !path.isAbsolute(npmCli) ||
       !fs.lstatSync(npmCli).isFile() || typeof mainnetPublicBuild !== 'boolean') refuse();
   const env = preparationEnvironment({ commit: staged.commit, scratch, inherited });
@@ -206,7 +206,8 @@ export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBui
   const buildEnv = preparationEnvironment({ commit: staged.commit, scratch, publicNetwork, inherited });
   const toolchain = { nodeSha256: hash(fs.readFileSync(process.execPath)), npmCliSha256: hash(fs.readFileSync(npmCli)) };
   const call = (args, heap, outputFd, nodeEnv = 'production', publicBuild = false, timeout = 30 * 60 * 1000) => run(process.execPath, [npmCli, ...args], {
-    cwd: staged.source, env: { ...(publicBuild ? buildEnv : env), NODE_ENV: nodeEnv, NODE_OPTIONS: `--max-old-space-size=${heap}` },
+    cwd: publicBuild ? staged.source : checkSource,
+    env: { ...(publicBuild ? buildEnv : env), NODE_ENV: nodeEnv, NODE_OPTIONS: `--max-old-space-size=${heap}` },
     encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, timeout, windowsHide: true,
     ...(outputFd !== undefined ? { stdio: ['ignore', outputFd, outputFd] } : {}),
   });
@@ -284,7 +285,16 @@ export function prepareImmutableRelease({ repo, releasesDir, commit, dependencie
   const scratch = path.join(staged.candidate, 'preparation-scratch');
   fs.mkdirSync(scratch, { mode: 0o700 });
   const inputs = copyPreparationDependencies({ source: staged.source, dependencies });
-  const checks = runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBuild });
+  // Tests write browser evidence, databases and caches relative to their cwd.
+  // Materialize the same Git tree for checks so the production build starts
+  // with only reviewed source and its own untouched dependency installation.
+  const checkRoot = path.join(scratch, 'checks');
+  fs.mkdirSync(checkRoot, { mode: 0o700 });
+  const checked = stageImmutableSource({ repo, releasesDir: checkRoot, commit });
+  if (checked.sourceManifestSha256 !== staged.sourceManifestSha256) refuse();
+  const checkInputs = copyPreparationDependencies({ source: checked.source, dependencies });
+  if (serial(checkInputs) !== serial(inputs)) refuse();
+  const checks = runPreparationChecks({ staged, checkSource: checked.source, scratch, npmCli, mainnetPublicBuild });
   const buildAliases = materializePreparationBuildAliases({ source: staged.source, dependencies: path.join(staged.source, 'node_modules') });
   const protectedBuildEntries = protectPreparationCopy(path.join(staged.source, '.next'));
   if (process.platform !== 'win32') for (const file of ['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo']) {
