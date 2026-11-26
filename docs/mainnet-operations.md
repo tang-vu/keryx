@@ -347,6 +347,35 @@ to the admitted policy only after native authority checks. Do not place a key in
 this declaration, README, command argument or chat. Public/private signers must
 differ; policy renewal never resets original lifetime/query exposure.
 
+### Renew the public expiry on an installed native server 1 release
+
+The project owner selects a single absolute expiry. Preserve the original public
+policy and protected runtime environment from the installed release's reviewed
+archive. Use the same signer, network, origin, storage identity and caps. Derive
+the successor by changing only `expiresAtSeconds` in the canonical public
+policy and updating its digest. Keep the old cutover and role records as originals.
+
+The protected `keryx-public-policy-expiry-authorization-v1` JSON binds the app
+commit, reviewed roles SHA-256, original and renewed environment SHA-256, original
+and renewed public policy SHA-256, and authorized expiry in Unix seconds. The
+field names are specified by `scripts/postgres/server1-public-policy-renewal.mts`.
+Stage this record privately and pin its SHA-256 in the operator configuration.
+Keep credentials on the host. Verify pending originals, queue and interrupted
+worker ownership before recovery. A crash lock requires the inspection described
+in [private worker recovery](private-worker.md).
+
+Prepare the accepted operator source as a separate immutable Linux cohort.
+Keep both reviewed public roles stopped while installing the exact authorized
+environment. Run that cohort's `server1-native-bootstrap.mts` with the original
+roles file and hash, followed by `--policy-renewal AUTHORIZATION_FILE
+AUTHORIZATION_SHA256 CONTROLLER_PREPARATION_SHA256 --verify-only`. The controller
+must pass its own preparation checks. It verifies the installed application's
+original build, staged ENV, active storage, acknowledged cutover, custody and
+current cumulative public ledger before accepting the successor. Use the same
+arguments without `--verify-only` for the cold start. Verify worker readiness,
+direct application health and public routes. The authorization ends at its
+specified expiry.
+
 Owner review must state each signer, exact prefunding deposit, lifetime/query caps,
 expiry and native transaction fee ceilings. Offline `prepare` can emit exact
 approve/depositFor calldata for each public signer and owner amount, but these are

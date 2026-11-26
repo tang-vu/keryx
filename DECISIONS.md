@@ -9864,3 +9864,8 @@ immutable payment first wires and conservative protected-dependency holds. Nativ
 synthetic CAS acceptance, full-size timing, fresh live data, startup and authorized
 ROOT cutover remain separate gates; no automatic retry, policy renewal, funding,
 schedule or publication follows from these source changes.
+
+
+## Bind an expiry extension to the installed release and a reviewed controller (2026-11-26)
+
+The installed native release preserves its original roles, treasury policy, environment and acknowledged cutover as evidence. A separately prepared controller can admit a cold start of the same application with an explicitly authorized successor expiry. The controller verifies both immutable cohorts, the exact environment change, the current storage identity, custody and cumulative signer accounting. This allows recovery after an expiry while retaining the historical release record and all pending exposure. See the public expiry procedure in [mainnet operations](docs/mainnet-operations.md).
